@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(npm -v)",
+      "Bash(npm install *)",
+      "Bash(npm config *)",
+      "Read(//home/jacaranda/**)",
+      "Bash(env)",
+      "Read(//etc/**)",
+      "Bash(find / -maxdepth 6 -iname \".npmrc\")",
+      "Bash(git -C /home/jacaranda/Descargas/parklink_app/mobile status)",
+      "Bash(npm test *)",
+      "Bash(npx tsc *)",
+      "Bash(find / -maxdepth 6 -iname \"*chromium-cli*\")",
+      "Bash(npx --yes chromium-cli --help)",
+      "Bash(curl -s -o /dev/null -w \"Bundle HTTP: %{http_code}\\\\n\" \"http://localhost:8081/index.ts.bundle?platform=web&dev=true\")",
+      "Bash(curl -s -o /tmp/claude-1000/-home-jacaranda-Descargas-parklink-app-mobile/4f6dc79b-e16d-4122-a3eb-815cca02996c/scratchpad/bundle.js -w \"Bundle HTTP: %{http_code}, size: %{size_download} bytes\\\\n\" \"http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable\" --max-time 90)",
+      "Bash(jobs -l)",
+      "Bash(lsof -i :8081 -sTCP:LISTEN)",
+      "Bash(npx expo *)",
+      "Bash(node -e \"console.log\\('react:', require\\('./node_modules/react/package.json'\\).version\\); console.log\\('react-dom:', require\\('./node_modules/react-dom/package.json'\\).version\\)\")",
+      "Bash(disown)",
+      "Bash(curl -s \"http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable\" --max-time 60 -o /tmp/claude-1000/-home-jacaranda-Descargas-parklink-app-mobile/4f6dc79b-e16d-4122-a3eb-815cca02996c/scratchpad/bundle2.js -w \"HTTP: %{http_code}\\\\n\")",
+      "Bash(python3 -c \"from PIL import Image; im=Image.open\\('logo-parklink.png'\\); print\\(im.size, im.mode\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(timeout 30 bash -c 'until curl -sf http://localhost:8081 >/dev/null; do sleep 1; done')",
+      "Bash(curl -s -o /dev/null -w \"HTML: %{http_code}\\\\n\" http://localhost:8081)",
+      "Bash(curl -s -o /tmp/claude-1000/-home-jacaranda-Descargas-parklink-app-mobile/4f6dc79b-e16d-4122-a3eb-815cca02996c/scratchpad/bundle3.js -w \"Bundle: %{http_code}, %{size_download} bytes\\\\n\" --max-time 60 \"http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable\")",
+      "Bash(curl -s -o /tmp/claude-1000/-home-jacaranda-Descargas-parklink-app-mobile/4f6dc79b-e16d-4122-a3eb-815cca02996c/scratchpad/logo_served.png -w \"logo asset HTTP: %{http_code}, %{size_download} bytes, content-type: %{content_type}\\\\n\" \"http://localhost:8081/assets/?unstable_path=.%2Fassets/logo-parklink.png\")",
+      "Bash(lsof -ti:8081 -sTCP:LISTEN)",
+      "Bash(xargs -r kill)",
+      "Bash(curl -s -o /tmp/claude-1000/-home-jacaranda-Descargas-parklink-app-mobile/4f6dc79b-e16d-4122-a3eb-815cca02996c/scratchpad/bundle4.js -w \"Bundle: %{http_code}, %{size_download} bytes\\\\n\" --max-time 60 \"http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/@react-navigation/native/package.json'\\).version\\)\")",
+      "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./node_modules/expo-router/package.json'\\).exports, null, 2\\)\\)\")",
+      "WebFetch(domain:docs.expo.dev)",
+      "Bash(curl -s -o /tmp/claude-1000/-home-jacaranda-Descargas-parklink-app-mobile/4f6dc79b-e16d-4122-a3eb-815cca02996c/scratchpad/bundle5.js -w \"Bundle: %{http_code}, %{size_download} bytes\\\\n\" --max-time 90 \"http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable\")"
+    ]
+  }
+}
