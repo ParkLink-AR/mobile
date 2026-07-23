@@ -5,19 +5,42 @@ import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
+import { useSessionStore } from '@/src/store/useSessionStore';
+import { createParkingSpot } from '@/src/services/parkingService';
 
 export default function NewSpot() {
   const colors = useThemeColors();
   const typography = useTypography();
+  const user = useSessionStore((s) => s.user);
   const [address, setAddress] = useState('');
   const [covered, setCovered] = useState(true);
   const [price, setPrice] = useState('');
   const [schedule, setSchedule] = useState('');
   const [description, setDescription] = useState('');
+  const [publishing, setPublishing] = useState(false);
 
-  function publish() {
-    // Mock only — no create-spot service call in this MVP pass.
-    router.back();
+  async function publish() {
+    if (!user || !address.trim() || !price.trim()) {
+      alert('Por favor completa los campos requeridos');
+      return;
+    }
+    
+    try {
+      setPublishing(true);
+      await createParkingSpot({
+        title: address.split(',')[0] || address,
+        ownerId: user.id,
+        address: address.trim(),
+        covered,
+        pricePerHour: Number(price),
+        schedule: schedule.trim() || undefined,
+        description: description.trim() || undefined,
+      });
+      router.back();
+    } catch (error) {
+      alert('Error al publicar la cochera');
+      setPublishing(false);
+    }
   }
 
   const styles = StyleSheet.create({
@@ -114,7 +137,7 @@ export default function NewSpot() {
         placeholderTextColor={colors.textSecondary}
       />
 
-      <Button title="Publicar cochera" onPress={publish} style={styles.button} />
+      <Button title="Publicar cochera" onPress={publish} disabled={publishing} style={styles.button} />
     </Screen>
   );
 }

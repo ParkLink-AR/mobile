@@ -17,6 +17,7 @@ import { Button } from '@/src/components/Button';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
 import { AccountMenu } from '@/src/components/AccountMenu';
 import { Screen } from '@/src/components/Screen';
+import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useThemeStore } from '@/src/store/useThemeStore';
@@ -279,7 +280,13 @@ export default function Search() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ gap: 10 }}
           renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => router.push(`/(driver)/spot/${item.id}`)}>
+            <TouchableOpacity onPress={() => router.push({
+              pathname: `/(driver)/spot/${item.id}`,
+              params: {
+                startHour: filters.startHour?.toString() ?? '8',
+                endHour: filters.endHour?.toString() ?? '9',
+              },
+            })}>
               <ParkingSpotCard spot={item} />
             </TouchableOpacity>
           )}
@@ -303,14 +310,20 @@ export default function Search() {
                   onPress={() => setSelectedSpotId(spot.id)}
                 >
                   <Text style={[styles.pinText, isSelected && styles.pinTextSelected]}>
-                    ${spot.pricePerHour}
+                    ${getDriverVisiblePrice(spot.pricePerHour)}
                   </Text>
                 </TouchableOpacity>
               );
             })}
           </View>
           {selectedSpot && (
-            <TouchableOpacity onPress={() => router.push(`/(driver)/spot/${selectedSpot.id}`)}>
+            <TouchableOpacity onPress={() => router.push({
+              pathname: `/(driver)/spot/${selectedSpot.id}`,
+              params: {
+                startHour: filters.startHour?.toString() ?? '8',
+                endHour: filters.endHour?.toString() ?? '9',
+              },
+            })}>
               <ParkingSpotCard spot={selectedSpot} />
             </TouchableOpacity>
           )}

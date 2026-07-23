@@ -1,5 +1,6 @@
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { Card } from '@/src/components/Card';
+import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { ParkingSpot } from '@/src/types';
@@ -39,7 +40,7 @@ export function ParkingSpotCard({ spot }: { spot: ParkingSpot }) {
           <Text style={typography.h2} numberOfLines={1}>
             {spot.title}
           </Text>
-          <Text style={styles.price}>${spot.pricePerHour}/hora</Text>
+          <Text style={styles.price}>${getDriverVisiblePrice(spot.pricePerHour)}/hora</Text>
         </View>
         <Text style={typography.caption} numberOfLines={1}>
           {spot.address}

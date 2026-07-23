@@ -11,6 +11,7 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail } from '@/src/services/parkingService';
 import { createBooking } from '@/src/services/bookingService';
 import { payBooking, getPaymentMethods } from '@/src/services/paymentService';
+import { getDriverVisiblePrice } from '@/src/services/utils';
 import { Booking, ParkingSpot, PaymentMethod } from '@/src/types';
 
 export default function ConfirmBooking() {
@@ -57,6 +58,7 @@ export default function ConfirmBooking() {
 
   const selectedMethod = paymentMethods.find((m) => m.id === selectedMethodId);
   const isCash = selectedMethod?.type === 'cash';
+  const visiblePricePerHour = getDriverVisiblePrice(spot.pricePerHour);
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.surface },
@@ -75,9 +77,8 @@ export default function ConfirmBooking() {
         <Text style={[typography.caption, styles.sectionTitle]}>RESUMEN</Text>
         <Row label="Fecha" value={booking.date} />
         <Row label="Horario" value={`${booking.startTime} a ${booking.endTime}`} />
-        <Row label="Duración" value={`${booking.hours} hs`} />
-        <Row label="Subtotal" value={`$${booking.subtotal}`} />
-        <Row label="Cargo de servicio (5%)" value={`$${booking.serviceCharge}`} />
+        <Row label="Precio por hora" value={`$${visiblePricePerHour}`} />
+        <Row label="Cantidad de horas" value={`${booking.hours} hs`} />
         <Row label="Total" value={`$${booking.total}`} bold />
         <Text style={[typography.caption, styles.sectionTitle]}>MÉTODO DE PAGO</Text>
         <PaymentMethodPicker

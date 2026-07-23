@@ -1,4 +1,5 @@
 import { searchParkingSpots, getParkingSpotDetail } from '@/src/services/parkingService';
+import { getDriverVisiblePrice } from '@/src/services/utils';
 
 describe('parkingService', () => {
   it('returns all active spots when no filters are given', async () => {
@@ -9,7 +10,7 @@ describe('parkingService', () => {
 
   it('filters spots by max price', async () => {
     const spots = await searchParkingSpots({ maxPrice: 900 });
-    expect(spots.every((s) => s.pricePerHour <= 900)).toBe(true);
+    expect(spots.every((s) => getDriverVisiblePrice(s.pricePerHour) <= 900)).toBe(true);
   });
 
   it('returns a single spot by id', async () => {
