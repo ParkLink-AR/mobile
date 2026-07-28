@@ -1,0 +1,5 @@
+auth.login.title=Iniciar sesión
+auth.forgotPassword.title=Recuperar contraseña
+auth.forgotPassword.note=Si el email existe, vas a recibir un link para restablecer tu contraseña.
+
+# Más claves están disponibles en castellano.json

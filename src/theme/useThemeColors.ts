@@ -1,5 +1,6 @@
 import { useThemeStore } from '@/src/store/useThemeStore';
-import { palettes, ColorPalette } from '@/src/theme/colors';
+import { palettes } from '@/src/theme/colors';
+import { ColorPalette } from '@/src/theme/types';
 
 export function useThemeColors(): ColorPalette {
   const mode = useThemeStore((s) => s.mode);

@@ -1,0 +1,54 @@
+{
+  "auth.login.title": "Iniciar sesión",
+  "auth.forgotPassword.title": "Recuperar contraseña",
+  "auth.forgotPassword.note": "Si el email existe, vas a recibir un link para restablecer tu contraseña.",
+  "auth.login.placeholder.password": "Contraseña",
+  "auth.login.forgot": "Olvidé mi contraseña",
+  "auth.login.button": "Ingresar",
+  "auth.register.placeholder.password": "Contraseña",
+
+  "driver.bookings.title": "Mis reservas",
+  "driver.profile.title": "Mi perfil",
+  "driver.profile.edit": "Editar perfil",
+  "driver.paymentMethods.title": "MÉTODOS DE PAGO",
+  "driver.booking.confirm.title": "Confirmar reserva",
+  "driver.booking.pricePerHour": "Precio por hora",
+  "driver.booking.methodPayment": "MÉTODO DE PAGO",
+  "driver.booking.confirmButton": "Confirmar reserva · $%{total}",
+  "driver.booking.success.title": "¡Reserva confirmada!",
+  "driver.booking.success.viewBookings": "Ver mis reservas",
+  "driver.booking.cancel.title": "Cancelar reserva",
+  "driver.booking.cancel.confirm": "¿Confirmás que querés cancelar?",
+  "driver.booking.cancel.yes": "Sí, cancelar",
+  "driver.rating.title": "Calificar al propietario",
+  "driver.review.placeholder": "Dejá un comentario (opcional)",
+
+  "spot.address": "Dirección",
+  "spot.pricePerHour": "Precio por hora",
+  "spot.pricePerHour.withUnit": "$%{price} por hora",
+
+  "owner.spot.edit.title": "Editar cochera",
+  "owner.settings.title": "Configuración",
+  "owner.bookings.title": "Reservas recibidas",
+  "owner.profile.title": "Mi perfil",
+  "owner.review.title": "Calificar al conductor",
+
+  "common.greeting.hello": "Hola, %{name}",
+  "common.section.pricePerHour": "PRECIO POR HORA",
+  "common.section.upcomingReservations": "PRÓXIMAS RESERVAS",
+  "common.section.reservationsIncluded": "RESERVAS INCLUIDAS",
+  "common.save": "Guardar",
+  "common.cancel": "Cancelar",
+  "common.confirm": "Confirmar",
+  "common.yes": "Sí",
+  "common.no": "No",
+
+  "account.settings.label": "Configuración",
+  "account.menu.theme.light": "Modo claro",
+  "account.menu.theme.dark": "Modo oscuro",
+
+  "payment.selectPlaceholder": "Seleccionar método de pago",
+  "verifiedBadge.text": "✓ Perfil verificado",
+
+  "mocks.reviews.comment.example": "Todo tal cual la descripción, sin sorpresas."
+}
