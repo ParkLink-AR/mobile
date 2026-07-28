@@ -1,4 +1,4 @@
-import { ColorPalette } from './types';
+import { ColorPalette } from '../types';
 
 export const darkPalette: ColorPalette = {
   deepNavy: '#042347',
