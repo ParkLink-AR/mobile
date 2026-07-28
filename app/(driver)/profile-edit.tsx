@@ -1,3 +1,4 @@
+import { t } from '@/src/i18n';
 import { useState } from 'react';
 import { Text, TextInput, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
@@ -39,7 +40,7 @@ export default function DriverProfileEdit() {
       <Text style={typography.h1}>Editar perfil</Text>
       <TextInput style={styles.input} value={name} onChangeText={setName} />
       <TextInput style={styles.input} value={email} onChangeText={setEmail} autoCapitalize="none" />
-      <Button title="Guardar" onPress={save} />
+      <Button title=t('common.save') onPress={save} />
     </Screen>
   );
 }

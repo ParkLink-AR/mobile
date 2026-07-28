@@ -1,3 +1,4 @@
+import { t } from '@/src/i18n';
 import { Text, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { Card } from '@/src/components/Card';
@@ -29,7 +30,7 @@ export default function OwnerProfile() {
         <Text style={typography.caption}>{user.email}</Text>
         <VerifiedBadge />
       </Card>
-      <Button title="Editar perfil" onPress={() => router.push('/(owner)/profile-edit')} />
+      <Button title=t('driver.profile.edit') onPress={() => router.push('/(owner)/profile-edit')} />
       <Button title="Ver liquidaciones" onPress={() => router.push('/(owner)/settlements')} />
       <Button
         title="Cerrar sesión"

@@ -1,3 +1,4 @@
+import { t } from '@/src/i18n';
 import { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -77,7 +78,7 @@ export default function ConfirmBooking() {
         <Text style={[typography.caption, styles.sectionTitle]}>RESUMEN</Text>
         <Row label="Fecha" value={booking.date} />
         <Row label="Horario" value={`${booking.startTime} a ${booking.endTime}`} />
-        <Row label="Precio por hora" value={`$${visiblePricePerHour}`} />
+        <Row label=t('driver.booking.pricePerHour') value={`$${visiblePricePerHour}`} />
         <Row label="Cantidad de horas" value={`${booking.hours} hs`} />
         <Row label="Total" value={`$${booking.total}`} bold />
         <Text style={[typography.caption, styles.sectionTitle]}>MÉTODO DE PAGO</Text>

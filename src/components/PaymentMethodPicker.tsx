@@ -1,3 +1,4 @@
+import { t } from '@/src/i18n';
 import { useState } from 'react';
 import { View, Text, Pressable, Modal, ScrollView, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/src/theme/useThemeColors';
@@ -65,7 +66,7 @@ export function PaymentMethodPicker({ methods, selectedId, onSelect }: PaymentMe
       <Pressable style={styles.selector} onPress={() => setVisible(true)}>
         <Text style={styles.selectorIcon}>{selected ? methodIcon(selected) : '💳'}</Text>
         <Text style={styles.selectorLabel} numberOfLines={1}>
-          {selected?.label ?? 'Seleccionar método de pago'}
+          {selected?.label ?? t('payment.selectPlaceholder')}
         </Text>
         <Text style={styles.chevron}>▾</Text>
       </Pressable>

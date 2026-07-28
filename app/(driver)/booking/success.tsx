@@ -1,3 +1,4 @@
+import { t } from '@/src/i18n';
 import { useEffect, useState } from 'react';
 import { Text, StyleSheet } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -39,7 +40,7 @@ export default function BookingSuccess() {
         <Text style={typography.body}>Total pagado: ${booking.total}</Text>
       </Card>
       <Button
-        title="Ver mis reservas"
+        title=t('driver.booking.success.viewBookings')
         onPress={() => router.replace('/(driver)/(tabs)/bookings')}
       />
     </Screen>

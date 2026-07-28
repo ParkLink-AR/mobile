@@ -1,3 +1,4 @@
+import { t } from '@/src/i18n';
 import { useEffect, useState } from 'react';
 import { Text, ScrollView, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
@@ -45,7 +46,7 @@ export default function DriverProfile() {
           <Text style={typography.caption}>{user.email}</Text>
           <VerifiedBadge />
         </Card>
-        <Button title="Editar perfil" onPress={() => router.push('/(driver)/profile-edit')} />
+        <Button title=t('driver.profile.edit') onPress={() => router.push('/(driver)/profile-edit')} />
 
         <Text style={[typography.caption, styles.sectionTitle]}>MÉTODOS DE PAGO</Text>
         <PaymentMethodPicker

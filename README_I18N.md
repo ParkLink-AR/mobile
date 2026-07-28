@@ -26,3 +26,29 @@ Para cambiar el idioma en tiempo de ejecución:
 import { setLanguage } from '@/src/i18n';
 setLanguage('en'); // 'es' | 'en' | 'ja'
 ```
+
+Configuración desde la app:
+
+- La selección de idioma y tema ahora está disponible en la UI de `Configuración`.
+- La store que contiene estas preferencias es `src/store/useSettingsStore.ts`.
+- Para leer/cambiar desde código (no UI), importá la store:
+
+```ts
+import { useSettingsStore } from '@/src/store/useSettingsStore';
+const lang = useSettingsStore((s) => s.language);
+const setLang = useSettingsStore((s) => s.setLanguage);
+const theme = useSettingsStore((s) => s.mode);
+const setTheme = useSettingsStore((s) => s.setMode);
+```
+
+Persistencia:
+- Implementé persistencia en `src/store/useSettingsStore.ts` usando `zustand` + `persist` y `AsyncStorage`.
+
+Instalación (persistencia):
+
+```bash
+# instala AsyncStorage
+npm install @react-native-async-storage/async-storage
+```
+
+Después de instalar, reiniciá Metro/Expo para que la store persista entre sesiones.

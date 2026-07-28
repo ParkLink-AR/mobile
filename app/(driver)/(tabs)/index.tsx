@@ -20,7 +20,7 @@ import { Screen } from '@/src/components/Screen';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
-import { useThemeStore } from '@/src/store/useThemeStore';
+import { useSettingsStore } from '@/src/store/useSettingsStore';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { searchParkingSpots, SearchParkingSpotsFilters } from '@/src/services/parkingService';
 import { ParkingSpot } from '@/src/types';
@@ -48,7 +48,7 @@ function pinPosition(id: string): { top: `${number}%`; left: `${number}%` } {
 export default function Search() {
   const colors = useThemeColors();
   const typography = useTypography();
-  const mode = useThemeStore((s) => s.mode);
+  const mode = useSettingsStore((s) => s.mode);
   const user = useSessionStore((s) => s.user);
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
   const [filters, setFilters] = useState<SearchParkingSpotsFilters>({});

@@ -1,17 +1,18 @@
+import { t } from '@/src/i18n';
 import { useState } from 'react';
 import { Modal, Pressable, View, Text, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { Avatar } from '@/src/components/Avatar';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { useThemeStore } from '@/src/store/useThemeStore';
+import { useSettingsStore } from '@/src/store/useSettingsStore';
 
 export function AccountMenu({ role }: { role: 'driver' | 'owner' }) {
   const colors = useThemeColors();
   const user = useSessionStore((s) => s.user);
   const logout = useSessionStore((s) => s.logout);
-  const mode = useThemeStore((s) => s.mode);
-  const toggleMode = useThemeStore((s) => s.toggleMode);
+  const mode = useSettingsStore((s) => s.mode);
+  const toggleMode = useSettingsStore((s) => s.toggleMode);
   const [open, setOpen] = useState(false);
 
   const styles = StyleSheet.create({
@@ -55,10 +56,10 @@ export function AccountMenu({ role }: { role: 'driver' | 'owner' }) {
         <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
           <View style={styles.menu}>
             <MenuItem icon="👤" label="Mi cuenta" onPress={() => go(`/(${role})/(tabs)/profile`)} />
-            <MenuItem icon="⚙️" label="Configuración" onPress={() => go(`/(${role})/settings`)} />
+            <MenuItem icon="⚙️" label=t('owner.settings.title') onPress={() => go(`/(${role})/settings`)} />
             <MenuItem
               icon={mode === 'dark' ? '☀️' : '🌙'}
-              label={mode === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+              label={mode === 'dark' ? t('account.menu.theme.light') : t('account.menu.theme.dark')}
               onPress={toggleMode}
             />
             <View style={styles.divider} />

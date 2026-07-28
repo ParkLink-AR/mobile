@@ -1,3 +1,4 @@
+import { t } from '@/src/i18n';
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -46,18 +47,18 @@ export default function DriverBookingDetail() {
       </Card>
       {booking.status === 'CONFIRMED' && (
         <Button
-          title="Cancelar reserva"
+          title=t('driver.booking.cancel.title')
           onPress={() =>
-            Alert.alert('Cancelar reserva', '¿Confirmás que querés cancelar?', [
-              { text: 'No' },
-              { text: 'Sí, cancelar', onPress: onCancel },
+            Alert.alert(t('driver.booking.cancel.title'), t('driver.booking.cancel.confirm'), [
+              { text: t('common.no') },
+              { text: t('driver.booking.cancel.yes'), onPress: onCancel },
             ])
           }
         />
       )}
       {booking.status === 'COMPLETED' && (
         <Button
-          title="Calificar al propietario"
+          title=t('driver.rating.title')
           onPress={() => router.push(`/(driver)/review/${booking.id}`)}
         />
       )}

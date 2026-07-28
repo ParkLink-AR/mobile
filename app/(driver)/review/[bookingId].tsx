@@ -1,3 +1,4 @@
+import { t } from '@/src/i18n';
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
@@ -45,7 +46,7 @@ export default function DriverReview() {
       </View>
       <TextInput
         style={styles.input}
-        placeholder="Dejá un comentario (opcional)"
+        placeholder=t('driver.review.placeholder')
         placeholderTextColor={colors.textSecondary}
         multiline
         value={comment}

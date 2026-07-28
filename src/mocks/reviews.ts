@@ -1,3 +1,4 @@
+import { t } from '@/src/i18n';
 import { Review } from '@/src/types';
 import { mockOwner } from './users';
 import { mockParkingSpots } from './parkingSpots';
@@ -60,7 +61,7 @@ export const mockReviewsBySpot: Record<string, Review[]> = {
       reviewerName: 'Tomás D.',
       toUserId: mockOwner.id,
       stars: 5,
-      comment: 'Todo tal cual la descripción, sin sorpresas.',
+      comment: t('mocks.reviews.comment.example'),
     },
     {
       id: 'review-3-2',

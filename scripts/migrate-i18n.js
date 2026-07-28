@@ -3,7 +3,7 @@ const path = require('path');
 const glob = require('glob');
 
 const root = path.resolve(__dirname, '..');
-const i18nPath = path.join(root, 'src', 'i18n', 'castellano.json');
+const i18nPath = path.join(root, 'src', 'i18n', 'es', 'castellano.json');
 const keys = JSON.parse(fs.readFileSync(i18nPath, 'utf8'));
 
 const files = glob.sync('**/*.{tsx,ts,jsx,js}', { cwd: root, ignore: ['node_modules/**', 'build/**', 'dist/**'] });

@@ -1,3 +1,4 @@
+import { t } from '@/src/i18n';
 import { useEffect, useState } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -53,7 +54,7 @@ export default function SpotDetail() {
             <Chip key={tag} label={tag} />
           ))}
         </View>
-        <Row label="Dirección" value={spot.address} />
+        <Row label=t('spot.address') value={spot.address} />
         <Row label="Disponible" value={spot.schedule} />
         <Row label="Precio" value={`$${visiblePricePerHour} por hora`} />
         <Text style={styles.total}>Total ({reservedHours} hs): ${total}</Text>

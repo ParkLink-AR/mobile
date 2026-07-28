@@ -1,3 +1,4 @@
+import { t } from '@/src/i18n';
 import { Stack } from 'expo-router';
 import { colors } from '@/src/theme/colors';
 
@@ -11,7 +12,7 @@ export default function AuthLayout() {
     >
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="register" options={{ title: 'Registro' }} />
-      <Stack.Screen name="forgot-password" options={{ title: 'Recuperar contraseña' }} />
+      <Stack.Screen name="forgot-password" options={{ title: t('auth.forgotPassword.title') }} />
     </Stack>
   );
 }

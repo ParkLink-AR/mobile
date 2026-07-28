@@ -1,9 +1,11 @@
 import { ReactNode, useState } from 'react';
-import { View, Text, Switch, StyleSheet } from 'react-native';
+import { View, Text, Switch, StyleSheet, Pressable } from 'react-native';
 import { Screen } from '@/src/components/Screen';
 import { Card } from '@/src/components/Card';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
+import { useSettingsStore, Language } from '@/src/store/useSettingsStore';
+import i18n from '@/src/i18n';
 
 export function SettingsContent() {
   const colors = useThemeColors();
@@ -41,7 +43,11 @@ export function SettingsContent() {
       <Text style={[typography.caption, styles.sectionTitle]}>PREFERENCIAS</Text>
       <Card style={styles.card}>
         <Row label="Idioma">
-          <Text style={typography.caption}>Español (Argentina)</Text>
+          <LanguagePicker />
+        </Row>
+        <View style={styles.divider} />
+        <Row label="Tema">
+          <ThemeToggle />
         </Row>
       </Card>
 
@@ -72,4 +78,32 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
       {children}
     </View>
   );
+}
+
+function LanguagePicker() {
+  const language = useSettingsStore((s) => s.language);
+  const setLanguage = useSettingsStore((s) => s.setLanguage);
+  const typography = useTypography();
+
+  const opts: { key: Language; label: string }[] = [
+    { key: 'es', label: 'Español' },
+    { key: 'en', label: 'English' },
+    { key: 'ja', label: '日本語' },
+  ];
+
+  return (
+    <View style={{ flexDirection: 'row', gap: 8 }}>
+      {opts.map((o) => (
+        <Pressable key={o.key} onPress={() => setLanguage(o.key)} style={{ padding: 6 }}>
+          <Text style={[typography.caption, { opacity: language === o.key ? 1 : 0.6 }]}>{o.label}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+function ThemeToggle() {
+  const mode = useSettingsStore((s) => s.mode);
+  const toggle = useSettingsStore((s) => s.toggleMode);
+  return <Switch value={mode === 'dark'} onValueChange={toggle} />;
 }

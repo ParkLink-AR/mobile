@@ -1,3 +1,4 @@
+import { t } from '@/src/i18n';
 import { useState } from 'react';
 import { Text, TextInput, Image, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
@@ -53,13 +54,13 @@ export default function Login() {
       />
       <TextInput
         style={styles.input}
-        placeholder="Contraseña"
+        placeholder=t('auth.login.placeholder.password')
         placeholderTextColor={colors.textSecondary}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
       />
-      <Button title="Ingresar" onPress={handleLogin} />
+      <Button title=t('auth.login.button') onPress={handleLogin} />
       <Text style={styles.link} onPress={() => router.push('/(auth)/register')}>
         ¿No tenés cuenta? Registrate
       </Text>
