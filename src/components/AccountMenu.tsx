@@ -55,15 +55,15 @@ export function AccountMenu({ role }: { role: 'driver' | 'owner' }) {
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
           <View style={styles.menu}>
-            <MenuItem icon="👤" label="Mi cuenta" onPress={() => go(`/(${role})/(tabs)/profile`)} />
-            <MenuItem icon="⚙️" label=t('owner.settings.title') onPress={() => go(`/(${role})/settings`)} />
+              <MenuItem icon="👤" label={t('account.myAccount')} onPress={() => go(`/(${role})/(tabs)/profile`)} />
+              <MenuItem icon="⚙️" label={t('account.settings.label')} onPress={() => go(`/(${role})/settings`)} />
             <MenuItem
               icon={mode === 'dark' ? '☀️' : '🌙'}
               label={mode === 'dark' ? t('account.menu.theme.light') : t('account.menu.theme.dark')}
               onPress={toggleMode}
             />
             <View style={styles.divider} />
-            <MenuItem icon="🚪" label="Cerrar sesión" onPress={handleLogout} muted />
+              <MenuItem icon="🚪" label={t('account.logout')} onPress={handleLogout} muted />
           </View>
         </Pressable>
       </Modal>

@@ -31,6 +31,7 @@
   "owner.settings.title": "Configuración",
   "owner.bookings.title": "Reservas recibidas",
   "owner.profile.title": "Mi perfil",
+  "owner.view.settlements": "Ver liquidaciones",
   "owner.review.title": "Calificar al conductor",
 
   "common.greeting.hello": "Hola, %{name}",
@@ -44,6 +45,16 @@
   "common.no": "No",
 
   "account.settings.label": "Configuración",
+  "account.myAccount": "Mi cuenta",
+  "account.logout": "Cerrar sesión",
+  "settings.notifications.title": "NOTIFICACIONES",
+  "settings.notifications.push": "Notificaciones push",
+  "settings.notifications.email": "Notificaciones por email",
+  "settings.preferences.title": "PREFERENCIAS",
+  "settings.language": "Idioma",
+  "settings.theme": "Tema",
+  "settings.about.title": "ACERCA DE",
+  "settings.version": "Versión",
   "account.menu.theme.light": "Modo claro",
   "account.menu.theme.dark": "Modo oscuro",
 

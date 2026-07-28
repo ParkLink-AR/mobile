@@ -31,6 +31,7 @@
   "owner.settings.title": "設定",
   "owner.bookings.title": "受け取った予約",
   "owner.profile.title": "マイプロフィール",
+  "owner.view.settlements": "清算を見る",
   "owner.review.title": "ドライバーを評価",
 
   "common.greeting.hello": "こんにちは、%{name}",
@@ -44,6 +45,16 @@
   "common.no": "いいえ",
 
   "account.settings.label": "設定",
+  "account.myAccount": "マイアカウント",
+  "account.logout": "ログアウト",
+  "settings.notifications.title": "通知",
+  "settings.notifications.push": "プッシュ通知",
+  "settings.notifications.email": "メール通知",
+  "settings.preferences.title": "設定",
+  "settings.language": "言語",
+  "settings.theme": "テーマ",
+  "settings.about.title": "このアプリについて",
+  "settings.version": "バージョン",
   "account.menu.theme.light": "ライトモード",
   "account.menu.theme.dark": "ダークモード",
 

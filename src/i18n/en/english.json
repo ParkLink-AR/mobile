@@ -31,6 +31,7 @@
   "owner.settings.title": "Settings",
   "owner.bookings.title": "Received bookings",
   "owner.profile.title": "My profile",
+  "owner.view.settlements": "View settlements",
   "owner.review.title": "Rate the driver",
 
   "common.greeting.hello": "Hello, %{name}",
@@ -44,6 +45,16 @@
   "common.no": "No",
 
   "account.settings.label": "Settings",
+  "account.myAccount": "My account",
+  "account.logout": "Log out",
+  "settings.notifications.title": "NOTIFICATIONS",
+  "settings.notifications.push": "Push notifications",
+  "settings.notifications.email": "Email notifications",
+  "settings.preferences.title": "PREFERENCES",
+  "settings.language": "Language",
+  "settings.theme": "Theme",
+  "settings.about.title": "ABOUT",
+  "settings.version": "Version",
   "account.menu.theme.light": "Light mode",
   "account.menu.theme.dark": "Dark mode",
 

@@ -5,7 +5,7 @@ import { Card } from '@/src/components/Card';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSettingsStore, Language } from '@/src/store/useSettingsStore';
-import i18n from '@/src/i18n';
+import { t } from '@/src/i18n';
 
 export function SettingsContent() {
   const colors = useThemeColors();
@@ -29,7 +29,7 @@ export function SettingsContent() {
 
   return (
     <Screen style={styles.container}>
-      <Text style={[typography.caption, styles.sectionTitle]}>NOTIFICACIONES</Text>
+      <Text style={[typography.caption, styles.sectionTitle]}>{t('settings.notifications.title')}</Text>
       <Card style={styles.card}>
         <Row label="Notificaciones push">
           <Switch value={pushEnabled} onValueChange={setPushEnabled} trackColor={{ true: colors.teal }} />
@@ -40,20 +40,20 @@ export function SettingsContent() {
         </Row>
       </Card>
 
-      <Text style={[typography.caption, styles.sectionTitle]}>PREFERENCIAS</Text>
+      <Text style={[typography.caption, styles.sectionTitle]}>{t('settings.preferences.title')}</Text>
       <Card style={styles.card}>
-        <Row label="Idioma">
+        <Row label={t('settings.language')}>
           <LanguagePicker />
         </Row>
         <View style={styles.divider} />
-        <Row label="Tema">
+        <Row label={t('settings.theme')}>
           <ThemeToggle />
         </Row>
       </Card>
 
-      <Text style={[typography.caption, styles.sectionTitle]}>ACERCA DE</Text>
+      <Text style={[typography.caption, styles.sectionTitle]}>{t('settings.about.title')}</Text>
       <Card style={styles.card}>
-        <Row label="Versión">
+        <Row label={t('settings.version')}>
           <Text style={typography.caption}>1.0.0</Text>
         </Row>
       </Card>

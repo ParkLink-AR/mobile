@@ -24,16 +24,16 @@ export default function OwnerProfile() {
 
   return (
     <Screen style={styles.container}>
-      <Text style={typography.h1}>Mi perfil</Text>
+      <Text style={typography.h1}>{t('owner.profile.title')}</Text>
       <Card>
         <Text style={typography.h2}>{user.name}</Text>
         <Text style={typography.caption}>{user.email}</Text>
         <VerifiedBadge />
       </Card>
-      <Button title=t('driver.profile.edit') onPress={() => router.push('/(owner)/profile-edit')} />
-      <Button title="Ver liquidaciones" onPress={() => router.push('/(owner)/settlements')} />
+      <Button title={t('driver.profile.edit')} onPress={() => router.push('/(owner)/profile-edit')} />
+      <Button title={t('owner.view.settlements')} onPress={() => router.push('/(owner)/settlements')} />
       <Button
-        title="Cerrar sesión"
+        title={t('account.logout')}
         onPress={() => {
           logout();
           router.replace('/(auth)/login');

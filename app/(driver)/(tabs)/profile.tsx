@@ -40,7 +40,7 @@ export default function DriverProfile() {
   return (
     <Screen style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={typography.h1}>Mi perfil</Text>
+        <Text style={typography.h1}>{t('driver.profile.title')}</Text>
         <Card>
           <Text style={typography.h2}>{user.name}</Text>
           <Text style={typography.caption}>{user.email}</Text>
@@ -48,7 +48,7 @@ export default function DriverProfile() {
         </Card>
         <Button title=t('driver.profile.edit') onPress={() => router.push('/(driver)/profile-edit')} />
 
-        <Text style={[typography.caption, styles.sectionTitle]}>MÉTODOS DE PAGO</Text>
+        <Text style={[typography.caption, styles.sectionTitle]}>{t('driver.paymentMethods.title')}</Text>
         <PaymentMethodPicker
           methods={paymentMethods}
           selectedId={selectedMethodId}
@@ -56,7 +56,7 @@ export default function DriverProfile() {
         />
 
         <Button
-          title="Cerrar sesión"
+          title={t('account.logout')}
           onPress={() => {
             logout();
             router.replace('/(auth)/login');
