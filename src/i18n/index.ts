@@ -1,10 +1,16 @@
 import castellano from './castellano.json';
+import english from './english.json';
+import japanese from './japanese.json';
 
 type LangMap = Record<string, string>;
 
 const languages: Record<string, LangMap> = {
   es: castellano,
+  en: english,
+  ja: japanese,
 };
+
+export const availableLanguages = Object.keys(languages);
 
 let current = languages.es;
 
@@ -22,4 +28,4 @@ export function t(key: string, vars?: Record<string, string | number>) {
   return str;
 }
 
-export default { t, setLanguage };
+export default { t, setLanguage, availableLanguages };

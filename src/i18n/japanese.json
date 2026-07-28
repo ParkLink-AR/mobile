@@ -1,0 +1,54 @@
+{
+  "auth.login.title": "ログイン",
+  "auth.forgotPassword.title": "パスワードの回復",
+  "auth.forgotPassword.note": "メールアドレスが存在する場合、パスワードをリセットするためのリンクが届きます。",
+  "auth.login.placeholder.password": "パスワード",
+  "auth.login.forgot": "パスワードをお忘れですか",
+  "auth.login.button": "ログイン",
+  "auth.register.placeholder.password": "パスワード",
+
+  "driver.bookings.title": "マイ予約",
+  "driver.profile.title": "マイプロフィール",
+  "driver.profile.edit": "プロフィールを編集",
+  "driver.paymentMethods.title": "支払い方法",
+  "driver.booking.confirm.title": "予約を確認",
+  "driver.booking.pricePerHour": "1時間あたりの価格",
+  "driver.booking.methodPayment": "支払い方法",
+  "driver.booking.confirmButton": "予約を確定 · $%{total}",
+  "driver.booking.success.title": "予約が確定しました！",
+  "driver.booking.success.viewBookings": "予約を見る",
+  "driver.booking.cancel.title": "予約をキャンセル",
+  "driver.booking.cancel.confirm": "キャンセルしてもよろしいですか？",
+  "driver.booking.cancel.yes": "はい、キャンセルする",
+  "driver.rating.title": "オーナーを評価",
+  "driver.review.placeholder": "コメントを残す（任意）",
+
+  "spot.address": "住所",
+  "spot.pricePerHour": "1時間あたりの価格",
+  "spot.pricePerHour.withUnit": "$%{price} / 時間",
+
+  "owner.spot.edit.title": "駐車スペースを編集",
+  "owner.settings.title": "設定",
+  "owner.bookings.title": "受け取った予約",
+  "owner.profile.title": "マイプロフィール",
+  "owner.review.title": "ドライバーを評価",
+
+  "common.greeting.hello": "こんにちは、%{name}",
+  "common.section.pricePerHour": "時間あたりの料金",
+  "common.section.upcomingReservations": "今後の予約",
+  "common.section.reservationsIncluded": "含まれる予約",
+  "common.save": "保存",
+  "common.cancel": "キャンセル",
+  "common.confirm": "確認",
+  "common.yes": "はい",
+  "common.no": "いいえ",
+
+  "account.settings.label": "設定",
+  "account.menu.theme.light": "ライトモード",
+  "account.menu.theme.dark": "ダークモード",
+
+  "payment.selectPlaceholder": "支払い方法を選択",
+  "verifiedBadge.text": "✓ プロフィール認証済み",
+
+  "mocks.reviews.comment.example": "説明どおりで、驚きはありません。"
+}

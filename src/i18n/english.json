@@ -1,0 +1,54 @@
+{
+  "auth.login.title": "Log in",
+  "auth.forgotPassword.title": "Recover password",
+  "auth.forgotPassword.note": "If the email exists, you'll receive a link to reset your password.",
+  "auth.login.placeholder.password": "Password",
+  "auth.login.forgot": "Forgot my password",
+  "auth.login.button": "Sign in",
+  "auth.register.placeholder.password": "Password",
+
+  "driver.bookings.title": "My bookings",
+  "driver.profile.title": "My profile",
+  "driver.profile.edit": "Edit profile",
+  "driver.paymentMethods.title": "PAYMENT METHODS",
+  "driver.booking.confirm.title": "Confirm booking",
+  "driver.booking.pricePerHour": "Price per hour",
+  "driver.booking.methodPayment": "PAYMENT METHOD",
+  "driver.booking.confirmButton": "Confirm booking · $%{total}",
+  "driver.booking.success.title": "Booking confirmed!",
+  "driver.booking.success.viewBookings": "View my bookings",
+  "driver.booking.cancel.title": "Cancel booking",
+  "driver.booking.cancel.confirm": "Are you sure you want to cancel?",
+  "driver.booking.cancel.yes": "Yes, cancel",
+  "driver.rating.title": "Rate the owner",
+  "driver.review.placeholder": "Leave a comment (optional)",
+
+  "spot.address": "Address",
+  "spot.pricePerHour": "Price per hour",
+  "spot.pricePerHour.withUnit": "$%{price} per hour",
+
+  "owner.spot.edit.title": "Edit parking spot",
+  "owner.settings.title": "Settings",
+  "owner.bookings.title": "Received bookings",
+  "owner.profile.title": "My profile",
+  "owner.review.title": "Rate the driver",
+
+  "common.greeting.hello": "Hello, %{name}",
+  "common.section.pricePerHour": "PRICE PER HOUR",
+  "common.section.upcomingReservations": "UPCOMING BOOKINGS",
+  "common.section.reservationsIncluded": "INCLUDED BOOKINGS",
+  "common.save": "Save",
+  "common.cancel": "Cancel",
+  "common.confirm": "Confirm",
+  "common.yes": "Yes",
+  "common.no": "No",
+
+  "account.settings.label": "Settings",
+  "account.menu.theme.light": "Light mode",
+  "account.menu.theme.dark": "Dark mode",
+
+  "payment.selectPlaceholder": "Select payment method",
+  "verifiedBadge.text": "✓ Verified profile",
+
+  "mocks.reviews.comment.example": "Everything as described, no surprises."
+}
