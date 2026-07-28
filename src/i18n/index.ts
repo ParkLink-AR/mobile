@@ -1,6 +1,6 @@
-import castellano from './castellano.json';
-import english from './english.json';
-import japanese from './japanese.json';
+import castellano from './es/castellano.json';
+import english from './en/english.json';
+import japanese from './ja/japanese.json';
 
 type LangMap = Record<string, string>;
 

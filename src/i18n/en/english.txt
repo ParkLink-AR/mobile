@@ -2,4 +2,4 @@ auth.login.title=Log in
 auth.forgotPassword.title=Recover password
 auth.forgotPassword.note=If the email exists, you'll receive a link to reset your password.
 
-# See src/i18n/english.json for full keys
+# See src/i18n/en/english.json for full keys

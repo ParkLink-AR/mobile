@@ -2,4 +2,4 @@ auth.login.title=ログイン
 auth.forgotPassword.title=パスワードの回復
 auth.forgotPassword.note=メールアドレスが存在する場合、パスワードをリセットするためのリンクが届きます。
 
-# See src/i18n/japanese.json for full keys
+# See src/i18n/ja/japanese.json for full keys
