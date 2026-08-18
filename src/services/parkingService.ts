@@ -3,6 +3,8 @@ import { getMockParkingSpots } from '@/src/mocks/parkingSpots';
 import { delay, getDriverVisiblePrice } from './utils';
 import { t } from '@/src/i18n';
 
+const GATEWAY_URL = process.env.EXPO_PUBLIC_GATEWAY_URL ?? '';
+
 let extraSpots: ParkingSpot[] = [];
 let nextSpotId = getMockParkingSpots().length + 1;
 
@@ -60,10 +62,54 @@ export interface CreateParkingSpotInput {
   covered: boolean;
   pricePerHour: number;
   schedule?: string;
+  scheduleStartHour?: number;
+  scheduleEndHour?: number;
   description?: string;
 }
 
 export async function createParkingSpot(input: CreateParkingSpotInput): Promise<ParkingSpot> {
+  // Try the real parking-service via the gateway when configured.
+  if (GATEWAY_URL) {
+    const res = await fetch(`${GATEWAY_URL}/parking-spots`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: input.title,
+        address: input.address,
+        pricePerHour: input.pricePerHour,
+        description: input.description,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`parking-service error: ${res.status}`);
+    }
+    const data = await res.json();
+    // Map the server response to the local ParkingSpot shape.
+    const spot: ParkingSpot = {
+      id: data.id,
+      ownerId: data.ownerId ?? input.ownerId,
+      title: data.title,
+      address: data.address,
+      lat: data.location?.coordinates?.[1] ?? -34.6037,
+      lng: data.location?.coordinates?.[0] ?? -58.4263,
+      pricePerHour: data.pricePerHour,
+      photoUrl: 'https://loremflickr.com/400/300/parking,garage/all?lock=' + data.id,
+      covered: input.covered,
+      rating: 0,
+      reviewCount: 0,
+      tags: input.covered ? ['covered'] : ['uncovered'],
+      schedule: input.schedule || (input.covered ? t('spot.1.schedule') : t('spot.4.schedule')),
+      scheduleStartHour: 8,
+      scheduleEndHour: 22,
+      distanceMeters: Math.floor(Math.random() * 2000) + 300,
+      description: data.description || '',
+      active: true,
+    };
+    extraSpots.push(spot);
+    return spot;
+  }
+
+  // Fallback: in-memory mock (no gateway configured).
   const newSpot: ParkingSpot = {
     id: `spot-${nextSpotId++}`,
     ownerId: input.ownerId,
@@ -78,8 +124,8 @@ export async function createParkingSpot(input: CreateParkingSpotInput): Promise<
     reviewCount: 0,
     tags: input.covered ? ['covered'] : ['uncovered'],
     schedule: input.schedule || (input.covered ? t('spot.1.schedule') : t('spot.4.schedule')),
-    scheduleStartHour: 8,
-    scheduleEndHour: 22,
+    scheduleStartHour: input.scheduleStartHour ?? 8,
+    scheduleEndHour: input.scheduleEndHour ?? 22,
     distanceMeters: Math.floor(Math.random() * 2000) + 300,
     description: input.description || '',
     active: true,

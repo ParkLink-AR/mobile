@@ -1,7 +1,7 @@
 import { t } from '@/src/i18n';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Text, View, ScrollView, StyleSheet, Pressable, Image } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
 import { VerifiedBadge } from '@/src/components/VerifiedBadge';
@@ -41,6 +41,13 @@ export default function DriverProfile() {
     });
     if (user) getParkingSpotsForOwner(user.id).then(setMySpots);
   }, [language]);
+
+  // Re-fetch spots every time this tab comes into focus (e.g. after adding a new spot)
+  useFocusEffect(
+    useCallback(() => {
+      if (user) getParkingSpotsForOwner(user.id).then(setMySpots);
+    }, [user?.id])
+  );
 
   if (!user) return null;
 
@@ -126,6 +133,12 @@ export default function DriverProfile() {
     },
     spotsEmptyText: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
     spotsGrid: { gap: 12 },
+    addSpotBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      paddingHorizontal: 10, paddingVertical: 5,
+      borderRadius: 8, borderWidth: 1.5, borderColor: colors.teal,
+    },
+    addSpotBtnText: { fontSize: 12, fontWeight: '600', color: colors.teal },
   });
 
   return (
@@ -174,6 +187,13 @@ export default function DriverProfile() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{t('profile.mySpots')}</Text>
           <View style={styles.sectionLine} />
+          <Pressable
+            style={({ pressed }) => [styles.addSpotBtn, { opacity: pressed ? 0.75 : 1 }]}
+            onPress={() => router.push('/(owner)/spots/new')}
+          >
+            <Ionicons name="add" size={14} color={colors.teal} />
+            <Text style={styles.addSpotBtnText}>{t('profile.mySpots.add')}</Text>
+          </Pressable>
         </View>
         {mySpots.length === 0 ? (
           <View style={styles.spotsEmpty}>
