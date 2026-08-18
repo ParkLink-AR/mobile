@@ -5,6 +5,7 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSettingsStore } from '@/src/store/useSettingsStore';
+import { t, useLanguage } from '@/src/i18n';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -15,24 +16,27 @@ interface TabConfig {
   activeIcon: IoniconName;
 }
 
-const DRIVER_TABS: TabConfig[] = [
-  { name: 'index',    label: 'Buscar',   icon: 'search-outline',   activeIcon: 'search' },
-  { name: 'bookings', label: 'Reservas', icon: 'calendar-outline', activeIcon: 'calendar' },
-  { name: 'profile',  label: 'Perfil',   icon: 'person-outline',   activeIcon: 'person' },
+type TabKey = 'index' | 'bookings' | 'profile' | 'spots';
+
+const DRIVER_TAB_KEYS: { name: TabKey; labelKey: string; icon: IoniconName; activeIcon: IoniconName }[] = [
+  { name: 'index',    labelKey: 'tabs.driver.search',   icon: 'search-outline',   activeIcon: 'search' },
+  { name: 'bookings', labelKey: 'tabs.driver.bookings', icon: 'calendar-outline', activeIcon: 'calendar' },
+  { name: 'profile',  labelKey: 'tabs.driver.profile',  icon: 'person-outline',   activeIcon: 'person' },
 ];
 
-const OWNER_TABS: TabConfig[] = [
-  { name: 'index',    label: 'Inicio',   icon: 'home-outline',     activeIcon: 'home' },
-  { name: 'spots',    label: 'Cocheras', icon: 'car-outline',      activeIcon: 'car' },
-  { name: 'bookings', label: 'Reservas', icon: 'calendar-outline', activeIcon: 'calendar' },
-  { name: 'profile',  label: 'Perfil',   icon: 'person-outline',   activeIcon: 'person' },
+const OWNER_TAB_KEYS: { name: TabKey; labelKey: string; icon: IoniconName; activeIcon: IoniconName }[] = [
+  { name: 'index',    labelKey: 'tabs.owner.home',     icon: 'home-outline',     activeIcon: 'home' },
+  { name: 'spots',    labelKey: 'tabs.owner.spots',    icon: 'car-outline',      activeIcon: 'car' },
+  { name: 'bookings', labelKey: 'tabs.owner.bookings', icon: 'calendar-outline', activeIcon: 'calendar' },
+  { name: 'profile',  labelKey: 'tabs.owner.profile',  icon: 'person-outline',   activeIcon: 'person' },
 ];
 
 interface DockTabBarProps extends BottomTabBarProps {
-  tabConfigs: TabConfig[];
+  tabKeys: { name: string; labelKey: string; icon: IoniconName; activeIcon: IoniconName }[];
 }
 
-export function DockTabBar({ state, navigation, tabConfigs }: DockTabBarProps) {
+export function DockTabBar({ state, navigation, tabKeys }: DockTabBarProps) {
+  useLanguage();
   const colors = useThemeColors();
   const mode = useSettingsStore((s) => s.mode);
   const insets = useSafeAreaInsets();
@@ -50,7 +54,7 @@ export function DockTabBar({ state, navigation, tabConfigs }: DockTabBarProps) {
         style={[styles.blur, { backgroundColor: bgColor }]}
       >
         <View style={styles.inner}>
-          {tabConfigs.map((tab, index) => {
+          {tabKeys.map((tab, index) => {
             const route = state.routes[index];
             const focused = state.index === index;
 
@@ -80,7 +84,7 @@ export function DockTabBar({ state, navigation, tabConfigs }: DockTabBarProps) {
                   { color: focused ? '#ffffff' : 'rgba(255,255,255,0.60)' },
                   focused && styles.labelActive,
                 ]}>
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </Text>
               </Pressable>
             );
@@ -92,11 +96,11 @@ export function DockTabBar({ state, navigation, tabConfigs }: DockTabBarProps) {
 }
 
 export function DriverDockTabBar(props: BottomTabBarProps) {
-  return <DockTabBar {...props} tabConfigs={DRIVER_TABS} />;
+  return <DockTabBar {...props} tabKeys={DRIVER_TAB_KEYS} />;
 }
 
 export function OwnerDockTabBar(props: BottomTabBarProps) {
-  return <DockTabBar {...props} tabConfigs={OWNER_TABS} />;
+  return <DockTabBar {...props} tabKeys={OWNER_TAB_KEYS} />;
 }
 
 const styles = StyleSheet.create({
