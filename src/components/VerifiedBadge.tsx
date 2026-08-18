@@ -1,10 +1,12 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '@/src/theme/colors';
+import { t, useLanguage } from '@/src/i18n';
 
 export function VerifiedBadge() {
+  useLanguage();
   return (
     <View style={styles.badge}>
-      <Text style={styles.text}>✓ Perfil verificado</Text>
+      <Text style={styles.text}>{t('verifiedBadge.text')}</Text>
     </View>
   );
 }

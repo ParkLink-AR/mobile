@@ -4,17 +4,25 @@ import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { ParkingSpot } from '@/src/types';
+import { t, useLanguage } from '@/src/i18n';
 
-const TAG_ICONS: Record<string, string> = {
-  'Cubierta': '🅿️',
-  'Descubierta': '☀️',
-  'Acceso 24/7': '🕐',
-  'Segura': '🛡️',
+// Tag keys stored in mock data mapped to their i18n key and icon
+const TAG_KEY_MAP: Record<string, { i18nKey: string; icon: string }> = {
+  'covered':   { i18nKey: 'spot.tag.covered',  icon: '🅿️' },
+  'uncovered': { i18nKey: 'spot.tag.uncovered', icon: '☀️' },
+  'access247': { i18nKey: 'spot.tag.access247', icon: '🕐' },
+  'secure':    { i18nKey: 'spot.tag.secure',    icon: '🛡️' },
 };
+
+/** Exported so other screens can translate tag keys without icons */
+export const TAG_LABEL_KEYS: Record<string, string> = Object.fromEntries(
+  Object.entries(TAG_KEY_MAP).map(([k, v]) => [k, v.i18nKey])
+);
 
 export function ParkingSpotCard({ spot }: { spot: ParkingSpot }) {
   const colors = useThemeColors();
   const typography = useTypography();
+  useLanguage();
   const styles = StyleSheet.create({
     card: { padding: 0, overflow: 'hidden' },
     photo: { width: '100%', height: 130 },
@@ -40,7 +48,7 @@ export function ParkingSpotCard({ spot }: { spot: ParkingSpot }) {
           <Text style={typography.h2} numberOfLines={1}>
             {spot.title}
           </Text>
-          <Text style={styles.price}>${getDriverVisiblePrice(spot.pricePerHour)}/hora</Text>
+          <Text style={styles.price}>${getDriverVisiblePrice(spot.pricePerHour)}{t('spot.pricePerHour.short')}</Text>
         </View>
         <Text style={typography.caption} numberOfLines={1}>
           {spot.address}
@@ -49,13 +57,16 @@ export function ParkingSpotCard({ spot }: { spot: ParkingSpot }) {
           {spot.description}
         </Text>
         <View style={styles.tagRow}>
-          {spot.tags.map((tag) => (
-            <View key={tag} style={styles.tag}>
-              <Text style={styles.tagText}>
-                {TAG_ICONS[tag] ?? ''} {tag}
-              </Text>
-            </View>
-          ))}
+          {spot.tags.map((tag) => {
+            const entry = TAG_KEY_MAP[tag];
+            return (
+              <View key={tag} style={styles.tag}>
+                <Text style={styles.tagText}>
+                  {entry ? `${entry.icon} ${t(entry.i18nKey)}` : tag}
+                </Text>
+              </View>
+            );
+          })}
         </View>
         <View style={styles.footerRow}>
           <Text style={typography.caption}>

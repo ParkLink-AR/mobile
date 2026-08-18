@@ -1,8 +1,9 @@
-import { t } from '@/src/i18n';
+import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Chip } from '@/src/components/Chip';
+import { TAG_LABEL_KEYS } from '@/src/components/ParkingSpotCard';
 import { RatingStars } from '@/src/components/RatingStars';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -15,6 +16,7 @@ import { ParkingSpot } from '@/src/types';
 export default function SpotDetail() {
   const colors = useThemeColors();
   const typography = useTypography();
+  useLanguage();
   const { id, startHour, endHour } = useLocalSearchParams<{ id: string; startHour?: string; endHour?: string }>();
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
 
@@ -51,15 +53,15 @@ export default function SpotDetail() {
         </TouchableOpacity>
         <View style={styles.tagRow}>
           {spot.tags.map((tag) => (
-            <Chip key={tag} label={tag} />
+            <Chip key={tag} label={TAG_LABEL_KEYS[tag] ? t(TAG_LABEL_KEYS[tag]) : tag} />
           ))}
         </View>
-        <Row label=t('spot.address') value={spot.address} />
-        <Row label="Disponible" value={spot.schedule} />
-        <Row label="Precio" value={`$${visiblePricePerHour} por hora`} />
-        <Text style={styles.total}>Total ({reservedHours} hs): ${total}</Text>
+        <Row label={t('spot.address')} value={spot.address} />
+        <Row label={t('spot.available')} value={spot.schedule} />
+        <Row label={t('spot.pricePerHour')} value={t('spot.pricePerHour.withUnit', { price: String(visiblePricePerHour) })} />
+        <Text style={styles.total}>{t('spot.total', { hours: String(reservedHours), total: String(total) })}</Text>
         <Button
-          title="Reservar ahora"
+          title={t('spot.bookNow')}
           onPress={() =>
             router.push({
               pathname: '/(driver)/booking/confirm',

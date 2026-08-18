@@ -1,4 +1,4 @@
-import { t } from '@/src/i18n';
+import { t, useLanguage } from '@/src/i18n';
 import { Text, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { Card } from '@/src/components/Card';
@@ -10,6 +10,7 @@ import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 
 export default function OwnerProfile() {
+  useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);

@@ -1,4 +1,4 @@
-import { t } from '@/src/i18n';
+import { t, useLanguage } from '@/src/i18n';
 import { useState } from 'react';
 import { Text, TextInput, Image, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
@@ -10,6 +10,7 @@ import { loginAsDriver, loginAsOwner } from '@/src/services/authService';
 
 export default function Login() {
   const colors = useThemeColors();
+  useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const login = useSessionStore((s) => s.login);
@@ -54,18 +55,18 @@ export default function Login() {
       />
       <TextInput
         style={styles.input}
-        placeholder=t('auth.login.placeholder.password')
+        placeholder={t('auth.login.placeholder.password')}
         placeholderTextColor={colors.textSecondary}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
       />
-      <Button title=t('auth.login.button') onPress={handleLogin} />
+      <Button title={t('auth.login.button')} onPress={handleLogin} />
       <Text style={styles.link} onPress={() => router.push('/(auth)/register')}>
-        ¿No tenés cuenta? Registrate
+        {t('auth.login.noAccount')}
       </Text>
       <Text style={styles.link} onPress={() => router.push('/(auth)/forgot-password')}>
-        Olvidé mi contraseña
+        {t('auth.login.forgot')}
       </Text>
     </Screen>
   );

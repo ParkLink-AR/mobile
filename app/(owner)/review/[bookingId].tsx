@@ -1,4 +1,4 @@
-import { t } from '@/src/i18n';
+import { t, useLanguage } from '@/src/i18n';
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
@@ -8,6 +8,7 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 
 export default function OwnerReview() {
+  useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const [stars, setStars] = useState(5);
@@ -36,7 +37,7 @@ export default function OwnerReview() {
 
   return (
     <Screen style={styles.container}>
-      <Text style={typography.h1}>Calificar al conductor</Text>
+      <Text style={typography.h1}>{t('owner.review.title')}</Text>
       <View style={styles.starsRow}>
         {[1, 2, 3, 4, 5].map((n) => (
           <Pressable key={n} onPress={() => setStars(n)}>
@@ -46,13 +47,13 @@ export default function OwnerReview() {
       </View>
       <TextInput
         style={styles.input}
-        placeholder=t('driver.review.placeholder')
+        placeholder={t('driver.review.placeholder')}
         placeholderTextColor={colors.textSecondary}
         multiline
         value={comment}
         onChangeText={setComment}
       />
-      <Button title="Enviar calificación" onPress={submit} />
+      <Button title={t('driver.review.submit')} onPress={submit} />
     </Screen>
   );
 }

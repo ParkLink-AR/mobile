@@ -1,3 +1,4 @@
+import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
 import { View, Text, Image, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { AccountMenu } from '@/src/components/AccountMenu';
@@ -13,6 +14,7 @@ import { getSettlementsForOwner } from '@/src/services/paymentService';
 import { Booking } from '@/src/types';
 
 export default function OwnerHome() {
+  useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
@@ -53,15 +55,17 @@ export default function OwnerHome() {
           style={styles.headerLogo}
           resizeMode="contain"
         />
-        <Text style={[typography.h1, styles.headerGreeting]}>Hola, {user.name}</Text>
+        <Text style={[typography.h1, styles.headerGreeting]}>
+          {t('common.greeting.hello').replace('%{name}', user.name)}
+        </Text>
         <AccountMenu role="owner" />
       </View>
       <Card style={styles.earnings}>
-        <Text style={styles.earningsLabel}>Ganancias de este mes</Text>
+        <Text style={styles.earningsLabel}>{t('owner.home.earningsLabel')}</Text>
         <Text style={styles.earningsValue}>${monthTotal.toLocaleString('es-AR')}</Text>
-        <Text style={styles.earningsDelta}>▲ +12% vs. mes anterior</Text>
+        <Text style={styles.earningsDelta}>{t('owner.home.earningsDelta')}</Text>
       </Card>
-      <Text style={[typography.caption, styles.sectionTitle]}>PRÓXIMAS RESERVAS</Text>
+      <Text style={[typography.caption, styles.sectionTitle]}>{t('owner.home.upcomingBookings')}</Text>
       <FlatList
         data={bookings}
         keyExtractor={(item) => item.id}
@@ -75,7 +79,7 @@ export default function OwnerHome() {
               </View>
               <View style={styles.row}>
                 <Text style={typography.caption}>
-                  {item.date} · {item.startTime} a {item.endTime}
+                  {item.date} · {item.startTime} {t('driver.booking.timeTo')} {item.endTime}
                 </Text>
                 <Text style={styles.total}>${item.total}</Text>
               </View>

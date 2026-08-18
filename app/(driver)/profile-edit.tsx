@@ -1,4 +1,4 @@
-import { t } from '@/src/i18n';
+import { t, useLanguage } from '@/src/i18n';
 import { useState } from 'react';
 import { Text, TextInput, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
@@ -10,6 +10,7 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { updateProfile } from '@/src/services/authService';
 
 export default function DriverProfileEdit() {
+  useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user)!;
@@ -37,10 +38,10 @@ export default function DriverProfileEdit() {
 
   return (
     <Screen style={styles.container}>
-      <Text style={typography.h1}>Editar perfil</Text>
+      <Text style={typography.h1}>{t('profile.edit.title')}</Text>
       <TextInput style={styles.input} value={name} onChangeText={setName} />
       <TextInput style={styles.input} value={email} onChangeText={setEmail} autoCapitalize="none" />
-      <Button title=t('common.save') onPress={save} />
+      <Button title={t('common.save')} onPress={save} />
     </Screen>
   );
 }

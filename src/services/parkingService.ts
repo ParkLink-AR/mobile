@@ -1,9 +1,14 @@
 import { ParkingSpot } from '@/src/types';
-import { mockParkingSpots } from '@/src/mocks/parkingSpots';
+import { getMockParkingSpots } from '@/src/mocks/parkingSpots';
 import { delay, getDriverVisiblePrice } from './utils';
+import { t } from '@/src/i18n';
 
-let allParkingSpots = [...mockParkingSpots];
-let nextSpotId = allParkingSpots.length + 1;
+let extraSpots: ParkingSpot[] = [];
+let nextSpotId = getMockParkingSpots().length + 1;
+
+function getAllSpots(): ParkingSpot[] {
+  return [...getMockParkingSpots(), ...extraSpots];
+}
 
 export interface SearchParkingSpotsFilters {
   minPrice?: number;
@@ -17,7 +22,7 @@ export interface SearchParkingSpotsFilters {
 export async function searchParkingSpots(
   filters: SearchParkingSpotsFilters = {}
 ): Promise<ParkingSpot[]> {
-  let results = allParkingSpots.filter((s) => s.active);
+  let results = getAllSpots().filter((s) => s.active);
   if (filters.minPrice !== undefined) {
     results = results.filter((s) => getDriverVisiblePrice(s.pricePerHour) >= filters.minPrice!);
   }
@@ -41,11 +46,11 @@ export async function searchParkingSpots(
 export async function getParkingSpotDetail(
   id: string
 ): Promise<ParkingSpot | undefined> {
-  return delay(allParkingSpots.find((s) => s.id === id));
+  return delay(getAllSpots().find((s) => s.id === id));
 }
 
 export async function getParkingSpotsForOwner(ownerId: string): Promise<ParkingSpot[]> {
-  return delay(allParkingSpots.filter((s) => s.ownerId === ownerId));
+  return delay(getAllSpots().filter((s) => s.ownerId === ownerId));
 }
 
 export interface CreateParkingSpotInput {
@@ -71,15 +76,15 @@ export async function createParkingSpot(input: CreateParkingSpotInput): Promise<
     covered: input.covered,
     rating: 0,
     reviewCount: 0,
-    tags: input.covered ? ['Cubierta'] : ['Descubierta'],
-    schedule: input.schedule || (input.covered ? 'Lun a Vie, 8:00 a 22:00 hs' : 'Todos los días, 24 hs'),
+    tags: input.covered ? ['covered'] : ['uncovered'],
+    schedule: input.schedule || (input.covered ? t('spot.1.schedule') : t('spot.4.schedule')),
     scheduleStartHour: 8,
     scheduleEndHour: 22,
     distanceMeters: Math.floor(Math.random() * 2000) + 300,
     description: input.description || '',
     active: true,
   };
-  allParkingSpots.push(newSpot);
+  extraSpots.push(newSpot);
   return delay(newSpot);
 }
 
@@ -91,7 +96,7 @@ export interface UpdateParkingSpotInput {
 }
 
 export async function updateParkingSpot(id: string, updates: UpdateParkingSpotInput): Promise<ParkingSpot | undefined> {
-  const spot = allParkingSpots.find((s) => s.id === id);
+  const spot = getAllSpots().find((s) => s.id === id);
   if (!spot) return undefined;
 
   if (updates.scheduleStartHour !== undefined) spot.scheduleStartHour = updates.scheduleStartHour;
@@ -102,7 +107,7 @@ export async function updateParkingSpot(id: string, updates: UpdateParkingSpotIn
   if (updates.scheduleStartHour !== undefined || updates.scheduleEndHour !== undefined) {
     const start = updates.scheduleStartHour ?? spot.scheduleStartHour;
     const end = updates.scheduleEndHour ?? spot.scheduleEndHour;
-    spot.schedule = `Lun a Vie, ${String(start).padStart(2, '0')}:00 a ${String(end).padStart(2, '0')}:00 hs`;
+    spot.schedule = `${String(start).padStart(2, '0')}:00 – ${String(end).padStart(2, '0')}:00`;
   }
 
   return delay(spot);

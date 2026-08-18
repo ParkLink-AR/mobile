@@ -1,4 +1,4 @@
-import { t } from '@/src/i18n';
+import { t, useLanguage } from '@/src/i18n';
 import { useState } from 'react';
 import { Text, TextInput, Image, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
@@ -12,6 +12,7 @@ import { loginAsDriver } from '@/src/services/authService';
 export default function Register() {
   const colors = useThemeColors();
   const typography = useTypography();
+  useLanguage();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -43,10 +44,10 @@ export default function Register() {
         style={styles.logo}
         resizeMode="contain"
       />
-      <Text style={typography.h1}>Creá tu cuenta</Text>
+      <Text style={typography.h1}>{t('auth.register.title')}</Text>
       <TextInput
         style={styles.input}
-        placeholder="Nombre"
+        placeholder={t('auth.register.placeholder.name')}
         placeholderTextColor={colors.textSecondary}
         value={name}
         onChangeText={setName}
@@ -61,13 +62,13 @@ export default function Register() {
       />
       <TextInput
         style={styles.input}
-        placeholder=t('auth.login.placeholder.password')
+        placeholder={t('auth.register.placeholder.password')}
         placeholderTextColor={colors.textSecondary}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
       />
-      <Button title="Crear cuenta" onPress={handleRegister} />
+      <Button title={t('auth.register.button')} onPress={handleRegister} />
     </Screen>
   );
 }

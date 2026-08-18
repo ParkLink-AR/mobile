@@ -7,10 +7,12 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { createParkingSpot } from '@/src/services/parkingService';
+import { t, useLanguage } from '@/src/i18n';
 
 export default function NewSpot() {
   const colors = useThemeColors();
   const typography = useTypography();
+  useLanguage();
   const user = useSessionStore((s) => s.user);
   const [address, setAddress] = useState('');
   const [covered, setCovered] = useState(true);
@@ -21,7 +23,7 @@ export default function NewSpot() {
 
   async function publish() {
     if (!user || !address.trim() || !price.trim()) {
-      alert('Por favor completa los campos requeridos');
+      alert(t('owner.spot.new.requiredFields'));
       return;
     }
     
@@ -38,7 +40,7 @@ export default function NewSpot() {
       });
       router.back();
     } catch (error) {
-      alert('Error al publicar la cochera');
+      alert(t('owner.spot.new.errorPublish'));
       setPublishing(false);
     }
   }
@@ -83,32 +85,32 @@ export default function NewSpot() {
 
   return (
     <Screen style={styles.container}>
-      <Text style={typography.caption}>Fotos</Text>
+      <Text style={typography.caption}>{t('owner.spot.new.photos')}</Text>
       <Pressable style={styles.photoBox}>
         <Text style={styles.photoPlus}>+</Text>
-        <Text style={typography.caption}>Tocá para subir fotos</Text>
+        <Text style={typography.caption}>{t('owner.spot.new.photosTap')}</Text>
       </Pressable>
 
-      <Text style={typography.caption}>Dirección</Text>
+      <Text style={typography.caption}>{t('owner.spot.new.address')}</Text>
       <TextInput style={styles.input} value={address} onChangeText={setAddress} />
 
-      <Text style={typography.caption}>Tipo de cochera</Text>
+      <Text style={typography.caption}>{t('owner.spot.new.type')}</Text>
       <View style={styles.toggleRow}>
         <Pressable
           style={[styles.toggle, covered && styles.toggleActive]}
           onPress={() => setCovered(true)}
         >
-          <Text style={covered ? styles.toggleTextActive : styles.toggleText}>Cubierta</Text>
+          <Text style={covered ? styles.toggleTextActive : styles.toggleText}>{t('owner.spot.new.covered')}</Text>
         </Pressable>
         <Pressable
           style={[styles.toggle, !covered && styles.toggleActive]}
           onPress={() => setCovered(false)}
         >
-          <Text style={!covered ? styles.toggleTextActive : styles.toggleText}>Descubierta</Text>
+          <Text style={!covered ? styles.toggleTextActive : styles.toggleText}>{t('owner.spot.new.uncovered')}</Text>
         </Pressable>
       </View>
 
-      <Text style={typography.caption}>Precio por hora</Text>
+      <Text style={typography.caption}>{t('owner.spot.new.pricePerHour')}</Text>
       <TextInput
         style={styles.input}
         value={price}
@@ -118,26 +120,26 @@ export default function NewSpot() {
         placeholderTextColor={colors.textSecondary}
       />
 
-      <Text style={typography.caption}>Disponibilidad</Text>
+      <Text style={typography.caption}>{t('owner.spot.new.availability')}</Text>
       <TextInput
         style={styles.input}
         value={schedule}
         onChangeText={setSchedule}
-        placeholder="Lun a Vie · 8:00 a 22:00"
+        placeholder={t('owner.spot.new.availabilityPlaceholder')}
         placeholderTextColor={colors.textSecondary}
       />
 
-      <Text style={typography.caption}>Descripción</Text>
+      <Text style={typography.caption}>{t('owner.spot.new.description')}</Text>
       <TextInput
         style={[styles.input, styles.multiline]}
         value={description}
         onChangeText={setDescription}
         multiline
-        placeholder="Cochera amplia para auto mediano. Acceso por portón eléctrico."
+        placeholder={t('owner.spot.new.descriptionPlaceholder')}
         placeholderTextColor={colors.textSecondary}
       />
 
-      <Button title="Publicar cochera" onPress={publish} disabled={publishing} style={styles.button} />
+      <Button title={t('owner.spot.new.publish')} onPress={publish} disabled={publishing} style={styles.button} />
     </Screen>
   );
 }

@@ -1,6 +1,6 @@
 import { Booking, PaymentMethod, Settlement } from '@/src/types';
 import { mockSettlements } from '@/src/mocks/settlements';
-import { mockPaymentMethods } from '@/src/mocks/paymentMethods';
+import { getMockPaymentMethods } from '@/src/mocks/paymentMethods';
 import { delay } from './utils';
 import { cancelBooking, getBookingById } from './bookingService';
 
@@ -22,7 +22,7 @@ export async function getSettlementById(id: string): Promise<Settlement | undefi
 }
 
 export async function getPaymentMethods(): Promise<PaymentMethod[]> {
-  return delay(mockPaymentMethods);
+  return delay(getMockPaymentMethods());
 }
 
 export { cancelBooking };

@@ -7,10 +7,12 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { getParkingSpotDetail } from '@/src/services/parkingService';
 import { ParkingSpot } from '@/src/types';
+import { t, useLanguage } from '@/src/i18n';
 
 export default function EditSpot() {
   const colors = useThemeColors();
   const typography = useTypography();
+  useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [price, setPrice] = useState('');
@@ -49,16 +51,16 @@ export default function EditSpot() {
   return (
     <Screen style={styles.container}>
       <Text style={typography.h1}>{spot.title}</Text>
-      <Text style={typography.caption}>Precio por hora</Text>
+      <Text style={typography.caption}>{t('owner.spot.edit.pricePerHour')}</Text>
       <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="numeric" />
-      <Text style={typography.caption}>Descripción</Text>
+      <Text style={typography.caption}>{t('owner.spot.edit.description')}</Text>
       <TextInput
         style={[styles.input, styles.multiline]}
         value={description}
         onChangeText={setDescription}
         multiline
       />
-      <Button title="Guardar cambios" onPress={save} />
+      <Button title={t('owner.spot.edit.save')} onPress={save} />
     </Screen>
   );
 }

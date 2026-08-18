@@ -24,6 +24,7 @@ import { useSettingsStore } from '@/src/store/useSettingsStore';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { searchParkingSpots, SearchParkingSpotsFilters } from '@/src/services/parkingService';
 import { ParkingSpot } from '@/src/types';
+import { t, useLanguage } from '@/src/i18n';
 
 const DISTANCE_OPTIONS = [
   { label: '< 500 m', value: 500 },
@@ -48,6 +49,7 @@ function pinPosition(id: string): { top: `${number}%`; left: `${number}%` } {
 export default function Search() {
   const colors = useThemeColors();
   const typography = useTypography();
+  useLanguage();
   const mode = useSettingsStore((s) => s.mode);
   const user = useSessionStore((s) => s.user);
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
@@ -238,14 +240,14 @@ export default function Search() {
           style={styles.headerLogo}
           resizeMode="contain"
         />
-        <Text style={[typography.h1, styles.headerGreeting]}>Hola, {user?.name}</Text>
+        <Text style={[typography.h1, styles.headerGreeting]}>{t('search.greeting', { name: user?.name ?? '' })}</Text>
         <AccountMenu role="driver" />
       </View>
 
       <View style={styles.searchBar}>
         <TextInput
           style={styles.searchInput}
-          placeholder="¿Dónde querés estacionar?"
+          placeholder={t('search.placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={addressInput}
           onChangeText={setAddressInput}
@@ -253,25 +255,25 @@ export default function Search() {
           returnKeyType="search"
         />
         <TouchableOpacity style={styles.searchButton} onPress={handleSearchAddress}>
-          <Text style={styles.searchButtonText}>Buscar</Text>
+          <Text style={styles.searchButtonText}>{t('search.button')}</Text>
         </TouchableOpacity>
       </View>
       {searchAddress && (
         <View style={styles.filterRow}>
-          <Chip label={`📍 Cerca de: ${searchAddress}`} onRemove={clearSearchAddress} />
+          <Chip label={t('search.nearBy', { address: searchAddress ?? '' })} onRemove={clearSearchAddress} />
         </View>
       )}
 
       <View style={styles.filterRow}>
-        <Chip label="⚙ Filtros" selected={activeChips.length > 0} onPress={openFilters} />
+        <Chip label={t('search.filters')} selected={activeChips.length > 0} onPress={openFilters} />
         {activeChips.map((chip) => (
           <Chip key={chip.label} label={chip.label} onRemove={chip.onRemove} />
         ))}
       </View>
 
       <View style={styles.filterRow}>
-        <Chip label="☰ Lista" selected={viewMode === 'list'} onPress={() => setViewMode('list')} />
-        <Chip label="🗺 Mapa" selected={viewMode === 'map'} onPress={() => setViewMode('map')} />
+        <Chip label={t('search.viewList')} selected={viewMode === 'list'} onPress={() => setViewMode('list')} />
+        <Chip label={t('search.viewMap')} selected={viewMode === 'map'} onPress={() => setViewMode('map')} />
       </View>
 
       {viewMode === 'list' ? (
@@ -341,7 +343,7 @@ export default function Search() {
             {editingTime ? (
               <View style={styles.timeEditor}>
                 <Text style={typography.h2}>
-                  {editingTime === 'start' ? 'Desde qué hora' : 'Hasta qué hora'}
+                  {editingTime === 'start' ? t('search.filters.fromHour') : t('search.filters.untilHour')}
                 </Text>
                 <DateTimePicker
                   value={editingTime === 'start' ? startTime : endTime}
@@ -353,17 +355,17 @@ export default function Search() {
                     else setEndTime(date);
                   }}
                 />
-                <Button title="Listo" onPress={() => setEditingTime(null)} />
+                <Button title={t('search.filters.done')} onPress={() => setEditingTime(null)} />
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={typography.h1}>Filtros</Text>
+                <Text style={typography.h1}>{t('search.filters.title')}</Text>
 
-                <Text style={[typography.caption, styles.sectionTitle]}>PRECIO POR HORA</Text>
+                <Text style={[typography.caption, styles.sectionTitle]}>{t('search.filters.pricePerHour')}</Text>
                 <View style={styles.row}>
                   <TextInput
                     style={[styles.input, styles.halfInput]}
-                    placeholder="Mínimo"
+                    placeholder={t('search.filters.minPrice')}
                     placeholderTextColor={colors.textSecondary}
                     keyboardType="numeric"
                     value={minPriceInput}
@@ -371,7 +373,7 @@ export default function Search() {
                   />
                   <TextInput
                     style={[styles.input, styles.halfInput]}
-                    placeholder="Máximo"
+                    placeholder={t('search.filters.maxPrice')}
                     placeholderTextColor={colors.textSecondary}
                     keyboardType="numeric"
                     value={maxPriceInput}
@@ -379,26 +381,26 @@ export default function Search() {
                   />
                 </View>
 
-                <Text style={[typography.caption, styles.sectionTitle]}>HORARIO NECESITADO</Text>
+                <Text style={[typography.caption, styles.sectionTitle]}>{t('search.filters.schedule')}</Text>
                 <Chip
-                  label={scheduleEnabled ? '🕐 Horario activado' : '🕐 Filtrar por horario'}
+                  label={scheduleEnabled ? t('search.filters.scheduleEnabled') : t('search.filters.scheduleFilter')}
                   selected={scheduleEnabled}
                   onPress={() => setScheduleEnabled((v) => !v)}
                 />
                 {scheduleEnabled && (
                   <View style={styles.timeButtonsRow}>
                     <TouchableOpacity style={styles.timeButton} onPress={() => setEditingTime('start')}>
-                      <Text style={typography.caption}>Desde</Text>
+                      <Text style={typography.caption}>{t('search.filters.from')}</Text>
                       <Text style={styles.timeValue}>{formatTime(startTime)}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.timeButton} onPress={() => setEditingTime('end')}>
-                      <Text style={typography.caption}>Hasta</Text>
+                      <Text style={typography.caption}>{t('search.filters.until')}</Text>
                       <Text style={styles.timeValue}>{formatTime(endTime)}</Text>
                     </TouchableOpacity>
                   </View>
                 )}
 
-                <Text style={[typography.caption, styles.sectionTitle]}>DISTANCIA</Text>
+                <Text style={[typography.caption, styles.sectionTitle]}>{t('search.filters.distance')}</Text>
                 <View style={styles.filterRow}>
                   {DISTANCE_OPTIONS.map((option) => (
                     <Chip
@@ -412,9 +414,9 @@ export default function Search() {
                   ))}
                 </View>
 
-                <Button title="Aplicar filtros" onPress={applyFilters} style={styles.applyButton} />
+                <Button title={t('search.filters.apply')} onPress={applyFilters} style={styles.applyButton} />
                 <Text style={styles.clearLink} onPress={clearFilters}>
-                  Limpiar filtros
+                  {t('search.filters.clear')}
                 </Text>
               </ScrollView>
             )}
