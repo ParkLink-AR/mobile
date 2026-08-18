@@ -19,6 +19,8 @@ export default function DriverLayout() {
       <Stack.Screen name="bookings/[id]" options={{ title: t('layout.driver.bookingDetail') }} />
       <Stack.Screen name="review/[bookingId]" options={{ title: t('layout.driver.review') }} />
       <Stack.Screen name="profile-edit" options={{ title: t('driver.profile.edit') }} />
+      <Stack.Screen name="change-email" options={{ title: t('changeEmail.title') }} />
+      <Stack.Screen name="change-phone" options={{ title: t('changePhone.title') }} />
       <Stack.Screen name="settings" options={{ title: t('owner.settings.title') }} />
     </Stack>
   );

@@ -31,6 +31,7 @@ interface UserOutResponse {
   last_name?: string | null;
   dni?: string | null;
   email_verified: boolean;
+  phone_verified: boolean;
 }
 
 function toAuthUser(u: UserOutResponse): AuthUser {
@@ -42,6 +43,7 @@ function toAuthUser(u: UserOutResponse): AuthUser {
     phone: u.phone ?? '',
     dni: u.dni ?? undefined,
     emailVerified: u.email_verified,
+    phoneVerified: u.phone_verified,
   };
 }
 
@@ -171,4 +173,52 @@ export async function logout(refreshToken: string): Promise<void> {
     method: 'POST',
     body: JSON.stringify({ refresh_token: refreshToken }),
   });
+}
+
+// -------------------------
+// Profile: name, and the (separately verified) email/phone changes
+// -------------------------
+
+export async function updateUserProfile(
+  userId: string,
+  updates: { firstName?: string; lastName?: string }
+): Promise<AuthUser> {
+  const body: Record<string, string> = {};
+  if (updates.firstName !== undefined) body.first_name = updates.firstName;
+  if (updates.lastName !== undefined) body.last_name = updates.lastName;
+  const userResponse = await request<UserOutResponse>(`/users/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+  return toAuthUser(userResponse);
+}
+
+export async function requestEmailChange(userId: string, newEmail: string): Promise<void> {
+  await request(`/users/${userId}/email`, {
+    method: 'POST',
+    body: JSON.stringify({ new_email: newEmail }),
+  });
+}
+
+export async function confirmEmailChange(userId: string, code: string): Promise<AuthUser> {
+  const userResponse = await request<UserOutResponse>(`/users/${userId}/email/confirm`, {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+  return toAuthUser(userResponse);
+}
+
+export async function requestPhoneChange(userId: string, newPhone: string): Promise<void> {
+  await request(`/users/${userId}/phone`, {
+    method: 'POST',
+    body: JSON.stringify({ new_phone: newPhone }),
+  });
+}
+
+export async function confirmPhoneChange(userId: string, code: string): Promise<AuthUser> {
+  const userResponse = await request<UserOutResponse>(`/users/${userId}/phone/confirm`, {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+  return toAuthUser(userResponse);
 }

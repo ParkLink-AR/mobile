@@ -8,6 +8,7 @@ const mockAuthUser: AuthUser = {
   email: 'martin@example.com',
   phone: '+5491100000000',
   emailVerified: true,
+  phoneVerified: true,
 };
 
 const mockTokens: AuthTokens = {

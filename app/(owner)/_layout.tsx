@@ -19,6 +19,8 @@ export default function OwnerLayout() {
       <Stack.Screen name="settlements/[id]" options={{ title: t('layout.owner.settlementDetail') }} />
       <Stack.Screen name="review/[bookingId]" options={{ title: t('layout.owner.review') }} />
       <Stack.Screen name="profile-edit" options={{ title: t('driver.profile.edit') }} />
+      <Stack.Screen name="change-email" options={{ title: t('changeEmail.title') }} />
+      <Stack.Screen name="change-phone" options={{ title: t('changePhone.title') }} />
       <Stack.Screen name="settings" options={{ title: t('owner.settings.title') }} />
     </Stack>
   );

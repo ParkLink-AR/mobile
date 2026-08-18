@@ -27,6 +27,7 @@ export interface AuthUser {
   dni?: string;
   avatarUrl?: string;
   emailVerified: boolean;
+  phoneVerified: boolean;
 }
 
 export interface AuthTokens {

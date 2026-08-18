@@ -42,6 +42,7 @@ export default function Register() {
 
   const [step, setStep] = useState<Step>('email');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [registrationComplete, setRegistrationComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -208,7 +209,7 @@ export default function Register() {
         birthDate: birthDate.toISOString().slice(0, 10),
         password,
       });
-      router.replace({ pathname: '/(auth)/login', params: { email } });
+      setRegistrationComplete(true);
     } catch (err) {
       handleApiError(err, 'No se pudo crear la cuenta.');
     } finally {
@@ -266,6 +267,8 @@ export default function Register() {
     successWrap: { alignItems: 'center', gap: 12, paddingVertical: 40 },
     successCheck: { fontSize: 48, color: colors.teal },
     successText: { fontSize: 16, fontWeight: '600', color: colors.text },
+    successButton: { alignSelf: 'stretch', marginTop: 12 },
+    successCenteredText: { textAlign: 'center' },
     dateButton: {
       borderWidth: 1,
       borderColor: colors.border,
@@ -274,6 +277,23 @@ export default function Register() {
     },
     dateButtonText: { fontSize: 15, color: birthDate ? colors.text : colors.textSecondary },
   });
+
+  if (registrationComplete) {
+    return (
+      <Screen style={styles.container}>
+        <View style={styles.successWrap}>
+          <Text style={styles.successCheck}>✓</Text>
+          <Text style={[typography.h1, styles.successCenteredText]}>{t('register.success.title')}</Text>
+          <Text style={[typography.body, styles.successCenteredText]}>{t('register.success.message')}</Text>
+          <Button
+            title={t('register.success.button')}
+            onPress={() => router.replace({ pathname: '/(auth)/login', params: { email } })}
+            style={styles.successButton}
+          />
+        </View>
+      </Screen>
+    );
+  }
 
   if (successMessage) {
     return (

@@ -11,6 +11,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -20,7 +21,8 @@ import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { updateProfile } from '@/src/services/authService';
+import { updateUserProfile } from '@/src/api/auth';
+import { ApiError } from '@/src/api/client';
 
 export default function DriverProfileEdit() {
   useLanguage();
@@ -30,9 +32,9 @@ export default function DriverProfileEdit() {
   const setUser = useSessionStore((s) => s.setUser);
   const [name, setName] = useState(user.name);
   const [lastName, setLastName] = useState(user.lastName ?? '');
-  const [email, setEmail] = useState(user.email);
-  const [phone, setPhone] = useState(user.phone ?? '');
   const [avatarUri, setAvatarUri] = useState<string | undefined>(user.avatarUrl);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   async function pickImage() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -53,15 +55,21 @@ export default function DriverProfileEdit() {
   }
 
   async function save() {
-    const updated = await updateProfile(user, {
-      name: name.trim(),
-      lastName: lastName.trim(),
-      email: email.trim(),
-      phone: phone.trim(),
-      avatarUrl: avatarUri,
-    });
-    setUser(updated);
-    router.back();
+    setError(null);
+    setSaving(true);
+    try {
+      const updated = await updateUserProfile(user.id, {
+        firstName: name.trim(),
+        lastName: lastName.trim(),
+      });
+      // Avatar isn't persisted server-side yet -- keep it merged in locally.
+      setUser({ ...updated, avatarUrl: avatarUri });
+      router.back();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : 'No se pudo guardar los cambios.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   const initials = [name.trim()[0], lastName.trim()[0]]
@@ -97,6 +105,17 @@ export default function DriverProfileEdit() {
     },
     row: { flexDirection: 'row', gap: 12 },
     rowItem: { flex: 1 },
+    error: { color: '#C62828', fontSize: 13 },
+
+    readOnlyRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      borderWidth: 1, borderColor: colors.border, borderRadius: 10,
+      padding: 13, backgroundColor: colors.background, gap: 10,
+    },
+    readOnlyInfo: { flex: 1, gap: 2 },
+    readOnlyValue: { fontSize: 15, color: colors.text },
+    verifiedText: { fontSize: 11, fontWeight: '700', color: colors.success },
+    changeLink: { fontSize: 13, fontWeight: '600', color: colors.teal },
   });
 
   return (
@@ -104,6 +123,7 @@ export default function DriverProfileEdit() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Text style={typography.h1}>{t('profile.edit.title')}</Text>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
 
           {/* Avatar */}
           <View style={styles.avatarSection}>
@@ -146,34 +166,40 @@ export default function DriverProfileEdit() {
             </View>
           </View>
 
-          {/* Email */}
+          {/* Email -- changing it requires verifying the new address, so it
+              lives in its own screen instead of this combined form. */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>{t('profile.edit.email')}</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholder={t('profile.edit.email')}
-              placeholderTextColor={colors.textSecondary}
-            />
+            <View style={styles.readOnlyRow}>
+              <View style={styles.readOnlyInfo}>
+                <Text style={styles.readOnlyValue}>{user.email}</Text>
+                {user.emailVerified && <Text style={styles.verifiedText}>{t('profile.edit.verified')}</Text>}
+              </View>
+              <Text style={styles.changeLink} onPress={() => router.push('/(driver)/change-email')}>
+                {t('profile.edit.changeEmail')}
+              </Text>
+            </View>
           </View>
 
-          {/* Phone */}
+          {/* Phone -- same reasoning, verified via SMS in its own screen. */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>{t('profile.edit.phone')}</Text>
-            <TextInput
-              style={styles.input}
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-              placeholder="+54 9 11 0000-0000"
-              placeholderTextColor={colors.textSecondary}
-            />
+            <View style={styles.readOnlyRow}>
+              <View style={styles.readOnlyInfo}>
+                <Text style={styles.readOnlyValue}>{user.phone || '—'}</Text>
+                {user.phoneVerified && <Text style={styles.verifiedText}>{t('profile.edit.verified')}</Text>}
+              </View>
+              <Text style={styles.changeLink} onPress={() => router.push('/(driver)/change-phone')}>
+                {t('profile.edit.changePhone')}
+              </Text>
+            </View>
           </View>
 
-          <Button title={t('common.save')} onPress={save} />
+          {saving ? (
+            <ActivityIndicator color={colors.teal} />
+          ) : (
+            <Button title={t('common.save')} onPress={save} />
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
