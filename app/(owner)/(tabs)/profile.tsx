@@ -45,7 +45,7 @@ export default function OwnerProfile() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    scrollContent: { padding: 16, paddingBottom: 100, gap: 16 },
+    scrollContent: { padding: 16, paddingBottom: 120, gap: 16 },
 
     profileCard: {
       backgroundColor: colors.surface, borderRadius: 16, padding: 20,

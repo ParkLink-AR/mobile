@@ -280,7 +280,7 @@ export default function Search() {
         <FlatList
           data={spots}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ gap: 10 }}
+          contentContainerStyle={{ gap: 10, paddingBottom: 120 }}
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => router.push({
               pathname: `/(driver)/spot/${item.id}`,
