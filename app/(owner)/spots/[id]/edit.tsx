@@ -59,6 +59,11 @@ export default function EditSpot() {
       alert(t('owner.spot.edit.invalidPrice'));
       return;
     }
+    const DAY_LABELS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
+    const fmt = (h: number) => `${String(h).padStart(2, '0')}:00`;
+    const scheduleString = schedule
+      .map((d) => `${DAY_LABELS[d.dayIndex]} ${fmt(d.startHour)}–${fmt(d.endHour)}`)
+      .join(', ');
     const globalStart = Math.min(...schedule.map((d) => d.startHour));
     const globalEnd = Math.max(...schedule.map((d) => d.endHour));
     try {
@@ -68,6 +73,8 @@ export default function EditSpot() {
         description: description.trim(),
         scheduleStartHour: globalStart,
         scheduleEndHour: globalEnd,
+        activeDays: schedule,
+        schedule: scheduleString,
       });
       if (updated) setSpot(updated);
       router.back();

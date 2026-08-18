@@ -5,11 +5,19 @@ import { t } from '@/src/i18n';
 
 const GATEWAY_URL = process.env.EXPO_PUBLIC_GATEWAY_URL ?? '';
 
+// Mutable cache of the mock spots — seeded once so in-place mutations from
+// updateParkingSpot() are visible to subsequent reads within the same session.
+let mockSpots: ParkingSpot[] | null = null;
+function getBaseSpots(): ParkingSpot[] {
+  if (!mockSpots) mockSpots = getMockParkingSpots();
+  return mockSpots;
+}
+
 let extraSpots: ParkingSpot[] = [];
-let nextSpotId = getMockParkingSpots().length + 1;
+let nextSpotId = getBaseSpots().length + 1;
 
 function getAllSpots(): ParkingSpot[] {
-  return [...getMockParkingSpots(), ...extraSpots];
+  return [...getBaseSpots(), ...extraSpots];
 }
 
 export interface SearchParkingSpotsFilters {
@@ -139,6 +147,9 @@ export interface UpdateParkingSpotInput {
   scheduleEndHour?: number;
   pricePerHour?: number;
   description?: string;
+  /** Per-day schedule; stored on the spot object so the edit screen can reload it. */
+  activeDays?: Array<{ dayIndex: number; startHour: number; endHour: number }>;
+  schedule?: string;
 }
 
 export async function updateParkingSpot(id: string, updates: UpdateParkingSpotInput): Promise<ParkingSpot | undefined> {
@@ -149,8 +160,9 @@ export async function updateParkingSpot(id: string, updates: UpdateParkingSpotIn
   if (updates.scheduleEndHour !== undefined) spot.scheduleEndHour = updates.scheduleEndHour;
   if (updates.pricePerHour !== undefined) spot.pricePerHour = updates.pricePerHour;
   if (updates.description !== undefined) spot.description = updates.description;
-
-  if (updates.scheduleStartHour !== undefined || updates.scheduleEndHour !== undefined) {
+  if (updates.activeDays !== undefined) (spot as any).activeDays = updates.activeDays;
+  if (updates.schedule !== undefined) spot.schedule = updates.schedule;
+  else if (updates.scheduleStartHour !== undefined || updates.scheduleEndHour !== undefined) {
     const start = updates.scheduleStartHour ?? spot.scheduleStartHour;
     const end = updates.scheduleEndHour ?? spot.scheduleEndHour;
     spot.schedule = `${String(start).padStart(2, '0')}:00 – ${String(end).padStart(2, '0')}:00`;
