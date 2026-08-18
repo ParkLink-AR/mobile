@@ -3,7 +3,10 @@ export type UserRole = 'driver' | 'owner';
 export interface User {
   id: string;
   name: string;
+  lastName: string;
   email: string;
+  phone: string;
+  avatarUrl?: string;
   role: UserRole;
   avatarInitials: string;
 }

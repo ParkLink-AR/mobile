@@ -11,5 +11,13 @@ export async function loginAsOwner(): Promise<User> {
 }
 
 export async function updateProfile(user: User, changes: Partial<User>): Promise<User> {
-  return delay({ ...user, ...changes });
+  // Recompute initials when name or lastName changes
+  const updatedUser = { ...user, ...changes };
+  const firstName = updatedUser.name?.trim() || '';
+  const lastName = updatedUser.lastName?.trim() || '';
+  updatedUser.avatarInitials = [firstName[0], lastName[0]]
+    .filter(Boolean)
+    .map((c) => c.toUpperCase())
+    .join('');
+  return delay(updatedUser);
 }

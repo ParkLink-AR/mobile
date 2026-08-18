@@ -1,6 +1,6 @@
 import { t } from '@/src/i18n';
 import { useEffect, useState } from 'react';
-import { Text, View, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { Text, View, ScrollView, StyleSheet, Pressable, Image } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
@@ -44,9 +44,10 @@ export default function DriverProfile() {
 
   if (!user) return null;
 
-  const initials = user.name
-    .split(' ').slice(0, 2)
-    .map((w: string) => w[0]?.toUpperCase() ?? '').join('');
+  const initials = [user.name, user.lastName]
+    .filter(Boolean)
+    .map((w: string) => w[0]?.toUpperCase() ?? '')
+    .join('');
 
   const isDark = mode === 'dark';
 
@@ -135,10 +136,14 @@ export default function DriverProfile() {
         {/* Profile card */}
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
+            {user.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={{ width: 64, height: 64, borderRadius: 32 }} />
+            ) : (
+              <Text style={styles.avatarText}>{initials}</Text>
+            )}
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{user.name}</Text>
+            <Text style={styles.profileName}>{[user.name, user.lastName].filter(Boolean).join(' ')}</Text>
             <Text style={styles.profileEmail}>{user.email}</Text>
             <VerifiedBadge />
           </View>
