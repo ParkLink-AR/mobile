@@ -56,6 +56,12 @@ export default function SpotDetail() {
             <Chip key={tag} label={TAG_LABEL_KEYS[tag] ? t(TAG_LABEL_KEYS[tag]) : tag} />
           ))}
         </View>
+        {(spot.descriptionKey || spot.description) ? (
+          <Row
+            label={t('spot.description')}
+            value={spot.descriptionKey ? t(spot.descriptionKey) : spot.description}
+          />
+        ) : null}
         <Row label={t('spot.address')} value={spot.address} />
         <Row label={t('spot.available')} value={spot.schedule} />
         <Row label={t('spot.pricePerHour')} value={t('spot.pricePerHour.withUnit', { price: String(visiblePricePerHour) })} />

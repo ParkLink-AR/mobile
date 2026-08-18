@@ -29,6 +29,7 @@ export interface ParkingSpot {
   scheduleEndHour: number;
   distanceMeters: number;
   description: string;
+  descriptionKey?: string;
   active: boolean;
 }
 

@@ -24,7 +24,8 @@ export function getMockParkingSpots(): ParkingSpot[] {
       scheduleStartHour: 8,
       scheduleEndHour: 22,
       distanceMeters: 350,
-      description: t('spot.1.description'),
+      descriptionKey: 'spot.1.description',
+      description: '',
       active: true,
     },
     {
@@ -44,7 +45,8 @@ export function getMockParkingSpots(): ParkingSpot[] {
       scheduleStartHour: 7,
       scheduleEndHour: 23,
       distanceMeters: 500,
-      description: t('spot.2.description'),
+      descriptionKey: 'spot.2.description',
+      description: '',
       active: true,
     },
     {
@@ -64,7 +66,8 @@ export function getMockParkingSpots(): ParkingSpot[] {
       scheduleStartHour: 8,
       scheduleEndHour: 20,
       distanceMeters: 900,
-      description: t('spot.3.description'),
+      descriptionKey: 'spot.3.description',
+      description: '',
       active: true,
     },
     {
@@ -84,7 +87,8 @@ export function getMockParkingSpots(): ParkingSpot[] {
       scheduleStartHour: 0,
       scheduleEndHour: 24,
       distanceMeters: 1200,
-      description: t('spot.4.description'),
+      descriptionKey: 'spot.4.description',
+      description: '',
       active: true,
     },
     {
@@ -104,7 +108,8 @@ export function getMockParkingSpots(): ParkingSpot[] {
       scheduleStartHour: 6,
       scheduleEndHour: 22,
       distanceMeters: 1500,
-      description: t('spot.5.description'),
+      descriptionKey: 'spot.5.description',
+      description: '',
       active: true,
     },
     {
@@ -124,7 +129,8 @@ export function getMockParkingSpots(): ParkingSpot[] {
       scheduleStartHour: 0,
       scheduleEndHour: 24,
       distanceMeters: 400,
-      description: t('spot.6.description'),
+      descriptionKey: 'spot.6.description',
+      description: '',
       active: true,
     },
     {
@@ -144,7 +150,8 @@ export function getMockParkingSpots(): ParkingSpot[] {
       scheduleStartHour: 8,
       scheduleEndHour: 21,
       distanceMeters: 600,
-      description: t('spot.7.description'),
+      descriptionKey: 'spot.7.description',
+      description: '',
       active: true,
     },
     {
@@ -164,7 +171,8 @@ export function getMockParkingSpots(): ParkingSpot[] {
       scheduleStartHour: 7,
       scheduleEndHour: 19,
       distanceMeters: 2000,
-      description: t('spot.8.description'),
+      descriptionKey: 'spot.8.description',
+      description: '',
       active: true,
     },
   ];
