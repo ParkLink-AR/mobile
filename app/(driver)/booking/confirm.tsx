@@ -1,4 +1,4 @@
-import { t } from '@/src/i18n';
+import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -16,6 +16,7 @@ import { getDriverVisiblePrice } from '@/src/services/utils';
 import { Booking, ParkingSpot, PaymentMethod } from '@/src/types';
 
 export default function ConfirmBooking() {
+  useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const { spotId, hours } = useLocalSearchParams<{ spotId: string; hours: string }>();
@@ -35,7 +36,7 @@ export default function ConfirmBooking() {
         parkingSpot: s,
         driverId: user.id,
         driverName: user.name,
-        date: 'Hoy',
+        date: t('driver.booking.today'),
         startTime: '14:00',
         endTime: '17:00',
         hours: Number(hours),
@@ -75,13 +76,13 @@ export default function ConfirmBooking() {
           <Text style={typography.h2}>{spot.title}</Text>
           <Text style={typography.caption}>{spot.address}</Text>
         </Card>
-        <Text style={[typography.caption, styles.sectionTitle]}>RESUMEN</Text>
-        <Row label="Fecha" value={booking.date} />
-        <Row label="Horario" value={`${booking.startTime} a ${booking.endTime}`} />
+        <Text style={[typography.caption, styles.sectionTitle]}>{t('driver.booking.summary')}</Text>
+        <Row label={t('driver.booking.date')} value={booking.date} />
+        <Row label={t('driver.booking.time')} value={`${booking.startTime} ${t('driver.booking.timeTo')} ${booking.endTime}`} />
         <Row label={t('driver.booking.pricePerHour')} value={`$${visiblePricePerHour}`} />
-        <Row label="Cantidad de horas" value={`${booking.hours} hs`} />
-        <Row label="Total" value={`$${booking.total}`} bold />
-        <Text style={[typography.caption, styles.sectionTitle]}>MÉTODO DE PAGO</Text>
+        <Row label={t('driver.booking.hours')} value={`${booking.hours} ${t('driver.booking.hoursUnit')}`} />
+        <Row label={t('driver.booking.total')} value={`$${booking.total}`} bold />
+        <Text style={[typography.caption, styles.sectionTitle]}>{t('driver.booking.methodPayment')}</Text>
         <PaymentMethodPicker
           methods={paymentMethods}
           selectedId={selectedMethodId}
@@ -90,10 +91,10 @@ export default function ConfirmBooking() {
         <Button
           title={
             paying
-              ? 'Procesando...'
+              ? t('driver.booking.processing')
               : isCash
-                ? `Confirmar reserva · $${booking.total}`
-                : `Pagar y confirmar · $${booking.total}`
+                ? t('driver.booking.confirmCash').replace('%{total}', String(booking.total))
+                : t('driver.booking.confirmPay').replace('%{total}', String(booking.total))
           }
           onPress={confirmAndPay}
           disabled={paying}

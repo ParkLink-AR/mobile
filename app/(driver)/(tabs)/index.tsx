@@ -10,9 +10,11 @@ import {
   TextInput,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Chip } from '@/src/components/Chip';
 import { Button } from '@/src/components/Button';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
@@ -20,11 +22,11 @@ import { AccountMenu } from '@/src/components/AccountMenu';
 import { Screen } from '@/src/components/Screen';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
 import { useSettingsStore } from '@/src/store/useSettingsStore';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { searchParkingSpots, SearchParkingSpotsFilters } from '@/src/services/parkingService';
 import { ParkingSpot } from '@/src/types';
+import { t, useLanguage } from '@/src/i18n';
 
 const DISTANCE_OPTIONS = [
   { label: '< 500 m', value: 500 },
@@ -44,7 +46,7 @@ function pinPosition(id: string): { top: `${number}%`; left: `${number}%` } {
 
 export default function Search() {
   const colors = useThemeColors();
-  const typography = useTypography();
+  useLanguage();
   const mode = useSettingsStore((s) => s.mode);
   const user = useSessionStore((s) => s.user);
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
@@ -124,7 +126,7 @@ export default function Search() {
   }
   if (filters.covered) {
     activeChips.push({
-      label: 'Cubierta',
+      label: t('search.filters.coveredOnly'),
       onRemove: () => setFilters((f) => ({ ...f, covered: undefined })),
     });
   }
@@ -136,14 +138,50 @@ export default function Search() {
   }
 
   const selectedSpot = spots.find((s) => s.id === selectedSpotId) ?? null;
+  const hasActiveFilters = activeChips.length > 0;
 
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
-    headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    headerLogo: { width: 36, height: 27 },
-    headerGreeting: { flex: 1 },
-    filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 0 },
-    locationBar: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    // ── Header ──────────────────────────────────────────────────────────────
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      paddingBottom: 14,
+      gap: 12,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    headerLogo: { width: 32, height: 24 },
+    headerGreetingBlock: { flex: 1 },
+    headerGreetingLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      fontWeight: '400',
+      letterSpacing: 0.2,
+    },
+    headerGreetingName: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+      letterSpacing: -0.3,
+    },
+    // ── Location bar ──────────────────────────────────────────────────────
+    locationSection: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
     locationText: { flex: 1, color: colors.textSecondary, fontSize: 13 },
     locationButton: {
       backgroundColor: colors.teal,
@@ -153,11 +191,99 @@ export default function Search() {
     },
     locationButtonText: { color: colors.white, fontWeight: '600', fontSize: 13 },
     error: { color: '#C62828', fontSize: 13 },
-    mapWrapper: { flex: 1, gap: 10 },
+    // ── Toolbar (filters + view toggle) ─────────────────────────────────────
+    toolbar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: 10,
+    },
+    filterButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      borderWidth: 1.5,
+      borderColor: hasActiveFilters ? colors.teal : colors.border,
+      borderRadius: 20,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      backgroundColor: hasActiveFilters ? colors.teal + '12' : colors.surface,
+    },
+    filterButtonText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: hasActiveFilters ? colors.teal : colors.textSecondary,
+    },
+    filterBadge: {
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: colors.teal,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    filterBadgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.white,
+    },
+    spacer: { flex: 1 },
+    segmentedControl: {
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      padding: 2,
+    },
+    segmentButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+    },
+    segmentActive: {
+      backgroundColor: colors.teal,
+    },
+    segmentText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    segmentTextActive: {
+      color: colors.white,
+    },
+    // ── Active filter chips ──────────────────────────────────────────────────
+    activeFiltersRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      paddingHorizontal: 20,
+      paddingTop: 10,
+      paddingBottom: 4,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    // ── List content ────────────────────────────────────────────────────────
+    listContent: {
+      padding: 16,
+      gap: 12,
+      paddingBottom: 120,
+    },
+    // ── Map view ────────────────────────────────────────────────────────────
+    mapWrapper: {
+      flex: 1,
+      gap: 0,
+    },
     mapBackground: {
       flex: 1,
       backgroundColor: mode === 'dark' ? '#16233A' : '#D6E8F5',
-      borderRadius: 12,
       overflow: 'hidden',
     },
     gridLineH: {
@@ -165,104 +291,205 @@ export default function Search() {
       left: 0,
       right: 0,
       height: 1,
-      backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(4, 35, 71, 0.08)',
+      backgroundColor:
+        mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(4, 35, 71, 0.06)',
     },
     gridLineV: {
       position: 'absolute',
       top: 0,
       bottom: 0,
       width: 1,
-      backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(4, 35, 71, 0.08)',
+      backgroundColor:
+        mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(4, 35, 71, 0.06)',
     },
     pin: {
       position: 'absolute',
       backgroundColor: colors.deepNavy,
-      borderRadius: 14,
+      borderRadius: 20,
       paddingHorizontal: 10,
       paddingVertical: 5,
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 4,
+        },
+        android: { elevation: 3 },
+      }),
     },
-    pinSelected: {
-      backgroundColor: colors.warning,
-    },
+    pinSelected: { backgroundColor: colors.teal },
     pinText: { color: colors.white, fontSize: 12, fontWeight: '700' },
-    pinTextSelected: { color: colors.white },
+    mapCardWrapper: {
+      padding: 16,
+      paddingBottom: 0,
+    },
+    // ── Filter modal ─────────────────────────────────────────────────────────
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(4, 35, 71, 0.4)',
+      backgroundColor: 'rgba(4, 35, 71, 0.45)',
       justifyContent: 'flex-end',
     },
     modalContent: {
       backgroundColor: colors.surface,
-      borderTopLeftRadius: 16,
-      borderTopRightRadius: 16,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
       padding: 20,
-      maxHeight: '85%',
+      paddingTop: 12,
+      maxHeight: '88%',
     },
-    sectionTitle: { marginTop: 12, marginBottom: 4 },
-    row: { flexDirection: 'row', gap: 8 },
+    modalHandle: {
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.border,
+      alignSelf: 'center',
+      marginBottom: 16,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+      letterSpacing: -0.3,
+      marginBottom: 4,
+    },
+    sectionLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
+      marginTop: 18,
+      marginBottom: 8,
+    },
+    row: { flexDirection: 'row', gap: 10 },
     input: {
-      borderWidth: 1,
+      flex: 1,
+      borderWidth: 1.5,
       borderColor: colors.border,
-      borderRadius: 8,
+      borderRadius: 10,
       padding: 12,
       fontSize: 15,
       color: colors.text,
+      backgroundColor: colors.background,
     },
-    halfInput: { flex: 1 },
-    applyButton: { marginTop: 16 },
-    clearLink: { color: colors.teal, textAlign: 'center', marginTop: 12 },
+    applyButton: { marginTop: 20, marginBottom: 6 },
+    clearLink: {
+      textAlign: 'center',
+      marginTop: 10,
+      marginBottom: 4,
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    chipsWrap: { flexDirection: 'row', flexWrap: 'wrap' },
   });
 
   return (
     <Screen style={styles.container}>
-      <View style={styles.headerRow}>
+      {/* ── Header ─────────────────────────────────────────────────── */}
+      <View style={styles.header}>
         <Image
           source={require('@/assets/logo-parklink.png')}
           style={styles.headerLogo}
           resizeMode="contain"
         />
-        <Text style={[typography.h1, styles.headerGreeting]}>Hola, {user?.name}</Text>
+        <View style={styles.headerGreetingBlock}>
+          <Text style={styles.headerGreetingLabel}>{t('search.welcome')}</Text>
+          <Text style={styles.headerGreetingName}>{user?.name ?? ''}</Text>
+        </View>
         <AccountMenu role="driver" />
       </View>
 
-      <View style={styles.locationBar}>
+      {/* ── Location bar ──────────────────────────────────────────── */}
+      <View style={styles.locationSection}>
         <Text style={styles.locationText}>
           {location
-            ? '📍 Buscando cocheras cerca de tu ubicación'
-            : locationError ?? 'Buscando tu ubicación…'}
+            ? `📍 ${t('search.location.searching')}`
+            : locationError ?? t('search.location.locating')}
         </Text>
         <TouchableOpacity style={styles.locationButton} onPress={locateMe} disabled={locating}>
           {locating ? (
             <ActivityIndicator color={colors.white} size="small" />
           ) : (
-            <Text style={styles.locationButtonText}>Actualizar</Text>
+            <Text style={styles.locationButtonText}>{t('search.location.refresh')}</Text>
           )}
         </TouchableOpacity>
       </View>
       {locationError ? <Text style={styles.error}>{locationError}</Text> : null}
 
-      <View style={styles.filterRow}>
-        <Chip label="⚙ Filtros" selected={activeChips.length > 0} onPress={openFilters} />
-        {activeChips.map((chip) => (
-          <Chip key={chip.label} label={chip.label} onRemove={chip.onRemove} />
-        ))}
+      {/* ── Toolbar ────────────────────────────────────────────────── */}
+      <View style={styles.toolbar}>
+        <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
+          <Ionicons
+            name="options-outline"
+            size={15}
+            color={hasActiveFilters ? colors.teal : colors.textSecondary}
+          />
+          <Text style={styles.filterButtonText}>{t('search.filters')}</Text>
+          {hasActiveFilters && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{activeChips.length}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        <View style={styles.spacer} />
+
+        <View style={styles.segmentedControl}>
+          <TouchableOpacity
+            style={[styles.segmentButton, viewMode === 'list' && styles.segmentActive]}
+            onPress={() => setViewMode('list')}
+          >
+            <Ionicons
+              name="list-outline"
+              size={14}
+              color={viewMode === 'list' ? colors.white : colors.textSecondary}
+            />
+            <Text style={[styles.segmentText, viewMode === 'list' && styles.segmentTextActive]}>
+              {t('search.viewList')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.segmentButton, viewMode === 'map' && styles.segmentActive]}
+            onPress={() => setViewMode('map')}
+          >
+            <Ionicons
+              name="map-outline"
+              size={14}
+              color={viewMode === 'map' ? colors.white : colors.textSecondary}
+            />
+            <Text style={[styles.segmentText, viewMode === 'map' && styles.segmentTextActive]}>
+              {t('search.viewMap')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <View style={styles.filterRow}>
-        <Chip label="☰ Lista" selected={viewMode === 'list'} onPress={() => setViewMode('list')} />
-        <Chip label="🗺 Mapa" selected={viewMode === 'map'} onPress={() => setViewMode('map')} />
-      </View>
+      {/* ── Active filter chips ────────────────────────────────────── */}
+      {activeChips.length > 0 && (
+        <View style={styles.activeFiltersRow}>
+          {activeChips.map((chip) => (
+            <Chip key={chip.label} label={chip.label} onRemove={chip.onRemove} />
+          ))}
+        </View>
+      )}
 
+      {/* ── Results ────────────────────────────────────────────────── */}
       {viewMode === 'list' ? (
         <FlatList
           data={spots}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ gap: 10 }}
+          contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => router.push({
-              pathname: `/(driver)/spot/${item.id}`,
-              params: { startHour: '8', endHour: '9' },
-            })}>
+            <TouchableOpacity
+              onPress={() =>
+                router.push({
+                  pathname: `/(driver)/spot/${item.id}`,
+                  params: { startHour: '8', endHour: '9' },
+                })
+              }
+            >
               <ParkingSpotCard spot={item} />
             </TouchableOpacity>
           )}
@@ -285,24 +512,29 @@ export default function Search() {
                   style={[styles.pin, { top: pos.top, left: pos.left }, isSelected && styles.pinSelected]}
                   onPress={() => setSelectedSpotId(spot.id)}
                 >
-                  <Text style={[styles.pinText, isSelected && styles.pinTextSelected]}>
-                    ${getDriverVisiblePrice(spot.pricePerHour)}
-                  </Text>
+                  <Text style={styles.pinText}>${getDriverVisiblePrice(spot.pricePerHour)}</Text>
                 </TouchableOpacity>
               );
             })}
           </View>
           {selectedSpot && (
-            <TouchableOpacity onPress={() => router.push({
-              pathname: `/(driver)/spot/${selectedSpot.id}`,
-              params: { startHour: '8', endHour: '9' },
-            })}>
-              <ParkingSpotCard spot={selectedSpot} />
-            </TouchableOpacity>
+            <View style={styles.mapCardWrapper}>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: `/(driver)/spot/${selectedSpot.id}`,
+                    params: { startHour: '8', endHour: '9' },
+                  })
+                }
+              >
+                <ParkingSpotCard spot={selectedSpot} />
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       )}
 
+      {/* ── Filter modal ───────────────────────────────────────────── */}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -311,22 +543,23 @@ export default function Search() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={typography.h1}>Filtros</Text>
+              <Text style={styles.modalTitle}>{t('search.filters.title')}</Text>
 
-              <Text style={[typography.caption, styles.sectionTitle]}>PRECIO POR HORA</Text>
+              <Text style={styles.sectionLabel}>{t('search.filters.pricePerHour')}</Text>
               <View style={styles.row}>
                 <TextInput
-                  style={[styles.input, styles.halfInput]}
-                  placeholder="Mínimo"
+                  style={styles.input}
+                  placeholder={t('search.filters.minPrice')}
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="numeric"
                   value={minPriceInput}
                   onChangeText={setMinPriceInput}
                 />
                 <TextInput
-                  style={[styles.input, styles.halfInput]}
-                  placeholder="Máximo"
+                  style={styles.input}
+                  placeholder={t('search.filters.maxPrice')}
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="numeric"
                   value={maxPriceInput}
@@ -334,15 +567,17 @@ export default function Search() {
                 />
               </View>
 
-              <Text style={[typography.caption, styles.sectionTitle]}>TIPO</Text>
-              <Chip
-                label={coveredOnly ? '🏠 Solo cubiertas' : '🏠 Cubierta y descubierta'}
-                selected={coveredOnly}
-                onPress={() => setCoveredOnly((v) => !v)}
-              />
+              <Text style={styles.sectionLabel}>{t('search.filters.type')}</Text>
+              <View style={styles.chipsWrap}>
+                <Chip
+                  label={coveredOnly ? t('search.filters.coveredOnly') : t('search.filters.coveredAny')}
+                  selected={coveredOnly}
+                  onPress={() => setCoveredOnly((v) => !v)}
+                />
+              </View>
 
-              <Text style={[typography.caption, styles.sectionTitle]}>DISTANCIA</Text>
-              <View style={styles.filterRow}>
+              <Text style={styles.sectionLabel}>{t('search.filters.distance')}</Text>
+              <View style={styles.chipsWrap}>
                 {DISTANCE_OPTIONS.map((option) => (
                   <Chip
                     key={option.value}
@@ -355,9 +590,13 @@ export default function Search() {
                 ))}
               </View>
 
-              <Button title="Aplicar filtros" onPress={applyFilters} style={styles.applyButton} />
+              <Button
+                title={t('search.filters.apply')}
+                onPress={applyFilters}
+                style={styles.applyButton}
+              />
               <Text style={styles.clearLink} onPress={clearFilters}>
-                Limpiar filtros
+                {t('search.filters.clear')}
               </Text>
             </ScrollView>
           </View>

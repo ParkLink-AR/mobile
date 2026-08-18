@@ -9,10 +9,12 @@ import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotsForOwner } from '@/src/services/parkingService';
 import { ParkingSpot } from '@/src/types';
+import { t, useLanguage } from '@/src/i18n';
 
 export default function OwnerSpots() {
   const colors = useThemeColors();
   const typography = useTypography();
+  useLanguage();
   const user = useSessionStore((s) => s.user);
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
 
@@ -32,8 +34,8 @@ export default function OwnerSpots() {
 
   return (
     <Screen style={styles.container}>
-      <Text style={typography.h1}>Mis cocheras</Text>
-      <Button title="+ Publicar cochera" onPress={() => router.push('/(owner)/spots/new')} />
+      <Text style={typography.h1}>{t('owner.spots.title')}</Text>
+      <Button title={t('owner.spots.publish')} onPress={() => router.push('/(owner)/spots/new')} />
       <FlatList
         data={spots}
         keyExtractor={(item) => item.id}
@@ -45,12 +47,12 @@ export default function OwnerSpots() {
             <Card>
               <Text style={typography.h2}>{item.title}</Text>
               <Text style={typography.caption}>{item.address}</Text>
-              <Text style={styles.price}>${item.pricePerHour} por hora</Text>
+              <Text style={styles.price}>{t('owner.spots.pricePerHour', { price: String(item.pricePerHour) })}</Text>
               <Text
                 style={styles.availabilityLink}
                 onPress={() => router.push(`/(owner)/spots/${item.id}/availability`)}
               >
-                Gestionar disponibilidad
+                {t('owner.spots.manageAvailability')}
               </Text>
             </Card>
           </TouchableOpacity>

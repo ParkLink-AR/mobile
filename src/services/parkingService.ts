@@ -102,6 +102,9 @@ export interface UpdateParkingSpotInput {
   scheduleEndHour?: number;
   pricePerHour?: number;
   description?: string;
+  /** Per-day schedule; not persisted anywhere yet (see note above). */
+  activeDays?: Array<{ dayIndex: number; startHour: number; endHour: number }>;
+  schedule?: string;
 }
 
 export async function updateParkingSpot(

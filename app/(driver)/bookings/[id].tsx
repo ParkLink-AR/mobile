@@ -1,4 +1,4 @@
-import { t } from '@/src/i18n';
+import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -12,6 +12,7 @@ import { getBookingById, cancelBooking } from '@/src/services/bookingService';
 import { Booking } from '@/src/types';
 
 export default function DriverBookingDetail() {
+  useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -41,9 +42,9 @@ export default function DriverBookingDetail() {
           <StatusBadge status={booking.status} />
         </View>
         <Text style={typography.body}>
-          {booking.date} · {booking.startTime} a {booking.endTime}
+          {booking.date} · {booking.startTime} {t('driver.booking.timeTo')} {booking.endTime}
         </Text>
-        <Text style={typography.body}>Total: ${booking.total}</Text>
+        <Text style={typography.body}>{t('driver.booking.total')}: ${booking.total}</Text>
       </Card>
       {booking.status === 'CONFIRMED' && (
         <Button

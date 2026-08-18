@@ -27,12 +27,22 @@ interface UserOutResponse {
   id: string;
   email: string;
   phone?: string | null;
-  name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  dni?: string | null;
   email_verified: boolean;
 }
 
 function toAuthUser(u: UserOutResponse): AuthUser {
-  return { id: u.id, name: u.name ?? '', email: u.email, emailVerified: u.email_verified };
+  return {
+    id: u.id,
+    name: u.first_name ?? '',
+    lastName: u.last_name ?? '',
+    email: u.email,
+    phone: u.phone ?? '',
+    dni: u.dni ?? undefined,
+    emailVerified: u.email_verified,
+  };
 }
 
 function toAuthTokens(t: TokenResponse): AuthTokens {

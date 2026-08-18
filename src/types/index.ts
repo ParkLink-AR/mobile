@@ -6,7 +6,10 @@ export type UserRole = 'driver' | 'owner';
 export interface User {
   id: string;
   name: string;
+  lastName: string;
   email: string;
+  phone: string;
+  avatarUrl?: string;
   role: UserRole;
   avatarInitials: string;
 }
@@ -18,7 +21,11 @@ export interface User {
 export interface AuthUser {
   id: string;
   name: string;
+  lastName: string;
   email: string;
+  phone: string;
+  dni?: string;
+  avatarUrl?: string;
   emailVerified: boolean;
 }
 
@@ -46,6 +53,7 @@ export interface ParkingSpot {
   scheduleEndHour: number;
   distanceMeters: number;
   description: string;
+  descriptionKey?: string;
   active: boolean;
 }
 

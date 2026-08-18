@@ -1,3 +1,4 @@
+import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -11,6 +12,7 @@ import { getBookingsForUser } from '@/src/services/bookingService';
 import { Booking } from '@/src/types';
 
 export default function DriverBookings() {
+  useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
@@ -32,7 +34,7 @@ export default function DriverBookings() {
 
   return (
     <Screen style={styles.container}>
-      <Text style={typography.h1}>Mis reservas</Text>
+      <Text style={typography.h1}>{t('driver.bookings.title')}</Text>
       <FlatList
         data={bookings}
         keyExtractor={(item) => item.id}
@@ -45,7 +47,7 @@ export default function DriverBookings() {
                 <StatusBadge status={item.status} />
               </View>
               <Text style={typography.caption}>
-                {item.date} · {item.startTime} a {item.endTime}
+                {item.date} · {item.startTime} {t('driver.booking.timeTo')} {item.endTime}
               </Text>
               <Text style={styles.total}>${item.total}</Text>
             </Card>

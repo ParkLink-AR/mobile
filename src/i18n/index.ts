@@ -28,4 +28,16 @@ export function t(key: string, vars?: Record<string, string | number>) {
   return str;
 }
 
+/**
+ * Call this in any component that renders text via t().
+ * It subscribes to the language store so the component re-renders when
+ * the language changes — without which t() would return stale translations.
+ */
+export function useLanguage() {
+  // Lazy require avoids a circular dependency at module evaluation time
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { useSettingsStore } = require('@/src/store/useSettingsStore') as typeof import('@/src/store/useSettingsStore');
+  useSettingsStore((s: { language: string }) => s.language);
+}
+
 export default { t, setLanguage, availableLanguages };

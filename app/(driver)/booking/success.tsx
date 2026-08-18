@@ -1,4 +1,4 @@
-import { t } from '@/src/i18n';
+import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
 import { Text, StyleSheet } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -11,6 +11,7 @@ import { getBookingById } from '@/src/services/bookingService';
 import { Booking } from '@/src/types';
 
 export default function BookingSuccess() {
+  useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
@@ -31,13 +32,13 @@ export default function BookingSuccess() {
   return (
     <Screen style={styles.container}>
       <Text style={styles.check}>✓</Text>
-      <Text style={typography.h1}>¡Reserva confirmada!</Text>
+      <Text style={typography.h1}>{t('driver.booking.success.title')}</Text>
       <Card style={styles.card}>
         <Text style={typography.h2}>{booking.parkingSpotTitle}</Text>
         <Text style={typography.body}>
-          {booking.date} · {booking.startTime} a {booking.endTime}
+          {booking.date} · {booking.startTime} {t('driver.booking.timeTo')} {booking.endTime}
         </Text>
-        <Text style={typography.body}>Total pagado: ${booking.total}</Text>
+        <Text style={typography.body}>{t('driver.booking.totalPaid').replace('%{total}', String(booking.total))}</Text>
       </Card>
       <Button
         title={t('driver.booking.success.viewBookings')}

@@ -4,7 +4,9 @@ import { AuthUser, AuthTokens } from '@/src/types';
 const mockAuthUser: AuthUser = {
   id: 'user-1',
   name: 'Martín',
+  lastName: 'Pérez',
   email: 'martin@example.com',
+  phone: '+5491100000000',
   emailVerified: true,
 };
 

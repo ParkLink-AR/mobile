@@ -9,10 +9,12 @@ import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getBookingsForUser } from '@/src/services/bookingService';
 import { Booking } from '@/src/types';
+import { t, useLanguage } from '@/src/i18n';
 
 export default function OwnerBookings() {
   const colors = useThemeColors();
   const typography = useTypography();
+  useLanguage();
   const user = useSessionStore((s) => s.user);
   const [sections, setSections] = useState<{ title: string; data: Booking[] }[]>([]);
 
@@ -23,8 +25,8 @@ export default function OwnerBookings() {
         const upcoming = all.filter((b) => b.status === 'CONFIRMED' || b.status === 'PENDING_PAYMENT');
         const history = all.filter((b) => b.status === 'COMPLETED' || b.status === 'CANCELLED' || b.status === 'EXPIRED');
         setSections([
-          { title: 'PRÓXIMAS', data: upcoming },
-          { title: 'HISTORIAL', data: history },
+          { title: t('owner.bookings.upcoming'), data: upcoming },
+          { title: t('owner.bookings.history'), data: history },
         ]);
       });
     }, [user?.id])
@@ -42,7 +44,7 @@ export default function OwnerBookings() {
 
   return (
     <Screen style={styles.container}>
-      <Text style={typography.h1}>Reservas recibidas</Text>
+      <Text style={typography.h1}>{t('owner.bookings.title')}</Text>
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
