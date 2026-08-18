@@ -24,7 +24,14 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "ParkLink usa tu ubicación para mostrarte las cocheras disponibles cerca tuyo."
+        }
+      ]
     ]
   }
 }

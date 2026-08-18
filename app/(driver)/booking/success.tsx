@@ -40,7 +40,7 @@ export default function BookingSuccess() {
         <Text style={typography.body}>Total pagado: ${booking.total}</Text>
       </Card>
       <Button
-        title=t('driver.booking.success.viewBookings')
+        title={t('driver.booking.success.viewBookings')}
         onPress={() => router.replace('/(driver)/(tabs)/bookings')}
       />
     </Screen>

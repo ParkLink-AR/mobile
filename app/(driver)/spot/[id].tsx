@@ -54,7 +54,7 @@ export default function SpotDetail() {
             <Chip key={tag} label={tag} />
           ))}
         </View>
-        <Row label=t('spot.address') value={spot.address} />
+        <Row label={t('spot.address')} value={spot.address} />
         <Row label="Disponible" value={spot.schedule} />
         <Row label="Precio" value={`$${visiblePricePerHour} por hora`} />
         <Text style={styles.total}>Total ({reservedHours} hs): ${total}</Text>

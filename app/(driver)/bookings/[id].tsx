@@ -47,7 +47,7 @@ export default function DriverBookingDetail() {
       </Card>
       {booking.status === 'CONFIRMED' && (
         <Button
-          title=t('driver.booking.cancel.title')
+          title={t('driver.booking.cancel.title')}
           onPress={() =>
             Alert.alert(t('driver.booking.cancel.title'), t('driver.booking.cancel.confirm'), [
               { text: t('common.no') },
@@ -58,7 +58,7 @@ export default function DriverBookingDetail() {
       )}
       {booking.status === 'COMPLETED' && (
         <Button
-          title=t('driver.rating.title')
+          title={t('driver.rating.title')}
           onPress={() => router.push(`/(driver)/review/${booking.id}`)}
         />
       )}

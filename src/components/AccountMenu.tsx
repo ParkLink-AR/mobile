@@ -6,14 +6,25 @@ import { Avatar } from '@/src/components/Avatar';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useSettingsStore } from '@/src/store/useSettingsStore';
+import { logout as logoutRequest } from '@/src/api/auth';
+
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? '';
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return (first + last).toUpperCase() || '?';
+}
 
 export function AccountMenu({ role }: { role: 'driver' | 'owner' }) {
   const colors = useThemeColors();
   const user = useSessionStore((s) => s.user);
-  const logout = useSessionStore((s) => s.logout);
+  const refreshToken = useSessionStore((s) => s.refreshToken);
+  const clearSession = useSessionStore((s) => s.clearSession);
+  const setActiveMode = useSessionStore((s) => s.setActiveMode);
   const mode = useSettingsStore((s) => s.mode);
   const toggleMode = useSettingsStore((s) => s.toggleMode);
   const [open, setOpen] = useState(false);
+  const otherRole = role === 'driver' ? 'owner' : 'driver';
 
   const styles = StyleSheet.create({
     overlay: { flex: 1, backgroundColor: 'rgba(4, 35, 71, 0.2)' },
@@ -41,22 +52,38 @@ export function AccountMenu({ role }: { role: 'driver' | 'owner' }) {
     router.push(path);
   }
 
-  function handleLogout() {
+  async function handleLogout() {
     setOpen(false);
-    logout();
+    if (refreshToken) {
+      // Best-effort: revoke the session server-side, but don't block the
+      // local logout on it (e.g. offline, or the token already expired).
+      await logoutRequest(refreshToken).catch(() => {});
+    }
+    clearSession();
     router.replace('/(auth)/login');
+  }
+
+  function handleSwitchMode() {
+    setOpen(false);
+    setActiveMode(otherRole);
+    router.replace(`/(${otherRole})/(tabs)`);
   }
 
   return (
     <>
       <Pressable onPress={() => setOpen(true)}>
-        <Avatar initials={user.avatarInitials} />
+        <Avatar initials={initialsFromName(user.name)} />
       </Pressable>
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
           <View style={styles.menu}>
               <MenuItem icon="👤" label={t('account.myAccount')} onPress={() => go(`/(${role})/(tabs)/profile`)} />
               <MenuItem icon="⚙️" label={t('account.settings.label')} onPress={() => go(`/(${role})/settings`)} />
+              <MenuItem
+                icon={otherRole === 'owner' ? '🏠' : '🚗'}
+                label={otherRole === 'owner' ? 'Cambiar a modo propietario' : 'Cambiar a modo conductor'}
+                onPress={handleSwitchMode}
+              />
             <MenuItem
               icon={mode === 'dark' ? '☀️' : '🌙'}
               label={mode === 'dark' ? t('account.menu.theme.light') : t('account.menu.theme.dark')}

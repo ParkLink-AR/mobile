@@ -9,8 +9,9 @@ import {
   Modal,
   TextInput,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { Chip } from '@/src/components/Chip';
 import { Button } from '@/src/components/Button';
@@ -30,10 +31,6 @@ const DISTANCE_OPTIONS = [
   { label: '< 1 km', value: 1000 },
   { label: '< 2 km', value: 2000 },
 ];
-
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-}
 
 function pinPosition(id: string): { top: `${number}%`; left: `${number}%` } {
   let hash = 0;
@@ -56,43 +53,49 @@ export default function Search() {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
 
-  const [addressInput, setAddressInput] = useState('');
-  const [searchAddress, setSearchAddress] = useState<string | null>(null);
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
 
   const [minPriceInput, setMinPriceInput] = useState('');
   const [maxPriceInput, setMaxPriceInput] = useState('');
-  const [scheduleEnabled, setScheduleEnabled] = useState(false);
-  const [startTime, setStartTime] = useState(new Date(2000, 0, 1, 8, 0));
-  const [endTime, setEndTime] = useState(new Date(2000, 0, 1, 20, 0));
-  const [editingTime, setEditingTime] = useState<'start' | 'end' | null>(null);
+  const [coveredOnly, setCoveredOnly] = useState(false);
   const [distanceInput, setDistanceInput] = useState<number | undefined>(undefined);
 
+  async function locateMe() {
+    setLocating(true);
+    setLocationError(null);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationError('Necesitamos tu ubicación para mostrarte cocheras cerca tuyo.');
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({});
+      setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+    } catch {
+      setLocationError('No pudimos obtener tu ubicación. Probá de nuevo.');
+    } finally {
+      setLocating(false);
+    }
+  }
+
   useEffect(() => {
-    searchParkingSpots(filters).then((results) => {
-      const ordered = searchAddress
-        ? [...results].sort((a, b) => a.distanceMeters - b.distanceMeters)
-        : results;
-      setSpots(ordered);
-      setSelectedSpotId(ordered[0]?.id ?? null);
+    locateMe();
+  }, []);
+
+  useEffect(() => {
+    if (!location) return;
+    searchParkingSpots({ ...filters, lat: location.lat, lng: location.lng }).then((results) => {
+      setSpots(results);
+      setSelectedSpotId(results[0]?.id ?? null);
     });
-  }, [filters, searchAddress]);
-
-  function handleSearchAddress() {
-    setSearchAddress(addressInput.trim() || null);
-  }
-
-  function clearSearchAddress() {
-    setAddressInput('');
-    setSearchAddress(null);
-  }
+  }, [filters, location]);
 
   function openFilters() {
     setMinPriceInput(filters.minPrice ? String(filters.minPrice) : '');
     setMaxPriceInput(filters.maxPrice ? String(filters.maxPrice) : '');
-    const hasSchedule = filters.startHour !== undefined && filters.endHour !== undefined;
-    setScheduleEnabled(hasSchedule);
-    setStartTime(new Date(2000, 0, 1, filters.startHour ?? 8, 0));
-    setEndTime(new Date(2000, 0, 1, filters.endHour ?? 20, 0));
+    setCoveredOnly(filters.covered ?? false);
     setDistanceInput(filters.maxDistanceMeters);
     setModalVisible(true);
   }
@@ -101,8 +104,7 @@ export default function Search() {
     setFilters({
       minPrice: minPriceInput ? Number(minPriceInput) : undefined,
       maxPrice: maxPriceInput ? Number(maxPriceInput) : undefined,
-      startHour: scheduleEnabled ? startTime.getHours() : undefined,
-      endHour: scheduleEnabled ? endTime.getHours() : undefined,
+      covered: coveredOnly || undefined,
       maxDistanceMeters: distanceInput,
     });
     setModalVisible(false);
@@ -120,10 +122,10 @@ export default function Search() {
       onRemove: () => setFilters((f) => ({ ...f, minPrice: undefined, maxPrice: undefined })),
     });
   }
-  if (filters.startHour !== undefined && filters.endHour !== undefined) {
+  if (filters.covered) {
     activeChips.push({
-      label: `${filters.startHour}-${filters.endHour} hs`,
-      onRemove: () => setFilters((f) => ({ ...f, startHour: undefined, endHour: undefined })),
+      label: 'Cubierta',
+      onRemove: () => setFilters((f) => ({ ...f, covered: undefined })),
     });
   }
   if (filters.maxDistanceMeters !== undefined) {
@@ -141,24 +143,16 @@ export default function Search() {
     headerLogo: { width: 36, height: 27 },
     headerGreeting: { flex: 1 },
     filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 0 },
-    searchBar: { flexDirection: 'row', gap: 8 },
-    searchInput: {
-      flex: 1,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
-      fontSize: 15,
-      backgroundColor: colors.surface,
-      color: colors.text,
-    },
-    searchButton: {
+    locationBar: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    locationText: { flex: 1, color: colors.textSecondary, fontSize: 13 },
+    locationButton: {
       backgroundColor: colors.teal,
       borderRadius: 8,
-      paddingHorizontal: 16,
-      justifyContent: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 8,
     },
-    searchButtonText: { color: colors.white, fontWeight: '600' },
+    locationButtonText: { color: colors.white, fontWeight: '600', fontSize: 13 },
+    error: { color: '#C62828', fontSize: 13 },
     mapWrapper: { flex: 1, gap: 10 },
     mapBackground: {
       flex: 1,
@@ -205,17 +199,6 @@ export default function Search() {
       maxHeight: '85%',
     },
     sectionTitle: { marginTop: 12, marginBottom: 4 },
-    timeButtonsRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
-    timeButton: {
-      flex: 1,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-    },
-    timeValue: { fontSize: 16, fontWeight: '700', color: colors.text, marginTop: 2 },
-    timeEditor: { alignItems: 'center', gap: 12, paddingVertical: 12 },
     row: { flexDirection: 'row', gap: 8 },
     input: {
       borderWidth: 1,
@@ -242,25 +225,21 @@ export default function Search() {
         <AccountMenu role="driver" />
       </View>
 
-      <View style={styles.searchBar}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="¿Dónde querés estacionar?"
-          placeholderTextColor={colors.textSecondary}
-          value={addressInput}
-          onChangeText={setAddressInput}
-          onSubmitEditing={handleSearchAddress}
-          returnKeyType="search"
-        />
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearchAddress}>
-          <Text style={styles.searchButtonText}>Buscar</Text>
+      <View style={styles.locationBar}>
+        <Text style={styles.locationText}>
+          {location
+            ? '📍 Buscando cocheras cerca de tu ubicación'
+            : locationError ?? 'Buscando tu ubicación…'}
+        </Text>
+        <TouchableOpacity style={styles.locationButton} onPress={locateMe} disabled={locating}>
+          {locating ? (
+            <ActivityIndicator color={colors.white} size="small" />
+          ) : (
+            <Text style={styles.locationButtonText}>Actualizar</Text>
+          )}
         </TouchableOpacity>
       </View>
-      {searchAddress && (
-        <View style={styles.filterRow}>
-          <Chip label={`📍 Cerca de: ${searchAddress}`} onRemove={clearSearchAddress} />
-        </View>
-      )}
+      {locationError ? <Text style={styles.error}>{locationError}</Text> : null}
 
       <View style={styles.filterRow}>
         <Chip label="⚙ Filtros" selected={activeChips.length > 0} onPress={openFilters} />
@@ -282,10 +261,7 @@ export default function Search() {
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => router.push({
               pathname: `/(driver)/spot/${item.id}`,
-              params: {
-                startHour: filters.startHour?.toString() ?? '8',
-                endHour: filters.endHour?.toString() ?? '9',
-              },
+              params: { startHour: '8', endHour: '9' },
             })}>
               <ParkingSpotCard spot={item} />
             </TouchableOpacity>
@@ -319,10 +295,7 @@ export default function Search() {
           {selectedSpot && (
             <TouchableOpacity onPress={() => router.push({
               pathname: `/(driver)/spot/${selectedSpot.id}`,
-              params: {
-                startHour: filters.startHour?.toString() ?? '8',
-                endHour: filters.endHour?.toString() ?? '9',
-              },
+              params: { startHour: '8', endHour: '9' },
             })}>
               <ParkingSpotCard spot={selectedSpot} />
             </TouchableOpacity>
@@ -334,90 +307,59 @@ export default function Search() {
         visible={modalVisible}
         animationType="slide"
         transparent
-        onRequestClose={() => (editingTime ? setEditingTime(null) : setModalVisible(false))}
+        onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            {editingTime ? (
-              <View style={styles.timeEditor}>
-                <Text style={typography.h2}>
-                  {editingTime === 'start' ? 'Desde qué hora' : 'Hasta qué hora'}
-                </Text>
-                <DateTimePicker
-                  value={editingTime === 'start' ? startTime : endTime}
-                  mode="time"
-                  display="spinner"
-                  onChange={(_, date) => {
-                    if (!date) return;
-                    if (editingTime === 'start') setStartTime(date);
-                    else setEndTime(date);
-                  }}
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={typography.h1}>Filtros</Text>
+
+              <Text style={[typography.caption, styles.sectionTitle]}>PRECIO POR HORA</Text>
+              <View style={styles.row}>
+                <TextInput
+                  style={[styles.input, styles.halfInput]}
+                  placeholder="Mínimo"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="numeric"
+                  value={minPriceInput}
+                  onChangeText={setMinPriceInput}
                 />
-                <Button title="Listo" onPress={() => setEditingTime(null)} />
+                <TextInput
+                  style={[styles.input, styles.halfInput]}
+                  placeholder="Máximo"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="numeric"
+                  value={maxPriceInput}
+                  onChangeText={setMaxPriceInput}
+                />
               </View>
-            ) : (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={typography.h1}>Filtros</Text>
 
-                <Text style={[typography.caption, styles.sectionTitle]}>PRECIO POR HORA</Text>
-                <View style={styles.row}>
-                  <TextInput
-                    style={[styles.input, styles.halfInput]}
-                    placeholder="Mínimo"
-                    placeholderTextColor={colors.textSecondary}
-                    keyboardType="numeric"
-                    value={minPriceInput}
-                    onChangeText={setMinPriceInput}
+              <Text style={[typography.caption, styles.sectionTitle]}>TIPO</Text>
+              <Chip
+                label={coveredOnly ? '🏠 Solo cubiertas' : '🏠 Cubierta y descubierta'}
+                selected={coveredOnly}
+                onPress={() => setCoveredOnly((v) => !v)}
+              />
+
+              <Text style={[typography.caption, styles.sectionTitle]}>DISTANCIA</Text>
+              <View style={styles.filterRow}>
+                {DISTANCE_OPTIONS.map((option) => (
+                  <Chip
+                    key={option.value}
+                    label={option.label}
+                    selected={distanceInput === option.value}
+                    onPress={() =>
+                      setDistanceInput((current) => (current === option.value ? undefined : option.value))
+                    }
                   />
-                  <TextInput
-                    style={[styles.input, styles.halfInput]}
-                    placeholder="Máximo"
-                    placeholderTextColor={colors.textSecondary}
-                    keyboardType="numeric"
-                    value={maxPriceInput}
-                    onChangeText={setMaxPriceInput}
-                  />
-                </View>
+                ))}
+              </View>
 
-                <Text style={[typography.caption, styles.sectionTitle]}>HORARIO NECESITADO</Text>
-                <Chip
-                  label={scheduleEnabled ? '🕐 Horario activado' : '🕐 Filtrar por horario'}
-                  selected={scheduleEnabled}
-                  onPress={() => setScheduleEnabled((v) => !v)}
-                />
-                {scheduleEnabled && (
-                  <View style={styles.timeButtonsRow}>
-                    <TouchableOpacity style={styles.timeButton} onPress={() => setEditingTime('start')}>
-                      <Text style={typography.caption}>Desde</Text>
-                      <Text style={styles.timeValue}>{formatTime(startTime)}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.timeButton} onPress={() => setEditingTime('end')}>
-                      <Text style={typography.caption}>Hasta</Text>
-                      <Text style={styles.timeValue}>{formatTime(endTime)}</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                <Text style={[typography.caption, styles.sectionTitle]}>DISTANCIA</Text>
-                <View style={styles.filterRow}>
-                  {DISTANCE_OPTIONS.map((option) => (
-                    <Chip
-                      key={option.value}
-                      label={option.label}
-                      selected={distanceInput === option.value}
-                      onPress={() =>
-                        setDistanceInput((current) => (current === option.value ? undefined : option.value))
-                      }
-                    />
-                  ))}
-                </View>
-
-                <Button title="Aplicar filtros" onPress={applyFilters} style={styles.applyButton} />
-                <Text style={styles.clearLink} onPress={clearFilters}>
-                  Limpiar filtros
-                </Text>
-              </ScrollView>
-            )}
+              <Button title="Aplicar filtros" onPress={applyFilters} style={styles.applyButton} />
+              <Text style={styles.clearLink} onPress={clearFilters}>
+                Limpiar filtros
+              </Text>
+            </ScrollView>
           </View>
         </View>
       </Modal>

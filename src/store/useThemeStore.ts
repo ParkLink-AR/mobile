@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ThemeMode } from '@/src/theme/colors';
+import { ThemeMode } from '@/src/theme/types';
 
 interface ThemeState {
   mode: ThemeMode;

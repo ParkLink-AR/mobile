@@ -13,13 +13,13 @@ export default function OwnerProfileEdit() {
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user)!;
-  const login = useSessionStore((s) => s.login);
+  const setUser = useSessionStore((s) => s.setUser);
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
 
   async function save() {
     const updated = await updateProfile(user, { name, email });
-    login(updated);
+    setUser(updated);
     router.back();
   }
 
@@ -40,7 +40,7 @@ export default function OwnerProfileEdit() {
       <Text style={typography.h1}>Editar perfil</Text>
       <TextInput style={styles.input} value={name} onChangeText={setName} />
       <TextInput style={styles.input} value={email} onChangeText={setEmail} autoCapitalize="none" />
-      <Button title=t('common.save') onPress={save} />
+      <Button title={t('common.save')} onPress={save} />
     </Screen>
   );
 }

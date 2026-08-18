@@ -1,3 +1,6 @@
+// El backend no tiene un rol fijo por usuario: cualquiera puede operar como
+// conductor o propietario. `ActiveMode` (useSessionStore) es el modo in-app
+// que decide qué stack se muestra, no un campo del usuario.
 export type UserRole = 'driver' | 'owner';
 
 export interface User {
@@ -6,6 +9,23 @@ export interface User {
   email: string;
   role: UserRole;
   avatarInitials: string;
+}
+
+// Perfil real que devuelve auth-service (GET /users/{id}), usado por el
+// flujo de autenticación real. `User` (arriba) sigue siendo el shape que
+// consumen las pantallas ya construidas sobre datos mockeados (bookings,
+// reviews, settlements).
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+}
+
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
 }
 
 export interface ParkingSpot {

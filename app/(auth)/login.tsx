@@ -1,18 +1,22 @@
 import { t } from '@/src/i18n';
 import { useState } from 'react';
-import { Text, TextInput, Image, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
+import { Text, TextInput, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { loginAsDriver, loginAsOwner } from '@/src/services/authService';
+import { login } from '@/src/api/auth';
+import { ApiError } from '@/src/api/client';
 
 export default function Login() {
   const colors = useThemeColors();
-  const [email, setEmail] = useState('');
+  const { email: prefilledEmail } = useLocalSearchParams<{ email?: string }>();
+  const [email, setEmail] = useState(prefilledEmail ?? '');
   const [password, setPassword] = useState('');
-  const login = useSessionStore((s) => s.login);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const setSession = useSessionStore((s) => s.setSession);
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.surface, padding: 24, gap: 12, justifyContent: 'center' },
@@ -26,15 +30,33 @@ export default function Login() {
       color: colors.text,
     },
     link: { color: colors.teal, textAlign: 'center', marginTop: 8 },
+    error: { color: '#C62828', fontSize: 13, textAlign: 'center' },
   });
 
   async function handleLogin() {
+    setError(null);
     const normalizedEmail = email.trim().toLowerCase();
-    const isOwner = normalizedEmail === 'propietario@gmail.com';
-    const mockUser = isOwner ? await loginAsOwner() : await loginAsDriver();
-    const user = { ...mockUser, email: email.trim() || mockUser.email };
-    login(user);
-    router.replace(isOwner ? '/(owner)/(tabs)' : '/(driver)/(tabs)');
+    if (!normalizedEmail || !password) {
+      setError('Completá email y contraseña.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { user, tokens } = await login({ email: normalizedEmail, password });
+      setSession(user, tokens);
+      router.replace('/(driver)/(tabs)');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        // Not verified yet -- send them to enter the code instead of just
+        // showing an error they can't do anything about.
+        router.push({ pathname: '/(auth)/verify-code', params: { email: normalizedEmail } });
+        return;
+      }
+      setError(err instanceof ApiError ? err.detail : 'No se pudo iniciar sesión.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -44,23 +66,29 @@ export default function Login() {
         style={styles.logo}
         resizeMode="contain"
       />
+      {error ? <Text style={styles.error}>{error}</Text> : null}
       <TextInput
         style={styles.input}
         placeholder="Email"
         placeholderTextColor={colors.textSecondary}
         autoCapitalize="none"
+        keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
       />
       <TextInput
         style={styles.input}
-        placeholder=t('auth.login.placeholder.password')
+        placeholder={t('auth.login.placeholder.password')}
         placeholderTextColor={colors.textSecondary}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
       />
-      <Button title=t('auth.login.button') onPress={handleLogin} />
+      {loading ? (
+        <ActivityIndicator color={colors.teal} />
+      ) : (
+        <Button title={t('auth.login.button')} onPress={handleLogin} />
+      )}
       <Text style={styles.link} onPress={() => router.push('/(auth)/register')}>
         ¿No tenés cuenta? Registrate
       </Text>

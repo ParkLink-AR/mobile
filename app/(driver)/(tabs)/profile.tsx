@@ -11,13 +11,15 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getPaymentMethods } from '@/src/services/paymentService';
+import { logout as logoutRequest } from '@/src/api/auth';
 import { PaymentMethod } from '@/src/types';
 
 export default function DriverProfile() {
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
-  const logout = useSessionStore((s) => s.logout);
+  const refreshToken = useSessionStore((s) => s.refreshToken);
+  const clearSession = useSessionStore((s) => s.clearSession);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
 
@@ -46,7 +48,7 @@ export default function DriverProfile() {
           <Text style={typography.caption}>{user.email}</Text>
           <VerifiedBadge />
         </Card>
-        <Button title=t('driver.profile.edit') onPress={() => router.push('/(driver)/profile-edit')} />
+        <Button title={t('driver.profile.edit')} onPress={() => router.push('/(driver)/profile-edit')} />
 
         <Text style={[typography.caption, styles.sectionTitle]}>{t('driver.paymentMethods.title')}</Text>
         <PaymentMethodPicker
@@ -57,8 +59,9 @@ export default function DriverProfile() {
 
         <Button
           title={t('account.logout')}
-          onPress={() => {
-            logout();
+          onPress={async () => {
+            if (refreshToken) await logoutRequest(refreshToken).catch(() => {});
+            clearSession();
             router.replace('/(auth)/login');
           }}
           style={styles.logout}

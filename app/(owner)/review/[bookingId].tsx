@@ -46,7 +46,7 @@ export default function OwnerReview() {
       </View>
       <TextInput
         style={styles.input}
-        placeholder=t('driver.review.placeholder')
+        placeholder={t('driver.review.placeholder')}
         placeholderTextColor={colors.textSecondary}
         multiline
         value={comment}

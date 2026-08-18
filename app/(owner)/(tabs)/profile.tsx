@@ -8,12 +8,14 @@ import { VerifiedBadge } from '@/src/components/VerifiedBadge';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
+import { logout as logoutRequest } from '@/src/api/auth';
 
 export default function OwnerProfile() {
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
-  const logout = useSessionStore((s) => s.logout);
+  const refreshToken = useSessionStore((s) => s.refreshToken);
+  const clearSession = useSessionStore((s) => s.clearSession);
 
   if (!user) return null;
 
@@ -34,8 +36,9 @@ export default function OwnerProfile() {
       <Button title={t('owner.view.settlements')} onPress={() => router.push('/(owner)/settlements')} />
       <Button
         title={t('account.logout')}
-        onPress={() => {
-          logout();
+        onPress={async () => {
+          if (refreshToken) await logoutRequest(refreshToken).catch(() => {});
+          clearSession();
           router.replace('/(auth)/login');
         }}
         style={styles.logout}

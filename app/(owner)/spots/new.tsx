@@ -29,7 +29,6 @@ export default function NewSpot() {
       setPublishing(true);
       await createParkingSpot({
         title: address.split(',')[0] || address,
-        ownerId: user.id,
         address: address.trim(),
         covered,
         pricePerHour: Number(price),

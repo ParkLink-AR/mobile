@@ -1,0 +1,164 @@
+import { AuthTokens, AuthUser } from '@/src/types';
+import { request } from './client';
+
+interface RegisterInput {
+  firstName: string;
+  lastName: string;
+  dni: string;
+  email: string;
+  phone: string;
+  birthDate: string; // 'YYYY-MM-DD'
+  password: string;
+}
+
+interface LoginInput {
+  email: string;
+  password: string;
+}
+
+interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+interface UserOutResponse {
+  id: string;
+  email: string;
+  phone?: string | null;
+  name?: string | null;
+  email_verified: boolean;
+}
+
+function toAuthUser(u: UserOutResponse): AuthUser {
+  return { id: u.id, name: u.name ?? '', email: u.email, emailVerified: u.email_verified };
+}
+
+function toAuthTokens(t: TokenResponse): AuthTokens {
+  return { accessToken: t.access_token, refreshToken: t.refresh_token, expiresIn: t.expires_in };
+}
+
+const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+// `atob` isn't reliably available on Hermes (RN's JS engine) across all
+// platforms, so this decodes base64url by hand instead of depending on it.
+function base64UrlDecode(input: string): string {
+  const normalized = input.replace(/-/g, '+').replace(/_/g, '/').replace(/=+$/, '');
+  let bits = '';
+  for (const char of normalized) {
+    const index = BASE64_CHARS.indexOf(char);
+    if (index === -1) continue;
+    bits += index.toString(2).padStart(6, '0');
+  }
+  const bytes: number[] = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) {
+    bytes.push(parseInt(bits.slice(i, i + 8), 2));
+  }
+  return decodeURIComponent(bytes.map((b) => '%' + b.toString(16).padStart(2, '0')).join(''));
+}
+
+// Decodes a JWT payload without verifying it -- the app never trusts this for
+// authorization (the backend re-verifies every request), it's only used to
+// read the `sub` claim so we know which /users/{id} to fetch after login.
+function decodeJwtPayload(token: string): { sub: string } {
+  const payload = token.split('.')[1];
+  return JSON.parse(base64UrlDecode(payload));
+}
+
+export async function register(input: RegisterInput): Promise<void> {
+  await request('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({
+      first_name: input.firstName,
+      last_name: input.lastName,
+      dni: input.dni,
+      email: input.email,
+      phone: input.phone,
+      birth_date: input.birthDate,
+      password: input.password,
+    }),
+  });
+}
+
+// -------------------------
+// Registration wizard: verify email, then phone, before the account exists
+// -------------------------
+
+export async function requestEmailRegistration(email: string): Promise<void> {
+  await request('/auth/registration/email/request', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function confirmEmailRegistration(email: string, code: string): Promise<void> {
+  await request('/auth/registration/email/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ email, code }),
+  });
+}
+
+export async function requestPhoneRegistration(phone: string): Promise<void> {
+  await request('/auth/registration/phone/request', {
+    method: 'POST',
+    body: JSON.stringify({ phone }),
+  });
+}
+
+export async function confirmPhoneRegistration(phone: string, code: string): Promise<void> {
+  await request('/auth/registration/phone/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ phone, code }),
+  });
+}
+
+export async function login(input: LoginInput): Promise<{ user: AuthUser; tokens: AuthTokens }> {
+  const tokenResponse = await request<TokenResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  const tokens = toAuthTokens(tokenResponse);
+  const { sub } = decodeJwtPayload(tokens.accessToken);
+  const userResponse = await request<UserOutResponse>(`/users/${sub}`, {}, tokens.accessToken);
+  return { user: toAuthUser(userResponse), tokens };
+}
+
+export async function confirmEmailCode(email: string, code: string): Promise<void> {
+  await request('/auth/email-verification/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ email, code }),
+  });
+}
+
+export async function resendVerificationCode(email: string): Promise<void> {
+  await request('/auth/email-verification/request', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  await request('/auth/password-reset/request', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function confirmPasswordReset(
+  email: string,
+  code: string,
+  newPassword: string
+): Promise<void> {
+  await request('/auth/password-reset/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ email, code, new_password: newPassword }),
+  });
+}
+
+export async function logout(refreshToken: string): Promise<void> {
+  await request('/auth/logout', {
+    method: 'POST',
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+}

@@ -1,15 +1,8 @@
-import { User } from '@/src/types';
-import { mockDriver, mockOwner } from '@/src/mocks/users';
+import { AuthUser } from '@/src/types';
 import { delay } from './utils';
 
-export async function loginAsDriver(): Promise<User> {
-  return delay(mockDriver);
-}
-
-export async function loginAsOwner(): Promise<User> {
-  return delay(mockOwner);
-}
-
-export async function updateProfile(user: User, changes: Partial<User>): Promise<User> {
+// Profile editing (name/email change) isn't wired to the real backend yet --
+// only registration/login/email-verification are (see src/api/auth.ts).
+export async function updateProfile(user: AuthUser, changes: Partial<AuthUser>): Promise<AuthUser> {
   return delay({ ...user, ...changes });
 }
