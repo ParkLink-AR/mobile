@@ -1,15 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
-  View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image,
+  View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity,
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { RatingStars } from '@/src/components/RatingStars';
 import { AvailabilityPicker, DaySchedule } from '@/src/components/AvailabilityPicker';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
-import { getParkingSpotDetail, updateParkingSpot } from '@/src/services/parkingService';
+import { getParkingSpotDetail, updateParkingSpot } from '@/src/services/parkingService'; // getParkingSpotDetail used in useFocusEffect
+import { useOwnerSpotsStore } from '@/src/store/useOwnerSpotsStore';
 import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 
@@ -18,6 +20,8 @@ export default function EditSpot() {
   const typography = useTypography();
   useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const markUpdated = useOwnerSpotsStore((s) => s.markUpdated);
+  const clearSpots = useOwnerSpotsStore((s) => s.clearSpots);
 
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [price, setPrice] = useState('');
@@ -26,26 +30,19 @@ export default function EditSpot() {
   const [schedule, setSchedule] = useState<DaySchedule[]>([0, 1, 2, 3, 4].map((d) => ({ dayIndex: d, startHour: 8, endHour: 22 })));
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    getParkingSpotDetail(id).then((s) => {
-      if (!s) return;
-      setSpot(s);
-      setPrice(String(s.pricePerHour));
-      setDescription(s.description ?? '');
-      setCovered(s.covered);
-      const storedDays: DaySchedule[] = (s as any).activeDays;
-      if (storedDays?.length) {
-        setSchedule(storedDays);
-      } else {
-        // Derive from global start/end, defaulting to Mon–Fri
-        setSchedule([0, 1, 2, 3, 4].map((d) => ({
-          dayIndex: d,
-          startHour: s.scheduleStartHour ?? 8,
-          endHour: s.scheduleEndHour ?? 22,
-        })));
-      }
-    });
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      getParkingSpotDetail(id).then((s) => {
+        if (!s) return;
+        setSpot(s);
+        setPrice(String(s.pricePerHour));
+        setDescription(s.description ?? '');
+        setCovered(s.covered);
+        const storedDays: DaySchedule[] | undefined = (s as any).activeDays;
+        if (storedDays?.length) setSchedule(storedDays);
+      });
+    }, [id]),
+  );
 
   if (!spot) return null;
 
@@ -71,12 +68,18 @@ export default function EditSpot() {
       const updated = await updateParkingSpot(id, {
         pricePerHour: parsedPrice,
         description: description.trim(),
+        covered,
         scheduleStartHour: globalStart,
         scheduleEndHour: globalEnd,
         activeDays: schedule,
         schedule: scheduleString,
       });
-      if (updated) setSpot(updated);
+      // 1. Limpiar la caché para que la lista no muestre datos viejos
+      //    mientras llega la respuesta del re-fetch.
+      clearSpots();
+      // 2. Incrementar lastUpdated dispara el useEffect de spots.tsx
+      //    de forma reactiva e inmediata, sin depender del ciclo de focus.
+      markUpdated();
       router.back();
     } catch {
       alert(t('owner.spot.edit.errorSave'));
@@ -86,7 +89,14 @@ export default function EditSpot() {
 
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
+    photoContainer: { position: 'relative' },
     photo: { width: '100%', height: 190 },
+    backBtn: {
+      position: 'absolute', top: 14, left: 14,
+      width: 36, height: 36, borderRadius: 18,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      alignItems: 'center', justifyContent: 'center',
+    },
     body: { padding: 16, gap: 14 },
 
     infoCard: {
@@ -129,8 +139,13 @@ export default function EditSpot() {
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Photo */}
-        <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
+        {/* Photo + back button */}
+        <View style={styles.photoContainer}>
+          <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.body}>
           {/* Spot info (read-only) */}

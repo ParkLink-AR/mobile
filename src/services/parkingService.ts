@@ -5,14 +5,39 @@ import {
   getParkingSpotDetail as apiGetParkingSpotDetail,
   getParkingSpotsForOwner as apiGetParkingSpotsForOwner,
   createParkingSpot as apiCreateParkingSpot,
+  updateParkingSpot as apiUpdateParkingSpot,
 } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { getDriverVisiblePrice } from './utils';
 
 const PLACEHOLDER_PHOTO_URL = 'https://loremflickr.com/400/300/parking,garage/all';
 
+const DAY_LABEL_INDEX: Record<string, number> = {
+  Lu: 0, Ma: 1, Mi: 2, Ju: 3, Vi: 4, Sá: 5, Sa: 5, Do: 6,
+};
+
+/**
+ * Parse a schedule string like "Lu 00:00–24:00, Ma 08:00–22:00" into an
+ * array of DaySchedule objects. Returns undefined if parsing fails or empty.
+ */
+function parseScheduleText(
+  text: string | null | undefined,
+): Array<{ dayIndex: number; startHour: number; endHour: number }> | undefined {
+  if (!text?.trim()) return undefined;
+  const entries = text.split(',').map((s) => s.trim());
+  const result: Array<{ dayIndex: number; startHour: number; endHour: number }> = [];
+  for (const entry of entries) {
+    const m = entry.match(/^(\S+)\s+(\d{1,2}):\d{2}[–-](\d{1,2}):\d{2}$/);
+    if (!m) return undefined;
+    const dayIndex = DAY_LABEL_INDEX[m[1]];
+    if (dayIndex === undefined) return undefined;
+    result.push({ dayIndex, startHour: Number(m[2]), endHour: Number(m[3]) });
+  }
+  return result.length ? result : undefined;
+}
+
 function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
-  return {
+  const spot: ParkingSpot = {
     id: raw.id,
     ownerId: raw.ownerId,
     title: raw.title,
@@ -26,15 +51,18 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     reviewCount: 0,
     tags: raw.covered ? ['Cubierta'] : ['Descubierta'],
     schedule: raw.scheduleText ?? '',
-    // No structured schedule hours from the backend yet (scheduleText is
-    // free text, same as what the owner types when publishing) -- treat
-    // every spot as always-available rather than fake precise hours.
     scheduleStartHour: 0,
     scheduleEndHour: 24,
     distanceMeters: raw.distanceMeters ?? 0,
     description: raw.description ?? '',
     active: raw.status === 'active',
   };
+
+  // Attach parsed activeDays so the edit screen can read them without a cache.
+  const parsed = parseScheduleText(raw.scheduleText);
+  if (parsed) (spot as any).activeDays = parsed;
+
+  return spot;
 }
 
 export interface SearchParkingSpotsFilters {
@@ -94,24 +122,25 @@ export async function createParkingSpot(input: CreateParkingSpotInput): Promise<
   return toParkingSpot(raw);
 }
 
-// Editing a published spot isn't wired to the backend yet (parking-service
-// has no update endpoint) -- this only merges the change into what was last
-// read, so the edit/availability screens don't crash, without persisting it.
 export interface UpdateParkingSpotInput {
   scheduleStartHour?: number;
   scheduleEndHour?: number;
   pricePerHour?: number;
   description?: string;
-  /** Per-day schedule; not persisted anywhere yet (see note above). */
+  covered?: boolean;
   activeDays?: Array<{ dayIndex: number; startHour: number; endHour: number }>;
   schedule?: string;
 }
 
 export async function updateParkingSpot(
   id: string,
-  updates: UpdateParkingSpotInput
+  updates: UpdateParkingSpotInput,
 ): Promise<ParkingSpot | undefined> {
-  const spot = await getParkingSpotDetail(id);
-  if (!spot) return undefined;
-  return { ...spot, ...updates };
+  const raw = await apiUpdateParkingSpot(id, {
+    pricePerHour: updates.pricePerHour,
+    description: updates.description,
+    covered: updates.covered,
+    scheduleText: updates.schedule,
+  });
+  return toParkingSpot(raw);
 }

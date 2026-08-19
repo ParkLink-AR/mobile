@@ -290,7 +290,7 @@ export default function DriverProfile() {
               <Text style={[styles.themeValueText, { color: isDark ? colors.teal : colors.textSecondary }]}>
                 {isDark ? t('profile.theme.dark') : t('profile.theme.light')}
               </Text>
-              <Ionicons name="swap-horizontal-outline" size={14} color={colors.border} />
+              <Ionicons name="swap-horizontal-outline" size={14} color={colors.textSecondary} />
             </Animated.View>
           </Pressable>
         </View>

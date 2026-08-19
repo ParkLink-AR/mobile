@@ -40,6 +40,23 @@ export interface CreateParkingSpotInput {
   rules?: string[];
 }
 
+export interface UpdateParkingSpotApiInput {
+  pricePerHour?: number;
+  description?: string;
+  covered?: boolean;
+  scheduleText?: string;
+}
+
+export async function updateParkingSpot(
+  id: string,
+  input: UpdateParkingSpotApiInput,
+): Promise<ParkingSpotApiResponse> {
+  return request(`/parking-spots/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+}
+
 export async function searchParkingSpots(
   params: SearchParkingSpotsParams
 ): Promise<ParkingSpotApiResponse[]> {
