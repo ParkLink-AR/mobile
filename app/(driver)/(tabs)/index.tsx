@@ -365,6 +365,11 @@ export default function Search() {
     row: { flexDirection: 'row', gap: 10 },
     input: {
       flex: 1,
+      // Without this, react-native-web's <input> keeps its content-based
+      // intrinsic width as a flex-shrink floor, so it doesn't actually
+      // shrink to share the row evenly -- one box ends up oversized and
+      // shoves the other one past the edge of the screen.
+      minWidth: 0,
       borderWidth: 1.5,
       borderColor: colors.border,
       borderRadius: 10,
