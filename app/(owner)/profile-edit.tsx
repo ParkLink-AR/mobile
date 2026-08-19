@@ -21,8 +21,11 @@ import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { updateUserProfile } from '@/src/api/auth';
+import { updateUserProfile, uploadAvatar, AvatarAsset } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
+
+const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export default function OwnerProfileEdit() {
   useLanguage();
@@ -33,6 +36,7 @@ export default function OwnerProfileEdit() {
   const [name, setName] = useState(user.name);
   const [lastName, setLastName] = useState(user.lastName ?? '');
   const [avatarUri, setAvatarUri] = useState<string | undefined>(user.avatarUrl);
+  const [avatarAsset, setAvatarAsset] = useState<AvatarAsset | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -49,21 +53,39 @@ export default function OwnerProfileEdit() {
       quality: 0.7,
       base64: false,
     });
-    if (!result.canceled && result.assets[0]?.uri) {
-      setAvatarUri(result.assets[0].uri);
+    if (result.canceled || !result.assets[0]?.uri) return;
+
+    const asset = result.assets[0];
+    const mimeType = asset.mimeType ?? 'image/jpeg';
+    if (!ALLOWED_AVATAR_TYPES.includes(mimeType)) {
+      Alert.alert('Formato no permitido', 'Usá una imagen JPEG, PNG o WEBP.');
+      return;
     }
+    if (asset.fileSize && asset.fileSize > MAX_AVATAR_SIZE_BYTES) {
+      Alert.alert('Imagen muy grande', 'El tamaño máximo es 5 MB.');
+      return;
+    }
+
+    setAvatarUri(asset.uri);
+    setAvatarAsset({
+      uri: asset.uri,
+      name: asset.fileName ?? `avatar.${mimeType.split('/')[1]}`,
+      type: mimeType,
+    });
   }
 
   async function save() {
     setError(null);
     setSaving(true);
     try {
-      const updated = await updateUserProfile(user.id, {
+      let updated = await updateUserProfile(user.id, {
         firstName: name.trim(),
         lastName: lastName.trim(),
       });
-      // Avatar isn't persisted server-side yet -- keep it merged in locally.
-      setUser({ ...updated, avatarUrl: avatarUri });
+      if (avatarAsset) {
+        updated = await uploadAvatar(user.id, avatarAsset);
+      }
+      setUser(updated);
       router.back();
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : 'No se pudo guardar los cambios.');

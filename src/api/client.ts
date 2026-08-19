@@ -1,6 +1,6 @@
 import { useSessionStore } from '@/src/store/useSessionStore';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
 
 // Paths that either don't require a session or that a session-refresh retry
 // would make no sense for (retrying a failed login/register with a rotated
@@ -93,5 +93,37 @@ export async function request<T>(
   }
 
   if (response.status === 204) return undefined as T;
+  return (await response.json()) as T;
+}
+
+// Multipart uploads (e.g. avatar) can't go through `request()`: it always
+// forces `Content-Type: application/json`, but FormData needs fetch to set
+// its own `multipart/form-data; boundary=...` instead.
+async function rawMultipartFetch(
+  path: string,
+  formData: FormData,
+  accessToken: string | null
+): Promise<Response> {
+  const headers: Record<string, string> = {};
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  return fetch(`${API_URL}${path}`, { method: 'POST', body: formData, headers });
+}
+
+export async function requestMultipart<T>(path: string, formData: FormData): Promise<T> {
+  const { accessToken } = useSessionStore.getState();
+  let response = await rawMultipartFetch(path, formData, accessToken);
+
+  if (response.status === 401 && accessToken) {
+    const newToken = await refreshSession();
+    if (newToken) {
+      response = await rawMultipartFetch(path, formData, newToken);
+    } else {
+      useSessionStore.getState().clearSession();
+    }
+  }
+
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
   return (await response.json()) as T;
 }

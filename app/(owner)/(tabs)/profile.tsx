@@ -1,6 +1,6 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Text, View, ScrollView, StyleSheet, Pressable, Modal, Animated, TouchableWithoutFeedback } from 'react-native';
+import { Text, View, Image, ScrollView, StyleSheet, Pressable, Modal, Animated, TouchableWithoutFeedback } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
@@ -167,7 +167,11 @@ export default function OwnerProfile() {
         {/* Profile card */}
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
+            {user.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={{ width: 64, height: 64, borderRadius: 32 }} />
+            ) : (
+              <Text style={styles.avatarText}>{initials}</Text>
+            )}
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{user.name}</Text>

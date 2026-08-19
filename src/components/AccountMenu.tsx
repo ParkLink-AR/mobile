@@ -74,7 +74,7 @@ export function AccountMenu({ role }: { role: 'driver' | 'owner' }) {
   return (
     <>
       <Pressable onPress={() => setOpen(true)}>
-        <Avatar initials={initialsFromName(user.name)} />
+        <Avatar initials={initialsFromName(user.name)} uri={user.avatarUrl} />
       </Pressable>
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.overlay} onPress={() => setOpen(false)}>

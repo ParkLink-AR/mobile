@@ -157,7 +157,7 @@ export default function Search() {
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    headerLogo: { width: 32, height: 24 },
+    headerLogo: { width: 28, height: 28 },
     headerGreetingBlock: { flex: 1 },
     headerGreetingLabel: {
       fontSize: 12,
@@ -390,7 +390,7 @@ export default function Search() {
       {/* ── Header ─────────────────────────────────────────────────── */}
       <View style={styles.header}>
         <Image
-          source={require('@/assets/logo-parklink.png')}
+          source={require('@/assets/favicon.png')}
           style={styles.headerLogo}
           resizeMode="contain"
         />

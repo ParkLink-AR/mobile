@@ -1,5 +1,5 @@
 import { AuthTokens, AuthUser } from '@/src/types';
-import { request } from './client';
+import { API_URL, request, requestMultipart } from './client';
 
 interface RegisterInput {
   firstName: string;
@@ -30,6 +30,7 @@ interface UserOutResponse {
   first_name?: string | null;
   last_name?: string | null;
   dni?: string | null;
+  avatar_url?: string | null;
   email_verified: boolean;
   phone_verified: boolean;
 }
@@ -42,6 +43,10 @@ function toAuthUser(u: UserOutResponse): AuthUser {
     email: u.email,
     phone: u.phone ?? '',
     dni: u.dni ?? undefined,
+    // The backend returns a path relative to its own /static mount (e.g.
+    // "/static/avatars/xxx.jpg"); the app only ever talks to the gateway,
+    // so it needs the full URL to actually fetch the image.
+    avatarUrl: u.avatar_url ? `${API_URL}${u.avatar_url}` : undefined,
     emailVerified: u.email_verified,
     phoneVerified: u.phone_verified,
   };
@@ -190,6 +195,26 @@ export async function updateUserProfile(
     method: 'PUT',
     body: JSON.stringify(body),
   });
+  return toAuthUser(userResponse);
+}
+
+export interface AvatarAsset {
+  uri: string;
+  name: string;
+  type: string;
+}
+
+export async function uploadAvatar(userId: string, asset: AvatarAsset): Promise<AuthUser> {
+  const formData = new FormData();
+  // React Native's FormData accepts this {uri, name, type} file-object shape
+  // (unlike the web File/Blob API), which is what expo-image-picker's result
+  // asset maps onto directly.
+  formData.append('file', {
+    uri: asset.uri,
+    name: asset.name,
+    type: asset.type,
+  } as unknown as Blob);
+  const userResponse = await requestMultipart<UserOutResponse>(`/users/${userId}/avatar`, formData);
   return toAuthUser(userResponse);
 }
 

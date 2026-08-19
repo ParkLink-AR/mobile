@@ -36,7 +36,7 @@ export default function OwnerHome() {
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
     headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    headerLogo: { width: 36, height: 27 },
+    headerLogo: { width: 32, height: 32 },
     headerGreeting: { flex: 1 },
     earnings: { backgroundColor: colors.deepNavy },
     earningsLabel: { color: colors.white, opacity: 0.8 },
@@ -51,7 +51,7 @@ export default function OwnerHome() {
     <Screen style={styles.container}>
       <View style={styles.headerRow}>
         <Image
-          source={require('@/assets/logo-parklink.png')}
+          source={require('@/assets/favicon.png')}
           style={styles.headerLogo}
           resizeMode="contain"
         />
