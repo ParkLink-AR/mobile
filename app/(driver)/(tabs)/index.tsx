@@ -25,6 +25,8 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSettingsStore } from '@/src/store/useSettingsStore';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { searchParkingSpots, SearchParkingSpotsFilters } from '@/src/services/parkingService';
+import { geocodeAddress, GeocodeCandidate } from '@/src/api/parking';
+import { ApiError } from '@/src/api/client';
 import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 
@@ -59,27 +61,79 @@ export default function Search() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
 
+  const [addressQuery, setAddressQuery] = useState('');
+  const [searchAddress, setSearchAddress] = useState<string | null>(null);
+  const [addressError, setAddressError] = useState<string | null>(null);
+  const [geocoding, setGeocoding] = useState(false);
+  const [candidates, setCandidates] = useState<GeocodeCandidate[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   const [minPriceInput, setMinPriceInput] = useState('');
   const [maxPriceInput, setMaxPriceInput] = useState('');
   const [coveredOnly, setCoveredOnly] = useState(false);
   const [distanceInput, setDistanceInput] = useState<number | undefined>(undefined);
 
   async function locateMe() {
+    // Switching to GPS overrides any active address search.
+    setSearchAddress(null);
+    setAddressQuery('');
+    setAddressError(null);
+    setCandidates([]);
+    setShowSuggestions(false);
+
     setLocating(true);
     setLocationError(null);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setLocationError('Necesitamos tu ubicación para mostrarte cocheras cerca tuyo.');
+        setLocationError(t('search.location.permissionError'));
         return;
       }
       const position = await Location.getCurrentPositionAsync({});
       setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
     } catch {
-      setLocationError('No pudimos obtener tu ubicación. Probá de nuevo.');
+      setLocationError(t('search.location.error'));
     } finally {
       setLocating(false);
     }
+  }
+
+  // Live suggestions as you type, like any other address search (Google
+  // Maps, Uber, etc.) -- debounced so it doesn't fire a request per
+  // keystroke, and only once there's enough text to actually search with.
+  useEffect(() => {
+    const query = addressQuery.trim();
+    if (query.length < 3) {
+      setCandidates([]);
+      setShowSuggestions(false);
+      setAddressError(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setGeocoding(true);
+      geocodeAddress(query)
+        .then((results) => {
+          setCandidates(results);
+          setShowSuggestions(true);
+          setAddressError(results.length === 0 ? t('search.location.addressError') : null);
+        })
+        .catch((err) => {
+          setCandidates([]);
+          setShowSuggestions(true);
+          setAddressError(err instanceof ApiError ? err.detail : t('search.location.addressError'));
+        })
+        .finally(() => setGeocoding(false));
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [addressQuery]);
+
+  function selectCandidate(candidate: GeocodeCandidate) {
+    setShowSuggestions(false);
+    setCandidates([]);
+    setSearchAddress(candidate.displayName);
+    setLocation({ lat: candidate.lat, lng: candidate.lng });
   }
 
   useEffect(() => {
@@ -118,6 +172,12 @@ export default function Search() {
   }
 
   const activeChips: { label: string; onRemove: () => void }[] = [];
+  if (searchAddress) {
+    activeChips.push({
+      label: t('search.nearBy', { address: searchAddress }),
+      onRemove: () => locateMe(),
+    });
+  }
   if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
     activeChips.push({
       label: `$${filters.minPrice ?? 0} – ${filters.maxPrice ?? '∞'}`,
@@ -171,26 +231,88 @@ export default function Search() {
       color: colors.text,
       letterSpacing: -0.3,
     },
-    // ── Location bar ──────────────────────────────────────────────────────
-    locationSection: {
+    // ── Search bar (address, or fall back to device location) ──────────────
+    searchWrapper: {
+      position: 'relative',
+      zIndex: 20,
+      elevation: 20,
+    },
+    searchSection: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      gap: 10,
       paddingHorizontal: 20,
       paddingVertical: 12,
       backgroundColor: colors.surface,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    locationText: { flex: 1, color: colors.textSecondary, fontSize: 13 },
-    locationButton: {
-      backgroundColor: colors.teal,
-      borderRadius: 8,
+    suggestionsDropdown: {
+      position: 'absolute',
+      top: '100%',
+      left: 20,
+      right: 20,
+      maxHeight: 320,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
       paddingHorizontal: 14,
-      paddingVertical: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 12,
     },
-    locationButtonText: { color: colors.white, fontWeight: '600', fontSize: 13 },
-    error: { color: '#C62828', fontSize: 13 },
+    candidateEmpty: {
+      paddingVertical: 16,
+      fontSize: 13,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    searchInputWrapper: {
+      flex: 1,
+      minWidth: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      paddingHorizontal: 12,
+      height: 44,
+    },
+    searchInput: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: 14,
+      color: colors.text,
+      height: '100%',
+    },
+    locateButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: colors.teal,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    statusText: {
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      color: colors.textSecondary,
+      fontSize: 13,
+      backgroundColor: colors.surface,
+    },
+    error: {
+      paddingHorizontal: 20,
+      paddingTop: 4,
+      paddingBottom: 8,
+      color: '#C62828',
+      fontSize: 13,
+      backgroundColor: colors.surface,
+    },
     // ── Toolbar (filters + view toggle) ─────────────────────────────────────
     toolbar: {
       flexDirection: 'row',
@@ -388,6 +510,16 @@ export default function Search() {
       fontWeight: '500',
     },
     chipsWrap: { flexDirection: 'row', flexWrap: 'wrap' },
+    // ── Address picker ───────────────────────────────────────────────────
+    candidateRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 12,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    candidateMain: { flex: 1, minWidth: 0, fontSize: 14, color: colors.text, lineHeight: 19 },
   });
 
   return (
@@ -406,22 +538,74 @@ export default function Search() {
         <AccountMenu role="driver" />
       </View>
 
-      {/* ── Location bar ──────────────────────────────────────────── */}
-      <View style={styles.locationSection}>
-        <Text style={styles.locationText}>
-          {location
-            ? `📍 ${t('search.location.searching')}`
-            : locationError ?? t('search.location.locating')}
-        </Text>
-        <TouchableOpacity style={styles.locationButton} onPress={locateMe} disabled={locating}>
-          {locating ? (
-            <ActivityIndicator color={colors.white} size="small" />
-          ) : (
-            <Text style={styles.locationButtonText}>{t('search.location.refresh')}</Text>
-          )}
-        </TouchableOpacity>
+      {/* ── Search bar ────────────────────────────────────────────── */}
+      <View style={styles.searchWrapper}>
+        <View style={styles.searchSection}>
+          <View style={styles.searchInputWrapper}>
+            {geocoding ? (
+              <ActivityIndicator color={colors.textSecondary} size="small" />
+            ) : (
+              <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
+            )}
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t('search.placeholder')}
+              placeholderTextColor={colors.textSecondary}
+              value={addressQuery}
+              onChangeText={setAddressQuery}
+              onFocus={() => candidates.length > 0 && setShowSuggestions(true)}
+              // The delay lets a tap on a suggestion register before the
+              // list disappears -- onBlur otherwise fires first and the
+              // FlatList unmounts out from under the touch.
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              returnKeyType="search"
+            />
+          </View>
+          <TouchableOpacity
+            style={styles.locateButton}
+            onPress={locateMe}
+            disabled={locating}
+            accessibilityLabel={t('search.location.refresh')}
+          >
+            {locating ? (
+              <ActivityIndicator color={colors.white} size="small" />
+            ) : (
+              <Ionicons name="locate" size={20} color={colors.white} />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {showSuggestions && (
+          <View style={styles.suggestionsDropdown}>
+            {candidates.length > 0 ? (
+              <FlatList
+                data={candidates}
+                keyExtractor={(item, index) => `${item.lat}-${item.lng}-${index}`}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.candidateRow} onPress={() => selectCandidate(item)}>
+                    <Ionicons name="location-outline" size={18} color={colors.teal} />
+                    <Text style={styles.candidateMain} numberOfLines={2}>
+                      {item.displayName}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+            ) : (
+              !geocoding && addressError && <Text style={styles.candidateEmpty}>{addressError}</Text>
+            )}
+          </View>
+        )}
       </View>
-      {locationError ? <Text style={styles.error}>{locationError}</Text> : null}
+      {!searchAddress && (
+        <Text style={styles.statusText}>
+          {locationError
+            ? locationError
+            : location
+            ? `📍 ${t('search.location.searching')}`
+            : t('search.location.locating')}
+        </Text>
+      )}
 
       {/* ── Toolbar ────────────────────────────────────────────────── */}
       <View style={styles.toolbar}>

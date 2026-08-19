@@ -1,0 +1,174 @@
+import { useCallback, useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
+import { Button } from '@/src/components/Button';
+import { Screen } from '@/src/components/Screen';
+import { RatingStars } from '@/src/components/RatingStars';
+import { useThemeColors } from '@/src/theme/useThemeColors';
+import { getParkingSpotDetail } from '@/src/services/parkingService';
+import { ParkingSpot } from '@/src/types';
+import { t, useLanguage } from '@/src/i18n';
+
+export default function SpotDetail() {
+  const colors = useThemeColors();
+  useLanguage();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [spot, setSpot] = useState<ParkingSpot | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      getParkingSpotDetail(id).then((s) => setSpot(s ?? null));
+    }, [id]),
+  );
+
+  const styles = StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.background },
+    photoContainer: { position: 'relative' },
+    photo: { width: '100%', height: 210 },
+    backBtn: {
+      position: 'absolute', top: 14, left: 14,
+      width: 36, height: 36, borderRadius: 18,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      alignItems: 'center', justifyContent: 'center',
+    },
+    body: { padding: 16, gap: 14, marginTop: -28 },
+
+    heroCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      padding: 18,
+      gap: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 3,
+    },
+    titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+    titleBlock: { flex: 1, gap: 4 },
+    spotTitle: { fontSize: 19, fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
+    addressRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    spotAddress: { flex: 1, fontSize: 13, color: colors.textSecondary, lineHeight: 17 },
+    priceBadge: {
+      backgroundColor: colors.teal + '18',
+      borderRadius: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+    },
+    priceValue: { fontSize: 16, fontWeight: '700', color: colors.teal },
+    divider: { height: 1, backgroundColor: colors.border },
+    pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    pill: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      backgroundColor: colors.background,
+      borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+    },
+    pillText: { fontSize: 12.5, fontWeight: '600', color: colors.text },
+
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 14, borderWidth: 1, borderColor: colors.border,
+      padding: 16, gap: 8,
+    },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    sectionLabel: {
+      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      letterSpacing: 0.8, textTransform: 'uppercase',
+    },
+    value: { fontSize: 14.5, color: colors.text, lineHeight: 20 },
+
+    availabilityBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+      marginTop: 4, alignSelf: 'flex-start',
+      backgroundColor: colors.teal + '14',
+      borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+    },
+    availabilityLink: { color: colors.teal, fontWeight: '700', fontSize: 13 },
+
+    editBtn: { marginTop: 4, flexDirection: 'row', gap: 8 },
+  });
+
+  if (!spot) return null;
+
+  return (
+    <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.photoContainer}>
+          <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.body}>
+          {/* Hero: title, address, rating, price and type together */}
+          <View style={styles.heroCard}>
+            <View style={styles.titleRow}>
+              <View style={styles.titleBlock}>
+                <Text style={styles.spotTitle}>{spot.title}</Text>
+                <View style={styles.addressRow}>
+                  <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+                  <Text style={styles.spotAddress} numberOfLines={2}>{spot.address}</Text>
+                </View>
+              </View>
+              <View style={styles.priceBadge}>
+                <Text style={styles.priceValue}>${spot.pricePerHour}{t('spot.pricePerHour.short')}</Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.pillRow}>
+              <View style={styles.pill}>
+                <Ionicons name="star" size={13} color="#F59E0B" />
+                <Text style={styles.pillText}>{spot.rating.toFixed(1)} ({spot.reviewCount})</Text>
+              </View>
+              <View style={styles.pill}>
+                <Ionicons
+                  name={spot.covered ? 'car-outline' : 'sunny-outline'}
+                  size={13}
+                  color={colors.teal}
+                />
+                <Text style={styles.pillText}>
+                  {spot.covered ? t('spot.tag.covered') : t('spot.tag.uncovered')}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+              <Text style={styles.sectionLabel}>{t('owner.spot.edit.availability')}</Text>
+            </View>
+            <Text style={styles.value}>{spot.schedule || '—'}</Text>
+            <TouchableOpacity
+              style={styles.availabilityBtn}
+              onPress={() => router.push(`/(owner)/spots/${id}/availability`)}
+            >
+              <Text style={styles.availabilityLink}>{t('owner.spots.manageAvailability')}</Text>
+              <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+            </TouchableOpacity>
+          </View>
+
+          {!!spot.description && (
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="document-text-outline" size={15} color={colors.textSecondary} />
+                <Text style={styles.sectionLabel}>{t('owner.spot.edit.description')}</Text>
+              </View>
+              <Text style={styles.value}>{spot.description}</Text>
+            </View>
+          )}
+
+          <Button
+            title={t('owner.spot.edit.title')}
+            onPress={() => router.push(`/(owner)/spots/${id}/edit`)}
+            style={styles.editBtn}
+          />
+        </View>
+      </ScrollView>
+    </Screen>
+  );
+}

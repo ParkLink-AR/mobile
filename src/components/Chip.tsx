@@ -15,6 +15,7 @@ export function Chip({ label, onPress, onRemove, selected }: ChipProps) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
+      maxWidth: 280,
       borderWidth: 1.5,
       borderColor: colors.border,
       borderRadius: 20,
@@ -29,6 +30,8 @@ export function Chip({ label, onPress, onRemove, selected }: ChipProps) {
       borderColor: colors.teal,
     },
     text: {
+      flexShrink: 1,
+      minWidth: 0,
       fontSize: 13,
       fontWeight: '500',
       color: colors.text,
@@ -50,7 +53,9 @@ export function Chip({ label, onPress, onRemove, selected }: ChipProps) {
       style={[styles.chip, selected && styles.chipSelected]}
       onPress={onRemove ?? onPress}
     >
-      <Text style={[styles.text, selected && styles.textSelected]}>{label}</Text>
+      <Text style={[styles.text, selected && styles.textSelected]} numberOfLines={1} ellipsizeMode="tail">
+        {label}
+      </Text>
       {onRemove && (
         <Text style={[styles.removeText, selected && styles.removeTextSelected]}>✕</Text>
       )}

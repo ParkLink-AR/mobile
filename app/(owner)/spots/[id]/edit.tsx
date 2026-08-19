@@ -1,17 +1,20 @@
 import { useCallback, useState } from 'react';
 import {
-  View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity,
+  View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
+import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { RatingStars } from '@/src/components/RatingStars';
 import { AvailabilityPicker, DaySchedule } from '@/src/components/AvailabilityPicker';
+import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { getParkingSpotDetail, updateParkingSpot } from '@/src/services/parkingService'; // getParkingSpotDetail used in useFocusEffect
 import { useOwnerSpotsStore } from '@/src/store/useOwnerSpotsStore';
+import { GeocodeCandidate, reverseGeocode } from '@/src/api/parking';
 import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 
@@ -24,6 +27,10 @@ export default function EditSpot() {
   const clearSpots = useOwnerSpotsStore((s) => s.clearSpots);
 
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
+  const [address, setAddress] = useState('');
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [covered, setCovered] = useState(true);
@@ -35,6 +42,8 @@ export default function EditSpot() {
       getParkingSpotDetail(id).then((s) => {
         if (!s) return;
         setSpot(s);
+        setAddress(s.address);
+        setCoordinates({ lat: s.lat, lng: s.lng });
         setPrice(String(s.pricePerHour));
         setDescription(s.description ?? '');
         setCovered(s.covered);
@@ -43,6 +52,45 @@ export default function EditSpot() {
       });
     }, [id]),
   );
+
+  function selectAddress(candidate: GeocodeCandidate) {
+    setAddress(candidate.displayName);
+    setCoordinates({ lat: candidate.lat, lng: candidate.lng });
+    setLocationError(null);
+  }
+
+  function handleAddressChange(text: string) {
+    setAddress(text);
+    // Editing the text after picking one invalidates the coordinates it
+    // came with -- force picking (or GPS) again before saving.
+    setCoordinates(null);
+  }
+
+  async function useCurrentLocation() {
+    setLocationError(null);
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationError(t('owner.spot.new.permissionError'));
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({});
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      setCoordinates({ lat, lng });
+      try {
+        const reversed = await reverseGeocode(lat, lng);
+        setAddress(reversed.displayName);
+      } catch {
+        setAddress(t('owner.spot.new.locationFallback'));
+      }
+    } catch {
+      setLocationError(t('search.location.error'));
+    } finally {
+      setLocating(false);
+    }
+  }
 
   if (!spot) return null;
 
@@ -54,6 +102,10 @@ export default function EditSpot() {
     const parsedPrice = Number(price);
     if (!price.trim() || isNaN(parsedPrice) || parsedPrice <= 0) {
       alert(t('owner.spot.edit.invalidPrice'));
+      return;
+    }
+    if (!address.trim() || !coordinates) {
+      alert(t('owner.spot.new.requiredFields'));
       return;
     }
     const DAY_LABELS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
@@ -73,6 +125,9 @@ export default function EditSpot() {
         scheduleEndHour: globalEnd,
         activeDays: schedule,
         schedule: scheduleString,
+        address: address.trim(),
+        lat: coordinates.lat,
+        lng: coordinates.lng,
       });
       // 1. Limpiar la caché para que la lista no muestre datos viejos
       //    mientras llega la respuesta del re-fetch.
@@ -133,6 +188,15 @@ export default function EditSpot() {
     toggleText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
     toggleTextActive: { color: colors.surface, fontWeight: '700' },
 
+    locationCard: { zIndex: 20, elevation: 20 },
+    addressRow: { flexDirection: 'row', gap: 8 },
+    locateButton: {
+      width: 46, height: 46, borderRadius: 8,
+      backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center',
+    },
+    locationConfirmed: { color: colors.success, fontSize: 12, fontWeight: '700' },
+    locationError: { color: '#C62828', fontSize: 12 },
+
     saveBtn: { marginTop: 4 },
   });
 
@@ -151,8 +215,34 @@ export default function EditSpot() {
           {/* Spot info (read-only) */}
           <View style={styles.infoCard}>
             <Text style={styles.spotTitle}>{spot.title}</Text>
-            <Text style={styles.spotAddress}>{spot.address}</Text>
             <RatingStars rating={spot.rating} count={spot.reviewCount} />
+          </View>
+
+          {/* Location */}
+          <View style={[styles.card, styles.locationCard]}>
+            <Text style={styles.sectionLabel}>{t('owner.spot.new.address')}</Text>
+            <View style={styles.addressRow}>
+              <AddressAutocomplete
+                value={address}
+                onChangeText={handleAddressChange}
+                onSelect={selectAddress}
+                placeholder={t('owner.spot.new.addressPlaceholder')}
+              />
+              <TouchableOpacity
+                style={styles.locateButton}
+                onPress={useCurrentLocation}
+                disabled={locating}
+                accessibilityLabel={t('owner.spot.new.useCurrentLocation')}
+              >
+                {locating ? (
+                  <ActivityIndicator color={colors.white} size="small" />
+                ) : (
+                  <Ionicons name="locate" size={20} color={colors.white} />
+                )}
+              </TouchableOpacity>
+            </View>
+            {coordinates && <Text style={styles.locationConfirmed}>{t('owner.spot.new.locationConfirmed')}</Text>}
+            {locationError && <Text style={styles.locationError}>{locationError}</Text>}
           </View>
 
           {/* Price */}

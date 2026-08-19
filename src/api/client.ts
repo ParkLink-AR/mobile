@@ -39,7 +39,13 @@ async function rawFetch(
     ...(options.headers as Record<string, string> | undefined),
   };
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-  return fetch(`${API_URL}${path}`, { ...options, headers });
+  // The backend sends an ETag on every GET with no Cache-Control -- on web
+  // that's enough for the browser to keep serving a stale cached body after
+  // an update elsewhere (e.g. re-opening a spot's detail screen right after
+  // editing it, with no way for the browser to know that PUT invalidated
+  // this GET). The client always wants the current server state, never an
+  // HTTP-cache guess at it.
+  return fetch(`${API_URL}${path}`, { ...options, headers, cache: 'no-store' });
 }
 
 async function refreshSession(): Promise<string | null> {
@@ -106,7 +112,7 @@ async function rawMultipartFetch(
 ): Promise<Response> {
   const headers: Record<string, string> = {};
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-  return fetch(`${API_URL}${path}`, { method: 'POST', body: formData, headers });
+  return fetch(`${API_URL}${path}`, { method: 'POST', body: formData, headers, cache: 'no-store' });
 }
 
 export async function requestMultipart<T>(path: string, formData: FormData): Promise<T> {

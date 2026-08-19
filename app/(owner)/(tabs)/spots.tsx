@@ -64,7 +64,7 @@ export default function OwnerSpots() {
         contentContainerStyle={{ gap: 10 }}
         renderItem={({ item }) => (
           <TouchableOpacity
-            onPress={() => router.push(`/(owner)/spots/${item.id}/edit`)}
+            onPress={() => router.push(`/(owner)/spots/${item.id}`)}
           >
             <Card>
               <Text style={typography.h2}>{item.title}</Text>

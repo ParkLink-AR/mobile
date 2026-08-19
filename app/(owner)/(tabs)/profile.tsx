@@ -210,7 +210,7 @@ export default function OwnerProfile() {
         ) : (
           <View style={styles.spotsGrid}>
             {mySpots.map((spot) => (
-              <Pressable key={spot.id} onPress={() => router.push(`/(owner)/spots/${spot.id}/edit`)}>
+              <Pressable key={spot.id} onPress={() => router.push(`/(owner)/spots/${spot.id}`)}>
                 <ParkingSpotCard spot={spot} />
               </Pressable>
             ))}

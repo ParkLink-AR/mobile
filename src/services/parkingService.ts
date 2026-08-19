@@ -104,6 +104,8 @@ export async function getParkingSpotsForOwner(ownerId: string): Promise<ParkingS
 export interface CreateParkingSpotInput {
   title: string;
   address: string;
+  lat: number;
+  lng: number;
   covered: boolean;
   pricePerHour: number;
   schedule?: string;
@@ -114,6 +116,8 @@ export async function createParkingSpot(input: CreateParkingSpotInput): Promise<
   const raw = await apiCreateParkingSpot({
     title: input.title,
     address: input.address,
+    lat: input.lat,
+    lng: input.lng,
     pricePerHour: input.pricePerHour,
     covered: input.covered,
     scheduleText: input.schedule,
@@ -130,6 +134,10 @@ export interface UpdateParkingSpotInput {
   covered?: boolean;
   activeDays?: Array<{ dayIndex: number; startHour: number; endHour: number }>;
   schedule?: string;
+  // The three go together: send all or none (see UpdateParkingSpotDto).
+  address?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export async function updateParkingSpot(
@@ -141,6 +149,9 @@ export async function updateParkingSpot(
     description: updates.description,
     covered: updates.covered,
     scheduleText: updates.schedule,
+    address: updates.address,
+    lat: updates.lat,
+    lng: updates.lng,
   });
   return toParkingSpot(raw);
 }

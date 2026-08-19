@@ -41,18 +41,24 @@ export function DockTabBar({ state, navigation, tabKeys }: DockTabBarProps) {
   const mode = useSettingsStore((s) => s.mode);
   const insets = useSafeAreaInsets();
 
-  const bgColor = mode === 'dark' ? 'rgba(16,110,112,0.92)' : 'rgba(16,110,112,0.95)';
+  // rgb(22,139,141) == colors.teal (#168B8D), same teal used for buttons
+  // and accents everywhere else in the app.
+  const bgColor = mode === 'dark' ? 'rgba(22,139,141,0.92)' : 'rgba(22,139,141,0.95)';
 
   return (
     <View
       style={[styles.wrapper, { bottom: Math.max(insets.bottom, 8) }]}
       pointerEvents="box-none"
     >
-      <BlurView
-        intensity={30}
-        tint="dark"
-        style={[styles.blur, { backgroundColor: bgColor }]}
-      >
+      <View style={styles.blur}>
+        {/* BlurView's own `tint`+`backgroundColor` blending is unpredictable
+            across platforms (came out gray in light mode with tint="dark",
+            then washed out near-white with tint="light") -- blur underneath,
+            and paint the actual teal as a separate, fully opaque-enough
+            layer on top, so the visible color no longer depends on how the
+            blur tint happens to mix with it. */}
+        <BlurView intensity={30} tint={mode === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: bgColor }]} />
         <View style={styles.inner}>
           {tabKeys.map((tab, index) => {
             const route = state.routes[index];
@@ -90,7 +96,7 @@ export function DockTabBar({ state, navigation, tabKeys }: DockTabBarProps) {
             );
           })}
         </View>
-      </BlurView>
+      </View>
     </View>
   );
 }
@@ -111,6 +117,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   blur: {
+    position: 'relative',
     width: '100%',
     borderRadius: 32,
     overflow: 'hidden',

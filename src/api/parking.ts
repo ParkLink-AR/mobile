@@ -22,6 +22,9 @@ export interface ParkingSpotApiResponse {
   distanceMeters?: number;
 }
 
+// Search always deals in resolved coordinates -- mobile geocodes a
+// free-text query first (via GET /geocode, which shows every ambiguous
+// match instead of guessing one) or uses device GPS, and only then searches.
 export interface SearchParkingSpotsParams {
   lat: number;
   lng: number;
@@ -30,10 +33,40 @@ export interface SearchParkingSpotsParams {
   covered?: boolean;
 }
 
+// One candidate match for a free-text address query -- ambiguous street
+// names (very common across Argentine cities) can resolve to several real
+// places, so the caller shows all of them and lets the user pick the right
+// one instead of the backend silently guessing.
+export interface GeocodeCandidate {
+  lat: number;
+  lng: number;
+  displayName: string;
+  city?: string;
+  postcode?: string;
+}
+
+export async function geocodeAddress(query: string): Promise<GeocodeCandidate[]> {
+  return request(`/geocode?q=${encodeURIComponent(query)}`);
+}
+
+export interface ReverseGeocodeResult {
+  lat: number;
+  lng: number;
+  displayName: string;
+}
+
+// The inverse: device coordinates -> a readable address, used when
+// publishing a spot with "use my current location" instead of typing one.
+export async function reverseGeocode(lat: number, lng: number): Promise<ReverseGeocodeResult> {
+  return request(`/geocode/reverse?lat=${lat}&lng=${lng}`);
+}
+
 export interface CreateParkingSpotInput {
   title: string;
   description?: string;
   address: string;
+  lat: number;
+  lng: number;
   pricePerHour: number;
   covered?: boolean;
   scheduleText?: string;
@@ -45,6 +78,10 @@ export interface UpdateParkingSpotApiInput {
   description?: string;
   covered?: boolean;
   scheduleText?: string;
+  // The three go together: send all or none.
+  address?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export async function updateParkingSpot(
