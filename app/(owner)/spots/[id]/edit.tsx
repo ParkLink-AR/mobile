@@ -89,14 +89,27 @@ export default function EditSpot() {
 
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    photoContainer: { position: 'relative' },
-    photo: { width: '100%', height: 190 },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.deepNavy,
+      paddingHorizontal: 4,
+      paddingVertical: 12,
+    },
     backBtn: {
-      position: 'absolute', top: 14, left: 14,
-      width: 36, height: 36, borderRadius: 18,
-      backgroundColor: 'rgba(0,0,0,0.45)',
+      width: 44, height: 44,
       alignItems: 'center', justifyContent: 'center',
     },
+    headerTitle: {
+      flex: 1,
+      textAlign: 'center',
+      fontSize: 17,
+      fontWeight: '600',
+      color: '#fff',
+      marginRight: 44, // compensate for backBtn width so title stays truly centered
+    },
+    photoContainer: { position: 'relative' },
+    photo: { width: '100%', height: 190 },
     body: { padding: 16, gap: 14 },
 
     infoCard: {
@@ -137,14 +150,19 @@ export default function EditSpot() {
   });
 
   return (
-    <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
+    <Screen style={styles.screen} edges={['top', 'left', 'right', 'bottom']}>
+      {/* Custom header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t('owner.spot.edit.title')}</Text>
+      </View>
+
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Photo + back button */}
+        {/* Photo */}
         <View style={styles.photoContainer}>
           <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={20} color="#fff" />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.body}>

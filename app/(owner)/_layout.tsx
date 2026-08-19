@@ -13,7 +13,7 @@ export default function OwnerLayout() {
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="spots/new" options={{ title: t('layout.owner.newSpot') }} />
-      <Stack.Screen name="spots/[id]/edit" options={{ title: t('owner.spot.edit.title') }} />
+      <Stack.Screen name="spots/[id]/edit" options={{ headerShown: false }} />
       <Stack.Screen name="spots/[id]/availability" options={{ title: t('layout.owner.availability') }} />
       <Stack.Screen name="settlements/index" options={{ title: t('layout.owner.settlements') }} />
       <Stack.Screen name="settlements/[id]" options={{ title: t('layout.owner.settlementDetail') }} />
