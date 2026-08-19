@@ -1,6 +1,6 @@
 import { t, useLanguage } from '@/src/i18n';
-import { useCallback, useEffect, useState } from 'react';
-import { Text, View, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Text, View, ScrollView, StyleSheet, Pressable, Modal, Animated, TouchableWithoutFeedback } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
@@ -14,10 +14,10 @@ import { useSettingsStore, Language } from '@/src/store/useSettingsStore';
 import { getParkingSpotsForOwner } from '@/src/services/parkingService';
 import { ParkingSpot } from '@/src/types';
 
-const LANGS: { key: Language; flag: string; label: string }[] = [
-  { key: 'es', flag: '🇦🇷', label: 'ES' },
-  { key: 'en', flag: '🇺🇸', label: 'EN' },
-  { key: 'ja', flag: '🇯🇵', label: '日本語' },
+const LANGS: { key: Language; label: string }[] = [
+  { key: 'es', label: 'Español' },
+  { key: 'en', label: 'English' },
+  { key: 'ja', label: '日本語' },
 ];
 
 export default function OwnerProfile() {
@@ -32,6 +32,17 @@ export default function OwnerProfile() {
   const mode = useSettingsStore((s) => s.mode);
   const toggleMode = useSettingsStore((s) => s.toggleMode);
   const [mySpots, setMySpots] = useState<ParkingSpot[]>([]);
+  const [langModalVisible, setLangModalVisible] = useState(false);
+
+  const themeAnim = useRef(new Animated.Value(mode === 'dark' ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(themeAnim, {
+      toValue: mode === 'dark' ? 1 : 0,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [mode]);
 
   useEffect(() => {
     if (user) getParkingSpotsForOwner(user.id).then(setMySpots);
@@ -50,7 +61,13 @@ export default function OwnerProfile() {
     .split(' ').slice(0, 2)
     .map((w: string) => w[0]?.toUpperCase() ?? '').join('');
 
+  const currentLang = LANGS.find((l) => l.key === language) ?? LANGS[0];
   const isDark = mode === 'dark';
+
+  const themeIconColor = themeAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.textSecondary, colors.teal],
+  });
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
@@ -95,32 +112,37 @@ export default function OwnerProfile() {
     },
     prefRow: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      paddingHorizontal: 16, paddingVertical: 12,
+      paddingHorizontal: 16, paddingVertical: 14,
     },
     prefDivider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
     prefLabel: { fontSize: 14, fontWeight: '500', color: colors.text },
 
-    langRow: { flexDirection: 'row', gap: 6 },
-    langPill: {
-      flexDirection: 'row', alignItems: 'center', gap: 4,
-      paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1.5,
-    },
-    langPillActive: { backgroundColor: colors.teal, borderColor: colors.teal },
-    langPillInactive: { backgroundColor: 'transparent', borderColor: colors.border },
-    langPillText: { fontSize: 12, fontWeight: '600' },
-    langPillTextActive: { color: colors.white },
-    langPillTextInactive: { color: colors.textSecondary },
+    langCurrent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    langCurrentText: { fontSize: 14, fontWeight: '600', color: colors.teal },
 
-    themeToggle: { flexDirection: 'row', gap: 6 },
-    themePill: {
-      flexDirection: 'row', alignItems: 'center', gap: 5,
-      paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1.5,
+    themeValue: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    themeValueText: { fontSize: 14, fontWeight: '600' },
+
+    modalOverlay: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
+      justifyContent: 'center', alignItems: 'center',
     },
-    themePillActive: { backgroundColor: colors.teal, borderColor: colors.teal },
-    themePillInactive: { backgroundColor: 'transparent', borderColor: colors.border },
-    themePillText: { fontSize: 12, fontWeight: '600' },
-    themePillTextActive: { color: colors.white },
-    themePillTextInactive: { color: colors.textSecondary },
+    modalSheet: {
+      width: '85%', borderRadius: 20, paddingVertical: 32, paddingHorizontal: 24,
+      backgroundColor: colors.surface, alignItems: 'center', gap: 8,
+    },
+    modalTitle: {
+      fontSize: 16, fontWeight: '700', color: colors.text,
+      marginBottom: 16, textAlign: 'center',
+    },
+    langOption: {
+      width: '100%', flexDirection: 'row', alignItems: 'center', gap: 14,
+      paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12,
+    },
+    langOptionActive: { backgroundColor: colors.teal + '22' },
+    langOptionLabel: { flex: 1, fontSize: 16, fontWeight: '600' },
+    langOptionLabelActive: { color: colors.teal },
+    langOptionLabelInactive: { color: colors.text },
 
     spotsEmpty: {
       backgroundColor: colors.surface, borderRadius: 12,
@@ -211,50 +233,35 @@ export default function OwnerProfile() {
           <View style={styles.sectionLine} />
         </View>
         <View style={styles.prefCard}>
-          <View style={styles.prefRow}>
+          <Pressable
+            style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => setLangModalVisible(true)}
+          >
             <Text style={styles.prefLabel}>{t('profile.language')}</Text>
-            <View style={styles.langRow}>
-              {LANGS.map((l) => {
-                const active = language === l.key;
-                return (
-                  <Pressable
-                    key={l.key}
-                    style={[styles.langPill, active ? styles.langPillActive : styles.langPillInactive]}
-                    onPress={() => setLanguage(l.key)}
-                  >
-                    <Text>{l.flag}</Text>
-                    <Text style={[styles.langPillText, active ? styles.langPillTextActive : styles.langPillTextInactive]}>
-                      {l.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+            <View style={styles.langCurrent}>
+              <Text style={styles.langCurrentText}>{currentLang.label}</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.teal} />
             </View>
-          </View>
+          </Pressable>
+
           <View style={styles.prefDivider} />
-          <View style={styles.prefRow}>
+
+          <Pressable
+            style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={toggleMode}
+          >
             <Text style={styles.prefLabel}>{t('profile.theme')}</Text>
-            <View style={styles.themeToggle}>
-              <Pressable
-                style={[styles.themePill, !isDark ? styles.themePillActive : styles.themePillInactive]}
-                onPress={() => isDark && toggleMode()}
-              >
-                <Ionicons name="sunny-outline" size={13} color={!isDark ? colors.white : colors.textSecondary} />
-                <Text style={[styles.themePillText, !isDark ? styles.themePillTextActive : styles.themePillTextInactive]}>
-                  {t('profile.theme.light')}
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.themePill, isDark ? styles.themePillActive : styles.themePillInactive]}
-                onPress={() => !isDark && toggleMode()}
-              >
-                <Ionicons name="moon-outline" size={13} color={isDark ? colors.white : colors.textSecondary} />
-                <Text style={[styles.themePillText, isDark ? styles.themePillTextActive : styles.themePillTextInactive]}>
-                  {t('profile.theme.dark')}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
+            <Animated.View style={styles.themeValue}>
+              {isDark
+                ? <Ionicons name="moon" size={16} color={colors.teal} />
+                : <Ionicons name="sunny" size={16} color={colors.textSecondary} />
+              }
+              <Text style={[styles.themeValueText, { color: isDark ? colors.teal : colors.textSecondary }]}>
+                {isDark ? t('profile.theme.dark') : t('profile.theme.light')}
+              </Text>
+              <Ionicons name="swap-horizontal-outline" size={14} color={colors.border} />
+            </Animated.View>
+          </Pressable>
         </View>
 
         {/* Account / Logout */}
@@ -274,6 +281,47 @@ export default function OwnerProfile() {
           <Text style={[styles.actionBtnText, styles.logoutBtnText]}>{t('account.logout')}</Text>
         </Pressable>
       </ScrollView>
+
+      <Modal
+        visible={langModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLangModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setLangModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalSheet}>
+                <Text style={styles.modalTitle}>{t('language.select')}</Text>
+                {LANGS.map((l) => {
+                  const active = language === l.key;
+                  return (
+                    <Pressable
+                      key={l.key}
+                      style={({ pressed }) => [
+                        styles.langOption,
+                        active && styles.langOptionActive,
+                        { opacity: pressed ? 0.7 : 1 },
+                      ]}
+                      onPress={() => {
+                        setLanguage(l.key);
+                        setLangModalVisible(false);
+                      }}
+                    >
+                      <Text style={[styles.langOptionLabel, active ? styles.langOptionLabelActive : styles.langOptionLabelInactive]}>
+                        {l.label}
+                      </Text>
+                      {active && (
+                        <Ionicons name="checkmark-circle" size={20} color={colors.teal} />
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </Screen>
   );
 }
