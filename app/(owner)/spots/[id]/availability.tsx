@@ -1,125 +1,120 @@
-import { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
-import { Card } from '@/src/components/Card';
+import { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
+import { AvailabilityPicker, DaySchedule } from '@/src/components/AvailabilityPicker';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
 import { getParkingSpotDetail, updateParkingSpot } from '@/src/services/parkingService';
+import { useOwnerSpotsStore } from '@/src/store/useOwnerSpotsStore';
 import { ParkingSpot } from '@/src/types';
+import { t, useLanguage } from '@/src/i18n';
 
-const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const DAY_LABELS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
+const fmt = (h: number) => `${String(h).padStart(2, '0')}:00`;
 
 export default function SpotAvailability() {
   const colors = useThemeColors();
-  const typography = useTypography();
+  useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const markUpdated = useOwnerSpotsStore((s) => s.markUpdated);
+  const clearSpots = useOwnerSpotsStore((s) => s.clearSpots);
+
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
-  const [startHour, setStartHour] = useState('');
-  const [endHour, setEndHour] = useState('');
+  const [schedule, setSchedule] = useState<DaySchedule[]>([]);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    getParkingSpotDetail(id).then((s) => {
-      if (!s) return;
-      setSpot(s);
-      setStartHour(String(s.scheduleStartHour));
-      setEndHour(String(s.scheduleEndHour));
-    });
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      getParkingSpotDetail(id).then((s) => {
+        if (!s) return;
+        setSpot(s);
+        const storedDays: DaySchedule[] | undefined = (s as any).activeDays;
+        setSchedule(storedDays?.length ? storedDays : [0, 1, 2, 3, 4].map((d) => ({ dayIndex: d, startHour: 8, endHour: 22 })));
+      });
+    }, [id]),
+  );
 
   if (!spot) return null;
 
   async function saveAvailability() {
-    if (!startHour.trim() || !endHour.trim()) {
-      alert('Por favor completa los horarios');
+    if (schedule.length === 0) {
+      alert(t('owner.spot.new.requiredSchedule'));
       return;
     }
-
-    const start = Number(startHour);
-    const end = Number(endHour);
-
-    if (start < 0 || start > 23 || end < 0 || end > 23 || start >= end) {
-      alert('Ingresa horarios válidos (0-23 y inicio < fin)');
-      return;
-    }
-
+    const scheduleString = schedule
+      .map((d) => `${DAY_LABELS[d.dayIndex]} ${fmt(d.startHour)}–${fmt(d.endHour)}`)
+      .join(', ');
+    const globalStart = Math.min(...schedule.map((d) => d.startHour));
+    const globalEnd = Math.max(...schedule.map((d) => d.endHour));
     try {
       setSaving(true);
-      const updated = await updateParkingSpot(id, {
-        scheduleStartHour: start,
-        scheduleEndHour: end,
+      await updateParkingSpot(id, {
+        scheduleStartHour: globalStart,
+        scheduleEndHour: globalEnd,
+        activeDays: schedule,
+        schedule: scheduleString,
       });
-      if (updated) setSpot(updated);
+      clearSpots();
+      markUpdated();
       router.back();
-    } catch (error) {
-      alert('Error al guardar la disponibilidad');
+    } catch {
+      alert(t('owner.spot.edit.errorSave'));
       setSaving(false);
     }
   }
 
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 8 },
-    card: { paddingVertical: 8 },
-    dayRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    input: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
-      fontSize: 15,
-      marginBottom: 4,
-      color: colors.text,
+    screen: { flex: 1, backgroundColor: colors.background },
+    body: { padding: 16, gap: 14 },
+
+    infoCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 14, borderWidth: 1, borderColor: colors.border,
+      padding: 16, gap: 6,
     },
-    timeRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-end', marginBottom: 16 },
-    timeInput: { flex: 1 },
-    label: { marginBottom: 4 },
+    spotTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+    currentSchedule: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
+
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 14, borderWidth: 1, borderColor: colors.border,
+      padding: 16, gap: 10,
+    },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    sectionLabel: {
+      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      letterSpacing: 0.8, textTransform: 'uppercase',
+    },
+
+    saveBtn: { marginTop: 4 },
   });
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.screen}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={typography.h1}>{spot.title}</Text>
-        <Text style={[typography.caption, styles.label]}>
-          Horario recurrente actual: {spot.schedule}
-        </Text>
+        <View style={styles.body}>
+          <View style={styles.infoCard}>
+            <Text style={styles.spotTitle}>{spot.title}</Text>
+            <Text style={styles.currentSchedule}>{spot.schedule || '—'}</Text>
+          </View>
 
-        <Text style={[typography.caption, styles.label]}>Editar disponibilidad</Text>
-        <View style={styles.timeRow}>
-          <View style={styles.timeInput}>
-            <Text style={[typography.caption, styles.label]}>Desde (hora)</Text>
-            <TextInput
-              style={styles.input}
-              value={startHour}
-              onChangeText={setStartHour}
-              keyboardType="numeric"
-              placeholder="8"
-              placeholderTextColor={colors.textSecondary}
-            />
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+              <Text style={styles.sectionLabel}>{t('owner.spot.edit.availability')}</Text>
+            </View>
+            <AvailabilityPicker value={schedule} onChange={setSchedule} />
           </View>
-          <View style={styles.timeInput}>
-            <Text style={[typography.caption, styles.label]}>Hasta (hora)</Text>
-            <TextInput
-              style={styles.input}
-              value={endHour}
-              onChangeText={setEndHour}
-              keyboardType="numeric"
-              placeholder="22"
-              placeholderTextColor={colors.textSecondary}
-            />
-          </View>
+
+          <Button
+            title={saving ? t('owner.spot.edit.saving') : t('owner.spot.edit.save')}
+            onPress={saveAvailability}
+            disabled={saving}
+            style={styles.saveBtn}
+          />
         </View>
-
-        <Text style={[typography.caption, styles.label]}>Disponibilidad por día</Text>
-        {DAYS.map((day) => (
-          <Card key={day} style={[styles.card, styles.dayRow]}>
-            <Text style={typography.body}>{day}</Text>
-            <Text style={typography.caption}>Disponible {startHour}-{endHour}h</Text>
-          </Card>
-        ))}
-
-        <Button title={saving ? 'Guardando...' : 'Guardar disponibilidad'} onPress={saveAvailability} disabled={saving} />
       </ScrollView>
     </Screen>
   );

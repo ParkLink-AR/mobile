@@ -32,12 +32,14 @@ export default function SpotDetail() {
       backgroundColor: 'rgba(0,0,0,0.45)',
       alignItems: 'center', justifyContent: 'center',
     },
-    body: { padding: 16, gap: 14, marginTop: -28 },
+    body: { padding: 16, gap: 14, marginTop: -20 },
 
     heroCard: {
       backgroundColor: colors.surface,
       borderRadius: 18,
-      padding: 18,
+      paddingHorizontal: 18,
+      paddingTop: 26,
+      paddingBottom: 18,
       gap: 10,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
@@ -86,7 +88,7 @@ export default function SpotDetail() {
     },
     availabilityLink: { color: colors.teal, fontWeight: '700', fontSize: 13 },
 
-    editBtn: { marginTop: 4, flexDirection: 'row', gap: 8 },
+    editBtn: { marginTop: 4 },
   });
 
   if (!spot) return null;
