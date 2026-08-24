@@ -12,6 +12,7 @@ import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { createParkingSpot } from '@/src/services/parkingService';
 import { GeocodeCandidate, reverseGeocode } from '@/src/api/parking';
+import { ScheduleEntry } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 
 /** Default Mon–Fri, 08:00–22:00 */
@@ -21,14 +22,8 @@ const DEFAULT_SCHEDULE: DaySchedule[] = [0, 1, 2, 3, 4].map((dayIndex) => ({
   endHour: 22,
 }));
 
-/** Serialise DaySchedule[] to a human-readable schedule string */
-function buildScheduleString(days: DaySchedule[]): string {
-  if (days.length === 0) return '';
-  const DAY_LABELS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
-  const fmt = (h: number) => `${String(h).padStart(2, '0')}:00`;
-  return days
-    .map((d) => `${DAY_LABELS[d.dayIndex]} ${fmt(d.startHour)}–${fmt(d.endHour)}`)
-    .join(', ');
+function toScheduleEntries(days: DaySchedule[]): ScheduleEntry[] {
+  return days.map((d) => ({ dayOfWeek: d.dayIndex, startHour: d.startHour, endHour: d.endHour }));
 }
 
 export default function NewSpot() {
@@ -107,10 +102,7 @@ export default function NewSpot() {
         lng: coordinates.lng,
         covered,
         pricePerHour: Number(price),
-        // El backend sólo guarda el horario como texto libre por ahora (no
-        // hay franjas horarias estructuradas por día todavía) -- se manda
-        // el resumen legible que arma el AvailabilityPicker.
-        schedule: buildScheduleString(schedule),
+        schedule: toScheduleEntries(schedule),
         description: description.trim() || undefined,
       });
       router.back();

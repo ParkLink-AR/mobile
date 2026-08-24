@@ -6,7 +6,7 @@ import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { RatingStars } from '@/src/components/RatingStars';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { getParkingSpotDetail } from '@/src/services/parkingService';
+import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
 import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 
@@ -144,7 +144,11 @@ export default function SpotDetail() {
               <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
               <Text style={styles.sectionLabel}>{t('owner.spot.edit.availability')}</Text>
             </View>
-            <Text style={styles.value}>{spot.schedule || '—'}</Text>
+            {formatScheduleForDisplay(spot.schedule).map((line) => (
+              <Text key={line.dayRange} style={styles.value}>
+                {line.dayRange}: {line.hours}
+              </Text>
+            ))}
             <TouchableOpacity
               style={styles.availabilityBtn}
               onPress={() => router.push(`/(owner)/spots/${id}/availability`)}

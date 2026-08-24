@@ -15,8 +15,20 @@ import { useTypography } from '@/src/theme/typography';
 import { getParkingSpotDetail, updateParkingSpot } from '@/src/services/parkingService'; // getParkingSpotDetail used in useFocusEffect
 import { useOwnerSpotsStore } from '@/src/store/useOwnerSpotsStore';
 import { GeocodeCandidate, reverseGeocode } from '@/src/api/parking';
-import { ParkingSpot } from '@/src/types';
+import { ParkingSpot, ScheduleEntry } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
+
+function toDaySchedule(schedule: ScheduleEntry[]): DaySchedule[] {
+  return schedule.map((entry) => ({
+    dayIndex: entry.dayOfWeek,
+    startHour: entry.startHour,
+    endHour: entry.endHour,
+  }));
+}
+
+function toScheduleEntries(days: DaySchedule[]): ScheduleEntry[] {
+  return days.map((day) => ({ dayOfWeek: day.dayIndex, startHour: day.startHour, endHour: day.endHour }));
+}
 
 export default function EditSpot() {
   const colors = useThemeColors();
@@ -47,8 +59,7 @@ export default function EditSpot() {
         setPrice(String(s.pricePerHour));
         setDescription(s.description ?? '');
         setCovered(s.covered);
-        const storedDays: DaySchedule[] | undefined = (s as any).activeDays;
-        if (storedDays?.length) setSchedule(storedDays);
+        if (s.schedule.length > 0) setSchedule(toDaySchedule(s.schedule));
       });
     }, [id]),
   );
@@ -108,23 +119,13 @@ export default function EditSpot() {
       alert(t('owner.spot.new.requiredFields'));
       return;
     }
-    const DAY_LABELS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
-    const fmt = (h: number) => `${String(h).padStart(2, '0')}:00`;
-    const scheduleString = schedule
-      .map((d) => `${DAY_LABELS[d.dayIndex]} ${fmt(d.startHour)}–${fmt(d.endHour)}`)
-      .join(', ');
-    const globalStart = Math.min(...schedule.map((d) => d.startHour));
-    const globalEnd = Math.max(...schedule.map((d) => d.endHour));
     try {
       setSaving(true);
       const updated = await updateParkingSpot(id, {
         pricePerHour: parsedPrice,
         description: description.trim(),
         covered,
-        scheduleStartHour: globalStart,
-        scheduleEndHour: globalEnd,
-        activeDays: schedule,
-        schedule: scheduleString,
+        schedule: toScheduleEntries(schedule),
         address: address.trim(),
         lat: coordinates.lat,
         lng: coordinates.lng,

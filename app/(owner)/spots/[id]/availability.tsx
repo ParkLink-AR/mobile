@@ -6,13 +6,22 @@ import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { AvailabilityPicker, DaySchedule } from '@/src/components/AvailabilityPicker';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { getParkingSpotDetail, updateParkingSpot } from '@/src/services/parkingService';
+import { getParkingSpotDetail, updateParkingSpot, formatScheduleForDisplay } from '@/src/services/parkingService';
 import { useOwnerSpotsStore } from '@/src/store/useOwnerSpotsStore';
-import { ParkingSpot } from '@/src/types';
+import { ParkingSpot, ScheduleEntry } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 
-const DAY_LABELS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
-const fmt = (h: number) => `${String(h).padStart(2, '0')}:00`;
+function toDaySchedule(schedule: ScheduleEntry[]): DaySchedule[] {
+  return schedule.map((entry) => ({
+    dayIndex: entry.dayOfWeek,
+    startHour: entry.startHour,
+    endHour: entry.endHour,
+  }));
+}
+
+function toScheduleEntries(days: DaySchedule[]): ScheduleEntry[] {
+  return days.map((day) => ({ dayOfWeek: day.dayIndex, startHour: day.startHour, endHour: day.endHour }));
+}
 
 export default function SpotAvailability() {
   const colors = useThemeColors();
@@ -30,8 +39,11 @@ export default function SpotAvailability() {
       getParkingSpotDetail(id).then((s) => {
         if (!s) return;
         setSpot(s);
-        const storedDays: DaySchedule[] | undefined = (s as any).activeDays;
-        setSchedule(storedDays?.length ? storedDays : [0, 1, 2, 3, 4].map((d) => ({ dayIndex: d, startHour: 8, endHour: 22 })));
+        setSchedule(
+          s.schedule.length > 0
+            ? toDaySchedule(s.schedule)
+            : [0, 1, 2, 3, 4].map((d) => ({ dayIndex: d, startHour: 8, endHour: 22 })),
+        );
       });
     }, [id]),
   );
@@ -43,19 +55,9 @@ export default function SpotAvailability() {
       alert(t('owner.spot.new.requiredSchedule'));
       return;
     }
-    const scheduleString = schedule
-      .map((d) => `${DAY_LABELS[d.dayIndex]} ${fmt(d.startHour)}–${fmt(d.endHour)}`)
-      .join(', ');
-    const globalStart = Math.min(...schedule.map((d) => d.startHour));
-    const globalEnd = Math.max(...schedule.map((d) => d.endHour));
     try {
       setSaving(true);
-      await updateParkingSpot(id, {
-        scheduleStartHour: globalStart,
-        scheduleEndHour: globalEnd,
-        activeDays: schedule,
-        schedule: scheduleString,
-      });
+      await updateParkingSpot(id, { schedule: toScheduleEntries(schedule) });
       clearSpots();
       markUpdated();
       router.back();
@@ -97,7 +99,11 @@ export default function SpotAvailability() {
         <View style={styles.body}>
           <View style={styles.infoCard}>
             <Text style={styles.spotTitle}>{spot.title}</Text>
-            <Text style={styles.currentSchedule}>{spot.schedule || '—'}</Text>
+            {formatScheduleForDisplay(spot.schedule).map((line) => (
+              <Text key={line.dayRange} style={styles.currentSchedule}>
+                {line.dayRange}: {line.hours}
+              </Text>
+            ))}
           </View>
 
           <View style={styles.card}>

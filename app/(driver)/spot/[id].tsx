@@ -12,7 +12,7 @@ import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { getParkingSpotDetail } from '@/src/services/parkingService';
+import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
 import { ParkingSpot } from '@/src/types';
 
 export default function SpotDetail() {
@@ -80,7 +80,7 @@ export default function SpotDetail() {
           />
         ) : null}
         <Row label={t('spot.address')} value={spot.address} />
-        <Row label={t('spot.available')} value={spot.schedule} />
+        <ScheduleRow label={t('spot.available')} schedule={spot.schedule} />
         <Row label={t('spot.pricePerHour')} value={t('spot.pricePerHour.withUnit', { price: String(visiblePricePerHour) })} />
 
         {isOwner ? (
@@ -124,6 +124,29 @@ function Row({ label, value }: { label: string; value: string }) {
     <View style={styles.row}>
       <Text style={typography.caption}>{label}</Text>
       <Text style={typography.body}>{value}</Text>
+    </View>
+  );
+}
+
+function ScheduleRow({ label, schedule }: { label: string; schedule: ParkingSpot['schedule'] }) {
+  const typography = useTypography();
+  const colors = useThemeColors();
+  const styles = StyleSheet.create({
+    row: { marginTop: 6 },
+    line: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 },
+    dayRange: { ...typography.body, minWidth: 90 },
+    closed: { color: colors.textSecondary },
+  });
+  const lines = formatScheduleForDisplay(schedule);
+  return (
+    <View style={styles.row}>
+      <Text style={typography.caption}>{label}</Text>
+      {lines.map((line) => (
+        <View key={line.dayRange} style={styles.line}>
+          <Text style={styles.dayRange}>{line.dayRange}</Text>
+          <Text style={[typography.body, line.hours === 'Cerrado' && styles.closed]}>{line.hours}</Text>
+        </View>
+      ))}
     </View>
   );
 }
