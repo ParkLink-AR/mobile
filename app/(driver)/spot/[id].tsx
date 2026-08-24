@@ -1,5 +1,5 @@
 import { t, useLanguage } from '@/src/i18n';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,28 +13,67 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
-import { ParkingSpot } from '@/src/types';
+import { ParkingSpot, ScheduleEntry } from '@/src/types';
+
+// dayOfWeek: 0=Monday…6=Sunday (app convention)
+// JS Date.getDay(): 0=Sunday…6=Saturday  → convert: (jsDay + 6) % 7
+function appDayOfWeek(): number {
+  return (new Date().getDay() + 6) % 7;
+}
+
+/**
+ * Returns an array of valid start hours for today from the spot schedule.
+ * A start hour `h` is valid if there is a schedule entry for today that covers [h, h+1].
+ */
+function getAvailableStartHours(schedule: ScheduleEntry[], durationHours: number): number[] {
+  const today = appDayOfWeek();
+  const todayEntries = schedule.filter((e) => e.dayOfWeek === today);
+  const hours: number[] = [];
+  for (const entry of todayEntries) {
+    for (let h = entry.startHour; h + durationHours <= entry.endHour; h++) {
+      hours.push(h);
+    }
+  }
+  return hours.sort((a, b) => a - b);
+}
 
 export default function SpotDetail() {
   const colors = useThemeColors();
   const typography = useTypography();
   useLanguage();
-  const { id, startHour, endHour } = useLocalSearchParams<{ id: string; startHour?: string; endHour?: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
+  const [durationHours, setDurationHours] = useState(1);
+  const [selectedStartHour, setSelectedStartHour] = useState<number | null>(null);
   const user = useSessionStore((s) => s.user);
 
   useEffect(() => {
     getParkingSpotDetail(id).then((s) => setSpot(s ?? null));
   }, [id]);
 
+  // Recompute available slots whenever spot or duration changes
+  const availableHours = useMemo(() => {
+    if (!spot) return [];
+    return getAvailableStartHours(spot.schedule, durationHours);
+  }, [spot, durationHours]);
+
+  // Reset selection if it becomes invalid after duration change
+  useEffect(() => {
+    if (selectedStartHour !== null && !availableHours.includes(selectedStartHour)) {
+      setSelectedStartHour(null);
+    }
+    // Auto-select first available hour if none selected
+    if (selectedStartHour === null && availableHours.length > 0) {
+      setSelectedStartHour(availableHours[0]);
+    }
+  }, [availableHours]);
+
   if (!spot) return null;
 
   const isOwner = !!user && spot.ownerId === user.id;
-  const start = startHour ? Number(startHour) : 8;
-  const end = endHour ? Number(endHour) : 9;
-  const reservedHours = Math.max(end - start, 1);
   const visiblePricePerHour = getDriverVisiblePrice(spot.pricePerHour);
-  const total = visiblePricePerHour * reservedHours;
+  const total = visiblePricePerHour * durationHours;
+  const canBook = selectedStartHour !== null;
 
   const styles = StyleSheet.create({
     screen: { backgroundColor: colors.surface },
@@ -57,6 +96,30 @@ export default function SpotDetail() {
       paddingVertical: 13, paddingHorizontal: 16, justifyContent: 'center',
     },
     editBtnText: { fontSize: 15, fontWeight: '700', color: colors.white },
+    // Duration selector
+    durationRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
+    durationBtn: {
+      width: 36, height: 36, borderRadius: 18,
+      backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center',
+    },
+    durationBtnDisabled: { backgroundColor: colors.teal + '44' },
+    durationBtnText: { fontSize: 20, fontWeight: '700', color: colors.white },
+    durationValue: { ...typography.h2, minWidth: 40, textAlign: 'center' },
+    // Slot picker
+    slotLabel: { ...typography.caption, marginTop: 10, marginBottom: 4 },
+    slotRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    slotChip: {
+      paddingVertical: 8, paddingHorizontal: 14,
+      borderRadius: 20, borderWidth: 1,
+      borderColor: colors.teal,
+      backgroundColor: colors.surface,
+    },
+    slotChipSelected: {
+      backgroundColor: colors.teal,
+    },
+    slotChipText: { fontSize: 14, fontWeight: '500', color: colors.teal },
+    slotChipTextSelected: { color: colors.white },
+    noSlotsText: { ...typography.body, color: colors.warning, marginTop: 4 },
   });
 
   return (
@@ -99,15 +162,71 @@ export default function SpotDetail() {
           </>
         ) : (
           <>
-            <Text style={styles.total}>{t('spot.total', { hours: String(reservedHours), total: String(total) })}</Text>
+            {/* Duration selector */}
+            <View style={{ marginTop: 6 }}>
+              <Text style={typography.caption}>{t('spot.selectHours')}</Text>
+              <View style={styles.durationRow}>
+                <TouchableOpacity
+                  style={[styles.durationBtn, durationHours <= 1 && styles.durationBtnDisabled]}
+                  onPress={() => setDurationHours((h) => Math.max(1, h - 1))}
+                  disabled={durationHours <= 1}
+                >
+                  <Text style={styles.durationBtnText}>−</Text>
+                </TouchableOpacity>
+                <Text style={styles.durationValue}>{durationHours}</Text>
+                <TouchableOpacity
+                  style={[styles.durationBtn, durationHours >= 12 && styles.durationBtnDisabled]}
+                  onPress={() => setDurationHours((h) => Math.min(12, h + 1))}
+                  disabled={durationHours >= 12}
+                >
+                  <Text style={styles.durationBtnText}>+</Text>
+                </TouchableOpacity>
+                <Text style={[typography.body, { color: colors.textSecondary }]}>
+                  {t('driver.booking.hoursUnit')}
+                </Text>
+              </View>
+            </View>
+
+            {/* Start time slot picker */}
+            <View>
+              <Text style={styles.slotLabel}>{t('spot.selectStartTime')}</Text>
+              {availableHours.length === 0 ? (
+                <Text style={styles.noSlotsText}>{t('spot.noSlotsToday')}</Text>
+              ) : (
+                <View style={styles.slotRow}>
+                  {availableHours.map((h) => {
+                    const isSelected = h === selectedStartHour;
+                    return (
+                      <TouchableOpacity
+                        key={h}
+                        style={[styles.slotChip, isSelected && styles.slotChipSelected]}
+                        onPress={() => setSelectedStartHour(h)}
+                      >
+                        <Text style={[styles.slotChipText, isSelected && styles.slotChipTextSelected]}>
+                          {String(h).padStart(2, '0')}:00
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+
+            <Text style={styles.total}>{t('spot.total', { hours: String(durationHours), total: String(total) })}</Text>
             <Button
               title={t('spot.bookNow')}
               onPress={() =>
                 router.push({
                   pathname: '/(driver)/booking/confirm',
-                  params: { spotId: spot.id, hours: String(reservedHours) },
+                  params: {
+                    spotId: spot.id,
+                    hours: String(durationHours),
+                    startHour: String(selectedStartHour),
+                    endHour: String((selectedStartHour ?? 0) + durationHours),
+                  },
                 })
               }
+              disabled={!canBook}
             />
           </>
         )}

@@ -48,6 +48,9 @@
   "spot.pricePerHour.short": "/hora",
   "spot.total": "Total (%{hours} hs): $%{total}",
   "spot.bookNow": "Reservar ahora",
+  "spot.selectHours": "Cantidad de horas",
+  "spot.selectStartTime": "Elegí el horario de inicio",
+  "spot.noSlotsToday": "No hay turnos disponibles hoy para esta duración.",
 
   "spot.tag.covered": "Cubierta",
   "spot.tag.uncovered": "Descubierta",
@@ -235,5 +238,21 @@
   "layout.owner.review": "Calificar",
   "layout.auth.register": "Registro",
 
-  "mocks.reviews.comment.example": "Todo tal cual la descripción, sin sorpresas."
+  "mocks.reviews.comment.example": "Todo tal cual la descripción, sin sorpresas.",
+
+  "driver.booking.spotNotFound": "No encontramos esa cochera.",
+  "driver.booking.errorCreating": "No pudimos reservar el turno. Intentá de nuevo.",
+  "driver.booking.errorConflict": "Este horario ya está reservado. Volvé y elegí otro.",
+  "driver.booking.errorConflictAction": "Elegir otro horario",
+
+  "driver.payment.errorTitle": "Error al pagar",
+  "driver.payment.errorCreatingPreference": "No pudimos iniciar el pago. Intentá de nuevo.",
+  "driver.payment.approved": "Tu reserva fue confirmada. ¡Ya podés ir a estacionar!",
+  "driver.payment.pending.title": "Procesando pago…",
+  "driver.payment.pending.body": "Estamos esperando la confirmación de Mercado Pago.",
+  "driver.payment.rejected.title": "Pago rechazado",
+  "driver.payment.rejected.body": "El pago fue rechazado o cancelado. La reserva no fue confirmada.",
+  "driver.payment.rejected.retry": "Buscar otra cochera",
+  "driver.payment.unknown.title": "Estado desconocido",
+  "driver.payment.unknown.body": "No pudimos confirmar el estado del pago. Revisá tus reservas."
 }

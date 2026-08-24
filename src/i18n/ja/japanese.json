@@ -48,6 +48,9 @@
   "spot.pricePerHour.short": "/時間",
   "spot.total": "合計（%{hours} 時間）: $%{total}",
   "spot.bookNow": "今すぐ予約",
+  "spot.selectHours": "時間数",
+  "spot.selectStartTime": "開始時刻を選択",
+  "spot.noSlotsToday": "この時間数では本日利用可能なスロットがありません。",
 
   "spot.tag.covered": "屋根あり",
   "spot.tag.uncovered": "屋根なし",
@@ -235,5 +238,21 @@
   "layout.owner.review": "評価",
   "layout.auth.register": "登録",
 
-  "mocks.reviews.comment.example": "説明どおりで、驚きはありません。"
+  "mocks.reviews.comment.example": "説明どおりで、驚きはありません。",
+
+  "driver.booking.spotNotFound": "その駐車スペースが見つかりませんでした。",
+  "driver.booking.errorCreating": "枠を予約できませんでした。もう一度お試しください。",
+  "driver.booking.errorConflict": "この時間帯はすでに予約されています。戻って別の時間を選んでください。",
+  "driver.booking.errorConflictAction": "別の時間を選ぶ",
+
+  "driver.payment.errorTitle": "支払いエラー",
+  "driver.payment.errorCreatingPreference": "支払いを開始できませんでした。もう一度お試しください。",
+  "driver.payment.approved": "予約が確定しました。駐車場へどうぞ！",
+  "driver.payment.pending.title": "支払い処理中…",
+  "driver.payment.pending.body": "Mercado Pagoの確認を待っています。",
+  "driver.payment.rejected.title": "支払い拒否",
+  "driver.payment.rejected.body": "支払いが拒否またはキャンセルされました。予約は確定していません。",
+  "driver.payment.rejected.retry": "他の駐車スペースを探す",
+  "driver.payment.unknown.title": "不明なステータス",
+  "driver.payment.unknown.body": "支払いステータスを確認できませんでした。予約を確認してください。"
 }

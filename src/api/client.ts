@@ -22,9 +22,10 @@ async function toApiError(response: Response): Promise<ApiError> {
   let detail = `Error ${response.status}`;
   try {
     const body = await response.json();
-    detail = body.detail || body.title || detail;
+    // booking-service uses `error`, payment/auth services use `detail` or `title`
+    detail = body.error || body.detail || body.message || body.title || detail;
   } catch {
-    // Not a JSON (problem+json) body -- keep the generic message.
+    // Not a JSON body -- keep the generic message.
   }
   return new ApiError(response.status, detail);
 }

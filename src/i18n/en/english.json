@@ -48,6 +48,9 @@
   "spot.pricePerHour.short": "/hr",
   "spot.total": "Total (%{hours} hrs): $%{total}",
   "spot.bookNow": "Book now",
+  "spot.selectHours": "Number of hours",
+  "spot.selectStartTime": "Select start time",
+  "spot.noSlotsToday": "No slots available today for this duration.",
 
   "spot.tag.covered": "Covered",
   "spot.tag.uncovered": "Uncovered",
@@ -235,5 +238,21 @@
   "layout.owner.review": "Rate",
   "layout.auth.register": "Register",
 
-  "mocks.reviews.comment.example": "Everything as described, no surprises."
+  "mocks.reviews.comment.example": "Everything as described, no surprises.",
+
+  "driver.booking.spotNotFound": "We couldn't find that parking spot.",
+  "driver.booking.errorCreating": "We couldn't reserve the slot. Please try again.",
+  "driver.booking.errorConflict": "This time slot is already taken. Go back and choose a different one.",
+  "driver.booking.errorConflictAction": "Choose another time",
+
+  "driver.payment.errorTitle": "Payment error",
+  "driver.payment.errorCreatingPreference": "We couldn't start the payment. Please try again.",
+  "driver.payment.approved": "Your booking is confirmed. You're good to go!",
+  "driver.payment.pending.title": "Processing payment…",
+  "driver.payment.pending.body": "Waiting for Mercado Pago confirmation.",
+  "driver.payment.rejected.title": "Payment rejected",
+  "driver.payment.rejected.body": "The payment was rejected or cancelled. The booking was not confirmed.",
+  "driver.payment.rejected.retry": "Find another spot",
+  "driver.payment.unknown.title": "Unknown status",
+  "driver.payment.unknown.body": "We couldn't confirm the payment status. Check your bookings."
 }
