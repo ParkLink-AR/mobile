@@ -1,4 +1,4 @@
-import { ParkingSpot } from '@/src/types';
+import { ParkingSpot, ScheduleEntry } from '@/src/types';
 import {
   ParkingSpotApiResponse,
   searchParkingSpots as apiSearchParkingSpots,
@@ -12,32 +12,8 @@ import { getDriverVisiblePrice } from './utils';
 
 const PLACEHOLDER_PHOTO_URL = 'https://loremflickr.com/400/300/parking,garage/all';
 
-const DAY_LABEL_INDEX: Record<string, number> = {
-  Lu: 0, Ma: 1, Mi: 2, Ju: 3, Vi: 4, Sá: 5, Sa: 5, Do: 6,
-};
-
-/**
- * Parse a schedule string like "Lu 00:00–24:00, Ma 08:00–22:00" into an
- * array of DaySchedule objects. Returns undefined if parsing fails or empty.
- */
-function parseScheduleText(
-  text: string | null | undefined,
-): Array<{ dayIndex: number; startHour: number; endHour: number }> | undefined {
-  if (!text?.trim()) return undefined;
-  const entries = text.split(',').map((s) => s.trim());
-  const result: Array<{ dayIndex: number; startHour: number; endHour: number }> = [];
-  for (const entry of entries) {
-    const m = entry.match(/^(\S+)\s+(\d{1,2}):\d{2}[–-](\d{1,2}):\d{2}$/);
-    if (!m) return undefined;
-    const dayIndex = DAY_LABEL_INDEX[m[1]];
-    if (dayIndex === undefined) return undefined;
-    result.push({ dayIndex, startHour: Number(m[2]), endHour: Number(m[3]) });
-  }
-  return result.length ? result : undefined;
-}
-
 function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
-  const spot: ParkingSpot = {
+  return {
     id: raw.id,
     ownerId: raw.ownerId,
     title: raw.title,
@@ -50,19 +26,61 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     rating: 0,
     reviewCount: 0,
     tags: raw.covered ? ['Cubierta'] : ['Descubierta'],
-    schedule: raw.scheduleText ?? '',
-    scheduleStartHour: 0,
-    scheduleEndHour: 24,
+    schedule: raw.schedule,
     distanceMeters: raw.distanceMeters ?? 0,
     description: raw.description ?? '',
     active: raw.status === 'active',
   };
+}
 
-  // Attach parsed activeDays so the edit screen can read them without a cache.
-  const parsed = parseScheduleText(raw.scheduleText);
-  if (parsed) (spot as any).activeDays = parsed;
+const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const CLOSED = 'Cerrado';
 
-  return spot;
+function fmtHour(hour: number): string {
+  return `${String(hour).padStart(2, '0')}:00`;
+}
+
+function windowsLabel(entries: ScheduleEntry[]): string {
+  return entries
+    .slice()
+    .sort((a, b) => a.startHour - b.startHour)
+    .map((entry) => `${fmtHour(entry.startHour)}–${fmtHour(entry.endHour)}`)
+    .join(', ');
+}
+
+export interface ScheduleDisplayLine {
+  dayRange: string;
+  hours: string;
+}
+
+/**
+ * Agrupa el horario semanal en líneas por rango de días consecutivos con el
+ * mismo horario (ej. "Lun – Vie  08:00 – 22:00"), como cualquier ficha de
+ * comercio. Los días sin ninguna entrada se muestran como "Cerrado".
+ */
+export function formatScheduleForDisplay(schedule: ScheduleEntry[]): ScheduleDisplayLine[] {
+  const byDay = new Map<number, ScheduleEntry[]>();
+  for (const entry of schedule) {
+    const dayEntries = byDay.get(entry.dayOfWeek) ?? [];
+    dayEntries.push(entry);
+    byDay.set(entry.dayOfWeek, dayEntries);
+  }
+
+  const perDayLabel = Array.from({ length: 7 }, (_, dayOfWeek) => {
+    const entries = byDay.get(dayOfWeek);
+    return entries?.length ? windowsLabel(entries) : CLOSED;
+  });
+
+  const lines: ScheduleDisplayLine[] = [];
+  let rangeStart = 0;
+  for (let day = 1; day <= 7; day++) {
+    if (day < 7 && perDayLabel[day] === perDayLabel[rangeStart]) continue;
+    const rangeEnd = day - 1;
+    const dayRange = rangeStart === rangeEnd ? DAY_LABELS[rangeStart] : `${DAY_LABELS[rangeStart]} – ${DAY_LABELS[rangeEnd]}`;
+    lines.push({ dayRange, hours: perDayLabel[rangeStart] });
+    rangeStart = day;
+  }
+  return lines;
 }
 
 export interface SearchParkingSpotsFilters {
@@ -108,7 +126,7 @@ export interface CreateParkingSpotInput {
   lng: number;
   covered: boolean;
   pricePerHour: number;
-  schedule?: string;
+  schedule?: ScheduleEntry[];
   description?: string;
 }
 
@@ -120,20 +138,17 @@ export async function createParkingSpot(input: CreateParkingSpotInput): Promise<
     lng: input.lng,
     pricePerHour: input.pricePerHour,
     covered: input.covered,
-    scheduleText: input.schedule,
+    schedule: input.schedule,
     description: input.description,
   });
   return toParkingSpot(raw);
 }
 
 export interface UpdateParkingSpotInput {
-  scheduleStartHour?: number;
-  scheduleEndHour?: number;
   pricePerHour?: number;
   description?: string;
   covered?: boolean;
-  activeDays?: Array<{ dayIndex: number; startHour: number; endHour: number }>;
-  schedule?: string;
+  schedule?: ScheduleEntry[];
   // The three go together: send all or none (see UpdateParkingSpotDto).
   address?: string;
   lat?: number;
@@ -148,7 +163,7 @@ export async function updateParkingSpot(
     pricePerHour: updates.pricePerHour,
     description: updates.description,
     covered: updates.covered,
-    scheduleText: updates.schedule,
+    schedule: updates.schedule,
     address: updates.address,
     lat: updates.lat,
     lng: updates.lng,

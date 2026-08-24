@@ -1,4 +1,5 @@
 import { request } from './client';
+import { ScheduleEntry } from '@/src/types';
 
 // Shape returned by parking-service (see parking-spots.service.ts's
 // ParkingSpotResponse) -- flattened lat/lng, no rating/reviews/tags yet
@@ -13,7 +14,7 @@ export interface ParkingSpotApiResponse {
   lng: number;
   pricePerHour: number;
   covered: boolean;
-  scheduleText: string | null;
+  schedule: ScheduleEntry[];
   photos: string[];
   rules: string[];
   status: 'active' | 'paused' | 'deleted';
@@ -69,7 +70,7 @@ export interface CreateParkingSpotInput {
   lng: number;
   pricePerHour: number;
   covered?: boolean;
-  scheduleText?: string;
+  schedule?: ScheduleEntry[];
   rules?: string[];
 }
 
@@ -77,7 +78,7 @@ export interface UpdateParkingSpotApiInput {
   pricePerHour?: number;
   description?: string;
   covered?: boolean;
-  scheduleText?: string;
+  schedule?: ScheduleEntry[];
   // The three go together: send all or none.
   address?: string;
   lat?: number;

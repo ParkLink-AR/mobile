@@ -36,6 +36,16 @@ export interface AuthTokens {
   expiresIn: number;
 }
 
+// Una franja horaria publicada. dayOfWeek: 0=Lunes … 6=Domingo (mismo índice
+// que AvailabilityPicker.DaySchedule.dayIndex). Puede haber más de una
+// entrada para el mismo día (turno partido) -- parking-service ya lo valida
+// y lo persiste así.
+export interface ScheduleEntry {
+  dayOfWeek: number;
+  startHour: number;
+  endHour: number;
+}
+
 export interface ParkingSpot {
   id: string;
   ownerId: string;
@@ -49,9 +59,7 @@ export interface ParkingSpot {
   rating: number;
   reviewCount: number;
   tags: string[];
-  schedule: string;
-  scheduleStartHour: number;
-  scheduleEndHour: number;
+  schedule: ScheduleEntry[];
   distanceMeters: number;
   description: string;
   descriptionKey?: string;

@@ -1,10 +1,13 @@
-import { searchParkingSpots, getParkingSpotDetail } from '@/src/services/parkingService';
+import { searchParkingSpots, getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { ApiError } from '@/src/api/client';
 import * as parkingApi from '@/src/api/parking';
 import type { ParkingSpotApiResponse } from '@/src/api/parking';
+import type { ScheduleEntry } from '@/src/types';
 
 jest.mock('@/src/api/parking');
+
+const MON_FRI_8_22: ScheduleEntry[] = [0, 1, 2, 3, 4].map((dayOfWeek) => ({ dayOfWeek, startHour: 8, endHour: 22 }));
 
 function makeApiSpot(overrides: Partial<ParkingSpotApiResponse> = {}): ParkingSpotApiResponse {
   return {
@@ -17,7 +20,7 @@ function makeApiSpot(overrides: Partial<ParkingSpotApiResponse> = {}): ParkingSp
     lng: -58.42,
     pricePerHour: 1200,
     covered: true,
-    scheduleText: 'Lun a Vie, 8 a 22 hs',
+    schedule: MON_FRI_8_22,
     photos: [],
     rules: [],
     status: 'active',
@@ -41,7 +44,7 @@ describe('parkingService', () => {
       id: 'spot-1',
       covered: true,
       tags: ['Cubierta'],
-      schedule: 'Lun a Vie, 8 a 22 hs',
+      schedule: MON_FRI_8_22,
       active: true,
     });
   });
@@ -72,5 +75,30 @@ describe('parkingService', () => {
     const spot = await getParkingSpotDetail('does-not-exist');
 
     expect(spot).toBeUndefined();
+  });
+});
+
+describe('formatScheduleForDisplay', () => {
+  it('groups consecutive days with identical hours into one line', () => {
+    expect(formatScheduleForDisplay(MON_FRI_8_22)).toEqual([
+      { dayRange: 'Lun – Vie', hours: '08:00–22:00' },
+      { dayRange: 'Sáb – Dom', hours: 'Cerrado' },
+    ]);
+  });
+
+  it('lists a split shift within the same day sorted by start hour', () => {
+    const schedule: ScheduleEntry[] = [
+      { dayOfWeek: 0, startHour: 16, endHour: 22 },
+      { dayOfWeek: 0, startHour: 8, endHour: 14 },
+    ];
+
+    expect(formatScheduleForDisplay(schedule)).toEqual([
+      { dayRange: 'Lun', hours: '08:00–14:00, 16:00–22:00' },
+      { dayRange: 'Mar – Dom', hours: 'Cerrado' },
+    ]);
+  });
+
+  it('reports every day closed for an empty schedule', () => {
+    expect(formatScheduleForDisplay([])).toEqual([{ dayRange: 'Lun – Dom', hours: 'Cerrado' }]);
   });
 });
