@@ -72,6 +72,9 @@ export default function Search() {
   const [maxPriceInput, setMaxPriceInput] = useState('');
   const [coveredOnly, setCoveredOnly] = useState(false);
   const [distanceInput, setDistanceInput] = useState<number | undefined>(undefined);
+  const [scheduleFilterOn, setScheduleFilterOn] = useState(false);
+  const [fromHourInput, setFromHourInput] = useState(8);
+  const [toHourInput, setToHourInput] = useState(9);
 
   async function locateMe() {
     // Switching to GPS overrides any active address search.
@@ -153,6 +156,9 @@ export default function Search() {
     setMaxPriceInput(filters.maxPrice ? String(filters.maxPrice) : '');
     setCoveredOnly(filters.covered ?? false);
     setDistanceInput(filters.maxDistanceMeters);
+    setScheduleFilterOn(filters.fromHour !== undefined);
+    setFromHourInput(filters.fromHour ?? 8);
+    setToHourInput(filters.toHour ?? 9);
     setModalVisible(true);
   }
 
@@ -162,6 +168,8 @@ export default function Search() {
       maxPrice: maxPriceInput ? Number(maxPriceInput) : undefined,
       covered: coveredOnly || undefined,
       maxDistanceMeters: distanceInput,
+      fromHour: scheduleFilterOn ? fromHourInput : undefined,
+      toHour: scheduleFilterOn ? toHourInput : undefined,
     });
     setModalVisible(false);
   }
@@ -194,6 +202,12 @@ export default function Search() {
     activeChips.push({
       label: DISTANCE_OPTIONS.find((d) => d.value === filters.maxDistanceMeters)?.label ?? '',
       onRemove: () => setFilters((f) => ({ ...f, maxDistanceMeters: undefined })),
+    });
+  }
+  if (filters.fromHour !== undefined && filters.toHour !== undefined) {
+    activeChips.push({
+      label: `${String(filters.fromHour).padStart(2, '0')}:00–${String(filters.toHour).padStart(2, '0')}:00`,
+      onRemove: () => setFilters((f) => ({ ...f, fromHour: undefined, toHour: undefined })),
     });
   }
 
@@ -500,6 +514,19 @@ export default function Search() {
       color: colors.text,
       backgroundColor: colors.background,
     },
+    scheduleRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
+    hourBlock: { flex: 1, gap: 4 },
+    hourLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '500' },
+    hourControl: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      borderWidth: 1, borderColor: colors.border, borderRadius: 8,
+      paddingHorizontal: 8, paddingVertical: 6, backgroundColor: colors.background,
+    },
+    hourBtn: {
+      width: 26, height: 26, borderRadius: 13,
+      backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
+    },
+    hourValue: { fontSize: 14, fontWeight: '700', color: colors.text, minWidth: 44, textAlign: 'center' },
     applyButton: { marginTop: 20, marginBottom: 6 },
     clearLink: {
       textAlign: 'center',
@@ -778,6 +805,55 @@ export default function Search() {
                   />
                 ))}
               </View>
+
+              <Text style={styles.sectionLabel}>{t('search.filters.schedule')}</Text>
+              <View style={styles.chipsWrap}>
+                <Chip
+                  label={t('search.filters.scheduleFilter')}
+                  selected={scheduleFilterOn}
+                  onPress={() => setScheduleFilterOn((v) => !v)}
+                />
+              </View>
+              {scheduleFilterOn && (
+                <View style={styles.scheduleRow}>
+                  <View style={styles.hourBlock}>
+                    <Text style={styles.hourLabel}>{t('search.filters.from')}</Text>
+                    <View style={styles.hourControl}>
+                      <TouchableOpacity
+                        style={styles.hourBtn}
+                        onPress={() => setFromHourInput((h) => Math.max(0, Math.min(h - 1, toHourInput - 1)))}
+                      >
+                        <Ionicons name="remove" size={14} color={colors.text} />
+                      </TouchableOpacity>
+                      <Text style={styles.hourValue}>{String(fromHourInput).padStart(2, '0')}:00</Text>
+                      <TouchableOpacity
+                        style={styles.hourBtn}
+                        onPress={() => setFromHourInput((h) => Math.min(toHourInput - 1, h + 1))}
+                      >
+                        <Ionicons name="add" size={14} color={colors.text} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View style={styles.hourBlock}>
+                    <Text style={styles.hourLabel}>{t('search.filters.until')}</Text>
+                    <View style={styles.hourControl}>
+                      <TouchableOpacity
+                        style={styles.hourBtn}
+                        onPress={() => setToHourInput((h) => Math.max(fromHourInput + 1, h - 1))}
+                      >
+                        <Ionicons name="remove" size={14} color={colors.text} />
+                      </TouchableOpacity>
+                      <Text style={styles.hourValue}>{String(toHourInput).padStart(2, '0')}:00</Text>
+                      <TouchableOpacity
+                        style={styles.hourBtn}
+                        onPress={() => setToHourInput((h) => Math.min(23, Math.max(h + 1, fromHourInput + 1)))}
+                      >
+                        <Ionicons name="add" size={14} color={colors.text} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              )}
 
               <Button
                 title={t('search.filters.apply')}

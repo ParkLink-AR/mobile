@@ -32,6 +32,11 @@ export interface SearchParkingSpotsParams {
   radius?: number;
   maxPrice?: number;
   covered?: boolean;
+  // Desired reservation window, ISO 8601 with offset. Go together: send
+  // both or neither (see SearchParkingSpotDto). Declared for the contract
+  // only -- parking-service doesn't filter by them yet.
+  from?: string;
+  to?: string;
 }
 
 // One candidate match for a free-text address query -- ambiguous street
@@ -104,6 +109,8 @@ export async function searchParkingSpots(
     ...(params.radius !== undefined ? { radius: String(params.radius) } : {}),
     ...(params.maxPrice !== undefined ? { maxPrice: String(params.maxPrice) } : {}),
     ...(params.covered !== undefined ? { covered: String(params.covered) } : {}),
+    ...(params.from !== undefined ? { from: params.from } : {}),
+    ...(params.to !== undefined ? { to: params.to } : {}),
   });
   return request(`/parking-spots/search?${query.toString()}`);
 }
