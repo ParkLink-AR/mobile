@@ -13,6 +13,7 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
+import { getAvailability, FreeWindow } from '@/src/api/parking';
 import { ParkingSpot, ScheduleEntry } from '@/src/types';
 
 // dayOfWeek: 0=Monday…6=Sunday (app convention)
@@ -21,11 +22,44 @@ function appDayOfWeek(): number {
   return (new Date().getDay() + 6) % 7;
 }
 
+function todayDateISO(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function addOneDay(dateISO: string): string {
+  const [year, month, day] = dateISO.split('-').map(Number);
+  const next = new Date(year, month - 1, day + 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+}
+
+/** Extracts the local hour-of-day from an ISO datetime like "2026-08-24T08:00:00-03:00". */
+function hourFromISO(iso: string): number {
+  return parseInt(iso.slice(11, 13), 10);
+}
+
 /**
- * Returns an array of valid start hours for today from the spot schedule.
- * A start hour `h` is valid if there is a schedule entry for today that covers [h, h+1].
+ * Returns valid start hours for today from parking-service's real availability
+ * (published schedule minus active bookings) -- a start hour `h` is valid if a
+ * free window covers [h, h+durationHours].
  */
-function getAvailableStartHours(schedule: ScheduleEntry[], durationHours: number): number[] {
+function startHoursFromFreeWindows(freeWindows: FreeWindow[], durationHours: number): number[] {
+  const hours: number[] = [];
+  for (const window of freeWindows) {
+    const start = hourFromISO(window.start);
+    const end = hourFromISO(window.end);
+    for (let h = start; h + durationHours <= end; h++) {
+      hours.push(h);
+    }
+  }
+  return hours.sort((a, b) => a - b);
+}
+
+/**
+ * Fallback when the availability call fails: valid start hours from the
+ * spot's published schedule alone (doesn't exclude existing bookings).
+ */
+function startHoursFromSchedule(schedule: ScheduleEntry[], durationHours: number): number[] {
   const today = appDayOfWeek();
   const todayEntries = schedule.filter((e) => e.dayOfWeek === today);
   const hours: number[] = [];
@@ -43,6 +77,7 @@ export default function SpotDetail() {
   useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
+  const [todayFreeWindows, setTodayFreeWindows] = useState<FreeWindow[] | null>(null);
   const [durationHours, setDurationHours] = useState(1);
   const [selectedStartHour, setSelectedStartHour] = useState<number | null>(null);
   const user = useSessionStore((s) => s.user);
@@ -51,11 +86,23 @@ export default function SpotDetail() {
     getParkingSpotDetail(id).then((s) => setSpot(s ?? null));
   }, [id]);
 
-  // Recompute available slots whenever spot or duration changes
+  // Real availability (published schedule minus active bookings) for today
+  // only -- there's no date picker anywhere in the app yet, everything
+  // assumes "today". Falls back to null on failure (e.g. booking-service
+  // down) so the picker still shows something, via the schedule-only path.
+  useEffect(() => {
+    const today = todayDateISO();
+    getAvailability(id, today, addOneDay(today))
+      .then((res) => setTodayFreeWindows(res.days[0]?.free_windows ?? []))
+      .catch(() => setTodayFreeWindows(null));
+  }, [id]);
+
+  // Recompute available slots whenever spot, duration, or availability changes
   const availableHours = useMemo(() => {
     if (!spot) return [];
-    return getAvailableStartHours(spot.schedule, durationHours);
-  }, [spot, durationHours]);
+    if (todayFreeWindows) return startHoursFromFreeWindows(todayFreeWindows, durationHours);
+    return startHoursFromSchedule(spot.schedule, durationHours);
+  }, [spot, todayFreeWindows, durationHours]);
 
   // Reset selection if it becomes invalid after duration change
   useEffect(() => {

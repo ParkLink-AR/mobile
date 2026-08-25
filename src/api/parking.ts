@@ -128,3 +128,29 @@ export async function createParkingSpot(
 ): Promise<ParkingSpotApiResponse> {
   return request('/parking-spots', { method: 'POST', body: JSON.stringify(input) });
 }
+
+export interface FreeWindow {
+  start: string; // ISO 8601 with -03:00 offset
+  end: string;
+}
+
+export interface DayAvailability {
+  date: string; // YYYY-MM-DD
+  status: 'closed' | 'full' | 'available';
+  free_windows: FreeWindow[];
+}
+
+/**
+ * Published schedule minus active bookings, per day in [from, to). from/to
+ * are YYYY-MM-DD (date-only -- a different convention from
+ * SearchParkingSpotsParams.from/to, which are full ISO datetimes).
+ *
+ * GET /parking-spots/{id}/availability
+ */
+export async function getAvailability(
+  parkingSpotId: string,
+  from: string,
+  to: string,
+): Promise<{ days: DayAvailability[] }> {
+  return request(`/parking-spots/${parkingSpotId}/availability?from=${from}&to=${to}`);
+}
