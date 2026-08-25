@@ -88,6 +88,22 @@ export interface SearchParkingSpotsFilters {
   maxPrice?: number;
   covered?: boolean;
   maxDistanceMeters?: number;
+  // Desired reservation window, today only (no date picker yet -- see
+  // toISOToday). Go together: both or neither.
+  fromHour?: number;
+  toHour?: number;
+}
+
+// Builds an ISO 8601 datetime for `hour` today, with a fixed -03:00 offset
+// (same assumption the backend makes everywhere else -- Buenos Aires has no
+// DST) rather than the device's own timezone, which may not be ART.
+function toISOToday(hour: number): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const paddedHour = String(hour).padStart(2, '0');
+  return `${year}-${month}-${day}T${paddedHour}:00:00-03:00`;
 }
 
 export async function searchParkingSpots(
@@ -99,6 +115,8 @@ export async function searchParkingSpots(
     radius: filters.maxDistanceMeters,
     maxPrice: filters.maxPrice,
     covered: filters.covered,
+    from: filters.fromHour !== undefined ? toISOToday(filters.fromHour) : undefined,
+    to: filters.toHour !== undefined ? toISOToday(filters.toHour) : undefined,
   });
   const spots = results.map(toParkingSpot);
   if (filters.minPrice === undefined) return spots;

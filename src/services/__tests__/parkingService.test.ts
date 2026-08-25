@@ -49,6 +49,30 @@ describe('parkingService', () => {
     });
   });
 
+  it('composes fromHour/toHour into today\'s ISO datetime with a fixed -03:00 offset', async () => {
+    jest.mocked(parkingApi.searchParkingSpots).mockResolvedValue([]);
+    const todayISO = new Date().toISOString().slice(0, 10);
+
+    await searchParkingSpots({ lat: -34.6, lng: -58.45, fromHour: 8, toHour: 9 });
+
+    expect(parkingApi.searchParkingSpots).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: `${todayISO}T08:00:00-03:00`,
+        to: `${todayISO}T09:00:00-03:00`,
+      }),
+    );
+  });
+
+  it('omits from/to when no schedule filter is set', async () => {
+    jest.mocked(parkingApi.searchParkingSpots).mockResolvedValue([]);
+
+    await searchParkingSpots({ lat: -34.6, lng: -58.45 });
+
+    const calledWith = jest.mocked(parkingApi.searchParkingSpots).mock.calls[0][0];
+    expect(calledWith.from).toBeUndefined();
+    expect(calledWith.to).toBeUndefined();
+  });
+
   it('filters spots by min price client-side (the backend only filters by max)', async () => {
     jest.mocked(parkingApi.searchParkingSpots).mockResolvedValue([
       makeApiSpot({ id: 'cheap', pricePerHour: 500 }),
