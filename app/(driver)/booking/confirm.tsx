@@ -3,18 +3,17 @@ import { ApiError } from '@/src/api/client';
 import { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import * as Linking from 'expo-linking';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { getParkingSpotDetail } from '@/src/services/parkingService';
+import { getParkingSpotDetail, toISOToday } from '@/src/services/parkingService';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { ParkingSpot } from '@/src/types';
-import { createBookingApi, createPaymentPreference } from '@/src/api/booking';
-import type { BookingApiResponse } from '@/src/api/booking';
+import { createBookingApi, confirmBookingApi } from '@/src/api/booking';
+import type { ScheduleEntryBody } from '@/src/api/booking';
 
 export default function ConfirmBooking() {
   useLanguage();
@@ -29,7 +28,6 @@ export default function ConfirmBooking() {
   const user = useSessionStore((s) => s.user);
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  // processing covers both booking creation and payment preference creation
   const [processing, setProcessing] = useState(false);
 
   const reservedHours = Math.max(Number(hours) || 1, 1);
@@ -47,25 +45,50 @@ export default function ConfirmBooking() {
     });
   }, [spotId]);
 
-  // Called when the user explicitly presses "Confirm & Pay".
-  // Creates the booking (PENDING_PAYMENT) and immediately opens checkout,
-  // so there is exactly one booking creation attempt per button press.
-  async function goToPay() {
+  // Called when the user explicitly presses "Confirm & Pay". Creates the
+  // booking (PENDING_PAYMENT), then confirms it directly with a placeholder
+  // payment_id.
+  //
+  // payment-service doesn't exist in this workspace yet (the gateway 503s on
+  // every /payments/* route), so the real Mercado Pago checkout
+  // (createPaymentPreference + Linking.openURL + polling on
+  // /payment/pending) can't run end-to-end here. Until it does, this treats
+  // payment as already succeeded and calls POST /bookings/{id}/confirm
+  // itself instead of waiting for the webhook to do it -- the booking ends
+  // up CONFIRMED for real, not stuck in PENDING_PAYMENT forever.
+  async function reserve() {
     if (!spot || !user || processing) return;
     setProcessing(true);
 
-    let created: BookingApiResponse;
     try {
-      // Build RFC3339 timestamps for today at the requested hours
-      const now = new Date();
-      const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), start, 0, 0);
-      const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), end, 0, 0);
+      const startISO = toISOToday(start);
+      const endISO = toISOToday(end);
+      const schedule: ScheduleEntryBody[] = spot.schedule.map((entry) => ({
+        day_of_week: entry.dayOfWeek,
+        start_hour: entry.startHour,
+        end_hour: entry.endHour,
+      }));
 
-      created = await createBookingApi(spotId, {
+      const created = await createBookingApi({
         user_id: user.id,
-        start: startDate.toISOString(),
-        end: endDate.toISOString(),
+        start: startISO,
+        end: endISO,
         amount: Math.round(spot.pricePerHour * reservedHours * 100), // centavos
+        parking_spot: { id: spotId, schedule },
+      });
+
+      await confirmBookingApi(created.id, `mock-payment-${created.id}`);
+
+      const visibleTotal = getDriverVisiblePrice(spot.pricePerHour) * reservedHours;
+      router.replace({
+        pathname: '/(driver)/booking/success',
+        params: {
+          spotTitle: spot.title,
+          date: new Date().toLocaleDateString('es-AR'),
+          startTime: `${String(start).padStart(2, '0')}:00`,
+          endTime: `${String(end).padStart(2, '0')}:00`,
+          total: String(visibleTotal),
+        },
       });
     } catch (err: any) {
       const isConflict = err instanceof ApiError && err.status === 409;
@@ -79,32 +102,6 @@ export default function ConfirmBooking() {
         const msg = err?.detail ?? err?.message ?? t('driver.booking.errorCreating');
         Alert.alert(t('driver.payment.errorTitle'), msg);
       }
-      setProcessing(false);
-      return;
-    }
-
-    try {
-      const visibleTotal = getDriverVisiblePrice(spot.pricePerHour) * reservedHours;
-      const preference = await createPaymentPreference({
-        amount: visibleTotal,
-        title: `Cochera: ${spot.title}`,
-        description: `${reservedHours} hs · ${spot.address}`,
-        currency: 'ARS',
-        payerEmail: user.email,
-        externalReference: created.id, // booking id used by webhook to confirm
-      });
-
-      // Open Mercado Pago checkout in the device browser
-      await Linking.openURL(preference.checkoutUrl);
-
-      // Navigate to pending screen while waiting for the webhook
-      router.replace({
-        pathname: '/(driver)/payment/pending',
-        params: { bookingId: created.id },
-      });
-    } catch (err: any) {
-      const msg = err?.detail ?? err?.message ?? t('driver.payment.errorCreatingPreference');
-      Alert.alert(t('driver.payment.errorTitle'), msg);
       setProcessing(false);
     }
   }
@@ -156,7 +153,7 @@ export default function ConfirmBooking() {
               ? t('driver.booking.processing')
               : t('driver.booking.confirmPay').replace('%{total}', String(visibleTotal))
           }
-          onPress={goToPay}
+          onPress={reserve}
           disabled={processing}
           style={styles.button}
         />

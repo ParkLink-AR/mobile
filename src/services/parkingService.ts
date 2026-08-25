@@ -97,7 +97,7 @@ export interface SearchParkingSpotsFilters {
 // Builds an ISO 8601 datetime for `hour` today, with a fixed -03:00 offset
 // (same assumption the backend makes everywhere else -- Buenos Aires has no
 // DST) rather than the device's own timezone, which may not be ART.
-function toISOToday(hour: number): string {
+export function toISOToday(hour: number): string {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');

@@ -1,5 +1,4 @@
 import { t, useLanguage } from '@/src/i18n';
-import { useEffect, useState } from 'react';
 import { Text, StyleSheet } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Card } from '@/src/components/Card';
@@ -7,21 +6,18 @@ import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
-import { getBookingById } from '@/src/services/bookingService';
-import { Booking } from '@/src/types';
 
 export default function BookingSuccess() {
   useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
-  const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
-  const [booking, setBooking] = useState<Booking | null>(null);
-
-  useEffect(() => {
-    getBookingById(bookingId).then((b) => setBooking(b ?? null));
-  }, [bookingId]);
-
-  if (!booking) return null;
+  const { spotTitle, date, startTime, endTime, total } = useLocalSearchParams<{
+    spotTitle: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    total: string;
+  }>();
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.surface, padding: 24, alignItems: 'center', gap: 16 },
@@ -34,11 +30,11 @@ export default function BookingSuccess() {
       <Text style={styles.check}>✓</Text>
       <Text style={typography.h1}>{t('driver.booking.success.title')}</Text>
       <Card style={styles.card}>
-        <Text style={typography.h2}>{booking.parkingSpotTitle}</Text>
+        <Text style={typography.h2}>{spotTitle}</Text>
         <Text style={typography.body}>
-          {booking.date} · {booking.startTime} {t('driver.booking.timeTo')} {booking.endTime}
+          {date} · {startTime} {t('driver.booking.timeTo')} {endTime}
         </Text>
-        <Text style={typography.body}>{t('driver.booking.totalPaid').replace('%{total}', String(booking.total))}</Text>
+        <Text style={typography.body}>{t('driver.booking.totalPaid').replace('%{total}', total)}</Text>
       </Card>
       <Button
         title={t('driver.booking.success.viewBookings')}
