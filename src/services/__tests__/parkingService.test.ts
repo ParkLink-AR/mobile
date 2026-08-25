@@ -51,7 +51,11 @@ describe('parkingService', () => {
 
   it('composes fromHour/toHour into today\'s ISO datetime with a fixed -03:00 offset', async () => {
     jest.mocked(parkingApi.searchParkingSpots).mockResolvedValue([]);
-    const todayISO = new Date().toISOString().slice(0, 10);
+    // Local calendar date, matching how toISOToday() itself builds "today" --
+    // not new Date().toISOString(), which is UTC and can be a different
+    // calendar day than local time depending on when the test runs.
+    const now = new Date();
+    const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     await searchParkingSpots({ lat: -34.6, lng: -58.45, fromHour: 8, toHour: 9 });
 
