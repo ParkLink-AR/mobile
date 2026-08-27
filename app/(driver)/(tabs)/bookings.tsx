@@ -8,19 +8,18 @@ import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { getBookingsForUser } from '@/src/services/bookingService';
-import { Booking } from '@/src/types';
+import { getDriverBookings, DriverBookingSummary } from '@/src/services/bookingService';
 
 export default function DriverBookings() {
   useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<DriverBookingSummary[]>([]);
 
   useFocusEffect(
     useCallback(() => {
-      if (user) getBookingsForUser(user.id, 'driver').then(setBookings);
+      if (user) getDriverBookings(user.id).then(setBookings);
     }, [user?.id])
   );
 

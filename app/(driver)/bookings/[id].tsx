@@ -8,25 +8,26 @@ import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
-import { getBookingById, cancelBooking } from '@/src/services/bookingService';
-import { Booking } from '@/src/types';
+import { getDriverBookingById, DriverBookingSummary } from '@/src/services/bookingService';
 
 export default function DriverBookingDetail() {
   useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [booking, setBooking] = useState<Booking | null>(null);
+  const [booking, setBooking] = useState<DriverBookingSummary | null>(null);
 
   useEffect(() => {
-    getBookingById(id).then((b) => setBooking(b ?? null));
+    getDriverBookingById(id).then(setBooking).catch(() => setBooking(null));
   }, [id]);
 
   if (!booking) return null;
 
-  async function onCancel() {
-    const updated = await cancelBooking(booking!.id);
-    setBooking(updated);
+  // Cancel is still mocked -- only local UI state, no real cancel request
+  // (out of scope for this pass, see booking-service/parking-service/gateway
+  // PRs for the view-only history endpoints this screen now reads from).
+  function onCancel() {
+    setBooking((current) => (current ? { ...current, status: 'CANCELLED' } : current));
   }
 
   const styles = StyleSheet.create({

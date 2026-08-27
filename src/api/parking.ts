@@ -119,6 +119,17 @@ export async function getParkingSpotDetail(id: string): Promise<ParkingSpotApiRe
   return request(`/parking-spots/${id}`);
 }
 
+/**
+ * Detail for several parking spots in one request, e.g. to enrich a list of
+ * bookings (which only carry a parkingSpotId) without one GET per booking.
+ *
+ * GET /parking-spots?ids=a,b,c
+ */
+export async function getParkingSpotsByIds(ids: string[]): Promise<ParkingSpotApiResponse[]> {
+  if (ids.length === 0) return [];
+  return request(`/parking-spots?ids=${ids.join(',')}`);
+}
+
 export async function getParkingSpotsForOwner(ownerId: string): Promise<ParkingSpotApiResponse[]> {
   return request(`/users/${ownerId}/parking-spots`);
 }

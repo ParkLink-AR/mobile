@@ -98,3 +98,25 @@ export async function confirmBookingApi(bookingId: string, paymentId: string): P
     body: JSON.stringify({ payment_id: paymentId }),
   });
 }
+
+/**
+ * A single booking by id, any status.
+ *
+ * GET /bookings/{id}
+ */
+export async function getBookingApi(bookingId: string): Promise<BookingApiResponse> {
+  return request(`/bookings/${bookingId}`);
+}
+
+/**
+ * Every booking made by userId, across all parking spots and statuses,
+ * most recent first.
+ *
+ * GET /users/{id}/bookings/history
+ */
+export async function getBookingHistoryApi(userId: string): Promise<BookingApiResponse[]> {
+  const { bookings } = await request<{ bookings: BookingApiResponse[] }>(
+    `/users/${userId}/bookings/history`
+  );
+  return bookings;
+}
