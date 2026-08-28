@@ -13,7 +13,7 @@ import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { getParkingSpotDetail, updateParkingSpot } from '@/src/services/parkingService'; // getParkingSpotDetail used in useFocusEffect
-import { useOwnerSpotsStore } from '@/src/store/useOwnerSpotsStore';
+import { useSpotsStore } from '@/src/store/useSpotsStore';
 import { GeocodeCandidate, reverseGeocode } from '@/src/api/parking';
 import { ParkingSpot, ScheduleEntry } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
@@ -35,8 +35,8 @@ export default function EditSpot() {
   const typography = useTypography();
   useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const markUpdated = useOwnerSpotsStore((s) => s.markUpdated);
-  const clearSpots = useOwnerSpotsStore((s) => s.clearSpots);
+  const markUpdated = useSpotsStore((s) => s.markUpdated);
+  const clearSpots = useSpotsStore((s) => s.clearSpots);
 
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [address, setAddress] = useState('');

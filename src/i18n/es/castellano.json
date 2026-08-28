@@ -50,6 +50,7 @@
   "spot.bookNow": "Reservar ahora",
   "spot.selectHours": "Cantidad de horas",
   "spot.selectStartTime": "Elegí el horario de inicio",
+  "spot.selectDay": "Elegí el día",
   "spot.noSlotsToday": "No hay turnos disponibles hoy para esta duración.",
 
   "spot.tag.covered": "Cubierta",
@@ -143,6 +144,7 @@
   "profile.mySpots": "MIS COCHERAS",
   "profile.mySpots.empty": "Todavía no tenés cocheras publicadas.",
   "profile.mySpots.add": "Añadir cochera",
+  "profile.finances": "FINANZAS",
   "profile.preferences": "PREFERENCIAS",
   "language.select": "Seleccionar idioma",
   "profile.language": "Idioma",
@@ -233,6 +235,10 @@
   "layout.owner.settlementDetail": "Detalle de liquidación",
   "layout.owner.review": "Calificar",
   "layout.auth.register": "Registro",
+  "layout.auth.verifyEmail": "Verificar email",
+  "settlements.title": "Liquidaciones",
+  "settlements.commission": "Comisión retenida: $%{amount}",
+  "settlements.bookingsIncluded": "RESERVAS INCLUIDAS",
 
   "mocks.reviews.comment.example": "Todo tal cual la descripción, sin sorpresas.",
 

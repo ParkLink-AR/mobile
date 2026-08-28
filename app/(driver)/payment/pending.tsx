@@ -11,12 +11,16 @@ import { request } from '@/src/api/client';
 
 type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'unknown';
 
-interface TransactionResponse {
-  status: string;
+interface VerifyStatusResponse {
+  currentStatus: string;
 }
 
-const POLL_INTERVAL_MS = 4000;
-const MAX_POLLS = 15; // 1 minute max
+// Poll every 2 seconds, up to 2 minutes (60 attempts).
+// Uses POST /payments/verify-status which queries MercadoPago directly if the
+// transaction isn't in our DB yet — works even when the webhook hasn't arrived
+// (e.g. WEBHOOK_BASE_URL is localhost and MP can't reach it in dev).
+const POLL_INTERVAL_MS = 2000;
+const MAX_POLLS = 60; // 2 minutes max
 
 export default function PaymentPendingScreen() {
   useLanguage();
@@ -32,19 +36,25 @@ export default function PaymentPendingScreen() {
     const timer = setInterval(async () => {
       pollCount.current += 1;
       try {
-        // The external_reference in payment-service IS the bookingId
-        const tx = await request<TransactionResponse>(
-          `/payments/external-reference/${bookingId}`
-        );
-        if (tx?.status === 'approved') {
+        // verify-status checks our DB first, then falls back to querying
+        // MercadoPago directly — so it works even without a webhook.
+        // The externalReference IS the bookingId (set in confirm.tsx).
+        const res = await request<VerifyStatusResponse>('/payments/verify-status', {
+          method: 'POST',
+          body: JSON.stringify({ externalReference: bookingId }),
+        });
+        const mpStatus = res?.currentStatus;
+        if (mpStatus === 'approved') {
           clearInterval(timer);
           setStatus('approved');
-        } else if (tx?.status === 'rejected' || tx?.status === 'cancelled') {
+        } else if (mpStatus === 'rejected' || mpStatus === 'cancelled' || mpStatus === 'refunded') {
           clearInterval(timer);
           setStatus('rejected');
         }
-      } catch {
-        // Not found yet – keep polling
+        // 'pending', 'in_process', 'authorized' → keep polling
+      } catch (err) {
+        // Log so we can diagnose issues (404 = not found yet, 401 = auth issue, etc.)
+        console.warn('[PaymentPending] poll error:', err);
       }
       if (pollCount.current >= MAX_POLLS) {
         clearInterval(timer);
@@ -116,12 +126,17 @@ export default function PaymentPendingScreen() {
     );
   }
 
-  // Pending: show spinner while polling
+  // Pending: show spinner while polling + cancel button
   return (
     <Screen style={styles.container}>
       <ActivityIndicator size="large" color={colors.teal} />
       <Text style={typography.h2}>{t('driver.payment.pending.title')}</Text>
       <Text style={[typography.body, { textAlign: 'center' }]}>{t('driver.payment.pending.body')}</Text>
+      <Button
+        title={t('common.cancel')}
+        onPress={() => router.replace('/(driver)/(tabs)/index')}
+        style={{ marginTop: 24, backgroundColor: 'transparent', borderWidth: 1, borderColor: '#888' }}
+      />
     </Screen>
   );
 }

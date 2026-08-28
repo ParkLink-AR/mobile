@@ -7,7 +7,7 @@ import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 
-export default function DriverReview() {
+export default function ReviewScreen() {
   useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
@@ -15,7 +15,6 @@ export default function DriverReview() {
   const [comment, setComment] = useState('');
 
   function submit() {
-    // Mock only — no review persistence service call in this MVP pass.
     router.back();
   }
 

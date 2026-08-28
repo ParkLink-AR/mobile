@@ -1,12 +1,12 @@
 import { t, useLanguage } from '@/src/i18n';
 import { Tabs } from 'expo-router';
-import { DriverDockTabBar } from '@/src/components/DockTabBar';
+import { DockTabBar } from '@/src/components/DockTabBar';
 
-export default function DriverTabsLayout() {
+export default function TabsLayout() {
   useLanguage();
   return (
     <Tabs
-      tabBar={(props) => <DriverDockTabBar {...props} />}
+      tabBar={(props) => <DockTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="index" options={{ title: t('tabs.driver.search') }} />

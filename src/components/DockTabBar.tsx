@@ -9,40 +9,18 @@ import { t, useLanguage } from '@/src/i18n';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-interface TabConfig {
-  name: string;
-  label: string;
-  icon: IoniconName;
-  activeIcon: IoniconName;
-}
-
-type TabKey = 'index' | 'bookings' | 'profile' | 'spots';
-
-const DRIVER_TAB_KEYS: { name: TabKey; labelKey: string; icon: IoniconName; activeIcon: IoniconName }[] = [
+const TAB_KEYS: { name: string; labelKey: string; icon: IoniconName; activeIcon: IoniconName }[] = [
   { name: 'index',    labelKey: 'tabs.driver.search',   icon: 'search-outline',   activeIcon: 'search' },
   { name: 'bookings', labelKey: 'tabs.driver.bookings', icon: 'calendar-outline', activeIcon: 'calendar' },
   { name: 'profile',  labelKey: 'tabs.driver.profile',  icon: 'person-outline',   activeIcon: 'person' },
 ];
 
-const OWNER_TAB_KEYS: { name: TabKey; labelKey: string; icon: IoniconName; activeIcon: IoniconName }[] = [
-  { name: 'index',    labelKey: 'tabs.owner.home',     icon: 'home-outline',     activeIcon: 'home' },
-  { name: 'spots',    labelKey: 'tabs.owner.spots',    icon: 'car-outline',      activeIcon: 'car' },
-  { name: 'bookings', labelKey: 'tabs.owner.bookings', icon: 'calendar-outline', activeIcon: 'calendar' },
-  { name: 'profile',  labelKey: 'tabs.owner.profile',  icon: 'person-outline',   activeIcon: 'person' },
-];
-
-interface DockTabBarProps extends BottomTabBarProps {
-  tabKeys: { name: string; labelKey: string; icon: IoniconName; activeIcon: IoniconName }[];
-}
-
-export function DockTabBar({ state, navigation, tabKeys }: DockTabBarProps) {
+export function DockTabBar({ state, navigation }: BottomTabBarProps) {
   useLanguage();
   const colors = useThemeColors();
   const mode = useSettingsStore((s) => s.mode);
   const insets = useSafeAreaInsets();
 
-  // rgb(22,139,141) == colors.teal (#168B8D), same teal used for buttons
-  // and accents everywhere else in the app.
   const bgColor = mode === 'dark' ? 'rgba(22,139,141,0.92)' : 'rgba(22,139,141,0.95)';
 
   return (
@@ -51,16 +29,10 @@ export function DockTabBar({ state, navigation, tabKeys }: DockTabBarProps) {
       pointerEvents="box-none"
     >
       <View style={styles.blur}>
-        {/* BlurView's own `tint`+`backgroundColor` blending is unpredictable
-            across platforms (came out gray in light mode with tint="dark",
-            then washed out near-white with tint="light") -- blur underneath,
-            and paint the actual teal as a separate, fully opaque-enough
-            layer on top, so the visible color no longer depends on how the
-            blur tint happens to mix with it. */}
         <BlurView intensity={30} tint={mode === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: bgColor }]} />
         <View style={styles.inner}>
-          {tabKeys.map((tab, index) => {
+          {TAB_KEYS.map((tab, index) => {
             const route = state.routes[index];
             const focused = state.index === index;
 
@@ -101,13 +73,8 @@ export function DockTabBar({ state, navigation, tabKeys }: DockTabBarProps) {
   );
 }
 
-export function DriverDockTabBar(props: BottomTabBarProps) {
-  return <DockTabBar {...props} tabKeys={DRIVER_TAB_KEYS} />;
-}
-
-export function OwnerDockTabBar(props: BottomTabBarProps) {
-  return <DockTabBar {...props} tabKeys={OWNER_TAB_KEYS} />;
-}
+// Keep named export for backwards compat with any remaining import
+export { DockTabBar as DriverDockTabBar };
 
 const styles = StyleSheet.create({
   wrapper: {

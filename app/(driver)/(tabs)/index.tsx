@@ -562,7 +562,7 @@ export default function Search() {
           <Text style={styles.headerGreetingLabel}>{t('search.welcome')}</Text>
           <Text style={styles.headerGreetingName}>{user?.name ?? ''}</Text>
         </View>
-        <AccountMenu role="driver" />
+        <AccountMenu />
       </View>
 
       {/* ── Search bar ────────────────────────────────────────────── */}

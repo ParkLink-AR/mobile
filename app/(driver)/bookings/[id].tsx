@@ -1,6 +1,6 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
@@ -22,7 +22,7 @@ export default function DriverBookingDetail() {
     getBookingById(id).then((b) => setBooking(b ?? null));
   }, [id]);
 
-  if (!booking) return null;
+  if (!booking) return <ActivityIndicator style={{ marginTop: 40 }} color={colors.teal} />;
 
   async function onCancel() {
     const updated = await cancelBooking(booking!.id);

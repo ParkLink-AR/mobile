@@ -51,15 +51,43 @@ function addOneDay(dateISO: string): string {
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
 }
 
-/** Extracts the local hour-of-day from an ISO datetime like "2026-08-24T08:00:00-03:00". */
+/**
+ * Extracts the Buenos Aires hour-of-day from an ISO datetime string.
+ * Handles both offset-aware strings ("...T08:00:00-03:00") and UTC ("...T11:00:00Z").
+ * Always returns the hour in ART (UTC-3).
+ */
 function hourFromISO(iso: string): number {
-  return parseInt(iso.slice(11, 13), 10);
+  const date = new Date(iso);
+  // Convert to ART (UTC-3): subtract 3 hours from UTC
+  const utcHour = date.getUTCHours();
+  return ((utcHour - 3) + 24) % 24;
+}
+
+/**
+ * Current hour in ART (UTC-3) with a 10-minute grace period.
+ * If it's 13:05 → returns 13 (still bookable). If it's 13:11 → returns 14.
+ * Returns -1 for future dates (nothing is in the past).
+ */
+function currentArtHourForDate(dateISO: string): number {
+  const nowUTC = new Date();
+  const nowArt = new Date(nowUTC.getTime() - 3 * 60 * 60 * 1000);
+
+  const todayISO = `${nowArt.getUTCFullYear()}-${String(nowArt.getUTCMonth() + 1).padStart(2, '0')}-${String(nowArt.getUTCDate()).padStart(2, '0')}`;
+
+  if (dateISO > todayISO) return -1;   // future date: nothing is past
+  if (dateISO < todayISO) return 24;   // past date: everything is past
+
+  // It's today: return cutoff hour (with 10-min grace)
+  const artMinutes = nowArt.getUTCHours() * 60 + nowArt.getUTCMinutes();
+  const graceMinutes = artMinutes - 10; // subtract grace period
+  return Math.ceil(graceMinutes / 60); // round up to next full hour
 }
 
 /**
  * Returns valid start hours from parking-service's real availability
  * (published schedule minus active bookings). A start hour `h` is valid if a
  * free window covers [h, h+durationHours].
+ * Includes past hours too — caller marks them as past via isPastHour().
  */
 function startHoursFromFreeWindows(freeWindows: FreeWindow[], durationHours: number): number[] {
   const hours: number[] = [];
@@ -120,21 +148,33 @@ export default function SpotDetail() {
   }, [id, selectedDay.dateISO]);
 
   // Recompute available slots whenever spot, duration, or availability changes
-  const availableHours = useMemo(() => {
+  const allHours = useMemo(() => {
     if (!spot) return [];
     if (freeWindows !== null) return startHoursFromFreeWindows(freeWindows, durationHours);
     return startHoursFromSchedule(spot.schedule, durationHours, selectedDay.date);
   }, [spot, freeWindows, durationHours, selectedDay]);
 
-  // Reset / auto-select when available hours change
+  // Cutoff hour for the selected day (with 10-min grace). Hours strictly below
+  // this are in the past and cannot be booked.
+  const pastCutoffHour = useMemo(
+    () => currentArtHourForDate(selectedDay.dateISO),
+    [selectedDay.dateISO],
+  );
+
+  const bookableHours = useMemo(
+    () => allHours.filter((h) => h >= pastCutoffHour),
+    [allHours, pastCutoffHour],
+  );
+
+  // Reset / auto-select when bookable hours change
   useEffect(() => {
-    if (selectedStartHour !== null && !availableHours.includes(selectedStartHour)) {
+    if (selectedStartHour !== null && !bookableHours.includes(selectedStartHour)) {
       setSelectedStartHour(null);
     }
-    if (selectedStartHour === null && availableHours.length > 0) {
-      setSelectedStartHour(availableHours[0]);
+    if (selectedStartHour === null && bookableHours.length > 0) {
+      setSelectedStartHour(bookableHours[0]);
     }
-  }, [availableHours]);
+  }, [bookableHours]);
 
   if (!spot) return null;
 
@@ -198,8 +238,10 @@ export default function SpotDetail() {
       backgroundColor: colors.surface,
     },
     slotChipSelected: { backgroundColor: colors.teal },
+    slotChipPast: { borderColor: colors.border, backgroundColor: colors.surface, opacity: 0.4 },
     slotChipText: { fontSize: 14, fontWeight: '500', color: colors.teal },
     slotChipTextSelected: { color: colors.white },
+    slotChipTextPast: { color: colors.textSecondary, textDecorationLine: 'line-through' },
     noSlotsText: { ...typography.body, color: colors.warning, marginTop: 4 },
   });
 
@@ -235,7 +277,7 @@ export default function SpotDetail() {
             </View>
             <TouchableOpacity
               style={styles.editBtn}
-              onPress={() => router.push(`/(owner)/spots/${spot.id}/edit`)}
+              onPress={() => router.push(`/(driver)/spots/${spot.id}/edit`)}
             >
               <Ionicons name="pencil-outline" size={16} color={colors.white} />
               <Text style={styles.editBtnText}>{t('spot.editSpot')}</Text>
@@ -297,19 +339,32 @@ export default function SpotDetail() {
             {/* Start time slot picker */}
             <View>
               <Text style={styles.slotLabel}>{t('spot.selectStartTime')}</Text>
-              {availableHours.length === 0 ? (
+              {allHours.length === 0 ? (
+                <Text style={styles.noSlotsText}>{t('spot.noSlotsToday')}</Text>
+              ) : bookableHours.length === 0 ? (
                 <Text style={styles.noSlotsText}>{t('spot.noSlotsToday')}</Text>
               ) : (
                 <View style={styles.slotRow}>
-                  {availableHours.map((h) => {
+                  {allHours.map((h) => {
+                    const isPast = h < pastCutoffHour;
                     const isSelected = h === selectedStartHour;
                     return (
                       <TouchableOpacity
                         key={h}
-                        style={[styles.slotChip, isSelected && styles.slotChipSelected]}
-                        onPress={() => setSelectedStartHour(h)}
+                        style={[
+                          styles.slotChip,
+                          isSelected && styles.slotChipSelected,
+                          isPast && styles.slotChipPast,
+                        ]}
+                        onPress={() => !isPast && setSelectedStartHour(h)}
+                        disabled={isPast}
+                        activeOpacity={isPast ? 1 : 0.7}
                       >
-                        <Text style={[styles.slotChipText, isSelected && styles.slotChipTextSelected]}>
+                        <Text style={[
+                          styles.slotChipText,
+                          isSelected && styles.slotChipTextSelected,
+                          isPast && styles.slotChipTextPast,
+                        ]}>
                           {String(h).padStart(2, '0')}:00
                         </Text>
                       </TouchableOpacity>

@@ -7,7 +7,7 @@ import { Screen } from '@/src/components/Screen';
 import { AvailabilityPicker, DaySchedule } from '@/src/components/AvailabilityPicker';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { getParkingSpotDetail, updateParkingSpot, formatScheduleForDisplay } from '@/src/services/parkingService';
-import { useOwnerSpotsStore } from '@/src/store/useOwnerSpotsStore';
+import { useSpotsStore } from '@/src/store/useSpotsStore';
 import { ParkingSpot, ScheduleEntry } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 
@@ -27,8 +27,8 @@ export default function SpotAvailability() {
   const colors = useThemeColors();
   useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const markUpdated = useOwnerSpotsStore((s) => s.markUpdated);
-  const clearSpots = useOwnerSpotsStore((s) => s.clearSpots);
+  const markUpdated = useSpotsStore((s) => s.markUpdated);
+  const clearSpots = useSpotsStore((s) => s.clearSpots);
 
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [schedule, setSchedule] = useState<DaySchedule[]>([]);

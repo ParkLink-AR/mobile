@@ -50,6 +50,8 @@
   "spot.bookNow": "Book now",
   "spot.selectHours": "Number of hours",
   "spot.selectStartTime": "Select start time",
+  "spot.selectDay": "Select day",
+
   "spot.noSlotsToday": "No slots available today for this duration.",
 
   "spot.tag.covered": "Covered",
@@ -143,6 +145,7 @@
   "profile.mySpots": "MY PARKING SPOTS",
   "profile.mySpots.empty": "You have no published spots yet.",
   "profile.mySpots.add": "Add spot",
+  "profile.finances": "FINANCES",
   "profile.preferences": "PREFERENCES",
   "language.select": "Select language",
   "profile.language": "Language",
@@ -233,6 +236,10 @@
   "layout.owner.settlementDetail": "Settlement details",
   "layout.owner.review": "Rate",
   "layout.auth.register": "Register",
+  "layout.auth.verifyEmail": "Verify email",
+  "settlements.title": "Settlements",
+  "settlements.commission": "Commission retained: $%{amount}",
+  "settlements.bookingsIncluded": "BOOKINGS INCLUDED",
 
   "mocks.reviews.comment.example": "Everything as described, no surprises.",
 

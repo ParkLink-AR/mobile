@@ -7,6 +7,7 @@ import { Screen } from '@/src/components/Screen';
 import { RatingStars } from '@/src/components/RatingStars';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
+import { getDriverVisiblePrice } from '@/src/services/utils';
 import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 
@@ -115,7 +116,7 @@ export default function SpotDetail() {
                 </View>
               </View>
               <View style={styles.priceBadge}>
-                <Text style={styles.priceValue}>${spot.pricePerHour}{t('spot.pricePerHour.short')}</Text>
+                <Text style={styles.priceValue}>${getDriverVisiblePrice(spot.pricePerHour)}{t('spot.pricePerHour.short')}</Text>
               </View>
             </View>
 
@@ -151,7 +152,7 @@ export default function SpotDetail() {
             ))}
             <TouchableOpacity
               style={styles.availabilityBtn}
-              onPress={() => router.push(`/(owner)/spots/${id}/availability`)}
+              onPress={() => router.push(`/(driver)/spots/${id}/availability`)}
             >
               <Text style={styles.availabilityLink}>{t('owner.spots.manageAvailability')}</Text>
               <Ionicons name="chevron-forward" size={13} color={colors.teal} />
@@ -170,7 +171,7 @@ export default function SpotDetail() {
 
           <Button
             title={t('owner.spot.edit.title')}
-            onPress={() => router.push(`/(owner)/spots/${id}/edit`)}
+            onPress={() => router.push(`/(driver)/spots/${id}/edit`)}
             style={styles.editBtn}
           />
         </View>
