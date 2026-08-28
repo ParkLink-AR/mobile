@@ -16,15 +16,33 @@ import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/p
 import { getAvailability, FreeWindow } from '@/src/api/parking';
 import { ParkingSpot, ScheduleEntry } from '@/src/types';
 
-// dayOfWeek: 0=Monday…6=Sunday (app convention)
-// JS Date.getDay(): 0=Sunday…6=Saturday  → convert: (jsDay + 6) % 7
-function appDayOfWeek(): number {
-  return (new Date().getDay() + 6) % 7;
+// ── Day helpers ───────────────────────────────────────────────────────────────
+
+// App day-of-week convention: 0=Monday … 6=Sunday
+// JS Date.getDay():            0=Sunday … 6=Saturday → convert: (jsDay + 6) % 7
+function toAppDayOfWeek(date: Date): number {
+  return (date.getDay() + 6) % 7;
 }
 
-function todayDateISO(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+/** Returns an array of { date, label } for today + the next 6 days (7 total). */
+function getNextSevenDays(): Array<{ date: Date; label: string; shortLabel: string; dateISO: string }> {
+  const DAY_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const appDay = toAppDayOfWeek(d);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return {
+      date: d,
+      shortLabel: DAY_SHORT[appDay],
+      label: `${day}/${month}`,
+      dateISO: `${year}-${month}-${day}`,
+    };
+  });
 }
 
 function addOneDay(dateISO: string): string {
@@ -39,8 +57,8 @@ function hourFromISO(iso: string): number {
 }
 
 /**
- * Returns valid start hours for today from parking-service's real availability
- * (published schedule minus active bookings) -- a start hour `h` is valid if a
+ * Returns valid start hours from parking-service's real availability
+ * (published schedule minus active bookings). A start hour `h` is valid if a
  * free window covers [h, h+durationHours].
  */
 function startHoursFromFreeWindows(freeWindows: FreeWindow[], durationHours: number): number[] {
@@ -59,11 +77,11 @@ function startHoursFromFreeWindows(freeWindows: FreeWindow[], durationHours: num
  * Fallback when the availability call fails: valid start hours from the
  * spot's published schedule alone (doesn't exclude existing bookings).
  */
-function startHoursFromSchedule(schedule: ScheduleEntry[], durationHours: number): number[] {
-  const today = appDayOfWeek();
-  const todayEntries = schedule.filter((e) => e.dayOfWeek === today);
+function startHoursFromSchedule(schedule: ScheduleEntry[], durationHours: number, date: Date): number[] {
+  const dayOfWeek = toAppDayOfWeek(date);
+  const entries = schedule.filter((e) => e.dayOfWeek === dayOfWeek);
   const hours: number[] = [];
-  for (const entry of todayEntries) {
+  for (const entry of entries) {
     for (let h = entry.startHour; h + durationHours <= entry.endHour; h++) {
       hours.push(h);
     }
@@ -77,39 +95,42 @@ export default function SpotDetail() {
   useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
-  const [todayFreeWindows, setTodayFreeWindows] = useState<FreeWindow[] | null>(null);
+  const [freeWindows, setFreeWindows] = useState<FreeWindow[] | null>(null);
   const [durationHours, setDurationHours] = useState(1);
   const [selectedStartHour, setSelectedStartHour] = useState<number | null>(null);
   const user = useSessionStore((s) => s.user);
+
+  const days = useMemo(() => getNextSevenDays(), []);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  const selectedDay = days[selectedDayIndex];
 
   useEffect(() => {
     getParkingSpotDetail(id).then((s) => setSpot(s ?? null));
   }, [id]);
 
-  // Real availability (published schedule minus active bookings) for today
-  // only -- there's no date picker anywhere in the app yet, everything
-  // assumes "today". Falls back to null on failure (e.g. booking-service
-  // down) so the picker still shows something, via the schedule-only path.
+  // Fetch real availability (published schedule minus active bookings) for the
+  // selected day. Falls back to null on failure so the schedule-only path
+  // still shows something (e.g. if booking-service is down).
   useEffect(() => {
-    const today = todayDateISO();
-    getAvailability(id, today, addOneDay(today))
-      .then((res) => setTodayFreeWindows(res.days[0]?.free_windows ?? []))
-      .catch(() => setTodayFreeWindows(null));
-  }, [id]);
+    setFreeWindows(null); // reset while loading
+    setSelectedStartHour(null);
+    getAvailability(id, selectedDay.dateISO, addOneDay(selectedDay.dateISO))
+      .then((res) => setFreeWindows(res.days[0]?.free_windows ?? []))
+      .catch(() => setFreeWindows(null));
+  }, [id, selectedDay.dateISO]);
 
   // Recompute available slots whenever spot, duration, or availability changes
   const availableHours = useMemo(() => {
     if (!spot) return [];
-    if (todayFreeWindows) return startHoursFromFreeWindows(todayFreeWindows, durationHours);
-    return startHoursFromSchedule(spot.schedule, durationHours);
-  }, [spot, todayFreeWindows, durationHours]);
+    if (freeWindows !== null) return startHoursFromFreeWindows(freeWindows, durationHours);
+    return startHoursFromSchedule(spot.schedule, durationHours, selectedDay.date);
+  }, [spot, freeWindows, durationHours, selectedDay]);
 
-  // Reset selection if it becomes invalid after duration change
+  // Reset / auto-select when available hours change
   useEffect(() => {
     if (selectedStartHour !== null && !availableHours.includes(selectedStartHour)) {
       setSelectedStartHour(null);
     }
-    // Auto-select first available hour if none selected
     if (selectedStartHour === null && availableHours.length > 0) {
       setSelectedStartHour(availableHours[0]);
     }
@@ -152,6 +173,21 @@ export default function SpotDetail() {
     durationBtnDisabled: { backgroundColor: colors.teal + '44' },
     durationBtnText: { fontSize: 20, fontWeight: '700', color: colors.white },
     durationValue: { ...typography.h2, minWidth: 40, textAlign: 'center' },
+    // Day picker
+    dayRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+    dayChip: {
+      alignItems: 'center', justifyContent: 'center',
+      paddingVertical: 8, paddingHorizontal: 10,
+      borderRadius: 12, borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      minWidth: 48,
+    },
+    dayChipSelected: { backgroundColor: colors.teal, borderColor: colors.teal },
+    dayChipLabel: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase' },
+    dayChipDate: { fontSize: 13, fontWeight: '600', color: colors.text, marginTop: 1 },
+    dayChipLabelSelected: { color: colors.white },
+    dayChipDateSelected: { color: colors.white },
     // Slot picker
     slotLabel: { ...typography.caption, marginTop: 10, marginBottom: 4 },
     slotRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -161,9 +197,7 @@ export default function SpotDetail() {
       borderColor: colors.teal,
       backgroundColor: colors.surface,
     },
-    slotChipSelected: {
-      backgroundColor: colors.teal,
-    },
+    slotChipSelected: { backgroundColor: colors.teal },
     slotChipText: { fontSize: 14, fontWeight: '500', color: colors.teal },
     slotChipTextSelected: { color: colors.white },
     noSlotsText: { ...typography.body, color: colors.warning, marginTop: 4 },
@@ -234,6 +268,32 @@ export default function SpotDetail() {
               </View>
             </View>
 
+            {/* Day picker */}
+            <View>
+              <Text style={styles.slotLabel}>{t('spot.selectDay')}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.dayRow}>
+                  {days.map((day, idx) => {
+                    const isSelected = idx === selectedDayIndex;
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        style={[styles.dayChip, isSelected && styles.dayChipSelected]}
+                        onPress={() => setSelectedDayIndex(idx)}
+                      >
+                        <Text style={[styles.dayChipLabel, isSelected && styles.dayChipLabelSelected]}>
+                          {day.shortLabel}
+                        </Text>
+                        <Text style={[styles.dayChipDate, isSelected && styles.dayChipDateSelected]}>
+                          {day.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            </View>
+
             {/* Start time slot picker */}
             <View>
               <Text style={styles.slotLabel}>{t('spot.selectStartTime')}</Text>
@@ -270,6 +330,7 @@ export default function SpotDetail() {
                     hours: String(durationHours),
                     startHour: String(selectedStartHour),
                     endHour: String((selectedStartHour ?? 0) + durationHours),
+                    bookingDate: selectedDay.dateISO,
                   },
                 })
               }

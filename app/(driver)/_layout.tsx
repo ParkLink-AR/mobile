@@ -17,6 +17,8 @@ export default function DriverLayout() {
       <Stack.Screen name="booking/confirm" options={{ title: t('driver.booking.confirm.title') }} />
       <Stack.Screen name="booking/success" options={{ title: '', headerBackVisible: false }} />
       <Stack.Screen name="payment/pending" options={{ title: t('driver.payment.pending.title'), headerBackVisible: false }} />
+      <Stack.Screen name="payment/success" options={{ title: '', headerBackVisible: false }} />
+      <Stack.Screen name="payment/failure" options={{ title: '', headerBackVisible: false }} />
       <Stack.Screen name="bookings/[id]" options={{ title: t('layout.driver.bookingDetail') }} />
       <Stack.Screen name="review/[bookingId]" options={{ title: t('layout.driver.review') }} />
       <Stack.Screen name="profile-edit" options={{ title: t('driver.profile.edit') }} />
