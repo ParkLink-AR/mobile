@@ -7,10 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "parklink",
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.parklink.mobile"
-    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -34,6 +30,13 @@
           "locationWhenInUsePermission": "ParkLink usa tu ubicación para mostrarte las cocheras disponibles cerca tuyo."
         }
       ]
-    ]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.parklink.mobile",
+      "config": {
+        "googleMapsApiKey": ""
+      }
+    }
   }
 }

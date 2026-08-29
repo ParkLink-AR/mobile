@@ -184,6 +184,8 @@
   "search.location.permissionError": "We need your location to show you nearby parking spots.",
   "search.location.error": "We couldn't get your location. Try again.",
   "search.location.addressError": "We couldn't find that address. Try another one.",
+  "search.noResults": "No parking spots available in this area.\nTry expanding your search or changing the filters.",
+  "search.retry": "Retry",
   "search.filters": "Filters",
   "search.viewList": "List",
   "search.viewMap": "Map",

@@ -184,6 +184,8 @@
   "search.location.permissionError": "近くの駐車場を表示するには位置情報が必要です。",
   "search.location.error": "位置情報を取得できませんでした。もう一度お試しください。",
   "search.location.addressError": "その住所が見つかりませんでした。別の住所をお試しください。",
+  "search.noResults": "このエリアに利用可能な駐車スペースがありません。\n検索範囲を広げるか、フィルターを変更してみてください。",
+  "search.retry": "再試行",
   "search.filters": "フィルター",
   "search.viewList": "リスト",
   "search.viewMap": "マップ",

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import MapView, { Marker, Region, PROVIDER_DEFAULT } from 'react-native-maps';
+import ClusteredMapView from 'react-native-map-clustering';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +31,8 @@ import { geocodeAddress, GeocodeCandidate } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
+import { useLocationPermission } from '@/src/hooks/useLocationPermission';
+import { MAP_STYLE } from '@/src/theme/mapStyle';
 
 const DISTANCE_OPTIONS = [
   { label: '< 500 m', value: 500 },
@@ -36,15 +40,13 @@ const DISTANCE_OPTIONS = [
   { label: '< 2 km', value: 2000 },
 ];
 
-function pinPosition(id: string): { top: `${number}%`; left: `${number}%` } {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash * 31 + id.charCodeAt(i)) % 1000;
-  }
-  const top = 10 + (hash % 65);
-  const left = 8 + ((hash * 7) % 75);
-  return { top: `${top}%`, left: `${left}%` };
-}
+// Default center: Buenos Aires
+const DEFAULT_REGION: Region = {
+  latitude: -34.6037,
+  longitude: -58.3816,
+  latitudeDelta: 0.05,
+  longitudeDelta: 0.05,
+};
 
 export default function Search() {
   const colors = useThemeColors();
@@ -52,10 +54,19 @@ export default function Search() {
   const mode = useSettingsStore((s) => s.mode);
   const user = useSessionStore((s) => s.user);
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
+  const [loadingSpots, setLoadingSpots] = useState(false);
+  const [spotsError, setSpotsError] = useState<string | null>(null);
   const [filters, setFilters] = useState<SearchParkingSpotsFilters>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
+  const mapRef = useRef<MapView>(null);
+
+  // useLocationPermission requests the system permission dialog as soon as
+  // this screen mounts. We do NOT call requestForegroundPermissionsAsync()
+  // anywhere else — calling it twice causes iOS to silently skip the dialog
+  // on the second call because it was already resolved by the first one.
+  const { status: permissionStatus, loading: permissionLoading } = useLocationPermission();
 
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -87,6 +98,11 @@ export default function Search() {
     setLocating(true);
     setLocationError(null);
     try {
+      // Always re-request here so that if the user previously denied and then
+      // manually re-enabled in Settings, tapping the button picks it up.
+      // On a fresh install this will be the ONLY call — useLocationPermission
+      // no longer calls requestForegroundPermissionsAsync(); it only reads the
+      // current status so we know whether to call locateMe() automatically.
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setLocationError(t('search.location.permissionError'));
@@ -139,17 +155,61 @@ export default function Search() {
     setLocation({ lat: candidate.lat, lng: candidate.lng });
   }
 
+  // Once the permission check resolves, decide what to do:
+  //   - undetermined → call locateMe(), which calls requestForegroundPermissionsAsync()
+  //                    and shows the system dialog for the first time.
+  //   - granted      → call locateMe() to get the actual GPS coordinates (no dialog).
+  //   - denied       → fall back to BA default region (no dialog, user already said no).
   useEffect(() => {
-    locateMe();
-  }, []);
+    if (permissionLoading) return;
+    if (permissionStatus === 'denied') {
+      // User previously denied — load spots for default BA coords without asking again.
+      setLocationError(t('search.location.permissionError'));
+    } else {
+      // undetermined (first open) or already granted — locateMe() will show the
+      // system dialog if needed, then get the GPS position.
+      locateMe();
+    }
+  }, [permissionLoading]);
+
+  // Search coords: real GPS position when available, BA default otherwise.
+  // This guarantees the API is always called and the map always has results.
+  const searchCoords = location ?? {
+    lat: DEFAULT_REGION.latitude,
+    lng: DEFAULT_REGION.longitude,
+  };
 
   useEffect(() => {
-    if (!location) return;
-    searchParkingSpots({ ...filters, lat: location.lat, lng: location.lng }).then((results) => {
-      setSpots(results);
-      setSelectedSpotId(results[0]?.id ?? null);
-    });
-  }, [filters, location]);
+    // Don't search while the permission check is still in flight or while
+    // GPS is being acquired — otherwise we fire with the BA default coords
+    // before the real position arrives and show an empty "no results" state.
+    if (permissionLoading || locating) return;
+
+    // Animate the map when real location arrives.
+    if (location) {
+      mapRef.current?.animateToRegion(
+        {
+          latitude: location.lat,
+          longitude: location.lng,
+          latitudeDelta: 0.04,
+          longitudeDelta: 0.04,
+        },
+        600,
+      );
+    }
+
+    setSpotsError(null);
+    setLoadingSpots(true);
+    searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng })
+      .then((results) => {
+        setSpots(results);
+        setSelectedSpotId(results[0]?.id ?? null);
+      })
+      .catch((err) => {
+        setSpotsError(err instanceof ApiError ? err.detail : t('search.location.error'));
+      })
+      .finally(() => setLoadingSpots(false));
+  }, [filters, location, permissionLoading, locating]);
 
   function openFilters() {
     setMinPriceInput(filters.minPrice ? String(filters.minPrice) : '');
@@ -304,14 +364,6 @@ export default function Search() {
       color: colors.text,
       height: '100%',
     },
-    locateButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 12,
-      backgroundColor: colors.teal,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
     statusText: {
       paddingHorizontal: 20,
       paddingTop: 8,
@@ -406,6 +458,33 @@ export default function Search() {
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
+    // ── Loading / empty / error states ──────────────────────────────────────
+    centeredFeedback: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 40,
+      gap: 12,
+    },
+    feedbackText: {
+      fontSize: 15,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    retryButton: {
+      marginTop: 4,
+      paddingHorizontal: 20,
+      paddingVertical: 9,
+      borderRadius: 20,
+      borderWidth: 1.5,
+      borderColor: colors.teal,
+    },
+    retryButtonText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.teal,
+    },
     // ── List content ────────────────────────────────────────────────────────
     listContent: {
       padding: 16,
@@ -415,47 +494,56 @@ export default function Search() {
     // ── Map view ────────────────────────────────────────────────────────────
     mapWrapper: {
       flex: 1,
-      gap: 0,
     },
-    mapBackground: {
+    map: {
       flex: 1,
-      backgroundColor: mode === 'dark' ? '#16233A' : '#D6E8F5',
-      overflow: 'hidden',
     },
-    gridLineH: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      height: 1,
-      backgroundColor:
-        mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(4, 35, 71, 0.06)',
-    },
-    gridLineV: {
-      position: 'absolute',
-      top: 0,
-      bottom: 0,
-      width: 1,
-      backgroundColor:
-        mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(4, 35, 71, 0.06)',
-    },
+    // Price pin bubble shown on each marker
     pin: {
-      position: 'absolute',
       backgroundColor: colors.deepNavy,
       borderRadius: 20,
       paddingHorizontal: 10,
       paddingVertical: 5,
+      borderWidth: 2,
+      borderColor: colors.white,
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 4,
+        },
+        android: { elevation: 4 },
+      }),
+    },
+    pinSelected: {
+      backgroundColor: colors.teal,
+      transform: [{ scale: 1.15 }],
+    },
+    pinText: { color: colors.white, fontSize: 12, fontWeight: '700' },
+    // "My location" FAB
+    locateFab: {
+      position: 'absolute',
+      right: 16,
+      bottom: 16,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
       ...Platform.select({
         ios: {
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.2,
-          shadowRadius: 4,
+          shadowRadius: 6,
         },
-        android: { elevation: 3 },
+        android: { elevation: 4 },
       }),
     },
-    pinSelected: { backgroundColor: colors.teal },
-    pinText: { color: colors.white, fontSize: 12, fontWeight: '700' },
     mapCardWrapper: {
       padding: 16,
       paddingBottom: 0,
@@ -588,18 +676,6 @@ export default function Search() {
               returnKeyType="search"
             />
           </View>
-          <TouchableOpacity
-            style={styles.locateButton}
-            onPress={locateMe}
-            disabled={locating}
-            accessibilityLabel={t('search.location.refresh')}
-          >
-            {locating ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <Ionicons name="locate" size={20} color={colors.white} />
-            )}
-          </TouchableOpacity>
         </View>
 
         {showSuggestions && (
@@ -693,46 +769,144 @@ export default function Search() {
 
       {/* ── Results ────────────────────────────────────────────────── */}
       {viewMode === 'list' ? (
-        <FlatList
-          data={spots}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
+        loadingSpots || permissionLoading || locating ? (
+          <View style={styles.centeredFeedback}>
+            <ActivityIndicator color={colors.teal} size="large" />
+          </View>
+        ) : spotsError ? (
+          <View style={styles.centeredFeedback}>
+            <Ionicons name="cloud-offline-outline" size={40} color={colors.textSecondary} />
+            <Text style={styles.feedbackText}>{spotsError}</Text>
             <TouchableOpacity
-              onPress={() =>
-                router.push({
-                  pathname: `/(driver)/spot/${item.id}`,
-                  params: { startHour: '8', endHour: '9' },
-                })
-              }
+              style={styles.retryButton}
+              onPress={() => {
+                setSpotsError(null);
+                setLoadingSpots(true);
+                searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng })
+                  .then((results) => { setSpots(results); setSelectedSpotId(results[0]?.id ?? null); })
+                  .catch((err) => setSpotsError(err instanceof ApiError ? err.detail : t('search.location.error')))
+                  .finally(() => setLoadingSpots(false));
+              }}
             >
-              <ParkingSpotCard spot={item} />
+              <Text style={styles.retryButtonText}>{t('search.retry')}</Text>
             </TouchableOpacity>
-          )}
-        />
+          </View>
+        ) : spots.length === 0 ? (
+          <View style={styles.centeredFeedback}>
+            <Ionicons name="car-outline" size={40} color={colors.textSecondary} />
+            <Text style={styles.feedbackText}>{t('search.noResults')}</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={spots}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: `/(driver)/spot/${item.id}`,
+                    params: { startHour: '8', endHour: '9' },
+                  })
+                }
+              >
+                <ParkingSpotCard spot={item} />
+              </TouchableOpacity>
+            )}
+          />
+        )
       ) : (
         <View style={styles.mapWrapper}>
-          <View style={styles.mapBackground}>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <View key={`h-${i}`} style={[styles.gridLineH, { top: `${i * 16}%` }]} />
-            ))}
-            {[1, 2, 3, 4, 5].map((i) => (
-              <View key={`v-${i}`} style={[styles.gridLineV, { left: `${i * 16}%` }]} />
-            ))}
+          <ClusteredMapView
+            ref={mapRef}
+            style={styles.map}
+            provider={PROVIDER_DEFAULT}
+            initialRegion={DEFAULT_REGION}
+            customMapStyle={MAP_STYLE}
+            showsUserLocation
+            showsMyLocationButton={false}
+            showsPointsOfInterests={false}
+            clusterColor={colors.teal}
+            clusterTextColor={colors.white}
+            clusterFontFamily="System"
+            animationEnabled
+            onPress={() => setSelectedSpotId(null)}
+          >
             {spots.map((spot) => {
-              const pos = pinPosition(spot.id);
               const isSelected = spot.id === selectedSpotId;
               return (
-                <TouchableOpacity
+                <Marker
                   key={spot.id}
-                  style={[styles.pin, { top: pos.top, left: pos.left }, isSelected && styles.pinSelected]}
+                  coordinate={{ latitude: spot.lat, longitude: spot.lng }}
                   onPress={() => setSelectedSpotId(spot.id)}
+                  tracksViewChanges={false}
                 >
-                  <Text style={styles.pinText}>${getDriverVisiblePrice(spot.pricePerHour)}</Text>
-                </TouchableOpacity>
+                  <View style={[styles.pin, isSelected && styles.pinSelected]}>
+                    <Text style={styles.pinText}>
+                      ${getDriverVisiblePrice(spot.pricePerHour)}
+                    </Text>
+                  </View>
+                </Marker>
               );
             })}
-          </View>
+          </ClusteredMapView>
+
+          {/* Loading overlay on map */}
+          {(loadingSpots || permissionLoading || locating) && (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.centeredFeedback,
+                { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'transparent' },
+              ]}
+            >
+              <ActivityIndicator color={colors.teal} size="large" />
+            </View>
+          )}
+
+          {/* No results overlay on map */}
+          {!loadingSpots && !permissionLoading && !locating && !spotsError && spots.length === 0 && (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.centeredFeedback,
+                { position: 'absolute', top: 60, left: 0, right: 0, backgroundColor: 'transparent' },
+              ]}
+            >
+              <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, alignItems: 'center', gap: 8 }}>
+                <Ionicons name="car-outline" size={28} color={colors.textSecondary} />
+                <Text style={styles.feedbackText}>{t('search.noResults')}</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Locate FAB */}
+          <TouchableOpacity
+            style={styles.locateFab}
+            onPress={() => {
+              if (location) {
+                mapRef.current?.animateToRegion(
+                  {
+                    latitude: location.lat,
+                    longitude: location.lng,
+                    latitudeDelta: 0.02,
+                    longitudeDelta: 0.02,
+                  },
+                  400,
+                );
+              } else {
+                locateMe();
+              }
+            }}
+          >
+            {locating ? (
+              <ActivityIndicator size="small" color={colors.teal} />
+            ) : (
+              <Ionicons name="locate" size={20} color={colors.teal} />
+            )}
+          </TouchableOpacity>
+
+          {/* Selected spot card */}
           {selectedSpot && (
             <View style={styles.mapCardWrapper}>
               <TouchableOpacity
@@ -748,7 +922,8 @@ export default function Search() {
             </View>
           )}
         </View>
-      )}
+        )
+      }
 
       {/* ── Filter modal ───────────────────────────────────────────── */}
       <Modal

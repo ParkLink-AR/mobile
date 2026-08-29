@@ -183,6 +183,8 @@
   "search.location.permissionError": "Necesitamos tu ubicación para mostrarte cocheras cerca tuyo.",
   "search.location.error": "No pudimos obtener tu ubicación. Probá de nuevo.",
   "search.location.addressError": "No pudimos encontrar esa dirección. Probá con otra.",
+  "search.noResults": "No hay cocheras disponibles en esta zona.\nProbá ampliar la búsqueda o cambiar los filtros.",
+  "search.retry": "Reintentar",
   "search.filters": "Filtros",
   "search.viewList": "Lista",
   "search.viewMap": "Mapa",
