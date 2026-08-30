@@ -15,7 +15,7 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
 import { useAvailability } from '@/src/hooks/useAvailability';
 import type { FreeWindow } from '@/src/api/parking';
-import { ParkingSpot, ScheduleEntry } from '@/src/types';
+import { ParkingSpot } from '@/src/types';
 
 // ── Day helpers ───────────────────────────────────────────────────────────────
 
@@ -81,35 +81,58 @@ function currentArtHourForDate(dateISO: string): number {
 /**
  * Returns valid start hours from parking-service's real availability
  * (published schedule minus active bookings). A start hour `h` is valid if a
- * free window covers [h, h+durationHours].
- * Includes past hours too — caller marks them as past via isPastHour().
+ * free window covers [h:00, h+durationHours:00] exactly — i.e. the window
+ * starts at or before h:00 AND ends at or after h+durationHours:00.
+ *
+ * Uses epoch milliseconds from the raw ISO strings rather than truncating to
+ * hours, so a free window that starts at e.g. 08:30 (left by a booking that
+ * ends at 08:30) does NOT incorrectly expose 08:00 as bookable.
  */
 function startHoursFromFreeWindows(freeWindows: FreeWindow[], durationHours: number): number[] {
   const hours: number[] = [];
   for (const window of freeWindows) {
-    const start = hourFromISO(window.start);
-    const end = hourFromISO(window.end);
-    for (let h = start; h + durationHours <= end; h++) {
+    const windowStartMs = new Date(window.start).getTime();
+    const windowEndMs = new Date(window.end).getTime();
+    // Derive the ART calendar date from the window start to anchor midnight.
+    const artDate = artDateFromISO(window.start);
+    const artMidnightMs = artMidnightForDate(artDate);
+
+    // First whole ART hour where slot start >= window start.
+    const windowStartArtHour = hourFromISO(window.start);
+    const windowStartMinute = new Date(window.start).getUTCMinutes();
+    // If window starts exactly on the hour, it is a valid slot start;
+    // otherwise bump to the next whole hour.
+    const firstHour = windowStartMinute === 0 ? windowStartArtHour : windowStartArtHour + 1;
+
+    for (let h = firstHour; ; h++) {
+      const slotStartMs = artMidnightMs + h * 3600_000;
+      const slotEndMs = artMidnightMs + (h + durationHours) * 3600_000;
+      if (slotEndMs > windowEndMs) break;
+      if (slotStartMs < windowStartMs) continue; // shouldn't happen after firstHour calc, but guard
       hours.push(h);
     }
   }
-  return hours.sort((a, b) => a - b);
+  return [...new Set(hours)].sort((a, b) => a - b);
+}
+
+/** UTC epoch-ms of Buenos Aires midnight (00:00 ART = 03:00 UTC) for a YYYY-MM-DD date. */
+function artMidnightForDate(dateISO: string): number {
+  const [year, month, day] = dateISO.split('-').map(Number);
+  return Date.UTC(year, month - 1, day, 3, 0, 0, 0); // 00:00 ART = 03:00 UTC
 }
 
 /**
- * Fallback when the availability call fails: valid start hours from the
- * spot's published schedule alone (doesn't exclude existing bookings).
+ * Returns the YYYY-MM-DD calendar date in ART (UTC-3) for an ISO timestamp.
+ * Used to anchor ART midnight correctly for any offset-aware or UTC timestamp.
  */
-function startHoursFromSchedule(schedule: ScheduleEntry[], durationHours: number, date: Date): number[] {
-  const dayOfWeek = toAppDayOfWeek(date);
-  const entries = schedule.filter((e) => e.dayOfWeek === dayOfWeek);
-  const hours: number[] = [];
-  for (const entry of entries) {
-    for (let h = entry.startHour; h + durationHours <= entry.endHour; h++) {
-      hours.push(h);
-    }
-  }
-  return hours.sort((a, b) => a - b);
+function artDateFromISO(iso: string): string {
+  const date = new Date(iso);
+  // Shift to ART by subtracting 3 hours from UTC.
+  const art = new Date(date.getTime() - 3 * 3600_000);
+  const y = art.getUTCFullYear();
+  const m = String(art.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(art.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 export default function SpotDetail() {
@@ -132,7 +155,7 @@ export default function SpotDetail() {
 
   // Auto-refreshing availability: refetches on day/duration change and every 30 s.
   // durationHours is passed so the hook re-runs when the user changes it.
-  const { freeWindows, loading: availabilityLoading, refresh: refreshAvailability } =
+  const { freeWindows, loading: availabilityLoading, error: availabilityError, refresh: refreshAvailability } =
     useAvailability(id, selectedDay.dateISO, durationHours);
 
   // Refresh whenever the screen comes back into focus (e.g. after pressing "back"
@@ -144,12 +167,14 @@ export default function SpotDetail() {
   );
 
   // Recompute available slots whenever spot, duration, or availability changes.
-  // When still loading we return [] so the picker shows a spinner instead of stale slots.
+  // When still loading (no prior data) or in error (no prior data) we return []
+  // so the picker shows a spinner/error instead of stale or unchecked slots.
+  // The schedule-only fallback has been intentionally removed: showing slots
+  // without subtracting existing bookings causes 409 conflicts at confirmation.
   const allHours = useMemo(() => {
-    if (!spot || availabilityLoading) return [];
-    if (freeWindows !== null) return startHoursFromFreeWindows(freeWindows, durationHours);
-    return startHoursFromSchedule(spot.schedule, durationHours, selectedDay.date);
-  }, [spot, freeWindows, availabilityLoading, durationHours, selectedDay]);
+    if (!spot || availabilityLoading || freeWindows === null) return [];
+    return startHoursFromFreeWindows(freeWindows, durationHours);
+  }, [spot, freeWindows, availabilityLoading, durationHours]);
 
   // Cutoff hour for the selected day (with 10-min grace). Hours strictly below
   // this are in the past and cannot be booked.
@@ -334,8 +359,17 @@ export default function SpotDetail() {
             {/* Start time slot picker */}
             <View>
               <Text style={styles.slotLabel}>{t('spot.selectStartTime')}</Text>
-              {availabilityLoading ? (
+              {availabilityLoading && freeWindows === null ? (
                 <ActivityIndicator size="small" color={colors.teal} style={{ marginTop: 8 }} />
+              ) : availabilityError && freeWindows === null ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <Text style={styles.noSlotsText}>{t('spot.availabilityError')}</Text>
+                  <TouchableOpacity onPress={refreshAvailability}>
+                    <Text style={[styles.slotChipText, { textDecorationLine: 'underline' }]}>
+                      {t('spot.availabilityRetry')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               ) : bookableHours.length === 0 ? (
                 <Text style={styles.noSlotsText}>{t('spot.noSlotsToday')}</Text>
               ) : (

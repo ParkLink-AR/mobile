@@ -51,8 +51,9 @@
   "spot.selectHours": "時間数",
   "spot.selectStartTime": "開始時刻を選択",
   "spot.selectDay": "日付を選択",
-
-  "spot.noSlotsToday": "この時間数では本日利用可能なスロットがありません。",
+  "spot.noSlotsToday": "この時間数では利用可能なスロットがありません。",
+  "spot.availabilityError": "空き時間を読み込めませんでした。接続を確認してください。",
+  "spot.availabilityRetry": "再試行",
 
   "spot.tag.covered": "屋根あり",
   "spot.tag.uncovered": "屋根なし",

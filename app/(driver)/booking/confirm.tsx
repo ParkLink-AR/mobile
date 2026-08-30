@@ -24,10 +24,32 @@ function addOneDay(dateISO: string): string {
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
 }
 
-/** Returns the Buenos Aires (ART = UTC-3) hour from an ISO datetime string. */
-function hourFromISO(iso: string): number {
-  const date = new Date(iso);
-  return ((date.getUTCHours() - 3) + 24) % 24;
+/**
+ * Checks whether the requested integer-hour slot [startHour:00, endHour:00]
+ * is fully covered by at least one free window. Compares epoch-ms so that a
+ * free window starting at e.g. 08:30 does NOT falsely cover the 08:00 slot.
+ */
+function slotIsCoveredByFreeWindows(
+  freeWindows: Array<{ start: string; end: string }>,
+  startHour: number,
+  endHour: number,
+  bookingDate: string,
+): boolean {
+  // Build the exact epoch-ms for slotStart and slotEnd using the booking date.
+  const artMidnightMs = artMidnightForDate(bookingDate);
+  const slotStartMs = artMidnightMs + startHour * 3600_000;
+  const slotEndMs = artMidnightMs + endHour * 3600_000;
+  return freeWindows.some((w) => {
+    const wStartMs = new Date(w.start).getTime();
+    const wEndMs = new Date(w.end).getTime();
+    return wStartMs <= slotStartMs && slotEndMs <= wEndMs;
+  });
+}
+
+/** UTC epoch-ms of Buenos Aires midnight (00:00 ART = 03:00 UTC) for a YYYY-MM-DD date. */
+function artMidnightForDate(dateISO: string): number {
+  const [year, month, day] = dateISO.split('-').map(Number);
+  return Date.UTC(year, month - 1, day, 3, 0, 0, 0); // ART midnight = UTC 03:00
 }
 
 export default function ConfirmBooking() {
@@ -89,11 +111,7 @@ export default function ConfirmBooking() {
       const dateTo = addOneDay(dateFrom);
       const availability = await getAvailability(spot.id, dateFrom, dateTo);
       const freeWindows = availability.days[0]?.free_windows ?? [];
-      const slotIsFree = freeWindows.some((w) => {
-        const wStart = hourFromISO(w.start);
-        const wEnd = hourFromISO(w.end);
-        return wStart <= start && end <= wEnd;
-      });
+      const slotIsFree = slotIsCoveredByFreeWindows(freeWindows, start, end, dateFrom);
       if (!slotIsFree) {
         Alert.alert(
           t('driver.payment.errorTitle'),

@@ -51,7 +51,9 @@
   "spot.selectHours": "Cantidad de horas",
   "spot.selectStartTime": "Elegí el horario de inicio",
   "spot.selectDay": "Elegí el día",
-  "spot.noSlotsToday": "No hay turnos disponibles hoy para esta duración.",
+  "spot.noSlotsToday": "No hay turnos disponibles para esta duración.",
+  "spot.availabilityError": "No pudimos cargar los horarios. Verificá tu conexión.",
+  "spot.availabilityRetry": "Reintentar",
 
   "spot.tag.covered": "Cubierta",
   "spot.tag.uncovered": "Descubierta",

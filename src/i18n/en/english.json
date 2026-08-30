@@ -51,8 +51,9 @@
   "spot.selectHours": "Number of hours",
   "spot.selectStartTime": "Select start time",
   "spot.selectDay": "Select day",
-
-  "spot.noSlotsToday": "No slots available today for this duration.",
+  "spot.noSlotsToday": "No slots available for this duration.",
+  "spot.availabilityError": "Couldn't load time slots. Check your connection.",
+  "spot.availabilityRetry": "Retry",
 
   "spot.tag.covered": "Covered",
   "spot.tag.uncovered": "Uncovered",
