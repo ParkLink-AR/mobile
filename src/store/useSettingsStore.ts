@@ -38,6 +38,6 @@ try {
   const currentLang = useSettingsStore.getState().language;
   i18n.setLanguage(currentLang);
   useSettingsStore.subscribe((s) => i18n.setLanguage(s.language));
-} catch (e) {
+} catch (_e) {
   // ignore during SSR or if AsyncStorage not ready
 }

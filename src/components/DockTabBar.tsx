@@ -3,7 +3,6 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSettingsStore } from '@/src/store/useSettingsStore';
 import { t, useLanguage } from '@/src/i18n';
 
@@ -17,7 +16,6 @@ const TAB_KEYS: { name: string; labelKey: string; icon: IoniconName; activeIcon:
 
 export function DockTabBar({ state, navigation }: BottomTabBarProps) {
   useLanguage();
-  const colors = useThemeColors();
   const mode = useSettingsStore((s) => s.mode);
   const insets = useSafeAreaInsets();
 

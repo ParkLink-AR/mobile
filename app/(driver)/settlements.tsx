@@ -1,5 +1,5 @@
 import { t, useLanguage } from '@/src/i18n';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Card } from '@/src/components/Card';

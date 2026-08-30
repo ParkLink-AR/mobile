@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
-import { RatingStars } from '@/src/components/RatingStars';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
 import { getDriverVisiblePrice } from '@/src/services/utils';

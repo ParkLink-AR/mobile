@@ -24,7 +24,6 @@ import { AccountMenu } from '@/src/components/AccountMenu';
 import { Screen } from '@/src/components/Screen';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useSettingsStore } from '@/src/store/useSettingsStore';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { searchParkingSpots, SearchParkingSpotsFilters } from '@/src/services/parkingService';
 import { geocodeAddress, GeocodeCandidate } from '@/src/api/parking';
@@ -51,7 +50,6 @@ const DEFAULT_REGION: Region = {
 export default function Search() {
   const colors = useThemeColors();
   useLanguage();
-  const mode = useSettingsStore((s) => s.mode);
   const user = useSessionStore((s) => s.user);
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
   const [loadingSpots, setLoadingSpots] = useState(false);
@@ -61,6 +59,9 @@ export default function Search() {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
   const mapRef = useRef<MapView>(null);
+  // Used to prevent the map's onPress from immediately clearing a marker
+  // selection: the marker sets this to true, then the map onPress checks it.
+  const markerJustPressed = useRef(false);
 
   // useLocationPermission requests the system permission dialog as soon as
   // this screen mounts. We do NOT call requestForegroundPermissionsAsync()
@@ -124,7 +125,9 @@ export default function Search() {
     const query = addressQuery.trim();
     if (query.length < 3) {
       setCandidates([]);
+       
       setShowSuggestions(false);
+       
       setAddressError(null);
       return;
     }
@@ -199,6 +202,7 @@ export default function Search() {
     }
 
     setSpotsError(null);
+     
     setLoadingSpots(true);
     searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng })
       .then((results) => {
@@ -545,8 +549,12 @@ export default function Search() {
       }),
     },
     mapCardWrapper: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
       padding: 16,
-      paddingBottom: 0,
+      paddingBottom: 16,
     },
     // ── Filter modal ─────────────────────────────────────────────────────────
     modalOverlay: {
@@ -830,7 +838,13 @@ export default function Search() {
             clusterTextColor={colors.white}
             clusterFontFamily="System"
             animationEnabled
-            onPress={() => setSelectedSpotId(null)}
+            onPress={() => {
+              if (markerJustPressed.current) {
+                markerJustPressed.current = false;
+                return;
+              }
+              setSelectedSpotId(null);
+            }}
           >
             {spots.map((spot) => {
               const isSelected = spot.id === selectedSpotId;
@@ -838,7 +852,10 @@ export default function Search() {
                 <Marker
                   key={spot.id}
                   coordinate={{ latitude: spot.lat, longitude: spot.lng }}
-                  onPress={() => setSelectedSpotId(spot.id)}
+                  onPress={() => {
+                   markerJustPressed.current = true;
+                   setSelectedSpotId(spot.id);
+                  }}
                   tracksViewChanges={false}
                 >
                   <View style={[styles.pin, isSelected && styles.pinSelected]}>

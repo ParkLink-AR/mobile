@@ -42,8 +42,11 @@ export function AddressAutocomplete({ value, onChangeText, onSelect, placeholder
   useEffect(() => {
     if (value !== lastEmittedRef.current) {
       lastEmittedRef.current = value;
+       
       setCandidates([]);
+       
       setShowSuggestions(false);
+       
       setError(null);
       return;
     }
@@ -51,7 +54,9 @@ export function AddressAutocomplete({ value, onChangeText, onSelect, placeholder
     const query = value.trim();
     if (query.length < MIN_QUERY_LENGTH) {
       setCandidates([]);
+       
       setShowSuggestions(false);
+       
       setError(null);
       return;
     }

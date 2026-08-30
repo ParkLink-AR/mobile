@@ -12,9 +12,23 @@ import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail, toISOToday } from '@/src/services/parkingService';
 import { getDriverVisiblePrice } from '@/src/services/utils';
+import { getAvailability } from '@/src/api/parking';
 import { ParkingSpot } from '@/src/types';
-import { createBookingApi, createPaymentPreference } from '@/src/api/booking';
-import type { ScheduleEntryBody } from '@/src/api/booking';
+import { createBookingApi, createPaymentPreference, type ScheduleEntryBody } from '@/src/api/booking';
+
+// ── Helpers for availability pre-check ───────────────────────────────────────
+
+function addOneDay(dateISO: string): string {
+  const [year, month, day] = dateISO.split('-').map(Number);
+  const next = new Date(year, month - 1, day + 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+}
+
+/** Returns the Buenos Aires (ART = UTC-3) hour from an ISO datetime string. */
+function hourFromISO(iso: string): number {
+  const date = new Date(iso);
+  return ((date.getUTCHours() - 3) + 24) % 24;
+}
 
 export default function ConfirmBooking() {
   useLanguage();
@@ -55,6 +69,7 @@ export default function ConfirmBooking() {
   }, [spotId]);
 
   // Full booking + MercadoPago payment flow:
+  //   0. GET /availability        → pre-check: confirm slot is still free
   //   1. POST /bookings          → creates PENDING_PAYMENT booking (15-min hold)
   //   2. POST /payments/create-preference → creates MP preference; externalReference = bookingId
   //   3. Opens checkoutUrl in an in-app WebBrowser
@@ -65,6 +80,33 @@ export default function ConfirmBooking() {
   async function reserve() {
     if (!spot || !user || processing) return;
     setProcessing(true);
+
+    // ── Step 0: pre-check availability before creating the booking ─────────
+    // This gives a fast, friendly error if the slot was taken while the user
+    // was on the confirm screen, without consuming a hold.
+    try {
+      const dateFrom = bookingDate ?? toISOToday(0).slice(0, 10);
+      const dateTo = addOneDay(dateFrom);
+      const availability = await getAvailability(spot.id, dateFrom, dateTo);
+      const freeWindows = availability.days[0]?.free_windows ?? [];
+      const slotIsFree = freeWindows.some((w) => {
+        const wStart = hourFromISO(w.start);
+        const wEnd = hourFromISO(w.end);
+        return wStart <= start && end <= wEnd;
+      });
+      if (!slotIsFree) {
+        Alert.alert(
+          t('driver.payment.errorTitle'),
+          t('driver.booking.errorConflict'),
+          [{ text: t('driver.booking.errorConflictAction'), onPress: () => router.back() }],
+        );
+        setProcessing(false);
+        return;
+      }
+    } catch {
+      // If availability check fails (network error), proceed and let the
+      // booking-service conflict check be the final gate.
+    }
 
     // ── Step 1: create the booking ──────────────────────────────────────────
     let bookingId: string;

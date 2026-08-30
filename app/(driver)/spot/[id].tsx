@@ -1,7 +1,7 @@
 import { t, useLanguage } from '@/src/i18n';
-import { useEffect, useState, useMemo } from 'react';
-import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Chip } from '@/src/components/Chip';
 import { TAG_LABEL_KEYS } from '@/src/components/ParkingSpotCard';
@@ -13,7 +13,8 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
-import { getAvailability, FreeWindow } from '@/src/api/parking';
+import { useAvailability } from '@/src/hooks/useAvailability';
+import type { FreeWindow } from '@/src/api/parking';
 import { ParkingSpot, ScheduleEntry } from '@/src/types';
 
 // ── Day helpers ───────────────────────────────────────────────────────────────
@@ -43,12 +44,6 @@ function getNextSevenDays(): Array<{ date: Date; label: string; shortLabel: stri
       dateISO: `${year}-${month}-${day}`,
     };
   });
-}
-
-function addOneDay(dateISO: string): string {
-  const [year, month, day] = dateISO.split('-').map(Number);
-  const next = new Date(year, month - 1, day + 1);
-  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
 }
 
 /**
@@ -123,7 +118,6 @@ export default function SpotDetail() {
   useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
-  const [freeWindows, setFreeWindows] = useState<FreeWindow[] | null>(null);
   const [durationHours, setDurationHours] = useState(1);
   const [selectedStartHour, setSelectedStartHour] = useState<number | null>(null);
   const user = useSessionStore((s) => s.user);
@@ -136,23 +130,26 @@ export default function SpotDetail() {
     getParkingSpotDetail(id).then((s) => setSpot(s ?? null));
   }, [id]);
 
-  // Fetch real availability (published schedule minus active bookings) for the
-  // selected day. Falls back to null on failure so the schedule-only path
-  // still shows something (e.g. if booking-service is down).
-  useEffect(() => {
-    setFreeWindows(null); // reset while loading
-    setSelectedStartHour(null);
-    getAvailability(id, selectedDay.dateISO, addOneDay(selectedDay.dateISO))
-      .then((res) => setFreeWindows(res.days[0]?.free_windows ?? []))
-      .catch(() => setFreeWindows(null));
-  }, [id, selectedDay.dateISO]);
+  // Auto-refreshing availability: refetches on day/duration change and every 30 s.
+  // durationHours is passed so the hook re-runs when the user changes it.
+  const { freeWindows, loading: availabilityLoading, refresh: refreshAvailability } =
+    useAvailability(id, selectedDay.dateISO, durationHours);
 
-  // Recompute available slots whenever spot, duration, or availability changes
+  // Refresh whenever the screen comes back into focus (e.g. after pressing "back"
+  // from the confirm screen when there was a 409 conflict).
+  useFocusEffect(
+    useCallback(() => {
+      refreshAvailability();
+    }, [refreshAvailability]),
+  );
+
+  // Recompute available slots whenever spot, duration, or availability changes.
+  // When still loading we return [] so the picker shows a spinner instead of stale slots.
   const allHours = useMemo(() => {
-    if (!spot) return [];
+    if (!spot || availabilityLoading) return [];
     if (freeWindows !== null) return startHoursFromFreeWindows(freeWindows, durationHours);
     return startHoursFromSchedule(spot.schedule, durationHours, selectedDay.date);
-  }, [spot, freeWindows, durationHours, selectedDay]);
+  }, [spot, freeWindows, availabilityLoading, durationHours, selectedDay]);
 
   // Cutoff hour for the selected day (with 10-min grace). Hours strictly below
   // this are in the past and cannot be booked.
@@ -161,27 +158,27 @@ export default function SpotDetail() {
     [selectedDay.dateISO],
   );
 
+  // Only show hours that are not in the past — past hours are never bookable and
+  // displaying them (even greyed-out) confuses the user into thinking they can pick them.
   const bookableHours = useMemo(
     () => allHours.filter((h) => h >= pastCutoffHour),
     [allHours, pastCutoffHour],
   );
 
-  // Reset / auto-select when bookable hours change
-  useEffect(() => {
-    if (selectedStartHour !== null && !bookableHours.includes(selectedStartHour)) {
-      setSelectedStartHour(null);
-    }
-    if (selectedStartHour === null && bookableHours.length > 0) {
-      setSelectedStartHour(bookableHours[0]);
-    }
-  }, [bookableHours]);
+  // Derive the effective selected hour: if the current selection is no longer
+  // in bookableHours (e.g. day changed, slot was just taken), fall back to the
+  // first available hour. This replaces a useEffect+setState pattern with pure
+  // derivation so there are no cascading renders.
+  const effectiveStartHour: number | null = bookableHours.includes(selectedStartHour as number)
+    ? selectedStartHour
+    : bookableHours[0] ?? null;
 
   if (!spot) return null;
 
   const isOwner = !!user && spot.ownerId === user.id;
   const visiblePricePerHour = getDriverVisiblePrice(spot.pricePerHour);
   const total = visiblePricePerHour * durationHours;
-  const canBook = selectedStartHour !== null;
+  const canBook = effectiveStartHour !== null;
 
   const styles = StyleSheet.create({
     screen: { backgroundColor: colors.surface },
@@ -238,10 +235,8 @@ export default function SpotDetail() {
       backgroundColor: colors.surface,
     },
     slotChipSelected: { backgroundColor: colors.teal },
-    slotChipPast: { borderColor: colors.border, backgroundColor: colors.surface, opacity: 0.4 },
     slotChipText: { fontSize: 14, fontWeight: '500', color: colors.teal },
     slotChipTextSelected: { color: colors.white },
-    slotChipTextPast: { color: colors.textSecondary, textDecorationLine: 'line-through' },
     noSlotsText: { ...typography.body, color: colors.warning, marginTop: 4 },
   });
 
@@ -339,31 +334,24 @@ export default function SpotDetail() {
             {/* Start time slot picker */}
             <View>
               <Text style={styles.slotLabel}>{t('spot.selectStartTime')}</Text>
-              {allHours.length === 0 ? (
-                <Text style={styles.noSlotsText}>{t('spot.noSlotsToday')}</Text>
+              {availabilityLoading ? (
+                <ActivityIndicator size="small" color={colors.teal} style={{ marginTop: 8 }} />
               ) : bookableHours.length === 0 ? (
                 <Text style={styles.noSlotsText}>{t('spot.noSlotsToday')}</Text>
               ) : (
                 <View style={styles.slotRow}>
-                  {allHours.map((h) => {
-                    const isPast = h < pastCutoffHour;
-                    const isSelected = h === selectedStartHour;
+                  {bookableHours.map((h) => {
+                    const isSelected = h === effectiveStartHour;
                     return (
                       <TouchableOpacity
                         key={h}
-                        style={[
-                          styles.slotChip,
-                          isSelected && styles.slotChipSelected,
-                          isPast && styles.slotChipPast,
-                        ]}
-                        onPress={() => !isPast && setSelectedStartHour(h)}
-                        disabled={isPast}
-                        activeOpacity={isPast ? 1 : 0.7}
+                        style={[styles.slotChip, isSelected && styles.slotChipSelected]}
+                        onPress={() => setSelectedStartHour(h)}
+                        activeOpacity={0.7}
                       >
                         <Text style={[
                           styles.slotChipText,
                           isSelected && styles.slotChipTextSelected,
-                          isPast && styles.slotChipTextPast,
                         ]}>
                           {String(h).padStart(2, '0')}:00
                         </Text>
@@ -383,8 +371,8 @@ export default function SpotDetail() {
                   params: {
                     spotId: spot.id,
                     hours: String(durationHours),
-                    startHour: String(selectedStartHour),
-                    endHour: String((selectedStartHour ?? 0) + durationHours),
+                    startHour: String(effectiveStartHour),
+                    endHour: String((effectiveStartHour ?? 0) + durationHours),
                     bookingDate: selectedDay.dateISO,
                   },
                 })

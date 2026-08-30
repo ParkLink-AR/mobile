@@ -31,19 +31,31 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@react-native/jest-preset": "^0.86.3",
     "@types/react": "~19.2.2",
-    "typescript": "~6.0.3"
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.68.0"
   },
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "start": "expo start --clear",
+    "android": "expo start --android --clear",
+    "ios": "expo start --ios --clear",
     "web": "expo start --web",
-    "test": "jest"
+    "test": "jest",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" \"app/**/*.{ts,tsx}\""
   },
   "private": true,
   "jest": {
     "preset": "jest-expo"
+  },
+  "overrides": {
+    "react-native-worklets": "0.12.1",
+    "metro": "0.84.5",
+    "metro-config": "0.84.5",
+    "metro-transform-worker": "0.84.5",
+    "image-size": "2.0.2"
   }
 }
