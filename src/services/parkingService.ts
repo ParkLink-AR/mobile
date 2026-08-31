@@ -1,11 +1,15 @@
 import { ParkingSpot, ScheduleEntry } from '@/src/types';
 import {
   ParkingSpotApiResponse,
+  ParkingSpotPhotoAsset,
   searchParkingSpots as apiSearchParkingSpots,
   getParkingSpotDetail as apiGetParkingSpotDetail,
   getParkingSpotsForOwner as apiGetParkingSpotsForOwner,
   createParkingSpot as apiCreateParkingSpot,
   updateParkingSpot as apiUpdateParkingSpot,
+  uploadParkingSpotPhotos as apiUploadParkingSpotPhotos,
+  deleteParkingSpotPhoto as apiDeleteParkingSpotPhoto,
+  reorderParkingSpotPhotos as apiReorderParkingSpotPhotos,
 } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { getDriverVisiblePrice } from './utils';
@@ -22,6 +26,7 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     lng: raw.lng,
     pricePerHour: raw.pricePerHour,
     photoUrl: raw.photos[0] ?? PLACEHOLDER_PHOTO_URL,
+    photos: raw.photos,
     covered: raw.covered,
     rating: 0,
     reviewCount: 0,
@@ -160,6 +165,21 @@ export async function createParkingSpot(input: CreateParkingSpotInput): Promise<
     description: input.description,
   });
   return toParkingSpot(raw);
+}
+
+export async function uploadParkingSpotPhotos(
+  spotId: string,
+  assets: ParkingSpotPhotoAsset[],
+): Promise<ParkingSpot> {
+  return toParkingSpot(await apiUploadParkingSpotPhotos(spotId, assets));
+}
+
+export async function deleteParkingSpotPhoto(spotId: string, url: string): Promise<ParkingSpot> {
+  return toParkingSpot(await apiDeleteParkingSpotPhoto(spotId, url));
+}
+
+export async function reorderParkingSpotPhotos(spotId: string, photos: string[]): Promise<ParkingSpot> {
+  return toParkingSpot(await apiReorderParkingSpotPhotos(spotId, photos));
 }
 
 export interface UpdateParkingSpotInput {

@@ -55,6 +55,7 @@ export interface ParkingSpot {
   lng: number;
   pricePerHour: number;
   photoUrl: string;
+  photos: string[];
   covered: boolean;
   rating: number;
   reviewCount: number;

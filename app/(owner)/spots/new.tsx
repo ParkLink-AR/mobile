@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, Pressable, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView, Image } from 'react-native';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
@@ -10,10 +11,14 @@ import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { createParkingSpot } from '@/src/services/parkingService';
-import { GeocodeCandidate, reverseGeocode } from '@/src/api/parking';
+import { createParkingSpot, uploadParkingSpotPhotos } from '@/src/services/parkingService';
+import { GeocodeCandidate, ParkingSpotPhotoAsset, reverseGeocode } from '@/src/api/parking';
 import { ScheduleEntry } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
+
+const MAX_PHOTOS = 10;
+const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 /** Default Mon–Fri, 08:00–22:00 */
 const DEFAULT_SCHEDULE: DaySchedule[] = [0, 1, 2, 3, 4].map((dayIndex) => ({
@@ -41,6 +46,44 @@ export default function NewSpot() {
   const [schedule, setSchedule] = useState<DaySchedule[]>(DEFAULT_SCHEDULE);
   const [description, setDescription] = useState('');
   const [publishing, setPublishing] = useState(false);
+  const [photos, setPhotos] = useState<ParkingSpotPhotoAsset[]>([]);
+
+  async function pickPhotos() {
+    if (photos.length >= MAX_PHOTOS) {
+      alert(t('owner.spot.new.maxPhotos'));
+      return;
+    }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      alert(t('owner.spot.new.photoPermissionError'));
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_PHOTOS - photos.length,
+      quality: 0.7,
+      base64: false,
+    });
+    if (result.canceled) return;
+
+    const picked: ParkingSpotPhotoAsset[] = [];
+    for (const asset of result.assets) {
+      const mimeType = asset.mimeType ?? 'image/jpeg';
+      if (!ALLOWED_PHOTO_TYPES.includes(mimeType)) continue;
+      if (asset.fileSize && asset.fileSize > MAX_PHOTO_SIZE_BYTES) continue;
+      picked.push({
+        uri: asset.uri,
+        name: asset.fileName ?? `photo.${mimeType.split('/')[1]}`,
+        type: mimeType,
+      });
+    }
+    setPhotos((prev) => [...prev, ...picked].slice(0, MAX_PHOTOS));
+  }
+
+  function removePhoto(index: number) {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+  }
 
   function selectAddress(candidate: GeocodeCandidate) {
     setAddress(candidate.displayName);
@@ -95,7 +138,7 @@ export default function NewSpot() {
 
     try {
       setPublishing(true);
-      await createParkingSpot({
+      const spot = await createParkingSpot({
         title: address.split(',')[0] || address,
         address: address.trim(),
         lat: coordinates.lat,
@@ -105,6 +148,12 @@ export default function NewSpot() {
         schedule: toScheduleEntries(schedule),
         description: description.trim() || undefined,
       });
+      if (photos.length > 0) {
+        // La cochera ya existe -- si esto falla, el dueño todavía puede
+        // agregar fotos después desde la edición, así que no bloqueamos la
+        // publicación por un error acá.
+        await uploadParkingSpotPhotos(spot.id, photos).catch(() => {});
+      }
       router.back();
     } catch {
       alert(t('owner.spot.new.errorPublish'));
@@ -122,6 +171,25 @@ export default function NewSpot() {
       alignItems: 'center', justifyContent: 'center', marginBottom: 8,
     },
     photoPlus: { fontSize: 24, color: colors.textSecondary },
+    photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+    photoThumbWrapper: { position: 'relative' },
+    photoThumb: { width: 72, height: 72, borderRadius: 8 },
+    coverBadge: {
+      position: 'absolute', bottom: 2, left: 2,
+      backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 4,
+      paddingHorizontal: 4, paddingVertical: 1,
+    },
+    coverBadgeText: { color: colors.white, fontSize: 9, fontWeight: '700' },
+    removePhotoBtn: {
+      position: 'absolute', top: -6, right: -6,
+      width: 20, height: 20, borderRadius: 10,
+      backgroundColor: colors.text, alignItems: 'center', justifyContent: 'center',
+    },
+    addPhotoThumb: {
+      width: 72, height: 72, borderRadius: 8,
+      borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border,
+      alignItems: 'center', justifyContent: 'center',
+    },
 
     input: {
       borderWidth: 1, borderColor: colors.border, borderRadius: 8,
@@ -154,10 +222,33 @@ export default function NewSpot() {
     <Screen style={styles.screen}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={typography.caption}>{t('owner.spot.new.photos')}</Text>
-        <Pressable style={styles.photoBox}>
-          <Text style={styles.photoPlus}>+</Text>
-          <Text style={typography.caption}>{t('owner.spot.new.photosTap')}</Text>
-        </Pressable>
+        {photos.length === 0 ? (
+          <Pressable style={styles.photoBox} onPress={pickPhotos}>
+            <Text style={styles.photoPlus}>+</Text>
+            <Text style={typography.caption}>{t('owner.spot.new.photosTap')}</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.photoRow}>
+            {photos.map((photo, index) => (
+              <View key={photo.uri} style={styles.photoThumbWrapper}>
+                <Image source={{ uri: photo.uri }} style={styles.photoThumb} />
+                {index === 0 && (
+                  <View style={styles.coverBadge}>
+                    <Text style={styles.coverBadgeText}>{t('owner.spot.new.cover')}</Text>
+                  </View>
+                )}
+                <TouchableOpacity style={styles.removePhotoBtn} onPress={() => removePhoto(index)}>
+                  <Ionicons name="close" size={13} color={colors.white} />
+                </TouchableOpacity>
+              </View>
+            ))}
+            {photos.length < MAX_PHOTOS && (
+              <TouchableOpacity style={styles.addPhotoThumb} onPress={pickPhotos}>
+                <Text style={styles.photoPlus}>+</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         <Text style={typography.caption}>{t('owner.spot.new.address')}</Text>
         <View style={styles.addressRow}>

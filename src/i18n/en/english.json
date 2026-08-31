@@ -80,6 +80,9 @@
   "owner.spots.manageAvailability": "Manage availability",
   "owner.spot.new.photos": "Photos",
   "owner.spot.new.photosTap": "Tap to upload photos",
+  "owner.spot.new.cover": "Cover",
+  "owner.spot.new.maxPhotos": "You can upload up to 10 photos.",
+  "owner.spot.new.photoPermissionError": "Gallery access is needed to add photos.",
   "owner.spot.new.address": "Address",
   "owner.spot.new.addressPlaceholder": "Where is your parking spot located?",
   "owner.spot.new.permissionError": "We need your location to use it as your parking spot location.",
@@ -110,6 +113,8 @@
   "owner.spot.edit.invalidPrice": "Please enter a valid price",
   "owner.spot.edit.invalidHours": "Start time must be before end time",
   "owner.spot.edit.errorSave": "Error saving changes",
+  "owner.spot.edit.photos": "Photos",
+  "owner.spot.edit.errorPhotos": "Couldn't update the photos.",
   "spot.ownedByYou": "This is your parking spot",
   "spot.editSpot": "Edit spot",
 

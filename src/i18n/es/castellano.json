@@ -80,6 +80,9 @@
   "owner.spots.manageAvailability": "Gestionar disponibilidad",
   "owner.spot.new.photos": "Fotos",
   "owner.spot.new.photosTap": "Tocá para subir fotos",
+  "owner.spot.new.cover": "Portada",
+  "owner.spot.new.maxPhotos": "Podés subir hasta 10 fotos.",
+  "owner.spot.new.photoPermissionError": "Se necesita acceso a la galería para agregar fotos.",
   "owner.spot.new.address": "Dirección",
   "owner.spot.new.addressPlaceholder": "¿Dónde está ubicada tu cochera?",
   "owner.spot.new.permissionError": "Necesitamos tu ubicación para usarla como ubicación de tu cochera.",
@@ -110,6 +113,8 @@
   "owner.spot.edit.invalidPrice": "Ingresá un precio válido",
   "owner.spot.edit.invalidHours": "El horario de inicio debe ser menor al de cierre",
   "owner.spot.edit.errorSave": "Error al guardar los cambios",
+  "owner.spot.edit.photos": "Fotos",
+  "owner.spot.edit.errorPhotos": "No se pudo actualizar las fotos.",
   "spot.ownedByYou": "Esta es tu cochera",
   "spot.editSpot": "Editar cochera",
 

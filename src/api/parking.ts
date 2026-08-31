@@ -1,4 +1,5 @@
-import { request } from './client';
+import { Platform } from 'react-native';
+import { request, requestMultipart } from './client';
 import { ScheduleEntry } from '@/src/types';
 
 // Shape returned by parking-service (see parking-spots.service.ts's
@@ -147,6 +148,55 @@ export interface DayAvailability {
  *
  * GET /parking-spots/{id}/availability
  */
+// Hasta 10 fotos por cochera, la primera del array es la portada (ver
+// ParkingSpotsService.MAX_PHOTOS en parking-service).
+export interface ParkingSpotPhotoAsset {
+  uri: string;
+  name: string;
+  type: string;
+}
+
+export async function uploadParkingSpotPhotos(
+  spotId: string,
+  assets: ParkingSpotPhotoAsset[],
+): Promise<ParkingSpotApiResponse> {
+  const formData = new FormData();
+  for (const asset of assets) {
+    if (Platform.OS === 'web') {
+      // Same reasoning as uploadAvatar in api/auth.ts: react-native-web's
+      // FormData needs a real Blob, not RN's {uri, name, type} shape.
+      const blob = await (await fetch(asset.uri)).blob();
+      formData.append('files', blob, asset.name);
+    } else {
+      formData.append('files', {
+        uri: asset.uri,
+        name: asset.name,
+        type: asset.type,
+      } as unknown as Blob);
+    }
+  }
+  return requestMultipart<ParkingSpotApiResponse>(`/parking-spots/${spotId}/photos`, formData);
+}
+
+export async function deleteParkingSpotPhoto(spotId: string, url: string): Promise<ParkingSpotApiResponse> {
+  return request(`/parking-spots/${spotId}/photos`, {
+    method: 'DELETE',
+    body: JSON.stringify({ url }),
+  });
+}
+
+// `photos` es el array completo reordenado (mismo set, orden nuevo) --
+// mover una foto al índice 0 la convierte en portada.
+export async function reorderParkingSpotPhotos(
+  spotId: string,
+  photos: string[],
+): Promise<ParkingSpotApiResponse> {
+  return request(`/parking-spots/${spotId}/photos/order`, {
+    method: 'PUT',
+    body: JSON.stringify({ photos }),
+  });
+}
+
 export async function getAvailability(
   parkingSpotId: string,
   from: string,

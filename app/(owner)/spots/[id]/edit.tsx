@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Button } from '@/src/components/Button';
@@ -12,11 +13,21 @@ import { AvailabilityPicker, DaySchedule } from '@/src/components/AvailabilityPi
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
-import { getParkingSpotDetail, updateParkingSpot } from '@/src/services/parkingService'; // getParkingSpotDetail used in useFocusEffect
+import {
+  getParkingSpotDetail,
+  updateParkingSpot,
+  uploadParkingSpotPhotos,
+  deleteParkingSpotPhoto,
+  reorderParkingSpotPhotos,
+} from '@/src/services/parkingService';
 import { useOwnerSpotsStore } from '@/src/store/useOwnerSpotsStore';
-import { GeocodeCandidate, reverseGeocode } from '@/src/api/parking';
+import { GeocodeCandidate, ParkingSpotPhotoAsset, reverseGeocode } from '@/src/api/parking';
 import { ParkingSpot, ScheduleEntry } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
+
+const MAX_PHOTOS = 10;
+const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 function toDaySchedule(schedule: ScheduleEntry[]): DaySchedule[] {
   return schedule.map((entry) => ({
@@ -48,6 +59,8 @@ export default function EditSpot() {
   const [covered, setCovered] = useState(true);
   const [schedule, setSchedule] = useState<DaySchedule[]>([0, 1, 2, 3, 4].map((d) => ({ dayIndex: d, startHour: 8, endHour: 22 })));
   const [saving, setSaving] = useState(false);
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [photosBusy, setPhotosBusy] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,10 +72,75 @@ export default function EditSpot() {
         setPrice(String(s.pricePerHour));
         setDescription(s.description ?? '');
         setCovered(s.covered);
+        setPhotos(s.photos);
         if (s.schedule.length > 0) setSchedule(toDaySchedule(s.schedule));
       });
     }, [id]),
   );
+
+  async function pickAndUploadPhotos() {
+    if (photos.length >= MAX_PHOTOS) {
+      alert(t('owner.spot.new.maxPhotos'));
+      return;
+    }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      alert(t('owner.spot.new.photoPermissionError'));
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_PHOTOS - photos.length,
+      quality: 0.7,
+      base64: false,
+    });
+    if (result.canceled) return;
+
+    const assets: ParkingSpotPhotoAsset[] = [];
+    for (const asset of result.assets) {
+      const mimeType = asset.mimeType ?? 'image/jpeg';
+      if (!ALLOWED_PHOTO_TYPES.includes(mimeType)) continue;
+      if (asset.fileSize && asset.fileSize > MAX_PHOTO_SIZE_BYTES) continue;
+      assets.push({ uri: asset.uri, name: asset.fileName ?? `photo.${mimeType.split('/')[1]}`, type: mimeType });
+    }
+    if (assets.length === 0) return;
+
+    try {
+      setPhotosBusy(true);
+      const updated = await uploadParkingSpotPhotos(id, assets);
+      setPhotos(updated.photos);
+    } catch {
+      alert(t('owner.spot.edit.errorPhotos'));
+    } finally {
+      setPhotosBusy(false);
+    }
+  }
+
+  async function handleDeletePhoto(url: string) {
+    try {
+      setPhotosBusy(true);
+      const updated = await deleteParkingSpotPhoto(id, url);
+      setPhotos(updated.photos);
+    } catch {
+      alert(t('owner.spot.edit.errorPhotos'));
+    } finally {
+      setPhotosBusy(false);
+    }
+  }
+
+  async function handleSetCover(url: string) {
+    const reordered = [url, ...photos.filter((p) => p !== url)];
+    try {
+      setPhotosBusy(true);
+      const updated = await reorderParkingSpotPhotos(id, reordered);
+      setPhotos(updated.photos);
+    } catch {
+      alert(t('owner.spot.edit.errorPhotos'));
+    } finally {
+      setPhotosBusy(false);
+    }
+  }
 
   function selectAddress(candidate: GeocodeCandidate) {
     setAddress(candidate.displayName);
@@ -189,6 +267,31 @@ export default function EditSpot() {
     toggleText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
     toggleTextActive: { color: colors.surface, fontWeight: '700' },
 
+    photosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    photoThumbWrapper: { position: 'relative' },
+    photoThumb: { width: 72, height: 72, borderRadius: 8 },
+    coverBadge: {
+      position: 'absolute', bottom: 2, left: 2,
+      backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 4,
+      paddingHorizontal: 4, paddingVertical: 1,
+    },
+    coverBadgeText: { color: colors.white, fontSize: 9, fontWeight: '700' },
+    removePhotoBtn: {
+      position: 'absolute', top: -6, right: -6,
+      width: 20, height: 20, borderRadius: 10,
+      backgroundColor: colors.text, alignItems: 'center', justifyContent: 'center',
+    },
+    setCoverBtn: {
+      position: 'absolute', bottom: 2, right: 2,
+      backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 4,
+      width: 18, height: 18, alignItems: 'center', justifyContent: 'center',
+    },
+    addPhotoThumb: {
+      width: 72, height: 72, borderRadius: 8,
+      borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border,
+      alignItems: 'center', justifyContent: 'center',
+    },
+
     locationCard: { zIndex: 20, elevation: 20 },
     addressRow: { flexDirection: 'row', gap: 8 },
     locateButton: {
@@ -217,6 +320,47 @@ export default function EditSpot() {
           <View style={styles.infoCard}>
             <Text style={styles.spotTitle}>{spot.title}</Text>
             <RatingStars rating={spot.rating} count={spot.reviewCount} />
+          </View>
+
+          {/* Photos */}
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>{t('owner.spot.edit.photos')}</Text>
+            <View style={styles.photosRow}>
+              {photos.map((url, index) => (
+                <View key={url} style={styles.photoThumbWrapper}>
+                  <Image source={{ uri: url }} style={styles.photoThumb} />
+                  {index === 0 ? (
+                    <View style={styles.coverBadge}>
+                      <Text style={styles.coverBadgeText}>{t('owner.spot.new.cover')}</Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.setCoverBtn}
+                      disabled={photosBusy}
+                      onPress={() => handleSetCover(url)}
+                    >
+                      <Ionicons name="star-outline" size={11} color={colors.white} />
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={styles.removePhotoBtn}
+                    disabled={photosBusy}
+                    onPress={() => handleDeletePhoto(url)}
+                  >
+                    <Ionicons name="close" size={13} color={colors.white} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {photos.length < MAX_PHOTOS && (
+                <TouchableOpacity style={styles.addPhotoThumb} disabled={photosBusy} onPress={pickAndUploadPhotos}>
+                  {photosBusy ? (
+                    <ActivityIndicator color={colors.teal} size="small" />
+                  ) : (
+                    <Ionicons name="add" size={22} color={colors.textSecondary} />
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {/* Location */}
