@@ -8,26 +8,14 @@ import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { RatingStars } from '@/src/components/RatingStars';
-import { AvailabilityPicker, DaySchedule } from '@/src/components/AvailabilityPicker';
+import { AvailabilityPicker, DayScheduleGroup, dayGroupsToEntries, entriesToDayGroups } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { getParkingSpotDetail, updateParkingSpot } from '@/src/services/parkingService'; // getParkingSpotDetail used in useFocusEffect
 import { useSpotsStore } from '@/src/store/useSpotsStore';
 import { GeocodeCandidate, reverseGeocode } from '@/src/api/parking';
-import { ParkingSpot, ScheduleEntry } from '@/src/types';
+import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
-
-function toDaySchedule(schedule: ScheduleEntry[]): DaySchedule[] {
-  return schedule.map((entry) => ({
-    dayIndex: entry.dayOfWeek,
-    startHour: entry.startHour,
-    endHour: entry.endHour,
-  }));
-}
-
-function toScheduleEntries(days: DaySchedule[]): ScheduleEntry[] {
-  return days.map((day) => ({ dayOfWeek: day.dayIndex, startHour: day.startHour, endHour: day.endHour }));
-}
 
 export default function EditSpot() {
   const colors = useThemeColors();
@@ -44,7 +32,9 @@ export default function EditSpot() {
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [covered, setCovered] = useState(true);
-  const [schedule, setSchedule] = useState<DaySchedule[]>([0, 1, 2, 3, 4].map((d) => ({ dayIndex: d, startHour: 8, endHour: 22 })));
+  const [schedule, setSchedule] = useState<DayScheduleGroup[]>(
+    [0, 1, 2, 3, 4].map((d) => ({ dayIndex: d, slots: [{ startHour: 8, endHour: 20 }] })),
+  );
   const [saving, setSaving] = useState(false);
 
   useFocusEffect(
@@ -57,7 +47,7 @@ export default function EditSpot() {
         setPrice(String(s.pricePerHour));
         setDescription(s.description ?? '');
         setCovered(s.covered);
-        if (s.schedule.length > 0) setSchedule(toDaySchedule(s.schedule));
+        if (s.schedule.length > 0) setSchedule(entriesToDayGroups(s.schedule));
       });
     }, [id]),
   );
@@ -123,7 +113,7 @@ export default function EditSpot() {
         pricePerHour: parsedPrice,
         description: description.trim(),
         covered,
-        schedule: toScheduleEntries(schedule),
+        schedule: dayGroupsToEntries(schedule),
         address: address.trim(),
         lat: coordinates.lat,
         lng: coordinates.lng,
