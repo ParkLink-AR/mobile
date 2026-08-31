@@ -1,8 +1,7 @@
-import { View, Text, Image, StyleSheet, Platform } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 import { Card } from '@/src/components/Card';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
 import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +21,6 @@ export const TAG_LABEL_KEYS: Record<string, string> = Object.fromEntries(
 
 export function ParkingSpotCard({ spot }: { spot: ParkingSpot }) {
   const colors = useThemeColors();
-  const typography = useTypography();
   useLanguage();
   const styles = StyleSheet.create({
     card: { padding: 0, overflow: 'hidden' },

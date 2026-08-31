@@ -98,3 +98,12 @@ export async function confirmBookingApi(bookingId: string, paymentId: string): P
     body: JSON.stringify({ payment_id: paymentId }),
   });
 }
+
+/**
+ * Returns the booking history for a user.
+ *
+ * GET /users/{userId}/bookings/history
+ */
+export async function getUserBookingsApi(userId: string): Promise<BookingApiResponse[]> {
+  return request(`/users/${userId}/bookings/history`);
+}

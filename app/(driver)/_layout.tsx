@@ -12,13 +12,25 @@ export default function DriverLayout() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      {/* Spot (driver view) */}
       <Stack.Screen name="spot/[id]" options={{ title: t('layout.driver.spotDetail') }} />
       <Stack.Screen name="spot/[id]/reviews" options={{ title: t('layout.driver.reviews') }} />
+      {/* Booking flow */}
       <Stack.Screen name="booking/confirm" options={{ title: t('driver.booking.confirm.title') }} />
       <Stack.Screen name="booking/success" options={{ title: '', headerBackVisible: false }} />
       <Stack.Screen name="payment/pending" options={{ title: t('driver.payment.pending.title'), headerBackVisible: false }} />
+      <Stack.Screen name="payment/success" options={{ title: '', headerBackVisible: false }} />
+      <Stack.Screen name="payment/failure" options={{ title: '', headerBackVisible: false }} />
       <Stack.Screen name="bookings/[id]" options={{ title: t('layout.driver.bookingDetail') }} />
       <Stack.Screen name="review/[bookingId]" options={{ title: t('layout.driver.review') }} />
+      {/* Owner / spot management */}
+      <Stack.Screen name="spots/new" options={{ title: t('layout.owner.newSpot') }} />
+      <Stack.Screen name="spots/[id]" options={{ title: t('owner.spot.detail.headerTitle') }} />
+      <Stack.Screen name="spots/[id]/edit" options={{ title: t('owner.spot.edit.title') }} />
+      <Stack.Screen name="spots/[id]/availability" options={{ title: t('layout.owner.availability') }} />
+      <Stack.Screen name="settlements" options={{ title: t('layout.owner.settlements') }} />
+      <Stack.Screen name="settlements/[id]" options={{ title: t('layout.owner.settlementDetail') }} />
+      {/* Profile */}
       <Stack.Screen name="profile-edit" options={{ title: t('driver.profile.edit') }} />
       <Stack.Screen name="change-email" options={{ title: t('changeEmail.title') }} />
       <Stack.Screen name="change-phone" options={{ title: t('changePhone.title') }} />

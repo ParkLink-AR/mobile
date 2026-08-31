@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { t, useLanguage } from '@/src/i18n';
+import { useCallback, useState } from 'react';
 import { Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
@@ -10,14 +11,17 @@ import { getSettlementsForOwner } from '@/src/services/paymentService';
 import { Settlement } from '@/src/types';
 
 export default function Settlements() {
+  useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
 
-  useEffect(() => {
-    if (user) getSettlementsForOwner(user.id).then(setSettlements);
-  }, [user?.id]);
+  useFocusEffect(
+    useCallback(() => {
+      if (user) getSettlementsForOwner(user.id).then(setSettlements);
+    }, [user?.id])
+  );
 
   if (!user) return null;
 
@@ -28,18 +32,18 @@ export default function Settlements() {
 
   return (
     <Screen style={styles.container}>
-      <Text style={typography.h1}>Liquidaciones</Text>
+      <Text style={typography.h1}>{t('settlements.title')}</Text>
       <FlatList
         data={settlements}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ gap: 10 }}
         renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => router.push(`/(owner)/settlements/${item.id}`)}>
+          <TouchableOpacity onPress={() => router.push(`/(driver)/settlements/${item.id}`)}>
             <Card>
               <Text style={typography.h2}>{item.period}</Text>
               <Text style={styles.amount}>${item.totalAmount.toLocaleString('es-AR')}</Text>
               <Text style={typography.caption}>
-                Comisión retenida: ${item.commissionRetained.toLocaleString('es-AR')}
+                {t('settlements.commission', { amount: item.commissionRetained.toLocaleString('es-AR') })}
               </Text>
             </Card>
           </TouchableOpacity>

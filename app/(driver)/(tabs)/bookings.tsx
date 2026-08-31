@@ -8,8 +8,36 @@ import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { getBookingsForUser } from '@/src/services/bookingService';
+import { getUserBookingsApi, BookingApiResponse } from '@/src/api/booking';
 import { Booking } from '@/src/types';
+
+/** Maps the backend wire shape to the UI Booking type. */
+function mapApiBooking(b: BookingApiResponse): Booking {
+  const start = new Date(b.start);
+  const end = new Date(b.end);
+  const hours = Math.max(1, Math.round((end.getTime() - start.getTime()) / 3_600_000));
+  const dateISO = b.start.slice(0, 10);
+  const startTime = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const endTime = end.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const amount = typeof b.amount === 'number' ? b.amount / 100 : 0; // centavos → pesos
+
+  return {
+    id: b.id,
+    parkingSpotId: b.parking_spot_id,
+    parkingSpotTitle: b.parking_spot_id, // booking-service doesn't return the title; use id as fallback
+    driverId: b.user_id,
+    driverName: '',
+    ownerId: '',
+    date: dateISO,
+    startTime,
+    endTime,
+    hours,
+    subtotal: amount,
+    serviceCharge: 0,
+    total: amount,
+    status: b.status as Booking['status'],
+  };
+}
 
 export default function DriverBookings() {
   useLanguage();
@@ -20,7 +48,11 @@ export default function DriverBookings() {
 
   useFocusEffect(
     useCallback(() => {
-      if (user) getBookingsForUser(user.id, 'driver').then(setBookings);
+      if (user) {
+        getUserBookingsApi(user.id)
+          .then((list) => setBookings(list.map(mapApiBooking)))
+          .catch((err) => console.warn('[Bookings] fetch error:', err));
+      }
     }, [user?.id])
   );
 

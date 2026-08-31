@@ -1,4 +1,4 @@
-import { Pressable, Text, StyleSheet, View } from 'react-native';
+import { Pressable, Text, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 
 interface ChipProps {

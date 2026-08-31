@@ -37,10 +37,4 @@ describe('useSessionStore', () => {
     expect(useSessionStore.getState().accessToken).toBeNull();
     expect(useSessionStore.getState().refreshToken).toBeNull();
   });
-
-  it('setActiveMode switches driver/owner mode', () => {
-    expect(useSessionStore.getState().activeMode).toBe('driver');
-    useSessionStore.getState().setActiveMode('owner');
-    expect(useSessionStore.getState().activeMode).toBe('owner');
-  });
 });

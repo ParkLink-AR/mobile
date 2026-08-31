@@ -3,6 +3,7 @@ import { ApiError } from '@/src/api/client';
 import { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -11,19 +12,56 @@ import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail, toISOToday } from '@/src/services/parkingService';
 import { getDriverVisiblePrice } from '@/src/services/utils';
+import { getAvailability } from '@/src/api/parking';
 import { ParkingSpot } from '@/src/types';
-import { createBookingApi, confirmBookingApi } from '@/src/api/booking';
-import type { ScheduleEntryBody } from '@/src/api/booking';
+import { createBookingApi, createPaymentPreference, type ScheduleEntryBody } from '@/src/api/booking';
+
+// ── Helpers for availability pre-check ───────────────────────────────────────
+
+function addOneDay(dateISO: string): string {
+  const [year, month, day] = dateISO.split('-').map(Number);
+  const next = new Date(year, month - 1, day + 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Checks whether the requested integer-hour slot [startHour:00, endHour:00]
+ * is fully covered by at least one free window. Compares epoch-ms so that a
+ * free window starting at e.g. 08:30 does NOT falsely cover the 08:00 slot.
+ */
+function slotIsCoveredByFreeWindows(
+  freeWindows: Array<{ start: string; end: string }>,
+  startHour: number,
+  endHour: number,
+  bookingDate: string,
+): boolean {
+  // Build the exact epoch-ms for slotStart and slotEnd using the booking date.
+  const artMidnightMs = artMidnightForDate(bookingDate);
+  const slotStartMs = artMidnightMs + startHour * 3600_000;
+  const slotEndMs = artMidnightMs + endHour * 3600_000;
+  return freeWindows.some((w) => {
+    const wStartMs = new Date(w.start).getTime();
+    const wEndMs = new Date(w.end).getTime();
+    return wStartMs <= slotStartMs && slotEndMs <= wEndMs;
+  });
+}
+
+/** UTC epoch-ms of Buenos Aires midnight (00:00 ART = 03:00 UTC) for a YYYY-MM-DD date. */
+function artMidnightForDate(dateISO: string): number {
+  const [year, month, day] = dateISO.split('-').map(Number);
+  return Date.UTC(year, month - 1, day, 3, 0, 0, 0); // ART midnight = UTC 03:00
+}
 
 export default function ConfirmBooking() {
   useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
-  const { spotId, hours, startHour, endHour } = useLocalSearchParams<{
+  const { spotId, hours, startHour, endHour, bookingDate } = useLocalSearchParams<{
     spotId: string;
     hours: string;
     startHour?: string;
     endHour?: string;
+    bookingDate?: string; // YYYY-MM-DD passed from spot/[id].tsx
   }>();
   const user = useSessionStore((s) => s.user);
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
@@ -33,6 +71,13 @@ export default function ConfirmBooking() {
   const reservedHours = Math.max(Number(hours) || 1, 1);
   const start = startHour ? Number(startHour) : 8;
   const end = endHour ? Number(endHour) : start + reservedHours;
+
+  // Use the date selected in spot/[id].tsx; fall back to today.
+  function toISO(dateISO: string | undefined, hour: number): string {
+    const base = dateISO ?? toISOToday(0).slice(0, 10); // "YYYY-MM-DD"
+    const paddedHour = String(hour).padStart(2, '0');
+    return `${base}T${paddedHour}:00:00-03:00`;
+  }
 
   // Only load the spot detail on mount — no booking is created yet.
   useEffect(() => {
@@ -45,24 +90,47 @@ export default function ConfirmBooking() {
     });
   }, [spotId]);
 
-  // Called when the user explicitly presses "Confirm & Pay". Creates the
-  // booking (PENDING_PAYMENT), then confirms it directly with a placeholder
-  // payment_id.
-  //
-  // payment-service doesn't exist in this workspace yet (the gateway 503s on
-  // every /payments/* route), so the real Mercado Pago checkout
-  // (createPaymentPreference + Linking.openURL + polling on
-  // /payment/pending) can't run end-to-end here. Until it does, this treats
-  // payment as already succeeded and calls POST /bookings/{id}/confirm
-  // itself instead of waiting for the webhook to do it -- the booking ends
-  // up CONFIRMED for real, not stuck in PENDING_PAYMENT forever.
+  // Full booking + MercadoPago payment flow:
+  //   0. GET /availability        → pre-check: confirm slot is still free
+  //   1. POST /bookings          → creates PENDING_PAYMENT booking (15-min hold)
+  //   2. POST /payments/create-preference → creates MP preference; externalReference = bookingId
+  //   3. Opens checkoutUrl in an in-app WebBrowser
+  //   4. User pays on the MP web checkout
+  //   5. MP webhook hits payment-service → confirms the booking in booking-service
+  //   6. MP redirects to parklink://payment/pending?bookingId=<id>
+  //   7. pending.tsx polls payment-service until approved/rejected
   async function reserve() {
     if (!spot || !user || processing) return;
     setProcessing(true);
 
+    // ── Step 0: pre-check availability before creating the booking ─────────
+    // This gives a fast, friendly error if the slot was taken while the user
+    // was on the confirm screen, without consuming a hold.
     try {
-      const startISO = toISOToday(start);
-      const endISO = toISOToday(end);
+      const dateFrom = bookingDate ?? toISOToday(0).slice(0, 10);
+      const dateTo = addOneDay(dateFrom);
+      const availability = await getAvailability(spot.id, dateFrom, dateTo);
+      const freeWindows = availability.days[0]?.free_windows ?? [];
+      const slotIsFree = slotIsCoveredByFreeWindows(freeWindows, start, end, dateFrom);
+      if (!slotIsFree) {
+        Alert.alert(
+          t('driver.payment.errorTitle'),
+          t('driver.booking.errorConflict'),
+          [{ text: t('driver.booking.errorConflictAction'), onPress: () => router.back() }],
+        );
+        setProcessing(false);
+        return;
+      }
+    } catch {
+      // If availability check fails (network error), proceed and let the
+      // booking-service conflict check be the final gate.
+    }
+
+    // ── Step 1: create the booking ──────────────────────────────────────────
+    let bookingId: string;
+    try {
+      const startISO = toISO(bookingDate, start);
+      const endISO = toISO(bookingDate, end);
       const schedule: ScheduleEntryBody[] = spot.schedule.map((entry) => ({
         day_of_week: entry.dayOfWeek,
         start_hour: entry.startHour,
@@ -76,20 +144,7 @@ export default function ConfirmBooking() {
         amount: Math.round(spot.pricePerHour * reservedHours * 100), // centavos
         parking_spot: { id: spotId, schedule },
       });
-
-      await confirmBookingApi(created.id, `mock-payment-${created.id}`);
-
-      const visibleTotal = getDriverVisiblePrice(spot.pricePerHour) * reservedHours;
-      router.replace({
-        pathname: '/(driver)/booking/success',
-        params: {
-          spotTitle: spot.title,
-          date: new Date().toLocaleDateString('es-AR'),
-          startTime: `${String(start).padStart(2, '0')}:00`,
-          endTime: `${String(end).padStart(2, '0')}:00`,
-          total: String(visibleTotal),
-        },
-      });
+      bookingId = created.id;
     } catch (err: any) {
       const isConflict = err instanceof ApiError && err.status === 409;
       if (isConflict) {
@@ -103,7 +158,44 @@ export default function ConfirmBooking() {
         Alert.alert(t('driver.payment.errorTitle'), msg);
       }
       setProcessing(false);
+      return;
     }
+
+    // ── Step 2: create MercadoPago preference ───────────────────────────────
+    let checkoutUrl: string;
+    try {
+      const visibleTotal = getDriverVisiblePrice(spot.pricePerHour) * reservedHours;
+      const preference = await createPaymentPreference({
+        amount: visibleTotal,
+        title: `Cochera ${spot.title}`,
+        description: `Reserva ${bookingDate ?? 'hoy'} ${String(start).padStart(2, '0')}:00–${String(end).padStart(2, '0')}:00`,
+        payerEmail: user.email,
+        externalReference: bookingId, // bookingId IS the external reference for the webhook
+      });
+      checkoutUrl = preference.checkoutUrl;
+    } catch (err: any) {
+      const msg = err?.detail ?? err?.message ?? t('driver.payment.errorCreatingPreference');
+      Alert.alert(t('driver.payment.errorTitle'), msg);
+      setProcessing(false);
+      return;
+    }
+
+    // ── Step 3: open MP checkout in an in-app browser ───────────────────────
+    // The browser closes when MP redirects to parklink://payment/pending
+    await WebBrowser.openBrowserAsync(checkoutUrl, {
+      dismissButtonStyle: 'cancel',
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+    });
+
+    // ── Step 4: navigate to pending screen to poll for confirmation ─────────
+    // This runs after the browser closes (either by redirect or by the user
+    // pressing Cancel). pending.tsx polls payment-service until the webhook
+    // has confirmed (or rejected) the payment.
+    setProcessing(false);
+    router.replace({
+      pathname: '/(driver)/payment/pending',
+      params: { bookingId },
+    });
   }
 
   if (loadError) {
@@ -135,7 +227,12 @@ export default function ConfirmBooking() {
           <Text style={typography.caption}>{spot.address}</Text>
         </Card>
         <Text style={[typography.caption, styles.sectionTitle]}>{t('driver.booking.summary')}</Text>
-        <Row label={t('driver.booking.date')} value={new Date().toLocaleDateString('es-AR')} />
+        <Row
+          label={t('driver.booking.date')}
+          value={bookingDate
+            ? new Date(bookingDate + 'T12:00:00').toLocaleDateString('es-AR')
+            : new Date().toLocaleDateString('es-AR')}
+        />
         <Row
           label={t('driver.booking.time')}
           value={`${String(start).padStart(2, '0')}:00 ${t('driver.booking.timeTo')} ${String(end).padStart(2, '0')}:00`}

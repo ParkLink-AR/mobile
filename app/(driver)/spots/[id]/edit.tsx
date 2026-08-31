@@ -9,10 +9,9 @@ import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { RatingStars } from '@/src/components/RatingStars';
-import { AvailabilityPicker, DaySchedule } from '@/src/components/AvailabilityPicker';
+import { AvailabilityPicker, DayScheduleGroup, dayGroupsToEntries, entriesToDayGroups } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
 import {
   getParkingSpotDetail,
   updateParkingSpot,
@@ -20,34 +19,21 @@ import {
   deleteParkingSpotPhoto,
   reorderParkingSpotPhotos,
 } from '@/src/services/parkingService';
-import { useOwnerSpotsStore } from '@/src/store/useOwnerSpotsStore';
+import { useSpotsStore } from '@/src/store/useSpotsStore';
 import { GeocodeCandidate, ParkingSpotPhotoAsset, reverseGeocode } from '@/src/api/parking';
-import { ParkingSpot, ScheduleEntry } from '@/src/types';
+import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 
 const MAX_PHOTOS = 10;
 const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-function toDaySchedule(schedule: ScheduleEntry[]): DaySchedule[] {
-  return schedule.map((entry) => ({
-    dayIndex: entry.dayOfWeek,
-    startHour: entry.startHour,
-    endHour: entry.endHour,
-  }));
-}
-
-function toScheduleEntries(days: DaySchedule[]): ScheduleEntry[] {
-  return days.map((day) => ({ dayOfWeek: day.dayIndex, startHour: day.startHour, endHour: day.endHour }));
-}
-
 export default function EditSpot() {
   const colors = useThemeColors();
-  const typography = useTypography();
   useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const markUpdated = useOwnerSpotsStore((s) => s.markUpdated);
-  const clearSpots = useOwnerSpotsStore((s) => s.clearSpots);
+  const markUpdated = useSpotsStore((s) => s.markUpdated);
+  const clearSpots = useSpotsStore((s) => s.clearSpots);
 
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [address, setAddress] = useState('');
@@ -57,7 +43,9 @@ export default function EditSpot() {
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [covered, setCovered] = useState(true);
-  const [schedule, setSchedule] = useState<DaySchedule[]>([0, 1, 2, 3, 4].map((d) => ({ dayIndex: d, startHour: 8, endHour: 22 })));
+  const [schedule, setSchedule] = useState<DayScheduleGroup[]>(
+    [0, 1, 2, 3, 4].map((d) => ({ dayIndex: d, slots: [{ startHour: 8, endHour: 20 }] })),
+  );
   const [saving, setSaving] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [photosBusy, setPhotosBusy] = useState(false);
@@ -73,7 +61,7 @@ export default function EditSpot() {
         setDescription(s.description ?? '');
         setCovered(s.covered);
         setPhotos(s.photos);
-        if (s.schedule.length > 0) setSchedule(toDaySchedule(s.schedule));
+        if (s.schedule.length > 0) setSchedule(entriesToDayGroups(s.schedule));
       });
     }, [id]),
   );
@@ -199,11 +187,11 @@ export default function EditSpot() {
     }
     try {
       setSaving(true);
-      const updated = await updateParkingSpot(id, {
+      await updateParkingSpot(id, {
         pricePerHour: parsedPrice,
         description: description.trim(),
         covered,
-        schedule: toScheduleEntries(schedule),
+        schedule: dayGroupsToEntries(schedule),
         address: address.trim(),
         lat: coordinates.lat,
         lng: coordinates.lng,

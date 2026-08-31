@@ -6,30 +6,24 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
-import { AvailabilityPicker, DaySchedule } from '@/src/components/AvailabilityPicker';
+import { AvailabilityPicker, DayScheduleGroup, dayGroupsToEntries } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { createParkingSpot, uploadParkingSpotPhotos } from '@/src/services/parkingService';
 import { GeocodeCandidate, ParkingSpotPhotoAsset, reverseGeocode } from '@/src/api/parking';
-import { ScheduleEntry } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 
 const MAX_PHOTOS = 10;
 const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-/** Default Mon–Fri, 08:00–22:00 */
-const DEFAULT_SCHEDULE: DaySchedule[] = [0, 1, 2, 3, 4].map((dayIndex) => ({
+/** Default Mon–Fri, 08:00–20:00 */
+const DEFAULT_SCHEDULE: DayScheduleGroup[] = [0, 1, 2, 3, 4].map((dayIndex) => ({
   dayIndex,
-  startHour: 8,
-  endHour: 22,
+  slots: [{ startHour: 8, endHour: 20 }],
 }));
-
-function toScheduleEntries(days: DaySchedule[]): ScheduleEntry[] {
-  return days.map((d) => ({ dayOfWeek: d.dayIndex, startHour: d.startHour, endHour: d.endHour }));
-}
 
 export default function NewSpot() {
   const colors = useThemeColors();
@@ -43,7 +37,7 @@ export default function NewSpot() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [covered, setCovered] = useState(true);
   const [price, setPrice] = useState('');
-  const [schedule, setSchedule] = useState<DaySchedule[]>(DEFAULT_SCHEDULE);
+  const [schedule, setSchedule] = useState<DayScheduleGroup[]>(DEFAULT_SCHEDULE);
   const [description, setDescription] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [photos, setPhotos] = useState<ParkingSpotPhotoAsset[]>([]);
@@ -145,7 +139,7 @@ export default function NewSpot() {
         lng: coordinates.lng,
         covered,
         pricePerHour: Number(price),
-        schedule: toScheduleEntries(schedule),
+        schedule: dayGroupsToEntries(schedule),
         description: description.trim() || undefined,
       });
       if (photos.length > 0) {

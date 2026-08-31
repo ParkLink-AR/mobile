@@ -35,7 +35,7 @@ export function t(key: string, vars?: Record<string, string | number>) {
  */
 export function useLanguage() {
   // Lazy require avoids a circular dependency at module evaluation time
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const { useSettingsStore } = require('@/src/store/useSettingsStore') as typeof import('@/src/store/useSettingsStore');
   useSettingsStore((s: { language: string }) => s.language);
 }

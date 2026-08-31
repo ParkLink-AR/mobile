@@ -1,7 +1,7 @@
 import { t, useLanguage } from '@/src/i18n';
-import { useEffect, useState, useMemo } from 'react';
-import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Chip } from '@/src/components/Chip';
 import { TAG_LABEL_KEYS } from '@/src/components/ParkingSpotCard';
@@ -13,62 +13,126 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
-import { getAvailability, FreeWindow } from '@/src/api/parking';
-import { ParkingSpot, ScheduleEntry } from '@/src/types';
+import { useAvailability } from '@/src/hooks/useAvailability';
+import type { FreeWindow } from '@/src/api/parking';
+import { ParkingSpot } from '@/src/types';
 
-// dayOfWeek: 0=Monday…6=Sunday (app convention)
-// JS Date.getDay(): 0=Sunday…6=Saturday  → convert: (jsDay + 6) % 7
-function appDayOfWeek(): number {
-  return (new Date().getDay() + 6) % 7;
+// ── Day helpers ───────────────────────────────────────────────────────────────
+
+// App day-of-week convention: 0=Monday … 6=Sunday
+// JS Date.getDay():            0=Sunday … 6=Saturday → convert: (jsDay + 6) % 7
+function toAppDayOfWeek(date: Date): number {
+  return (date.getDay() + 6) % 7;
 }
 
-function todayDateISO(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
-
-function addOneDay(dateISO: string): string {
-  const [year, month, day] = dateISO.split('-').map(Number);
-  const next = new Date(year, month - 1, day + 1);
-  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
-}
-
-/** Extracts the local hour-of-day from an ISO datetime like "2026-08-24T08:00:00-03:00". */
-function hourFromISO(iso: string): number {
-  return parseInt(iso.slice(11, 13), 10);
+/** Returns an array of { date, label } for today + the next 6 days (7 total). */
+function getNextSevenDays(): Array<{ date: Date; label: string; shortLabel: string; dateISO: string }> {
+  const DAY_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const appDay = toAppDayOfWeek(d);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return {
+      date: d,
+      shortLabel: DAY_SHORT[appDay],
+      label: `${day}/${month}`,
+      dateISO: `${year}-${month}-${day}`,
+    };
+  });
 }
 
 /**
- * Returns valid start hours for today from parking-service's real availability
- * (published schedule minus active bookings) -- a start hour `h` is valid if a
- * free window covers [h, h+durationHours].
+ * Extracts the Buenos Aires hour-of-day from an ISO datetime string.
+ * Handles both offset-aware strings ("...T08:00:00-03:00") and UTC ("...T11:00:00Z").
+ * Always returns the hour in ART (UTC-3).
+ */
+function hourFromISO(iso: string): number {
+  const date = new Date(iso);
+  // Convert to ART (UTC-3): subtract 3 hours from UTC
+  const utcHour = date.getUTCHours();
+  return ((utcHour - 3) + 24) % 24;
+}
+
+/**
+ * Current hour in ART (UTC-3) with a 10-minute grace period.
+ * If it's 13:05 → returns 13 (still bookable). If it's 13:11 → returns 14.
+ * Returns -1 for future dates (nothing is in the past).
+ */
+function currentArtHourForDate(dateISO: string): number {
+  const nowUTC = new Date();
+  const nowArt = new Date(nowUTC.getTime() - 3 * 60 * 60 * 1000);
+
+  const todayISO = `${nowArt.getUTCFullYear()}-${String(nowArt.getUTCMonth() + 1).padStart(2, '0')}-${String(nowArt.getUTCDate()).padStart(2, '0')}`;
+
+  if (dateISO > todayISO) return -1;   // future date: nothing is past
+  if (dateISO < todayISO) return 24;   // past date: everything is past
+
+  // It's today: return cutoff hour (with 10-min grace)
+  const artMinutes = nowArt.getUTCHours() * 60 + nowArt.getUTCMinutes();
+  const graceMinutes = artMinutes - 10; // subtract grace period
+  return Math.ceil(graceMinutes / 60); // round up to next full hour
+}
+
+/**
+ * Returns valid start hours from parking-service's real availability
+ * (published schedule minus active bookings). A start hour `h` is valid if a
+ * free window covers [h:00, h+durationHours:00] exactly — i.e. the window
+ * starts at or before h:00 AND ends at or after h+durationHours:00.
+ *
+ * Uses epoch milliseconds from the raw ISO strings rather than truncating to
+ * hours, so a free window that starts at e.g. 08:30 (left by a booking that
+ * ends at 08:30) does NOT incorrectly expose 08:00 as bookable.
  */
 function startHoursFromFreeWindows(freeWindows: FreeWindow[], durationHours: number): number[] {
   const hours: number[] = [];
   for (const window of freeWindows) {
-    const start = hourFromISO(window.start);
-    const end = hourFromISO(window.end);
-    for (let h = start; h + durationHours <= end; h++) {
+    const windowStartMs = new Date(window.start).getTime();
+    const windowEndMs = new Date(window.end).getTime();
+    // Derive the ART calendar date from the window start to anchor midnight.
+    const artDate = artDateFromISO(window.start);
+    const artMidnightMs = artMidnightForDate(artDate);
+
+    // First whole ART hour where slot start >= window start.
+    const windowStartArtHour = hourFromISO(window.start);
+    const windowStartMinute = new Date(window.start).getUTCMinutes();
+    // If window starts exactly on the hour, it is a valid slot start;
+    // otherwise bump to the next whole hour.
+    const firstHour = windowStartMinute === 0 ? windowStartArtHour : windowStartArtHour + 1;
+
+    for (let h = firstHour; ; h++) {
+      const slotStartMs = artMidnightMs + h * 3600_000;
+      const slotEndMs = artMidnightMs + (h + durationHours) * 3600_000;
+      if (slotEndMs > windowEndMs) break;
+      if (slotStartMs < windowStartMs) continue; // shouldn't happen after firstHour calc, but guard
       hours.push(h);
     }
   }
-  return hours.sort((a, b) => a - b);
+  return [...new Set(hours)].sort((a, b) => a - b);
+}
+
+/** UTC epoch-ms of Buenos Aires midnight (00:00 ART = 03:00 UTC) for a YYYY-MM-DD date. */
+function artMidnightForDate(dateISO: string): number {
+  const [year, month, day] = dateISO.split('-').map(Number);
+  return Date.UTC(year, month - 1, day, 3, 0, 0, 0); // 00:00 ART = 03:00 UTC
 }
 
 /**
- * Fallback when the availability call fails: valid start hours from the
- * spot's published schedule alone (doesn't exclude existing bookings).
+ * Returns the YYYY-MM-DD calendar date in ART (UTC-3) for an ISO timestamp.
+ * Used to anchor ART midnight correctly for any offset-aware or UTC timestamp.
  */
-function startHoursFromSchedule(schedule: ScheduleEntry[], durationHours: number): number[] {
-  const today = appDayOfWeek();
-  const todayEntries = schedule.filter((e) => e.dayOfWeek === today);
-  const hours: number[] = [];
-  for (const entry of todayEntries) {
-    for (let h = entry.startHour; h + durationHours <= entry.endHour; h++) {
-      hours.push(h);
-    }
-  }
-  return hours.sort((a, b) => a - b);
+function artDateFromISO(iso: string): string {
+  const date = new Date(iso);
+  // Shift to ART by subtracting 3 hours from UTC.
+  const art = new Date(date.getTime() - 3 * 3600_000);
+  const y = art.getUTCFullYear();
+  const m = String(art.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(art.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 export default function SpotDetail() {
@@ -77,50 +141,69 @@ export default function SpotDetail() {
   useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
-  const [todayFreeWindows, setTodayFreeWindows] = useState<FreeWindow[] | null>(null);
   const [durationHours, setDurationHours] = useState(1);
   const [selectedStartHour, setSelectedStartHour] = useState<number | null>(null);
   const user = useSessionStore((s) => s.user);
+
+  const days = useMemo(() => getNextSevenDays(), []);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  const selectedDay = days[selectedDayIndex];
 
   useEffect(() => {
     getParkingSpotDetail(id).then((s) => setSpot(s ?? null));
   }, [id]);
 
-  // Real availability (published schedule minus active bookings) for today
-  // only -- there's no date picker anywhere in the app yet, everything
-  // assumes "today". Falls back to null on failure (e.g. booking-service
-  // down) so the picker still shows something, via the schedule-only path.
-  useEffect(() => {
-    const today = todayDateISO();
-    getAvailability(id, today, addOneDay(today))
-      .then((res) => setTodayFreeWindows(res.days[0]?.free_windows ?? []))
-      .catch(() => setTodayFreeWindows(null));
-  }, [id]);
+  // Auto-refreshing availability: refetches on day/duration change and every 30 s.
+  // durationHours is passed so the hook re-runs when the user changes it.
+  const { freeWindows, loading: availabilityLoading, error: availabilityError, refresh: refreshAvailability } =
+    useAvailability(id, selectedDay.dateISO, durationHours);
 
-  // Recompute available slots whenever spot, duration, or availability changes
-  const availableHours = useMemo(() => {
-    if (!spot) return [];
-    if (todayFreeWindows) return startHoursFromFreeWindows(todayFreeWindows, durationHours);
-    return startHoursFromSchedule(spot.schedule, durationHours);
-  }, [spot, todayFreeWindows, durationHours]);
+  // Refresh whenever the screen comes back into focus (e.g. after pressing "back"
+  // from the confirm screen when there was a 409 conflict).
+  useFocusEffect(
+    useCallback(() => {
+      refreshAvailability();
+    }, [refreshAvailability]),
+  );
 
-  // Reset selection if it becomes invalid after duration change
-  useEffect(() => {
-    if (selectedStartHour !== null && !availableHours.includes(selectedStartHour)) {
-      setSelectedStartHour(null);
-    }
-    // Auto-select first available hour if none selected
-    if (selectedStartHour === null && availableHours.length > 0) {
-      setSelectedStartHour(availableHours[0]);
-    }
-  }, [availableHours]);
+  // Recompute available slots whenever spot, duration, or availability changes.
+  // When still loading (no prior data) or in error (no prior data) we return []
+  // so the picker shows a spinner/error instead of stale or unchecked slots.
+  // The schedule-only fallback has been intentionally removed: showing slots
+  // without subtracting existing bookings causes 409 conflicts at confirmation.
+  const allHours = useMemo(() => {
+    if (!spot || availabilityLoading || freeWindows === null) return [];
+    return startHoursFromFreeWindows(freeWindows, durationHours);
+  }, [spot, freeWindows, availabilityLoading, durationHours]);
+
+  // Cutoff hour for the selected day (with 10-min grace). Hours strictly below
+  // this are in the past and cannot be booked.
+  const pastCutoffHour = useMemo(
+    () => currentArtHourForDate(selectedDay.dateISO),
+    [selectedDay.dateISO],
+  );
+
+  // Only show hours that are not in the past — past hours are never bookable and
+  // displaying them (even greyed-out) confuses the user into thinking they can pick them.
+  const bookableHours = useMemo(
+    () => allHours.filter((h) => h >= pastCutoffHour),
+    [allHours, pastCutoffHour],
+  );
+
+  // Derive the effective selected hour: if the current selection is no longer
+  // in bookableHours (e.g. day changed, slot was just taken), fall back to the
+  // first available hour. This replaces a useEffect+setState pattern with pure
+  // derivation so there are no cascading renders.
+  const effectiveStartHour: number | null = bookableHours.includes(selectedStartHour as number)
+    ? selectedStartHour
+    : bookableHours[0] ?? null;
 
   if (!spot) return null;
 
   const isOwner = !!user && spot.ownerId === user.id;
   const visiblePricePerHour = getDriverVisiblePrice(spot.pricePerHour);
   const total = visiblePricePerHour * durationHours;
-  const canBook = selectedStartHour !== null;
+  const canBook = effectiveStartHour !== null;
 
   const styles = StyleSheet.create({
     screen: { backgroundColor: colors.surface },
@@ -152,6 +235,21 @@ export default function SpotDetail() {
     durationBtnDisabled: { backgroundColor: colors.teal + '44' },
     durationBtnText: { fontSize: 20, fontWeight: '700', color: colors.white },
     durationValue: { ...typography.h2, minWidth: 40, textAlign: 'center' },
+    // Day picker
+    dayRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+    dayChip: {
+      alignItems: 'center', justifyContent: 'center',
+      paddingVertical: 8, paddingHorizontal: 10,
+      borderRadius: 12, borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      minWidth: 48,
+    },
+    dayChipSelected: { backgroundColor: colors.teal, borderColor: colors.teal },
+    dayChipLabel: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase' },
+    dayChipDate: { fontSize: 13, fontWeight: '600', color: colors.text, marginTop: 1 },
+    dayChipLabelSelected: { color: colors.white },
+    dayChipDateSelected: { color: colors.white },
     // Slot picker
     slotLabel: { ...typography.caption, marginTop: 10, marginBottom: 4 },
     slotRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -161,9 +259,7 @@ export default function SpotDetail() {
       borderColor: colors.teal,
       backgroundColor: colors.surface,
     },
-    slotChipSelected: {
-      backgroundColor: colors.teal,
-    },
+    slotChipSelected: { backgroundColor: colors.teal },
     slotChipText: { fontSize: 14, fontWeight: '500', color: colors.teal },
     slotChipTextSelected: { color: colors.white },
     noSlotsText: { ...typography.body, color: colors.warning, marginTop: 4 },
@@ -201,7 +297,7 @@ export default function SpotDetail() {
             </View>
             <TouchableOpacity
               style={styles.editBtn}
-              onPress={() => router.push(`/(owner)/spots/${spot.id}/edit`)}
+              onPress={() => router.push(`/(driver)/spots/${spot.id}/edit`)}
             >
               <Ionicons name="pencil-outline" size={16} color={colors.white} />
               <Text style={styles.editBtnText}>{t('spot.editSpot')}</Text>
@@ -234,22 +330,63 @@ export default function SpotDetail() {
               </View>
             </View>
 
+            {/* Day picker */}
+            <View>
+              <Text style={styles.slotLabel}>{t('spot.selectDay')}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.dayRow}>
+                  {days.map((day, idx) => {
+                    const isSelected = idx === selectedDayIndex;
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        style={[styles.dayChip, isSelected && styles.dayChipSelected]}
+                        onPress={() => setSelectedDayIndex(idx)}
+                      >
+                        <Text style={[styles.dayChipLabel, isSelected && styles.dayChipLabelSelected]}>
+                          {day.shortLabel}
+                        </Text>
+                        <Text style={[styles.dayChipDate, isSelected && styles.dayChipDateSelected]}>
+                          {day.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            </View>
+
             {/* Start time slot picker */}
             <View>
               <Text style={styles.slotLabel}>{t('spot.selectStartTime')}</Text>
-              {availableHours.length === 0 ? (
+              {availabilityLoading && freeWindows === null ? (
+                <ActivityIndicator size="small" color={colors.teal} style={{ marginTop: 8 }} />
+              ) : availabilityError && freeWindows === null ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <Text style={styles.noSlotsText}>{t('spot.availabilityError')}</Text>
+                  <TouchableOpacity onPress={refreshAvailability}>
+                    <Text style={[styles.slotChipText, { textDecorationLine: 'underline' }]}>
+                      {t('spot.availabilityRetry')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : bookableHours.length === 0 ? (
                 <Text style={styles.noSlotsText}>{t('spot.noSlotsToday')}</Text>
               ) : (
                 <View style={styles.slotRow}>
-                  {availableHours.map((h) => {
-                    const isSelected = h === selectedStartHour;
+                  {bookableHours.map((h) => {
+                    const isSelected = h === effectiveStartHour;
                     return (
                       <TouchableOpacity
                         key={h}
                         style={[styles.slotChip, isSelected && styles.slotChipSelected]}
                         onPress={() => setSelectedStartHour(h)}
+                        activeOpacity={0.7}
                       >
-                        <Text style={[styles.slotChipText, isSelected && styles.slotChipTextSelected]}>
+                        <Text style={[
+                          styles.slotChipText,
+                          isSelected && styles.slotChipTextSelected,
+                        ]}>
                           {String(h).padStart(2, '0')}:00
                         </Text>
                       </TouchableOpacity>
@@ -268,8 +405,9 @@ export default function SpotDetail() {
                   params: {
                     spotId: spot.id,
                     hours: String(durationHours),
-                    startHour: String(selectedStartHour),
-                    endHour: String((selectedStartHour ?? 0) + durationHours),
+                    startHour: String(effectiveStartHour),
+                    endHour: String((effectiveStartHour ?? 0) + durationHours),
+                    bookingDate: selectedDay.dateISO,
                   },
                 })
               }

@@ -1,3 +1,4 @@
+import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
 import { Text, FlatList, StyleSheet } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
@@ -10,6 +11,7 @@ import { getBookingById } from '@/src/services/bookingService';
 import { Booking, Settlement } from '@/src/types';
 
 export default function SettlementDetail() {
+  useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -39,10 +41,10 @@ export default function SettlementDetail() {
         <Text style={typography.h1}>{settlement.period}</Text>
         <Text style={styles.amount}>${settlement.totalAmount.toLocaleString('es-AR')}</Text>
         <Text style={typography.caption}>
-          Comisión retenida: ${settlement.commissionRetained.toLocaleString('es-AR')}
+          {t('settlements.commission', { amount: settlement.commissionRetained.toLocaleString('es-AR') })}
         </Text>
       </Card>
-      <Text style={[typography.caption, styles.sectionTitle]}>RESERVAS INCLUIDAS</Text>
+      <Text style={[typography.caption, styles.sectionTitle]}>{t('settlements.bookingsIncluded')}</Text>
       <FlatList
         data={bookings}
         keyExtractor={(item) => item.id}
@@ -51,7 +53,7 @@ export default function SettlementDetail() {
           <Card>
             <Text style={typography.body}>{item.driverName}</Text>
             <Text style={typography.caption}>
-              {item.date} · {item.startTime} a {item.endTime} · ${item.subtotal}
+              {item.date} · {item.startTime} {t('driver.booking.timeTo')} {item.endTime} · ${item.subtotal}
             </Text>
           </Card>
         )}

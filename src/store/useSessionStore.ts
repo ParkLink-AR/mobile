@@ -3,18 +3,14 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { AuthUser, AuthTokens } from '@/src/types';
 import { secureStorage } from '@/src/services/secureStorage';
 
-export type ActiveMode = 'driver' | 'owner';
-
 interface SessionState {
   user: AuthUser | null;
   accessToken: string | null;
   refreshToken: string | null;
-  activeMode: ActiveMode;
   hydrated: boolean;
   setSession: (user: AuthUser, tokens: AuthTokens) => void;
   setTokens: (tokens: AuthTokens) => void;
   setUser: (user: AuthUser) => void;
-  setActiveMode: (mode: ActiveMode) => void;
   clearSession: () => void;
 }
 
@@ -24,19 +20,16 @@ export const useSessionStore = create<SessionState>()(
       user: null,
       accessToken: null,
       refreshToken: null,
-      activeMode: 'driver',
       hydrated: false,
       setSession: (user, tokens) =>
         set({
           user,
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
-          activeMode: 'driver',
         }),
       setTokens: (tokens) =>
         set({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken }),
       setUser: (user) => set({ user }),
-      setActiveMode: (mode) => set({ activeMode: mode }),
       clearSession: () => set({ user: null, accessToken: null, refreshToken: null }),
     }),
     {
@@ -46,7 +39,6 @@ export const useSessionStore = create<SessionState>()(
         user: state.user,
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
-        activeMode: state.activeMode,
       }),
     }
   )

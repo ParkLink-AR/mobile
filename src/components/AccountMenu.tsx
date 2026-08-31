@@ -16,17 +16,15 @@ function initialsFromName(name: string): string {
   return (first + last).toUpperCase() || '?';
 }
 
-export function AccountMenu({ role }: { role: 'driver' | 'owner' }) {
+export function AccountMenu() {
   const colors = useThemeColors();
   useLanguage();
   const user = useSessionStore((s) => s.user);
   const refreshToken = useSessionStore((s) => s.refreshToken);
   const clearSession = useSessionStore((s) => s.clearSession);
-  const setActiveMode = useSessionStore((s) => s.setActiveMode);
   const mode = useSettingsStore((s) => s.mode);
   const toggleMode = useSettingsStore((s) => s.toggleMode);
   const [open, setOpen] = useState(false);
-  const otherRole = role === 'driver' ? 'owner' : 'driver';
 
   const styles = StyleSheet.create({
     overlay: { flex: 1, backgroundColor: 'rgba(4, 35, 71, 0.2)' },
@@ -57,18 +55,10 @@ export function AccountMenu({ role }: { role: 'driver' | 'owner' }) {
   async function handleLogout() {
     setOpen(false);
     if (refreshToken) {
-      // Best-effort: revoke the session server-side, but don't block the
-      // local logout on it (e.g. offline, or the token already expired).
       await logoutRequest(refreshToken).catch(() => {});
     }
     clearSession();
     router.replace('/(auth)/login');
-  }
-
-  function handleSwitchMode() {
-    setOpen(false);
-    setActiveMode(otherRole);
-    router.replace(`/(${otherRole})/(tabs)`);
   }
 
   return (
@@ -79,17 +69,12 @@ export function AccountMenu({ role }: { role: 'driver' | 'owner' }) {
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
           <View style={styles.menu}>
-            <MenuItem iconName="person-outline" label={t('account.myAccount')} onPress={() => go(`/(${role})/(tabs)/profile`)} />
-            <MenuItem iconName="settings-outline" label={t('account.settings.label')} onPress={() => go(`/(${role})/settings`)} />
-            <MenuItem
-              iconName={otherRole === 'owner' ? 'business-outline' : 'car-outline'}
-              label={otherRole === 'owner' ? t('account.switchToOwner') : t('account.switchToDriver')}
-              onPress={handleSwitchMode}
-            />
+            <MenuItem iconName="person-outline" label={t('account.myAccount')} onPress={() => go('/(driver)/(tabs)/profile')} />
+            <MenuItem iconName="settings-outline" label={t('account.settings.label')} onPress={() => go('/(driver)/settings')} />
             <MenuItem
               iconName={mode === 'dark' ? 'sunny-outline' : 'moon-outline'}
               label={mode === 'dark' ? t('account.menu.theme.light') : t('account.menu.theme.dark')}
-              onPress={toggleMode}
+              onPress={() => { setOpen(false); toggleMode(); }}
             />
             <View style={styles.divider} />
             <MenuItem iconName="log-out-outline" label={t('account.logout')} onPress={handleLogout} muted />

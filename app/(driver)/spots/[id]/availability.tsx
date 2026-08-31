@@ -4,34 +4,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
-import { AvailabilityPicker, DaySchedule } from '@/src/components/AvailabilityPicker';
+import { AvailabilityPicker, DayScheduleGroup, dayGroupsToEntries, entriesToDayGroups } from '@/src/components/AvailabilityPicker';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { getParkingSpotDetail, updateParkingSpot, formatScheduleForDisplay } from '@/src/services/parkingService';
-import { useOwnerSpotsStore } from '@/src/store/useOwnerSpotsStore';
-import { ParkingSpot, ScheduleEntry } from '@/src/types';
+import { useSpotsStore } from '@/src/store/useSpotsStore';
+import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
-
-function toDaySchedule(schedule: ScheduleEntry[]): DaySchedule[] {
-  return schedule.map((entry) => ({
-    dayIndex: entry.dayOfWeek,
-    startHour: entry.startHour,
-    endHour: entry.endHour,
-  }));
-}
-
-function toScheduleEntries(days: DaySchedule[]): ScheduleEntry[] {
-  return days.map((day) => ({ dayOfWeek: day.dayIndex, startHour: day.startHour, endHour: day.endHour }));
-}
 
 export default function SpotAvailability() {
   const colors = useThemeColors();
   useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const markUpdated = useOwnerSpotsStore((s) => s.markUpdated);
-  const clearSpots = useOwnerSpotsStore((s) => s.clearSpots);
+  const markUpdated = useSpotsStore((s) => s.markUpdated);
+  const clearSpots = useSpotsStore((s) => s.clearSpots);
 
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
-  const [schedule, setSchedule] = useState<DaySchedule[]>([]);
+  const [schedule, setSchedule] = useState<DayScheduleGroup[]>([]);
   const [saving, setSaving] = useState(false);
 
   useFocusEffect(
@@ -41,8 +29,8 @@ export default function SpotAvailability() {
         setSpot(s);
         setSchedule(
           s.schedule.length > 0
-            ? toDaySchedule(s.schedule)
-            : [0, 1, 2, 3, 4].map((d) => ({ dayIndex: d, startHour: 8, endHour: 22 })),
+            ? entriesToDayGroups(s.schedule)
+            : [0, 1, 2, 3, 4].map((d) => ({ dayIndex: d, slots: [{ startHour: 8, endHour: 20 }] })),
         );
       });
     }, [id]),
@@ -57,7 +45,7 @@ export default function SpotAvailability() {
     }
     try {
       setSaving(true);
-      await updateParkingSpot(id, { schedule: toScheduleEntries(schedule) });
+      await updateParkingSpot(id, { schedule: dayGroupsToEntries(schedule) });
       clearSpots();
       markUpdated();
       router.back();

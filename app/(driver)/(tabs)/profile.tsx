@@ -8,16 +8,14 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
 import { VerifiedBadge } from '@/src/components/VerifiedBadge';
-import { PaymentMethodPicker } from '@/src/components/PaymentMethodPicker';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useSettingsStore, Language } from '@/src/store/useSettingsStore';
-import { getPaymentMethods } from '@/src/services/paymentService';
 import { logout as logoutRequest } from '@/src/api/auth';
 import { getParkingSpotsForOwner } from '@/src/services/parkingService';
-import { PaymentMethod, ParkingSpot } from '@/src/types';
+import { ParkingSpot } from '@/src/types';
 
 const LANGS: { key: Language; label: string }[] = [
   { key: 'es', label: 'Español' },
@@ -25,7 +23,7 @@ const LANGS: { key: Language; label: string }[] = [
   { key: 'ja', label: '日本語' },
 ];
 
-export default function DriverProfile() {
+export default function Profile() {
   useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
@@ -36,12 +34,9 @@ export default function DriverProfile() {
   const setLanguage = useSettingsStore((s) => s.setLanguage);
   const mode = useSettingsStore((s) => s.mode);
   const toggleMode = useSettingsStore((s) => s.toggleMode);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
   const [mySpots, setMySpots] = useState<ParkingSpot[]>([]);
   const [langModalVisible, setLangModalVisible] = useState(false);
 
-  // Animation ref for theme toggle
   const themeAnim = useRef(new Animated.Value(mode === 'dark' ? 1 : 0)).current;
 
   useEffect(() => {
@@ -53,12 +48,8 @@ export default function DriverProfile() {
   }, [mode]);
 
   useEffect(() => {
-    getPaymentMethods().then((methods) => {
-      setPaymentMethods(methods);
-      setSelectedMethodId((prev) => prev ?? methods[0]?.id ?? null);
-    });
     if (user) getParkingSpotsForOwner(user.id).then(setMySpots);
-  }, [language]);
+  }, [user?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -75,16 +66,6 @@ export default function DriverProfile() {
 
   const currentLang = LANGS.find((l) => l.key === language) ?? LANGS[0];
   const isDark = mode === 'dark';
-
-  // Interpolated background for theme row
-  const themeBg = themeAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [colors.surface, colors.surface],
-  });
-  const themeIconColor = themeAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [colors.textSecondary, colors.teal],
-  });
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
@@ -116,9 +97,11 @@ export default function DriverProfile() {
       borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16,
     },
     editBtn: { backgroundColor: colors.teal },
+    settlementsBtn: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.teal },
     logoutBtn: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: '#EF4444' },
     actionBtnText: { flex: 1, fontSize: 15, fontWeight: '600' },
     editBtnText: { color: colors.white },
+    settlementsBtnText: { color: colors.teal },
     logoutBtnText: { color: '#EF4444' },
 
     prefCard: {
@@ -132,17 +115,10 @@ export default function DriverProfile() {
     prefDivider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
     prefLabel: { fontSize: 14, fontWeight: '500', color: colors.text },
 
-    // Current language display (no pill)
-    langCurrent: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-    },
+    langCurrent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     langCurrentText: { fontSize: 14, fontWeight: '600', color: colors.teal },
-    langChevron: { marginLeft: 2 },
 
-    // Theme row right side
-    themeValue: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-    },
+    themeValue: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     themeValueText: { fontSize: 14, fontWeight: '600' },
 
     spotsEmpty: {
@@ -159,15 +135,13 @@ export default function DriverProfile() {
     },
     addSpotBtnText: { fontSize: 12, fontWeight: '600', color: colors.teal },
 
-    // Language modal
     modalOverlay: {
       flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
       justifyContent: 'center', alignItems: 'center',
     },
     modalSheet: {
       width: '85%', borderRadius: 20, paddingVertical: 32, paddingHorizontal: 24,
-      backgroundColor: colors.surface,
-      alignItems: 'center', gap: 8,
+      backgroundColor: colors.surface, alignItems: 'center', gap: 8,
     },
     modalTitle: {
       fontSize: 16, fontWeight: '700', color: colors.text,
@@ -178,11 +152,9 @@ export default function DriverProfile() {
       paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12,
     },
     langOptionActive: { backgroundColor: colors.teal + '22' },
-    langOptionFlag: { fontSize: 28 },
     langOptionLabel: { flex: 1, fontSize: 16, fontWeight: '600' },
     langOptionLabelActive: { color: colors.teal },
     langOptionLabelInactive: { color: colors.text },
-    langOptionCheck: { marginLeft: 'auto' },
   });
 
   return (
@@ -216,24 +188,13 @@ export default function DriverProfile() {
           <Ionicons name="chevron-forward" size={16} color={colors.white} />
         </Pressable>
 
-        {/* Payment methods */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t('driver.paymentMethods.title')}</Text>
-          <View style={styles.sectionLine} />
-        </View>
-        <PaymentMethodPicker
-          methods={paymentMethods}
-          selectedId={selectedMethodId}
-          onSelect={setSelectedMethodId}
-        />
-
         {/* My spots */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{t('profile.mySpots')}</Text>
           <View style={styles.sectionLine} />
           <Pressable
             style={({ pressed }) => [styles.addSpotBtn, { opacity: pressed ? 0.75 : 1 }]}
-            onPress={() => router.push('/(owner)/spots/new')}
+            onPress={() => router.push('/(driver)/spots/new')}
           >
             <Ionicons name="add" size={14} color={colors.teal} />
             <Text style={styles.addSpotBtnText}>{t('profile.mySpots.add')}</Text>
@@ -247,12 +208,26 @@ export default function DriverProfile() {
         ) : (
           <View style={styles.spotsGrid}>
             {mySpots.map((spot) => (
-              <Pressable key={spot.id} onPress={() => router.push(`/(driver)/spot/${spot.id}`)}>
+              <Pressable key={spot.id} onPress={() => router.push(`/(driver)/spots/${spot.id}`)}>
                 <ParkingSpotCard spot={spot} />
               </Pressable>
             ))}
           </View>
         )}
+
+        {/* Finances */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{t('profile.finances')}</Text>
+          <View style={styles.sectionLine} />
+        </View>
+        <Pressable
+          style={({ pressed }) => [styles.actionBtn, styles.settlementsBtn, { opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => router.push('/(driver)/settlements')}
+        >
+          <Ionicons name="receipt-outline" size={18} color={colors.teal} />
+          <Text style={[styles.actionBtnText, styles.settlementsBtnText]}>{t('owner.view.settlements')}</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.teal} />
+        </Pressable>
 
         {/* Preferences */}
         <View style={styles.sectionHeader}>
@@ -260,7 +235,6 @@ export default function DriverProfile() {
           <View style={styles.sectionLine} />
         </View>
         <View style={styles.prefCard}>
-          {/* Language row — shows only current, tap opens modal */}
           <Pressable
             style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
             onPress={() => setLangModalVisible(true)}
@@ -268,25 +242,22 @@ export default function DriverProfile() {
             <Text style={styles.prefLabel}>{t('profile.language')}</Text>
             <View style={styles.langCurrent}>
               <Text style={styles.langCurrentText}>{currentLang.label}</Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.teal} style={styles.langChevron} />
+              <Ionicons name="chevron-forward" size={14} color={colors.teal} />
             </View>
           </Pressable>
 
           <View style={styles.prefDivider} />
 
-          {/* Theme row — single tap toggles with animation */}
           <Pressable
             style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
             onPress={toggleMode}
           >
             <Text style={styles.prefLabel}>{t('profile.theme')}</Text>
-            <Animated.View style={[styles.themeValue]}>
-              <Animated.Text style={{ color: themeIconColor }}>
-                {isDark
-                  ? <Ionicons name="moon" size={16} color={colors.teal} />
-                  : <Ionicons name="sunny" size={16} color={colors.textSecondary} />
-                }
-              </Animated.Text>
+            <Animated.View style={styles.themeValue}>
+              {isDark
+                ? <Ionicons name="moon" size={16} color={colors.teal} />
+                : <Ionicons name="sunny" size={16} color={colors.textSecondary} />
+              }
               <Text style={[styles.themeValueText, { color: isDark ? colors.teal : colors.textSecondary }]}>
                 {isDark ? t('profile.theme.dark') : t('profile.theme.light')}
               </Text>
@@ -344,7 +315,7 @@ export default function DriverProfile() {
                         {l.label}
                       </Text>
                       {active && (
-                        <Ionicons name="checkmark-circle" size={20} color={colors.teal} style={styles.langOptionCheck} />
+                        <Ionicons name="checkmark-circle" size={20} color={colors.teal} />
                       )}
                     </Pressable>
                   );

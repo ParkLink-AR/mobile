@@ -4,7 +4,10 @@ import { useSettingsStore } from '@/src/store/useSettingsStore';
 import { useThemeStore } from '@/src/store/useThemeStore';
 
 export function useThemeColors(): ColorPalette {
-  // prefer settings store if available; fallback to legacy theme store
-  const mode = useSettingsStore((s) => s.mode) ?? useThemeStore((s) => s.mode);
-  return palettes[mode];
+  // Both hooks must be called unconditionally (Rules of Hooks). useSettingsStore
+  // is the source of truth; useThemeStore is the legacy fallback — we always read
+  // both and pick whichever is non-null.
+  const settingsMode = useSettingsStore((s) => s.mode);
+  const themeMode = useThemeStore((s) => s.mode);
+  return palettes[settingsMode ?? themeMode];
 }
