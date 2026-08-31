@@ -9,6 +9,7 @@ import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { RatingStars } from '@/src/components/RatingStars';
+import { PhotoGallery } from '@/src/components/PhotoGallery';
 import { AvailabilityPicker, DayScheduleGroup, dayGroupsToEntries, entriesToDayGroups } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
 import { useThemeColors } from '@/src/theme/useThemeColors';
@@ -212,7 +213,6 @@ export default function EditSpot() {
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     photoContainer: { position: 'relative' },
-    photo: { width: '100%', height: 190 },
     backBtn: {
       position: 'absolute', top: 14, left: 14,
       width: 36, height: 36, borderRadius: 18,
@@ -297,7 +297,7 @@ export default function EditSpot() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Photo + back button */}
         <View style={styles.photoContainer}>
-          <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
+          <PhotoGallery photos={photos} height={190} fallbackUri={spot.photoUrl} />
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={20} color="#fff" />
           </TouchableOpacity>

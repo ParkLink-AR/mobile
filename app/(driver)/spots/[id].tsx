@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
+import { PhotoGallery } from '@/src/components/PhotoGallery';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
 import { getDriverVisiblePrice } from '@/src/services/utils';
@@ -25,7 +26,6 @@ export default function SpotDetail() {
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     photoContainer: { position: 'relative' },
-    photo: { width: '100%', height: 210 },
     backBtn: {
       position: 'absolute', top: 14, left: 14,
       width: 36, height: 36, borderRadius: 18,
@@ -97,7 +97,7 @@ export default function SpotDetail() {
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.photoContainer}>
-          <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
+          <PhotoGallery photos={spot.photos} height={210} fallbackUri={spot.photoUrl} />
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={20} color="#fff" />
           </TouchableOpacity>

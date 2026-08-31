@@ -1,11 +1,12 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Chip } from '@/src/components/Chip';
 import { TAG_LABEL_KEYS } from '@/src/components/ParkingSpotCard';
 import { RatingStars } from '@/src/components/RatingStars';
+import { PhotoGallery } from '@/src/components/PhotoGallery';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { getDriverVisiblePrice } from '@/src/services/utils';
@@ -268,7 +269,7 @@ export default function SpotDetail() {
   return (
     <Screen style={styles.screen} edges={['top', 'left', 'right']}>
       <ScrollView style={styles.container}>
-      <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
+      <PhotoGallery photos={spot.photos} height={200} fallbackUri={spot.photoUrl} />
       <View style={styles.body}>
         <Text style={typography.h1}>{spot.title}</Text>
         <TouchableOpacity onPress={() => router.push(`/(driver)/spot/${spot.id}/reviews`)}>
