@@ -41,6 +41,7 @@ export default function Profile() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
 
   const themeAnim = useRef(new Animated.Value(mode === 'dark' ? 1 : 0)).current;
 
@@ -65,6 +66,7 @@ export default function Profile() {
   if (!user) return null;
 
   function closeDeleteModal() {
+    if (deleteSuccess) return; // force going through the "Entendido" button, not the backdrop
     setDeleteModalVisible(false);
     setDeletePassword('');
     setDeleteError(null);
@@ -79,12 +81,21 @@ export default function Profile() {
     setDeleteError(null);
     try {
       await deleteAccount(user!.id, deletePassword);
-      clearSession();
-      router.replace('/(auth)/login');
+      // Don't clearSession() yet -- this screen has `if (!user) return null`
+      // above, so wiping the session here would unmount the whole component
+      // (modal included) before the success message ever gets to render.
+      // It happens in handleDeleteSuccessAcknowledge instead, at the same
+      // time as the navigation away from this screen.
+      setDeleteSuccess(true);
     } catch (err) {
       setDeleteError(err instanceof ApiError ? err.detail : t('account.deleteAccount.error'));
       setDeleting(false);
     }
+  }
+
+  function handleDeleteSuccessAcknowledge() {
+    clearSession();
+    router.replace('/(auth)/login');
   }
 
   const initials = [user.name, user.lastName]
@@ -355,42 +366,58 @@ export default function Profile() {
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.modalSheet}>
-                <Text style={styles.modalTitle}>{t('account.deleteAccount.title')}</Text>
-                <Text style={styles.deleteWarning}>{t('account.deleteAccount.warning')}</Text>
-                <TextInput
-                  style={styles.deleteInput}
-                  value={deletePassword}
-                  onChangeText={setDeletePassword}
-                  placeholder={t('account.deleteAccount.passwordPlaceholder')}
-                  placeholderTextColor={colors.textSecondary}
-                  secureTextEntry
-                  editable={!deleting}
-                />
-                {deleteError && <Text style={styles.deleteErrorText}>{deleteError}</Text>}
-                <View style={styles.deleteActions}>
-                  <Pressable
-                    style={({ pressed }) => [styles.deleteCancelBtn, { opacity: pressed ? 0.7 : 1 }]}
-                    onPress={closeDeleteModal}
-                    disabled={deleting}
-                  >
-                    <Text style={styles.deleteCancelBtnText}>{t('common.cancel')}</Text>
-                  </Pressable>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.deleteConfirmBtn,
-                      deleting && styles.deleteConfirmBtnDisabled,
-                      { opacity: pressed && !deleting ? 0.85 : 1 },
-                    ]}
-                    onPress={handleDeleteAccount}
-                    disabled={deleting}
-                  >
-                    {deleting ? (
-                      <ActivityIndicator color={colors.white} size="small" />
-                    ) : (
-                      <Text style={styles.deleteConfirmBtnText}>{t('account.deleteAccount.confirm')}</Text>
-                    )}
-                  </Pressable>
-                </View>
+                {deleteSuccess ? (
+                  <>
+                    <Ionicons name="checkmark-circle" size={44} color={colors.teal} />
+                    <Text style={styles.modalTitle}>{t('account.deleteAccount.successTitle')}</Text>
+                    <Text style={styles.deleteWarning}>{t('account.deleteAccount.successMessage')}</Text>
+                    <Pressable
+                      style={({ pressed }) => [styles.deleteConfirmBtn, { width: '100%', backgroundColor: colors.teal, opacity: pressed ? 0.85 : 1 }]}
+                      onPress={handleDeleteSuccessAcknowledge}
+                    >
+                      <Text style={styles.deleteConfirmBtnText}>{t('account.deleteAccount.successAck')}</Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.modalTitle}>{t('account.deleteAccount.title')}</Text>
+                    <Text style={styles.deleteWarning}>{t('account.deleteAccount.warning')}</Text>
+                    <TextInput
+                      style={styles.deleteInput}
+                      value={deletePassword}
+                      onChangeText={setDeletePassword}
+                      placeholder={t('account.deleteAccount.passwordPlaceholder')}
+                      placeholderTextColor={colors.textSecondary}
+                      secureTextEntry
+                      editable={!deleting}
+                    />
+                    {deleteError && <Text style={styles.deleteErrorText}>{deleteError}</Text>}
+                    <View style={styles.deleteActions}>
+                      <Pressable
+                        style={({ pressed }) => [styles.deleteCancelBtn, { opacity: pressed ? 0.7 : 1 }]}
+                        onPress={closeDeleteModal}
+                        disabled={deleting}
+                      >
+                        <Text style={styles.deleteCancelBtnText}>{t('common.cancel')}</Text>
+                      </Pressable>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.deleteConfirmBtn,
+                          deleting && styles.deleteConfirmBtnDisabled,
+                          { opacity: pressed && !deleting ? 0.85 : 1 },
+                        ]}
+                        onPress={handleDeleteAccount}
+                        disabled={deleting}
+                      >
+                        {deleting ? (
+                          <ActivityIndicator color={colors.white} size="small" />
+                        ) : (
+                          <Text style={styles.deleteConfirmBtnText}>{t('account.deleteAccount.confirm')}</Text>
+                        )}
+                      </Pressable>
+                    </View>
+                  </>
+                )}
               </View>
             </TouchableWithoutFeedback>
           </View>
