@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import { AuthTokens, AuthUser } from '@/src/types';
-import { API_URL, request, requestMultipart } from './client';
+import { request, requestMultipart } from './client';
 
 interface RegisterInput {
   firstName: string;
@@ -44,10 +44,10 @@ function toAuthUser(u: UserOutResponse): AuthUser {
     email: u.email,
     phone: u.phone ?? '',
     dni: u.dni ?? undefined,
-    // The backend returns a path relative to its own /static mount (e.g.
-    // "/static/avatars/xxx.jpg"); the app only ever talks to the gateway,
-    // so it needs the full URL to actually fetch the image.
-    avatarUrl: u.avatar_url ? `${API_URL}${u.avatar_url}` : undefined,
+    // avatar_url is already an absolute R2 URL (see app/utils/storage.py in
+    // auth-service) -- unlike the old local-disk path, it's not relative to
+    // the gateway anymore, so it's used as-is.
+    avatarUrl: u.avatar_url ?? undefined,
     emailVerified: u.email_verified,
     phoneVerified: u.phone_verified,
   };

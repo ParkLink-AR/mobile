@@ -83,6 +83,9 @@
   "owner.spots.manageAvailability": "利用可能時間を管理",
   "owner.spot.new.photos": "写真",
   "owner.spot.new.photosTap": "タップして写真をアップロード",
+  "owner.spot.new.cover": "カバー",
+  "owner.spot.new.maxPhotos": "写真は最大10枚までアップロードできます。",
+  "owner.spot.new.photoPermissionError": "写真を追加するにはギャラリーへのアクセスが必要です。",
   "owner.spot.new.address": "住所",
   "owner.spot.new.addressPlaceholder": "駐車場はどこにありますか?",
   "owner.spot.new.permissionError": "駐車場の位置として使用するために位置情報が必要です。",
@@ -116,6 +119,8 @@
   "owner.spot.edit.invalidPrice": "有効な価格を入力してください",
   "owner.spot.edit.invalidHours": "開始時刻は終了時刻より前である必要があります",
   "owner.spot.edit.errorSave": "変更の保存中にエラーが発生しました",
+  "owner.spot.edit.photos": "写真",
+  "owner.spot.edit.errorPhotos": "写真を更新できませんでした。",
   "spot.ownedByYou": "これはあなたの駐車スペースです",
   "spot.editSpot": "スペースを編集",
 
