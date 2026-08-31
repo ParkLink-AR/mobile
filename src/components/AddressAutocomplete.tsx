@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { geocodeAddress, GeocodeCandidate } from '@/src/api/parking';
@@ -162,19 +162,20 @@ export function AddressAutocomplete({ value, onChangeText, onSelect, placeholder
       {showSuggestions && (
         <View style={styles.dropdown}>
           {candidates.length > 0 ? (
-            <FlatList
-              data={candidates}
-              keyExtractor={(item, index) => `${item.lat}-${item.lng}-${index}`}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.candidateRow} onPress={() => handleSelect(item)}>
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              {candidates.map((item, index) => (
+                <TouchableOpacity
+                  key={`${item.lat}-${item.lng}-${index}`}
+                  style={styles.candidateRow}
+                  onPress={() => handleSelect(item)}
+                >
                   <Ionicons name="location-outline" size={18} color={colors.teal} />
                   <Text style={styles.candidateMain} numberOfLines={2}>
                     {item.displayName}
                   </Text>
                 </TouchableOpacity>
-              )}
-            />
+              ))}
+            </ScrollView>
           ) : (
             !geocoding && error && <Text style={styles.empty}>{error}</Text>
           )}
