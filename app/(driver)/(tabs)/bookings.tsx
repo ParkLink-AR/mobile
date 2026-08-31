@@ -9,10 +9,11 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getUserBookingsApi, BookingApiResponse } from '@/src/api/booking';
+import { getParkingSpotDetail } from '@/src/api/parking';
 import { Booking } from '@/src/types';
 
 /** Maps the backend wire shape to the UI Booking type. */
-function mapApiBooking(b: BookingApiResponse): Booking {
+function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
   const start = new Date(b.start);
   const end = new Date(b.end);
   const hours = Math.max(1, Math.round((end.getTime() - start.getTime()) / 3_600_000));
@@ -24,7 +25,7 @@ function mapApiBooking(b: BookingApiResponse): Booking {
   return {
     id: b.id,
     parkingSpotId: b.parking_spot_id,
-    parkingSpotTitle: b.parking_spot_id, // booking-service doesn't return the title; use id as fallback
+    parkingSpotTitle: spotTitle,
     driverId: b.user_id,
     driverName: '',
     ownerId: '',
@@ -48,11 +49,22 @@ export default function DriverBookings() {
 
   useFocusEffect(
     useCallback(() => {
-      if (user) {
-        getUserBookingsApi(user.id)
-          .then((list) => setBookings(list.map(mapApiBooking)))
-          .catch((err) => console.warn('[Bookings] fetch error:', err));
-      }
+      if (!user) return;
+      getUserBookingsApi(user.id)
+        .then(async (list) => {
+          // Deduplicate spot ids and fetch titles in parallel
+          const uniqueSpotIds = [...new Set(list.map((b) => b.parking_spot_id))];
+          const spotTitleMap: Record<string, string> = {};
+          await Promise.allSettled(
+            uniqueSpotIds.map((id) =>
+              getParkingSpotDetail(id)
+                .then((spot) => { spotTitleMap[id] = spot.title; })
+                .catch(() => { spotTitleMap[id] = id; }) // fallback to id on error
+            )
+          );
+          setBookings(list.map((b) => mapApiBooking(b, spotTitleMap[b.parking_spot_id] ?? b.parking_spot_id)));
+        })
+        .catch((err) => console.warn('[Bookings] fetch error:', err));
     }, [user?.id])
   );
 
@@ -81,7 +93,7 @@ export default function DriverBookings() {
               <Text style={typography.caption}>
                 {item.date} · {item.startTime} {t('driver.booking.timeTo')} {item.endTime}
               </Text>
-              <Text style={styles.total}>${item.total}</Text>
+              <Text style={styles.total}>${item.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             </Card>
           </TouchableOpacity>
         )}
