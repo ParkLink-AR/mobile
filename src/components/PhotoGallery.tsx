@@ -86,6 +86,29 @@ export function PhotoGallery({ photos, height, fallbackUri }: PhotoGalleryProps)
   }
 
   const styles = StyleSheet.create({
+    // Rounded bottom corners + a soft shadow, same language as Card
+    // (src/components/Card.tsx: borderRadius 16, shadowOpacity 0.08) --
+    // the top stays square since it sits flush against the screen edge.
+    // Shadow and corner-clipping are split across two Views on purpose:
+    // Android's elevation shadow gets clipped away by overflow:hidden on
+    // the same node, so the outer View only carries the shadow and the
+    // inner one only carries the rounding + clip.
+    shadowWrapper: {
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 10,
+        },
+        android: { elevation: 3 },
+      }),
+    },
+    clip: {
+      borderBottomLeftRadius: 16,
+      borderBottomRightRadius: 16,
+      overflow: 'hidden',
+    },
     photo: { width, height },
     counter: {
       position: 'absolute', bottom: 12, right: 14,
@@ -96,24 +119,26 @@ export function PhotoGallery({ photos, height, fallbackUri }: PhotoGalleryProps)
   });
 
   return (
-    <View>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
-        {uris.map((uri, i) => (
-          <Image key={`${uri}-${i}`} source={{ uri }} style={styles.photo} />
-        ))}
-      </ScrollView>
-      {uris.length > 1 && (
-        <View style={styles.counter}>
-          <Text style={styles.counterText}>{index + 1}/{uris.length}</Text>
-        </View>
-      )}
+    <View style={styles.shadowWrapper}>
+      <View style={styles.clip}>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
+          {uris.map((uri, i) => (
+            <Image key={`${uri}-${i}`} source={{ uri }} style={styles.photo} />
+          ))}
+        </ScrollView>
+        {uris.length > 1 && (
+          <View style={styles.counter}>
+            <Text style={styles.counterText}>{index + 1}/{uris.length}</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
