@@ -1,7 +1,7 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Text, View, ScrollView, StyleSheet, Pressable, Image,
+  Text, View, ScrollView, StyleSheet, Pressable, Image, TextInput, ActivityIndicator,
   Modal, Animated, TouchableWithoutFeedback,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -13,7 +13,8 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useSettingsStore, Language } from '@/src/store/useSettingsStore';
-import { logout as logoutRequest } from '@/src/api/auth';
+import { logout as logoutRequest, deleteAccount } from '@/src/api/auth';
+import { ApiError } from '@/src/api/client';
 import { getParkingSpotsForOwner } from '@/src/services/parkingService';
 import { ParkingSpot } from '@/src/types';
 
@@ -36,6 +37,10 @@ export default function Profile() {
   const toggleMode = useSettingsStore((s) => s.toggleMode);
   const [mySpots, setMySpots] = useState<ParkingSpot[]>([]);
   const [langModalVisible, setLangModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const themeAnim = useRef(new Animated.Value(mode === 'dark' ? 1 : 0)).current;
 
@@ -58,6 +63,29 @@ export default function Profile() {
   );
 
   if (!user) return null;
+
+  function closeDeleteModal() {
+    setDeleteModalVisible(false);
+    setDeletePassword('');
+    setDeleteError(null);
+  }
+
+  async function handleDeleteAccount() {
+    if (!deletePassword.trim()) {
+      setDeleteError(t('account.deleteAccount.passwordRequired'));
+      return;
+    }
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteAccount(user!.id, deletePassword);
+      clearSession();
+      router.replace('/(auth)/login');
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.detail : t('account.deleteAccount.error'));
+      setDeleting(false);
+    }
+  }
 
   const initials = [user.name, user.lastName]
     .filter(Boolean)
@@ -103,6 +131,9 @@ export default function Profile() {
     editBtnText: { color: colors.white },
     settlementsBtnText: { color: colors.teal },
     logoutBtnText: { color: '#EF4444' },
+
+    deleteAccountLink: { alignSelf: 'center', marginTop: 2, padding: 8 },
+    deleteAccountLinkText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
 
     prefCard: {
       backgroundColor: colors.surface, borderRadius: 12,
@@ -155,6 +186,28 @@ export default function Profile() {
     langOptionLabel: { flex: 1, fontSize: 16, fontWeight: '600' },
     langOptionLabelActive: { color: colors.teal },
     langOptionLabelInactive: { color: colors.text },
+
+    deleteWarning: {
+      fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 18,
+      marginBottom: 16,
+    },
+    deleteInput: {
+      width: '100%', borderWidth: 1, borderColor: colors.border, borderRadius: 10,
+      padding: 12, fontSize: 15, color: colors.text, marginBottom: 4,
+    },
+    deleteErrorText: { color: '#EF4444', fontSize: 13, marginBottom: 8, textAlign: 'center' },
+    deleteActions: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 8 },
+    deleteCancelBtn: {
+      flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+      borderWidth: 1.5, borderColor: colors.border,
+    },
+    deleteCancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.text },
+    deleteConfirmBtn: {
+      flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+      backgroundColor: '#EF4444',
+    },
+    deleteConfirmBtnDisabled: { opacity: 0.6 },
+    deleteConfirmBtnText: { fontSize: 15, fontWeight: '600', color: colors.white },
   });
 
   return (
@@ -282,7 +335,67 @@ export default function Profile() {
           <Ionicons name="log-out-outline" size={20} color="#EF4444" />
           <Text style={[styles.actionBtnText, styles.logoutBtnText]}>{t('account.logout')}</Text>
         </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [styles.deleteAccountLink, { opacity: pressed ? 0.6 : 1 }]}
+          onPress={() => setDeleteModalVisible(true)}
+        >
+          <Text style={styles.deleteAccountLinkText}>{t('account.deleteAccount')}</Text>
+        </Pressable>
       </ScrollView>
+
+      {/* Delete account confirmation modal */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeDeleteModal}
+      >
+        <TouchableWithoutFeedback onPress={closeDeleteModal}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalSheet}>
+                <Text style={styles.modalTitle}>{t('account.deleteAccount.title')}</Text>
+                <Text style={styles.deleteWarning}>{t('account.deleteAccount.warning')}</Text>
+                <TextInput
+                  style={styles.deleteInput}
+                  value={deletePassword}
+                  onChangeText={setDeletePassword}
+                  placeholder={t('account.deleteAccount.passwordPlaceholder')}
+                  placeholderTextColor={colors.textSecondary}
+                  secureTextEntry
+                  editable={!deleting}
+                />
+                {deleteError && <Text style={styles.deleteErrorText}>{deleteError}</Text>}
+                <View style={styles.deleteActions}>
+                  <Pressable
+                    style={({ pressed }) => [styles.deleteCancelBtn, { opacity: pressed ? 0.7 : 1 }]}
+                    onPress={closeDeleteModal}
+                    disabled={deleting}
+                  >
+                    <Text style={styles.deleteCancelBtnText}>{t('common.cancel')}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.deleteConfirmBtn,
+                      deleting && styles.deleteConfirmBtnDisabled,
+                      { opacity: pressed && !deleting ? 0.85 : 1 },
+                    ]}
+                    onPress={handleDeleteAccount}
+                    disabled={deleting}
+                  >
+                    {deleting ? (
+                      <ActivityIndicator color={colors.white} size="small" />
+                    ) : (
+                      <Text style={styles.deleteConfirmBtnText}>{t('account.deleteAccount.confirm')}</Text>
+                    )}
+                  </Pressable>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       {/* Language selection modal */}
       <Modal

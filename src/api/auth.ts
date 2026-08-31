@@ -256,3 +256,13 @@ export async function confirmPhoneChange(userId: string, code: string): Promise<
   });
   return toAuthUser(userResponse);
 }
+
+// Permanent: hard-deletes the user row plus every parking spot they own
+// (and all the R2 photos on both) -- see auth-service's delete_user. There's
+// no undo, unlike logout.
+export async function deleteAccount(userId: string, password: string): Promise<void> {
+  await request(`/users/${userId}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ password }),
+  });
+}
