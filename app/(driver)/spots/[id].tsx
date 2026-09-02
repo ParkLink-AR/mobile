@@ -25,7 +25,7 @@ export default function SpotDetail() {
 
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    body: { padding: 16, gap: 14, marginTop: -20 },
+    body: { padding: 16, gap: 14 },
 
     heroCard: {
       backgroundColor: colors.surface,
