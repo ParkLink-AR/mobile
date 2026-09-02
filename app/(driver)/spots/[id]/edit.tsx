@@ -9,7 +9,6 @@ import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { RatingStars } from '@/src/components/RatingStars';
-import { PhotoGallery } from '@/src/components/PhotoGallery';
 import { AvailabilityPicker, DayScheduleGroup, dayGroupsToEntries, entriesToDayGroups } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
 import { useThemeColors } from '@/src/theme/useThemeColors';
@@ -289,8 +288,6 @@ export default function EditSpot() {
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <PhotoGallery photos={photos} height={190} fallbackUri={spot.photoUrl} />
-
         <View style={styles.body}>
           {/* Spot info (read-only) */}
           <View style={styles.infoCard}>
