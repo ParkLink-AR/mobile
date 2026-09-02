@@ -263,6 +263,7 @@
   "layout.auth.register": "Register",
   "layout.auth.verifyEmail": "Verify email",
   "settlements.title": "Settlements",
+  "settlements.empty": "You don't have any settlements yet. Once a booking is paid out, it'll show up here.",
   "settlements.commission": "Commission retained: $%{amount}",
   "settlements.bookingsIncluded": "BOOKINGS INCLUDED",
 

@@ -263,6 +263,7 @@
   "layout.auth.register": "Registro",
   "layout.auth.verifyEmail": "Verificar email",
   "settlements.title": "Liquidaciones",
+  "settlements.empty": "Todavía no tenés liquidaciones. Cuando cobres una reserva, la vas a ver acá.",
   "settlements.commission": "Comisión retenida: $%{amount}",
   "settlements.bookingsIncluded": "RESERVAS INCLUIDAS",
 

@@ -263,6 +263,7 @@
   "layout.auth.register": "登録",
   "layout.auth.verifyEmail": "メールを確認",
   "settlements.title": "清算",
+  "settlements.empty": "まだ清算がありません。予約の支払いが完了すると、ここに表示されます。",
   "settlements.commission": "手数料: $%{amount}",
   "settlements.bookingsIncluded": "含まれる予約",
 

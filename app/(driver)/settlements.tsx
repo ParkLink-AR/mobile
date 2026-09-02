@@ -1,6 +1,7 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
-import { Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text, View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Screen } from '@/src/components/Screen';
@@ -28,6 +29,8 @@ export default function Settlements() {
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
     amount: { color: colors.teal, fontWeight: '700', fontSize: 20, marginTop: 4 },
+    emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
+    emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   });
 
   return (
@@ -36,7 +39,13 @@ export default function Settlements() {
       <FlatList
         data={settlements}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ gap: 10 }}
+        contentContainerStyle={{ gap: 10, flexGrow: 1 }}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="cash-outline" size={40} color={colors.textSecondary} />
+            <Text style={styles.emptyText}>{t('settlements.empty')}</Text>
+          </View>
+        }
         renderItem={({ item }) => (
           <TouchableOpacity onPress={() => router.push(`/(driver)/settlements/${item.id}`)}>
             <Card>
