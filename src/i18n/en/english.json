@@ -56,6 +56,9 @@
   "spot.availabilityError": "Couldn't load time slots. Check your connection.",
   "spot.availabilityRetry": "Retry",
 
+  "spot.reviews.count": "%{count} reviews",
+  "spot.reviews.empty": "There are no reviews yet.",
+
   "spot.tag.covered": "Covered",
   "spot.tag.uncovered": "Uncovered",
   "spot.tag.access247": "24/7 Access",

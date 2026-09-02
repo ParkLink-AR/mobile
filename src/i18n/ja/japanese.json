@@ -56,6 +56,9 @@
   "spot.availabilityError": "空き時間を読み込めませんでした。接続を確認してください。",
   "spot.availabilityRetry": "再試行",
 
+  "spot.reviews.count": "レビュー%{count}件",
+  "spot.reviews.empty": "まだレビューがありません。",
+
   "spot.tag.covered": "屋根あり",
   "spot.tag.uncovered": "屋根なし",
   "spot.tag.access247": "24時間アクセス",

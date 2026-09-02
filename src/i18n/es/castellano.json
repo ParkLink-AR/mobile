@@ -56,6 +56,9 @@
   "spot.availabilityError": "No pudimos cargar los horarios. Verificá tu conexión.",
   "spot.availabilityRetry": "Reintentar",
 
+  "spot.reviews.count": "%{count} reseñas",
+  "spot.reviews.empty": "Todavía no hay reseñas para mostrar.",
+
   "spot.tag.covered": "Cubierta",
   "spot.tag.uncovered": "Descubierta",
   "spot.tag.access247": "Acceso 24/7",
