@@ -212,13 +212,6 @@ export default function EditSpot() {
 
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    photoContainer: { position: 'relative' },
-    backBtn: {
-      position: 'absolute', top: 14, left: 14,
-      width: 36, height: 36, borderRadius: 18,
-      backgroundColor: 'rgba(0,0,0,0.45)',
-      alignItems: 'center', justifyContent: 'center',
-    },
     body: { padding: 16, gap: 14 },
 
     infoCard: {
@@ -286,6 +279,7 @@ export default function EditSpot() {
       width: 46, height: 46, borderRadius: 8,
       backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center',
     },
+    locationConfirmedRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     locationConfirmed: { color: colors.success, fontSize: 12, fontWeight: '700' },
     locationError: { color: '#C62828', fontSize: 12 },
 
@@ -295,13 +289,7 @@ export default function EditSpot() {
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Photo + back button */}
-        <View style={styles.photoContainer}>
-          <PhotoGallery photos={photos} height={190} fallbackUri={spot.photoUrl} />
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        <PhotoGallery photos={photos} height={190} fallbackUri={spot.photoUrl} />
 
         <View style={styles.body}>
           {/* Spot info (read-only) */}
@@ -374,7 +362,12 @@ export default function EditSpot() {
                 )}
               </TouchableOpacity>
             </View>
-            {coordinates && <Text style={styles.locationConfirmed}>{t('owner.spot.new.locationConfirmed')}</Text>}
+            {coordinates && (
+              <View style={styles.locationConfirmedRow}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                <Text style={styles.locationConfirmed}>{t('owner.spot.new.locationConfirmed')}</Text>
+              </View>
+            )}
             {locationError && <Text style={styles.locationError}>{locationError}</Text>}
           </View>
 

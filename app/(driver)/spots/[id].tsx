@@ -25,13 +25,6 @@ export default function SpotDetail() {
 
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    photoContainer: { position: 'relative' },
-    backBtn: {
-      position: 'absolute', top: 14, left: 14,
-      width: 36, height: 36, borderRadius: 18,
-      backgroundColor: 'rgba(0,0,0,0.45)',
-      alignItems: 'center', justifyContent: 'center',
-    },
     body: { padding: 16, gap: 14, marginTop: -20 },
 
     heroCard: {
@@ -96,12 +89,7 @@ export default function SpotDetail() {
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.photoContainer}>
-          <PhotoGallery photos={spot.photos} height={210} fallbackUri={spot.photoUrl} />
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        <PhotoGallery photos={spot.photos} height={210} fallbackUri={spot.photoUrl} />
 
         <View style={styles.body}>
           {/* Hero: title, address, rating, price and type together */}
