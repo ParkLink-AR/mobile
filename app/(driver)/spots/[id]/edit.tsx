@@ -40,6 +40,7 @@ export default function EditSpot() {
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [addressSuggestionsOpen, setAddressSuggestionsOpen] = useState(false);
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [covered, setCovered] = useState(true);
@@ -345,6 +346,7 @@ export default function EditSpot() {
                 onChangeText={handleAddressChange}
                 onSelect={selectAddress}
                 placeholder={t('owner.spot.new.addressPlaceholder')}
+                onSuggestionsVisibilityChange={setAddressSuggestionsOpen}
               />
               <TouchableOpacity
                 style={styles.locateButton}
@@ -359,13 +361,13 @@ export default function EditSpot() {
                 )}
               </TouchableOpacity>
             </View>
-            {coordinates && (
+            {coordinates && !addressSuggestionsOpen && (
               <View style={styles.locationConfirmedRow}>
                 <Ionicons name="checkmark-circle" size={14} color={colors.success} />
                 <Text style={styles.locationConfirmed}>{t('owner.spot.new.locationConfirmed')}</Text>
               </View>
             )}
-            {locationError && <Text style={styles.locationError}>{locationError}</Text>}
+            {locationError && !addressSuggestionsOpen && <Text style={styles.locationError}>{locationError}</Text>}
           </View>
 
           {/* Price */}

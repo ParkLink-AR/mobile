@@ -14,6 +14,11 @@ interface AddressAutocompleteProps {
   onChangeText: (text: string) => void;
   onSelect: (candidate: GeocodeCandidate) => void;
   placeholder?: string;
+  /** Fires whenever the suggestions dropdown opens/closes -- callers use it
+   * to hide anything they render right below this (e.g. a "location
+   * confirmed" message), since the dropdown floats over that space instead
+   * of pushing it down. */
+  onSuggestionsVisibilityChange?: (visible: boolean) => void;
 }
 
 /** Live, as-you-type address search (debounced) with a dropdown of every
@@ -21,7 +26,13 @@ interface AddressAutocompleteProps {
  * several different Argentine cities, so the user picks the right one
  * instead of the backend silently guessing. Shared between searching for a
  * spot and publishing one. */
-export function AddressAutocomplete({ value, onChangeText, onSelect, placeholder }: AddressAutocompleteProps) {
+export function AddressAutocomplete({
+  value,
+  onChangeText,
+  onSelect,
+  placeholder,
+  onSuggestionsVisibilityChange,
+}: AddressAutocompleteProps) {
   useLanguage();
   const colors = useThemeColors();
   const [candidates, setCandidates] = useState<GeocodeCandidate[]>([]);
@@ -79,6 +90,10 @@ export function AddressAutocomplete({ value, onChangeText, onSelect, placeholder
 
     return () => clearTimeout(timer);
   }, [value]);
+
+  useEffect(() => {
+    onSuggestionsVisibilityChange?.(showSuggestions);
+  }, [showSuggestions, onSuggestionsVisibilityChange]);
 
   function handleChangeText(text: string) {
     lastEmittedRef.current = text;
