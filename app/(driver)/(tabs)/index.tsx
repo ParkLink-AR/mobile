@@ -750,19 +750,27 @@ export default function Search() {
               {t('search.viewList')}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.segmentButton, viewMode === 'map' && styles.segmentActive]}
-            onPress={() => setViewMode('map')}
-          >
-            <Ionicons
-              name="map-outline"
-              size={14}
-              color={viewMode === 'map' ? colors.white : colors.textSecondary}
-            />
-            <Text style={[styles.segmentText, viewMode === 'map' && styles.segmentTextActive]}>
-              {t('search.viewMap')}
-            </Text>
-          </TouchableOpacity>
+          {/* react-native-maps/react-native-map-clustering have no web build --
+              metro.config.js resolves them to an empty stub there to avoid
+              crashing the whole app, which means rendering <ClusteredMapView>/
+              <Marker> throws the moment this tab switches to map view. Simplest
+              fix: don't offer map view at all on web instead of offering a
+              broken button. */}
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity
+              style={[styles.segmentButton, viewMode === 'map' && styles.segmentActive]}
+              onPress={() => setViewMode('map')}
+            >
+              <Ionicons
+                name="map-outline"
+                size={14}
+                color={viewMode === 'map' ? colors.white : colors.textSecondary}
+              />
+              <Text style={[styles.segmentText, viewMode === 'map' && styles.segmentTextActive]}>
+                {t('search.viewMap')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -776,7 +784,7 @@ export default function Search() {
       )}
 
       {/* ── Results ────────────────────────────────────────────────── */}
-      {viewMode === 'list' ? (
+      {viewMode === 'list' || Platform.OS === 'web' ? (
         loadingSpots || permissionLoading || locating ? (
           <View style={styles.centeredFeedback}>
             <ActivityIndicator color={colors.teal} size="large" />
