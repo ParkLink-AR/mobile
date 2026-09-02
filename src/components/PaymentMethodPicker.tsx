@@ -1,6 +1,7 @@
 import { t } from '@/src/i18n';
 import { useState } from 'react';
 import { View, Text, Pressable, Modal, ScrollView, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { PaymentMethod } from '@/src/types';
 
@@ -58,7 +59,6 @@ export function PaymentMethodPicker({ methods, selectedId, onSelect }: PaymentMe
     optionSelected: { backgroundColor: colors.background },
     optionIcon: { fontSize: 16 },
     optionLabel: { flex: 1, fontSize: 14, color: colors.text },
-    check: { color: colors.teal, fontWeight: '700' },
   });
 
   return (
@@ -88,7 +88,9 @@ export function PaymentMethodPicker({ methods, selectedId, onSelect }: PaymentMe
                   <Text style={styles.optionLabel} numberOfLines={1}>
                     {method.label}
                   </Text>
-                  {method.id === selectedId && <Text style={styles.check}>✓</Text>}
+                  {method.id === selectedId && (
+                    <Ionicons name="checkmark" size={18} color={colors.teal} />
+                  )}
                 </Pressable>
               ))}
             </ScrollView>

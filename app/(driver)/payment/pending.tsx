@@ -5,6 +5,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
+import { StatusIcon } from '@/src/components/StatusIcon';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { request } from '@/src/api/client';
@@ -74,14 +75,13 @@ export default function PaymentPendingScreen() {
       justifyContent: 'center',
       gap: 16,
     },
-    icon: { fontSize: 56 },
     card: { width: '100%', marginVertical: 12 },
   });
 
   if (status === 'approved') {
     return (
       <Screen style={styles.container}>
-        <Text style={[styles.icon, { color: colors.success }]}>✓</Text>
+        <StatusIcon variant="success" />
         <Text style={typography.h1}>{t('driver.booking.success.title')}</Text>
         <Card style={styles.card}>
           <Text style={typography.body}>{t('driver.payment.approved')}</Text>
@@ -97,7 +97,7 @@ export default function PaymentPendingScreen() {
   if (status === 'rejected') {
     return (
       <Screen style={styles.container}>
-        <Text style={[styles.icon, { color: colors.warning }]}>✗</Text>
+        <StatusIcon variant="error" />
         <Text style={typography.h1}>{t('driver.payment.rejected.title')}</Text>
         <Card style={styles.card}>
           <Text style={typography.body}>{t('driver.payment.rejected.body')}</Text>
@@ -113,7 +113,7 @@ export default function PaymentPendingScreen() {
   if (status === 'unknown') {
     return (
       <Screen style={styles.container}>
-        <Text style={[styles.icon, { color: colors.textSecondary }]}>?</Text>
+        <StatusIcon variant="unknown" />
         <Text style={typography.h1}>{t('driver.payment.unknown.title')}</Text>
         <Card style={styles.card}>
           <Text style={typography.body}>{t('driver.payment.unknown.body')}</Text>

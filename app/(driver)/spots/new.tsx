@@ -208,7 +208,8 @@ export default function NewSpot() {
       width: 46, height: 46, borderRadius: 8,
       backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center',
     },
-    locationConfirmed: { color: colors.success, fontSize: 12, fontWeight: '700', marginBottom: 8 },
+    locationConfirmedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 },
+    locationConfirmed: { color: colors.success, fontSize: 12, fontWeight: '700' },
     locationError: { color: '#C62828', fontSize: 12, marginBottom: 8 },
   });
 
@@ -265,7 +266,12 @@ export default function NewSpot() {
             )}
           </TouchableOpacity>
         </View>
-        {coordinates && <Text style={styles.locationConfirmed}>{t('owner.spot.new.locationConfirmed')}</Text>}
+        {coordinates && (
+          <View style={styles.locationConfirmedRow}>
+            <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+            <Text style={styles.locationConfirmed}>{t('owner.spot.new.locationConfirmed')}</Text>
+          </View>
+        )}
         {locationError && <Text style={styles.locationError}>{locationError}</Text>}
 
         <Text style={typography.caption}>{t('owner.spot.new.type')}</Text>

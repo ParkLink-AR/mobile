@@ -136,6 +136,7 @@ export default function DriverProfileEdit() {
     },
     readOnlyInfo: { flex: 1, gap: 2 },
     readOnlyValue: { fontSize: 15, color: colors.text },
+    verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
     verifiedText: { fontSize: 11, fontWeight: '700', color: colors.success },
     changeLink: { fontSize: 13, fontWeight: '600', color: colors.teal },
   });
@@ -195,7 +196,12 @@ export default function DriverProfileEdit() {
             <View style={styles.readOnlyRow}>
               <View style={styles.readOnlyInfo}>
                 <Text style={styles.readOnlyValue}>{user.email}</Text>
-                {user.emailVerified && <Text style={styles.verifiedText}>{t('profile.edit.verified')}</Text>}
+                {user.emailVerified && (
+                  <View style={styles.verifiedRow}>
+                    <Ionicons name="checkmark-circle" size={13} color={colors.success} />
+                    <Text style={styles.verifiedText}>{t('profile.edit.verified')}</Text>
+                  </View>
+                )}
               </View>
               <Text style={styles.changeLink} onPress={() => router.push('/(driver)/change-email')}>
                 {t('profile.edit.changeEmail')}
@@ -209,7 +215,12 @@ export default function DriverProfileEdit() {
             <View style={styles.readOnlyRow}>
               <View style={styles.readOnlyInfo}>
                 <Text style={styles.readOnlyValue}>{user.phone || '—'}</Text>
-                {user.phoneVerified && <Text style={styles.verifiedText}>{t('profile.edit.verified')}</Text>}
+                {user.phoneVerified && (
+                  <View style={styles.verifiedRow}>
+                    <Ionicons name="checkmark-circle" size={13} color={colors.success} />
+                    <Text style={styles.verifiedText}>{t('profile.edit.verified')}</Text>
+                  </View>
+                )}
               </View>
               <Text style={styles.changeLink} onPress={() => router.push('/(driver)/change-phone')}>
                 {t('profile.edit.changePhone')}

@@ -16,6 +16,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
+import { StatusIcon } from '@/src/components/StatusIcon';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import {
@@ -265,7 +266,6 @@ export default function Register() {
     countryRowName: { flex: 1, fontSize: 15, color: colors.text },
     countryRowDial: { fontSize: 14, color: colors.textSecondary },
     successWrap: { alignItems: 'center', gap: 12, paddingVertical: 40 },
-    successCheck: { fontSize: 48, color: colors.teal },
     successText: { fontSize: 16, fontWeight: '600', color: colors.text },
     successButton: { alignSelf: 'stretch', marginTop: 12 },
     successCenteredText: { textAlign: 'center' },
@@ -282,7 +282,7 @@ export default function Register() {
     return (
       <Screen style={styles.container}>
         <View style={styles.successWrap}>
-          <Text style={styles.successCheck}>✓</Text>
+          <StatusIcon variant="success" />
           <Text style={[typography.h1, styles.successCenteredText]}>{t('register.success.title')}</Text>
           <Text style={[typography.body, styles.successCenteredText]}>{t('register.success.message')}</Text>
           <Button
@@ -299,7 +299,7 @@ export default function Register() {
     return (
       <Screen style={styles.container}>
         <View style={styles.successWrap}>
-          <Text style={styles.successCheck}>✓</Text>
+          <StatusIcon variant="success" />
           <Text style={styles.successText}>{successMessage}</Text>
         </View>
       </Screen>
