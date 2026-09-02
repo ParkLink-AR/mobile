@@ -206,14 +206,18 @@ export default function Search() {
     setLoadingSpots(true);
     searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng })
       .then((results) => {
-        setSpots(results);
-        setSelectedSpotId(results[0]?.id ?? null);
+        // Never show the driver their own listings here -- if they search
+        // from home, their own garage is always "nearby" and can't be
+        // booked by themselves anyway.
+        const filtered = results.filter((spot) => spot.ownerId !== user?.id);
+        setSpots(filtered);
+        setSelectedSpotId(filtered[0]?.id ?? null);
       })
       .catch((err) => {
         setSpotsError(err instanceof ApiError ? err.detail : t('search.location.error'));
       })
       .finally(() => setLoadingSpots(false));
-  }, [filters, location, permissionLoading, locating]);
+  }, [filters, location, permissionLoading, locating, user?.id]);
 
   function openFilters() {
     setMinPriceInput(filters.minPrice ? String(filters.minPrice) : '');
@@ -799,7 +803,11 @@ export default function Search() {
                 setSpotsError(null);
                 setLoadingSpots(true);
                 searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng })
-                  .then((results) => { setSpots(results); setSelectedSpotId(results[0]?.id ?? null); })
+                  .then((results) => {
+                    const filtered = results.filter((spot) => spot.ownerId !== user?.id);
+                    setSpots(filtered);
+                    setSelectedSpotId(filtered[0]?.id ?? null);
+                  })
                   .catch((err) => setSpotsError(err instanceof ApiError ? err.detail : t('search.location.error')))
                   .finally(() => setLoadingSpots(false));
               }}
