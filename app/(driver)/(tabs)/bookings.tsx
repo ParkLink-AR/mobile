@@ -1,6 +1,7 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
@@ -74,6 +75,8 @@ export default function DriverBookings() {
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     total: { color: colors.teal, fontWeight: '700', marginTop: 4 },
+    emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
+    emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   });
 
   return (
@@ -82,7 +85,13 @@ export default function DriverBookings() {
       <FlatList
         data={bookings}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ gap: 10 }}
+        contentContainerStyle={{ gap: 10, flexGrow: 1 }}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="calendar-outline" size={40} color={colors.textSecondary} />
+            <Text style={styles.emptyText}>{t('driver.bookings.empty')}</Text>
+          </View>
+        }
         renderItem={({ item }) => (
           <TouchableOpacity onPress={() => router.push(`/(driver)/bookings/${item.id}`)}>
             <Card>

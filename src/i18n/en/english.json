@@ -12,6 +12,7 @@
   "auth.register.button": "Create account",
 
   "driver.bookings.title": "My bookings",
+  "driver.bookings.empty": "You don't have any bookings yet. Once you book a spot, it'll show up here.",
   "driver.profile.title": "My profile",
   "driver.profile.edit": "Edit profile",
   "driver.paymentMethods.title": "PAYMENT METHODS",

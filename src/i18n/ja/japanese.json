@@ -12,6 +12,7 @@
   "auth.register.button": "アカウントを作成",
 
   "driver.bookings.title": "マイ予約",
+  "driver.bookings.empty": "まだ予約がありません。予約すると、ここに表示されます。",
   "driver.profile.title": "マイプロフィール",
   "driver.profile.edit": "プロフィールを編集",
   "driver.paymentMethods.title": "支払い方法",

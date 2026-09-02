@@ -12,6 +12,7 @@
   "auth.register.button": "Crear cuenta",
 
   "driver.bookings.title": "Mis reservas",
+  "driver.bookings.empty": "Todavía no tenés reservas. Cuando reserves una cochera, la vas a ver acá.",
   "driver.profile.title": "Mi perfil",
   "driver.profile.edit": "Editar perfil",
   "driver.paymentMethods.title": "MÉTODOS DE PAGO",
