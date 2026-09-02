@@ -44,6 +44,9 @@ export default function SpotDetail() {
     titleBlock: { flex: 1, gap: 4 },
     spotTitle: { fontSize: 19, fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
     addressRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    // location-outline's pin glyph is inset within its box, leaving it visibly
+    // indented vs the flush-left title above -- nudge it back to line up.
+    addressIcon: { marginLeft: -2 },
     spotAddress: { flex: 1, fontSize: 13, color: colors.textSecondary, lineHeight: 17 },
     priceBadge: {
       backgroundColor: colors.teal + '18',
@@ -98,7 +101,7 @@ export default function SpotDetail() {
               <View style={styles.titleBlock}>
                 <Text style={styles.spotTitle}>{spot.title}</Text>
                 <View style={styles.addressRow}>
-                  <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+                  <Ionicons name="location-outline" size={14} color={colors.textSecondary} style={styles.addressIcon} />
                   <Text style={styles.spotAddress} numberOfLines={2}>{spot.address}</Text>
                 </View>
               </View>
