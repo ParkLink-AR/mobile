@@ -15,7 +15,6 @@ import {
   uploadParkingSpotPhotos as apiUploadParkingSpotPhotos,
   deleteParkingSpotPhoto as apiDeleteParkingSpotPhoto,
   reorderParkingSpotPhotos as apiReorderParkingSpotPhotos,
-  getSpotReviewsApi,
 } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { getDriverVisiblePrice } from './utils';
@@ -34,8 +33,8 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     photoUrl: raw.photos[0] ?? PLACEHOLDER_PHOTO_URL,
     photos: raw.photos,
     covered: raw.covered,
-    rating: 0,
-    reviewCount: 0,
+    rating: raw.rating,
+    reviewCount: raw.reviewCount,
     tags: raw.covered ? ['Cubierta'] : ['Descubierta'],
     schedule: raw.schedule,
     distanceMeters: raw.distanceMeters ?? 0,
@@ -144,18 +143,7 @@ export async function getParkingSpotDetail(id: string): Promise<ParkingSpot | un
     throw err;
   }
 
-  const spot = toParkingSpot(raw);
-  // One extra call for a single spot's detail is cheap -- unlike search results
-  // (many spots at once), so it's worth it to show a real rating/count here
-  // instead of the 0/0 placeholder.
-  try {
-    const reviews = await getSpotReviewsApi(id);
-    spot.rating = reviews.average_rating;
-    spot.reviewCount = reviews.count;
-  } catch {
-    // Keep the 0/0 placeholder if the reviews call fails.
-  }
-  return spot;
+  return toParkingSpot(raw);
 }
 
 export async function getParkingSpotsForOwner(ownerId: string): Promise<ParkingSpot[]> {

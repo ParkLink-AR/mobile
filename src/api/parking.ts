@@ -4,8 +4,9 @@ import { ScheduleEntry } from '@/src/types';
 import { ReviewListApiResponse } from './booking';
 
 // Shape returned by parking-service (see parking-spots.service.ts's
-// ParkingSpotResponse) -- flattened lat/lng, no rating/reviews/tags yet
-// since booking/reviews aren't wired up.
+// ParkingSpotResponse) -- flattened lat/lng. rating/reviewCount are real
+// aggregates parking-service fetches from booking-service's reviews table
+// (0/0 when there are no reviews yet).
 export interface ParkingSpotApiResponse {
   id: string;
   ownerId: string;
@@ -24,6 +25,8 @@ export interface ParkingSpotApiResponse {
   createdAt: string;
   updatedAt: string;
   distanceMeters?: number;
+  rating: number;
+  reviewCount: number;
 }
 
 // Search always deals in resolved coordinates -- mobile geocodes a
