@@ -8,6 +8,8 @@
     "userInterfaceStyle": "light",
     "scheme": "parklink",
     "android": {
+      "package": "com.parklink.mobile",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -24,6 +26,15 @@
       "expo-status-bar",
       "@react-native-community/datetimepicker",
       "expo-secure-store",
+      "@react-native-firebase/app",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
       [
         "expo-location",
         {
@@ -34,6 +45,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.parklink.mobile",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "config": {
         "googleMapsApiKey": ""
       }
