@@ -126,6 +126,8 @@
   "owner.spot.new.instantBooking": "Confirm bookings automatically",
   "owner.spot.new.instantBookingHint": "If you turn this off, every paid booking stays pending until you approve it.",
   "owner.spot.new.pricePerHour": "Price per hour",
+  "owner.spot.new.capacity": "Number of spaces",
+  "owner.spot.new.capacityHint": "For a parking lot: how many identical spaces you rent at this same address.",
   "owner.spot.new.availability": "Availability",
   "owner.spot.new.availabilityPlaceholder": "Mon–Fri · 8:00–22:00",
   "owner.spot.new.description": "Description",

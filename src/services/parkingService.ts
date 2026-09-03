@@ -33,6 +33,7 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     photoUrl: raw.photos[0] ?? PLACEHOLDER_PHOTO_URL,
     photos: raw.photos,
     covered: raw.covered,
+    capacity: raw.capacity ?? 1,
     rating: raw.rating,
     reviewCount: raw.reviewCount,
     tags: raw.covered ? ['Cubierta'] : ['Descubierta'],
@@ -169,6 +170,8 @@ export interface CreateParkingSpotInput {
   lng: number;
   covered: boolean;
   instantBooking: boolean;
+  // Lugares idénticos a alquilar contra el mismo id (playa). Omitido = 1.
+  capacity?: number;
   pricePerHour: number;
   schedule?: ScheduleEntry[];
   description?: string;
@@ -183,6 +186,7 @@ export async function createParkingSpot(input: CreateParkingSpotInput): Promise<
     pricePerHour: input.pricePerHour,
     covered: input.covered,
     instantBooking: input.instantBooking,
+    capacity: input.capacity,
     schedule: input.schedule,
     description: input.description,
   });
@@ -209,6 +213,7 @@ export interface UpdateParkingSpotInput {
   description?: string;
   covered?: boolean;
   instantBooking?: boolean;
+  capacity?: number;
   schedule?: ScheduleEntry[];
   // The three go together: send all or none (see UpdateParkingSpotDto).
   address?: string;
@@ -225,6 +230,7 @@ export async function updateParkingSpot(
     description: updates.description,
     covered: updates.covered,
     instantBooking: updates.instantBooking,
+    capacity: updates.capacity,
     schedule: updates.schedule,
     address: updates.address,
     lat: updates.lat,

@@ -142,7 +142,7 @@ export default function ConfirmBooking() {
         start: startISO,
         end: endISO,
         amount: Math.round(spot.pricePerHour * reservedHours * 100), // centavos
-        parking_spot: { id: spotId, schedule },
+        parking_spot: { id: spotId, schedule, capacity: spot.capacity },
       });
       bookingId = created.id;
     } catch (err: any) {

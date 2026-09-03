@@ -18,6 +18,7 @@ export interface ParkingSpotApiResponse {
   pricePerHour: number;
   covered: boolean;
   instantBooking: boolean;
+  capacity: number;
   schedule: ScheduleEntry[];
   photos: string[];
   rules: string[];
@@ -82,6 +83,8 @@ export interface CreateParkingSpotInput {
   pricePerHour: number;
   covered?: boolean;
   instantBooking?: boolean;
+  // Lugares idénticos a alquilar contra el mismo id (playa). Omitido = 1.
+  capacity?: number;
   schedule?: ScheduleEntry[];
   rules?: string[];
 }
@@ -91,6 +94,7 @@ export interface UpdateParkingSpotApiInput {
   description?: string;
   covered?: boolean;
   instantBooking?: boolean;
+  capacity?: number;
   schedule?: ScheduleEntry[];
   // The three go together: send all or none.
   address?: string;

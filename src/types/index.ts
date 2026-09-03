@@ -57,6 +57,8 @@ export interface ParkingSpot {
   photoUrl: string;
   photos: string[];
   covered: boolean;
+  // Lugares idénticos que se alquilan contra este id (playa). 1 = cochera común.
+  capacity: number;
   rating: number;
   reviewCount: number;
   tags: string[];
