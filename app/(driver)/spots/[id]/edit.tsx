@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
-  View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity, ActivityIndicator, Switch, Alert, Platform,
+  View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity, ActivityIndicator, Switch, Modal, TouchableWithoutFeedback,
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -54,6 +54,12 @@ export default function EditSpot() {
   const [saving, setSaving] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    title: string;
+    body: string;
+    confirmLabel: string;
+    onConfirm: () => void;
+  } | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
   const [photosBusy, setPhotosBusy] = useState(false);
 
@@ -219,16 +225,11 @@ export default function EditSpot() {
   }
 
   // Alert.alert with buttons is a no-op on web (react-native-web's Alert
-  // module has no UI at all) -- window.confirm is the equivalent there.
+  // module has no UI at all) -- a real Modal (below, in the JSX) works on
+  // every platform, same pattern profile.tsx already uses for account
+  // deletion.
   function confirmAction(title: string, message: string, confirmLabel: string, onConfirm: () => void) {
-    if (Platform.OS === 'web') {
-      if (window.confirm(`${title}\n\n${message}`)) onConfirm();
-      return;
-    }
-    Alert.alert(title, message, [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: confirmLabel, style: 'destructive', onPress: onConfirm },
-    ]);
+    setConfirmModal({ title, body: message, confirmLabel, onConfirm });
   }
 
   function handleToggleActive() {
@@ -362,6 +363,34 @@ export default function EditSpot() {
     dangerBtnText: { fontWeight: '700', fontSize: 15, color: colors.text },
     deleteBtn: { borderColor: '#C62828' },
     deleteBtnText: { color: '#C62828' },
+
+    modalOverlay: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
+      justifyContent: 'center', alignItems: 'center',
+    },
+    modalSheet: {
+      width: '85%', borderRadius: 20, paddingVertical: 32, paddingHorizontal: 24,
+      backgroundColor: colors.surface, alignItems: 'center', gap: 8,
+    },
+    modalTitle: {
+      fontSize: 16, fontWeight: '700', color: colors.text,
+      marginBottom: 8, textAlign: 'center',
+    },
+    modalBody: {
+      fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 18,
+      marginBottom: 8,
+    },
+    modalActions: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 8 },
+    modalCancelBtn: {
+      flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+      borderWidth: 1.5, borderColor: colors.border,
+    },
+    modalCancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.text },
+    modalConfirmBtn: {
+      flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+      backgroundColor: '#C62828',
+    },
+    modalConfirmBtnText: { fontSize: 15, fontWeight: '600', color: colors.white },
   });
 
   return (
@@ -548,6 +577,42 @@ export default function EditSpot() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={!!confirmModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmModal(null)}
+      >
+        <TouchableWithoutFeedback onPress={() => setConfirmModal(null)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalSheet}>
+                <Text style={styles.modalTitle}>{confirmModal?.title}</Text>
+                <Text style={styles.modalBody}>{confirmModal?.body}</Text>
+                <View style={styles.modalActions}>
+                  <Pressable
+                    style={({ pressed }) => [styles.modalCancelBtn, { opacity: pressed ? 0.7 : 1 }]}
+                    onPress={() => setConfirmModal(null)}
+                  >
+                    <Text style={styles.modalCancelBtnText}>{t('common.cancel')}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.modalConfirmBtn, { opacity: pressed ? 0.85 : 1 }]}
+                    onPress={() => {
+                      const onConfirm = confirmModal?.onConfirm;
+                      setConfirmModal(null);
+                      onConfirm?.();
+                    }}
+                  >
+                    <Text style={styles.modalConfirmBtnText}>{confirmModal?.confirmLabel}</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </Screen>
   );
 }
