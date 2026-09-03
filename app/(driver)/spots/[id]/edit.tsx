@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
-  View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity, ActivityIndicator, Switch, Alert,
+  View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity, ActivityIndicator, Switch, Alert, Platform,
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -218,57 +218,59 @@ export default function EditSpot() {
     }
   }
 
+  // Alert.alert with buttons is a no-op on web (react-native-web's Alert
+  // module has no UI at all) -- window.confirm is the equivalent there.
+  function confirmAction(title: string, message: string, confirmLabel: string, onConfirm: () => void) {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${title}\n\n${message}`)) onConfirm();
+      return;
+    }
+    Alert.alert(title, message, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: confirmLabel, style: 'destructive', onPress: onConfirm },
+    ]);
+  }
+
   function handleToggleActive() {
     if (!spot) return;
     const goingActive = !spot.active;
-    Alert.alert(
+    confirmAction(
       goingActive ? t('owner.spot.edit.reactivateTitle') : t('owner.spot.edit.deactivateTitle'),
       goingActive ? t('owner.spot.edit.reactivateBody') : t('owner.spot.edit.deactivateBody'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: goingActive ? t('owner.spot.edit.reactivate') : t('owner.spot.edit.deactivate'),
-          onPress: async () => {
-            setStatusBusy(true);
-            try {
-              const updated = await updateParkingSpotStatus(id, goingActive ? 'active' : 'paused');
-              setSpot(updated);
-              clearSpots();
-              markUpdated();
-            } catch {
-              alert(t('owner.spot.edit.errorStatus'));
-            } finally {
-              setStatusBusy(false);
-            }
-          },
-        },
-      ],
+      goingActive ? t('owner.spot.edit.reactivate') : t('owner.spot.edit.deactivate'),
+      async () => {
+        setStatusBusy(true);
+        try {
+          const updated = await updateParkingSpotStatus(id, goingActive ? 'active' : 'paused');
+          setSpot(updated);
+          clearSpots();
+          markUpdated();
+        } catch {
+          alert(t('owner.spot.edit.errorStatus'));
+        } finally {
+          setStatusBusy(false);
+        }
+      },
     );
   }
 
   function handleDelete() {
-    Alert.alert(
+    confirmAction(
       t('owner.spot.edit.deleteTitle'),
       t('owner.spot.edit.deleteBody'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('owner.spot.edit.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            setDeleteBusy(true);
-            try {
-              await deleteParkingSpot(id);
-              clearSpots();
-              markUpdated();
-              router.replace('/(driver)/(tabs)/profile');
-            } catch (err) {
-              alert(err instanceof ApiError ? err.detail : t('owner.spot.edit.errorDelete'));
-              setDeleteBusy(false);
-            }
-          },
-        },
-      ],
+      t('owner.spot.edit.delete'),
+      async () => {
+        setDeleteBusy(true);
+        try {
+          await deleteParkingSpot(id);
+          clearSpots();
+          markUpdated();
+          router.replace('/(driver)/(tabs)/profile');
+        } catch (err) {
+          alert(err instanceof ApiError ? err.detail : t('owner.spot.edit.errorDelete'));
+          setDeleteBusy(false);
+        }
+      },
     );
   }
 
