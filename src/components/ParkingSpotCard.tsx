@@ -1,10 +1,12 @@
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, GestureResponderEvent } from 'react-native';
 import { Card } from '@/src/components/Card';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 import { Ionicons } from '@expo/vector-icons';
+
+export const FAVORITE_RED = '#FF385C';
 
 // Tag keys stored in mock data mapped to their i18n key and icon
 const TAG_KEY_MAP: Record<string, { i18nKey: string; iconName: string }> = {
@@ -19,12 +21,25 @@ export const TAG_LABEL_KEYS: Record<string, string> = Object.fromEntries(
   Object.entries(TAG_KEY_MAP).map(([k, v]) => [k, v.i18nKey])
 );
 
-export function ParkingSpotCard({ spot }: { spot: ParkingSpot }) {
+interface ParkingSpotCardProps {
+  spot: ParkingSpot;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
+}
+
+export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite }: ParkingSpotCardProps) {
   const colors = useThemeColors();
   useLanguage();
   const styles = StyleSheet.create({
     card: { padding: 0, overflow: 'hidden' },
+    photoWrapper: { position: 'relative' },
     photo: { width: '100%', height: 148 },
+    favoriteBtn: {
+      position: 'absolute', top: 10, right: 10,
+      width: 30, height: 30, borderRadius: 15,
+      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: 'rgba(0,0,0,0.35)',
+    },
     body: { padding: 14, gap: 6 },
     titleRow: {
       flexDirection: 'row',
@@ -94,9 +109,28 @@ export function ParkingSpotCard({ spot }: { spot: ParkingSpot }) {
       ? `${(spot.distanceMeters / 1000).toFixed(1)} km`
       : `${spot.distanceMeters} m`;
 
+  function handleFavoritePress(e: GestureResponderEvent) {
+    // La card se usa envuelta en un TouchableOpacity de navegación (lista de
+    // búsqueda/favoritos) -- sin esto, en react-native-web el tap del
+    // corazón burbujea y también dispara la navegación.
+    e.stopPropagation?.();
+    onToggleFavorite?.();
+  }
+
   return (
     <Card style={styles.card}>
-      <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
+      <View style={styles.photoWrapper}>
+        <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
+        {onToggleFavorite && (
+          <TouchableOpacity style={styles.favoriteBtn} onPress={handleFavoritePress}>
+            <Ionicons
+              name={isFavorite ? 'heart' : 'heart-outline'}
+              size={17}
+              color={isFavorite ? FAVORITE_RED : colors.white}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
       <View style={styles.body}>
         <View style={styles.titleRow}>
           <Text style={styles.title} numberOfLines={1}>

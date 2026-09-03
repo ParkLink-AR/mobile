@@ -5,6 +5,10 @@ import {
   searchParkingSpots as apiSearchParkingSpots,
   getParkingSpotDetail as apiGetParkingSpotDetail,
   getParkingSpotsForOwner as apiGetParkingSpotsForOwner,
+  getFavoriteIds as apiGetFavoriteIds,
+  getFavoriteSpots as apiGetFavoriteSpots,
+  addFavorite,
+  removeFavorite,
   createParkingSpot as apiCreateParkingSpot,
   updateParkingSpot as apiUpdateParkingSpot,
   uploadParkingSpotPhotos as apiUploadParkingSpotPhotos,
@@ -141,6 +145,17 @@ export async function getParkingSpotsForOwner(ownerId: string): Promise<ParkingS
   const results = await apiGetParkingSpotsForOwner(ownerId);
   return results.map(toParkingSpot);
 }
+
+export async function getFavoriteIds(): Promise<string[]> {
+  return apiGetFavoriteIds();
+}
+
+export async function getFavoriteSpots(): Promise<ParkingSpot[]> {
+  const results = await apiGetFavoriteSpots();
+  return results.map(toParkingSpot);
+}
+
+export { addFavorite, removeFavorite };
 
 export interface CreateParkingSpotInput {
   title: string;

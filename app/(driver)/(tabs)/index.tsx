@@ -25,6 +25,7 @@ import { Screen } from '@/src/components/Screen';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
+import { useFavoritesStore } from '@/src/store/useFavoritesStore';
 import { searchParkingSpots, SearchParkingSpotsFilters } from '@/src/services/parkingService';
 import { geocodeAddress, GeocodeCandidate } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
@@ -51,6 +52,8 @@ export default function Search() {
   const colors = useThemeColors();
   useLanguage();
   const user = useSessionStore((s) => s.user);
+  const favoriteIds = useFavoritesStore((s) => s.ids);
+  const toggleFavorite = useFavoritesStore((s) => s.toggle);
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
   const [loadingSpots, setLoadingSpots] = useState(false);
   const [spotsError, setSpotsError] = useState<string | null>(null);
@@ -834,7 +837,11 @@ export default function Search() {
                   })
                 }
               >
-                <ParkingSpotCard spot={item} />
+                <ParkingSpotCard
+                  spot={item}
+                  isFavorite={favoriteIds.has(item.id)}
+                  onToggleFavorite={() => toggleFavorite(item.id)}
+                />
               </TouchableOpacity>
             )}
           />

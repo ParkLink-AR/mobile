@@ -124,6 +124,22 @@ export async function getParkingSpotsForOwner(ownerId: string): Promise<ParkingS
   return request(`/users/${ownerId}/parking-spots`);
 }
 
+export async function getFavoriteIds(): Promise<string[]> {
+  return request('/favorites/ids');
+}
+
+export async function getFavoriteSpots(): Promise<ParkingSpotApiResponse[]> {
+  return request('/favorites');
+}
+
+export async function addFavorite(parkingSpotId: string): Promise<void> {
+  await request('/favorites', { method: 'POST', body: JSON.stringify({ parkingSpotId }) });
+}
+
+export async function removeFavorite(parkingSpotId: string): Promise<void> {
+  await request(`/favorites/${parkingSpotId}`, { method: 'DELETE' });
+}
+
 export async function createParkingSpot(
   input: CreateParkingSpotInput
 ): Promise<ParkingSpotApiResponse> {

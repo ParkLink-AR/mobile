@@ -13,6 +13,8 @@
 
   "driver.bookings.title": "マイ予約",
   "driver.bookings.empty": "まだ予約がありません。予約すると、ここに表示されます。",
+  "driver.favorites.title": "お気に入り",
+  "driver.favorites.empty": "まだお気に入りがありません。ハートをタップして保存しましょう。",
   "driver.profile.title": "マイプロフィール",
   "driver.profile.edit": "プロフィールを編集",
   "driver.paymentMethods.title": "支払い方法",
@@ -189,6 +191,7 @@
   "account.switchToDriver": "ドライバーモードに切り替え",
 
   "tabs.driver.search": "検索",
+  "tabs.driver.favorites": "お気に入り",
   "tabs.driver.bookings": "予約",
   "tabs.driver.profile": "プロフィール",
   "tabs.owner.home": "ホーム",

@@ -13,6 +13,8 @@
 
   "driver.bookings.title": "Mis reservas",
   "driver.bookings.empty": "Todavía no tenés reservas. Cuando reserves una cochera, la vas a ver acá.",
+  "driver.favorites.title": "Mis favoritos",
+  "driver.favorites.empty": "Todavía no tenés favoritos. Marcá una cochera con el corazón para verla acá.",
   "driver.profile.title": "Mi perfil",
   "driver.profile.edit": "Editar perfil",
   "driver.paymentMethods.title": "MÉTODOS DE PAGO",
@@ -189,6 +191,7 @@
   "account.switchToDriver": "Cambiar a modo conductor",
 
   "tabs.driver.search": "Buscar",
+  "tabs.driver.favorites": "Favoritos",
   "tabs.driver.bookings": "Reservas",
   "tabs.driver.profile": "Perfil",
   "tabs.owner.home": "Inicio",

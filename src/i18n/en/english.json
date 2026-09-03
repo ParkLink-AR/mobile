@@ -13,6 +13,8 @@
 
   "driver.bookings.title": "My bookings",
   "driver.bookings.empty": "You don't have any bookings yet. Once you book a spot, it'll show up here.",
+  "driver.favorites.title": "My favorites",
+  "driver.favorites.empty": "You don't have any favorites yet. Tap the heart on a spot to save it here.",
   "driver.profile.title": "My profile",
   "driver.profile.edit": "Edit profile",
   "driver.paymentMethods.title": "PAYMENT METHODS",
@@ -189,6 +191,7 @@
   "account.switchToDriver": "Switch to driver mode",
 
   "tabs.driver.search": "Search",
+  "tabs.driver.favorites": "Favorites",
   "tabs.driver.bookings": "Bookings",
   "tabs.driver.profile": "Profile",
   "tabs.owner.home": "Home",

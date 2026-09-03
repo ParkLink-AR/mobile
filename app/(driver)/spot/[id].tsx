@@ -4,7 +4,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Chip } from '@/src/components/Chip';
-import { TAG_LABEL_KEYS } from '@/src/components/ParkingSpotCard';
+import { TAG_LABEL_KEYS, FAVORITE_RED } from '@/src/components/ParkingSpotCard';
 import { RatingStars } from '@/src/components/RatingStars';
 import { PhotoGallery } from '@/src/components/PhotoGallery';
 import { Button } from '@/src/components/Button';
@@ -13,6 +13,7 @@ import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
+import { useFavoritesStore } from '@/src/store/useFavoritesStore';
 import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
 import { useAvailability } from '@/src/hooks/useAvailability';
 import type { FreeWindow } from '@/src/api/parking';
@@ -145,6 +146,8 @@ export default function SpotDetail() {
   const [durationHours, setDurationHours] = useState(1);
   const [selectedStartHour, setSelectedStartHour] = useState<number | null>(null);
   const user = useSessionStore((s) => s.user);
+  const isFavorite = useFavoritesStore((s) => (id ? s.ids.has(id) : false));
+  const toggleFavorite = useFavoritesStore((s) => s.toggle);
 
   const days = useMemo(() => getNextSevenDays(), []);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
@@ -209,6 +212,13 @@ export default function SpotDetail() {
   const styles = StyleSheet.create({
     screen: { backgroundColor: colors.surface },
     container: { flex: 1, backgroundColor: colors.surface },
+    photoWrapper: { position: 'relative' },
+    favoriteBtn: {
+      position: 'absolute', top: 14, right: 14,
+      width: 36, height: 36, borderRadius: 18,
+      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: 'rgba(0,0,0,0.35)',
+    },
     photo: { width: '100%', height: 200 },
     body: { padding: 16, gap: 10 },
     tagRow: { flexDirection: 'row', marginVertical: 4 },
@@ -269,7 +279,16 @@ export default function SpotDetail() {
   return (
     <Screen style={styles.screen} edges={['top', 'left', 'right']}>
       <ScrollView style={styles.container}>
-      <PhotoGallery photos={spot.photos} height={200} fallbackUri={spot.photoUrl} />
+      <View style={styles.photoWrapper}>
+        <PhotoGallery photos={spot.photos} height={200} fallbackUri={spot.photoUrl} />
+        <TouchableOpacity style={styles.favoriteBtn} onPress={() => toggleFavorite(spot.id)}>
+          <Ionicons
+            name={isFavorite ? 'heart' : 'heart-outline'}
+            size={20}
+            color={isFavorite ? FAVORITE_RED : colors.white}
+          />
+        </TouchableOpacity>
+      </View>
       <View style={styles.body}>
         <Text style={typography.h1}>{spot.title}</Text>
         <TouchableOpacity onPress={() => router.push(`/(driver)/spot/${spot.id}/reviews`)}>
