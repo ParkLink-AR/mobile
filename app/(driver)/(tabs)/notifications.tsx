@@ -1,5 +1,5 @@
 import { t, useLanguage } from '@/src/i18n';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -32,9 +32,11 @@ export default function Notifications() {
   const markSeen = useNotificationsStore((s) => s.markSeen);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  useFocusEffect(() => {
-    if (user) refresh(user.id);
-  });
+  useFocusEffect(
+    useCallback(() => {
+      if (user) refresh(user.id);
+    }, [user?.id, refresh]),
+  );
 
   useEffect(() => {
     if (items.length > 0) markSeen(items.map((item) => item.id));
