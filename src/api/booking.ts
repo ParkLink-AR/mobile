@@ -11,6 +11,8 @@ export interface BookingApiResponse {
   status: string;
   hold_expires_at?: string;
   amount: number;
+  payment_id?: string;
+  updated_at: string;
 }
 
 // ── Request bodies ────────────────────────────────────────────────────────────

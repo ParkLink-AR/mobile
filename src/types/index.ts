@@ -91,6 +91,8 @@ export interface Booking {
   serviceCharge: number;
   total: number;
   status: BookingStatus;
+  paymentId?: string;
+  confirmedAt?: string;
 }
 
 export interface Review {
