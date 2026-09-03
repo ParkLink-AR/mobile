@@ -53,6 +53,10 @@ export interface CreateBookingBody {
   parking_spot: {
     id: string;
     schedule: ScheduleEntryBody[];
+    // Number of identical places the spot rents against this id ("playa"):
+    // booking-service allows up to `capacity` overlapping active bookings.
+    // Omitted/0 is treated as 1.
+    capacity?: number;
   };
 }
 

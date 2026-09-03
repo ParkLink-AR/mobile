@@ -39,6 +39,7 @@ export default function NewSpot() {
   const [covered, setCovered] = useState(true);
   const [instantBooking, setInstantBooking] = useState(true);
   const [price, setPrice] = useState('');
+  const [capacity, setCapacity] = useState('1');
   const [schedule, setSchedule] = useState<DayScheduleGroup[]>(DEFAULT_SCHEDULE);
   const [description, setDescription] = useState('');
   const [publishing, setPublishing] = useState(false);
@@ -142,6 +143,7 @@ export default function NewSpot() {
         covered,
         instantBooking,
         pricePerHour: Number(price),
+        capacity: Math.max(1, Math.trunc(Number(capacity)) || 1),
         schedule: dayGroupsToEntries(schedule),
         description: description.trim() || undefined,
       });
@@ -322,6 +324,19 @@ export default function NewSpot() {
           placeholder="$1.200"
           placeholderTextColor={colors.textSecondary}
         />
+
+        <Text style={typography.caption}>{t('owner.spot.new.capacity')}</Text>
+        <TextInput
+          style={styles.input}
+          value={capacity}
+          onChangeText={(text) => setCapacity(text.replace(/[^0-9]/g, ''))}
+          keyboardType="number-pad"
+          placeholder="1"
+          placeholderTextColor={colors.textSecondary}
+        />
+        <Text style={[typography.caption, { color: colors.textSecondary, marginBottom: 4 }]}>
+          {t('owner.spot.new.capacityHint')}
+        </Text>
 
         <Text style={[typography.caption, styles.sectionLabel]}>
           {t('owner.spot.new.availability')}

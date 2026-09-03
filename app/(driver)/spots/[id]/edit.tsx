@@ -45,6 +45,7 @@ export default function EditSpot() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [addressSuggestionsOpen, setAddressSuggestionsOpen] = useState(false);
   const [price, setPrice] = useState('');
+  const [capacity, setCapacity] = useState('1');
   const [description, setDescription] = useState('');
   const [covered, setCovered] = useState(true);
   const [instantBooking, setInstantBooking] = useState(true);
@@ -71,6 +72,7 @@ export default function EditSpot() {
         setAddress(s.address);
         setCoordinates({ lat: s.lat, lng: s.lng });
         setPrice(String(s.pricePerHour));
+        setCapacity(String(s.capacity ?? 1));
         setDescription(s.description ?? '');
         setCovered(s.covered);
         setInstantBooking(s.instantBooking);
@@ -206,6 +208,7 @@ export default function EditSpot() {
         description: description.trim(),
         covered,
         instantBooking,
+        capacity: Math.max(1, Math.trunc(Number(capacity)) || 1),
         schedule: dayGroupsToEntries(schedule),
         address: address.trim(),
         lat: coordinates.lat,
@@ -488,6 +491,22 @@ export default function EditSpot() {
               placeholder="1200"
               placeholderTextColor={colors.textSecondary}
             />
+          </View>
+
+          {/* Capacity */}
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>{t('owner.spot.new.capacity')}</Text>
+            <TextInput
+              style={styles.input}
+              value={capacity}
+              onChangeText={(text) => setCapacity(text.replace(/[^0-9]/g, ''))}
+              keyboardType="number-pad"
+              placeholder="1"
+              placeholderTextColor={colors.textSecondary}
+            />
+            <Text style={{ fontSize: 12, color: colors.textSecondary }}>
+              {t('owner.spot.new.capacityHint')}
+            </Text>
           </View>
 
           {/* Type */}

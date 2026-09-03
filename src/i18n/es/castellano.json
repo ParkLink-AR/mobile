@@ -126,6 +126,8 @@
   "owner.spot.new.instantBooking": "Confirmar reservas automáticamente",
   "owner.spot.new.instantBookingHint": "Si lo apagás, cada reserva pagada queda pendiente hasta que la aprobás vos.",
   "owner.spot.new.pricePerHour": "Precio por hora",
+  "owner.spot.new.capacity": "Cantidad de cocheras",
+  "owner.spot.new.capacityHint": "Para una playa: cuántos lugares idénticos alquilás en esta misma dirección.",
   "owner.spot.new.availability": "Disponibilidad",
   "owner.spot.new.availabilityPlaceholder": "Lun a Vie · 8:00 a 22:00",
   "owner.spot.new.description": "Descripción",

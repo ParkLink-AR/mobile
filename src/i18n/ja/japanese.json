@@ -126,6 +126,8 @@
   "owner.spot.new.instantBooking": "予約を自動的に確定する",
   "owner.spot.new.instantBookingHint": "オフにすると、支払い済みの予約はあなたが承認するまで保留になります。",
   "owner.spot.new.pricePerHour": "1時間あたりの価格",
+  "owner.spot.new.capacity": "駐車スペース数",
+  "owner.spot.new.capacityHint": "駐車場の場合：同じ住所で貸し出す同一スペースの数。",
   "owner.spot.new.availability": "利用可能時間",
   "owner.spot.new.availabilityPlaceholder": "月〜金 · 8:00〜22:00",
   "owner.spot.new.description": "説明",
