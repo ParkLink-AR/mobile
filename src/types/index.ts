@@ -65,6 +65,7 @@ export interface ParkingSpot {
   description: string;
   descriptionKey?: string;
   active: boolean;
+  instantBooking: boolean;
 }
 
 export type BookingStatus =
@@ -72,7 +73,8 @@ export type BookingStatus =
   | 'CONFIRMED'
   | 'COMPLETED'
   | 'CANCELLED'
-  | 'EXPIRED';
+  | 'EXPIRED'
+  | 'PENDING_OWNER_APPROVAL';
 
 export interface Booking {
   id: string;

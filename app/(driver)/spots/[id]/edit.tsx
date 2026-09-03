@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
-  View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity, ActivityIndicator,
+  View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity, ActivityIndicator, Switch, Alert,
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -15,12 +15,15 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import {
   getParkingSpotDetail,
   updateParkingSpot,
+  updateParkingSpotStatus,
+  deleteParkingSpot,
   uploadParkingSpotPhotos,
   deleteParkingSpotPhoto,
   reorderParkingSpotPhotos,
 } from '@/src/services/parkingService';
 import { useSpotsStore } from '@/src/store/useSpotsStore';
 import { GeocodeCandidate, ParkingSpotPhotoAsset, reverseGeocode } from '@/src/api/parking';
+import { ApiError } from '@/src/api/client';
 import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 
@@ -44,10 +47,13 @@ export default function EditSpot() {
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [covered, setCovered] = useState(true);
+  const [instantBooking, setInstantBooking] = useState(true);
   const [schedule, setSchedule] = useState<DayScheduleGroup[]>(
     [0, 1, 2, 3, 4].map((d) => ({ dayIndex: d, slots: [{ startHour: 8, endHour: 20 }] })),
   );
   const [saving, setSaving] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [photosBusy, setPhotosBusy] = useState(false);
 
@@ -61,6 +67,7 @@ export default function EditSpot() {
         setPrice(String(s.pricePerHour));
         setDescription(s.description ?? '');
         setCovered(s.covered);
+        setInstantBooking(s.instantBooking);
         setPhotos(s.photos);
         if (s.schedule.length > 0) setSchedule(entriesToDayGroups(s.schedule));
       });
@@ -192,6 +199,7 @@ export default function EditSpot() {
         pricePerHour: parsedPrice,
         description: description.trim(),
         covered,
+        instantBooking,
         schedule: dayGroupsToEntries(schedule),
         address: address.trim(),
         lat: coordinates.lat,
@@ -208,6 +216,60 @@ export default function EditSpot() {
       alert(t('owner.spot.edit.errorSave'));
       setSaving(false);
     }
+  }
+
+  function handleToggleActive() {
+    if (!spot) return;
+    const goingActive = !spot.active;
+    Alert.alert(
+      goingActive ? t('owner.spot.edit.reactivateTitle') : t('owner.spot.edit.deactivateTitle'),
+      goingActive ? t('owner.spot.edit.reactivateBody') : t('owner.spot.edit.deactivateBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: goingActive ? t('owner.spot.edit.reactivate') : t('owner.spot.edit.deactivate'),
+          onPress: async () => {
+            setStatusBusy(true);
+            try {
+              const updated = await updateParkingSpotStatus(id, goingActive ? 'active' : 'paused');
+              setSpot(updated);
+              clearSpots();
+              markUpdated();
+            } catch {
+              alert(t('owner.spot.edit.errorStatus'));
+            } finally {
+              setStatusBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  function handleDelete() {
+    Alert.alert(
+      t('owner.spot.edit.deleteTitle'),
+      t('owner.spot.edit.deleteBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('owner.spot.edit.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            setDeleteBusy(true);
+            try {
+              await deleteParkingSpot(id);
+              clearSpots();
+              markUpdated();
+              router.replace('/(driver)/(tabs)/profile');
+            } catch (err) {
+              alert(err instanceof ApiError ? err.detail : t('owner.spot.edit.errorDelete'));
+              setDeleteBusy(false);
+            }
+          },
+        },
+      ],
+    );
   }
 
   const styles = StyleSheet.create({
@@ -248,6 +310,12 @@ export default function EditSpot() {
     toggleText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
     toggleTextActive: { color: colors.surface, fontWeight: '700' },
 
+    instantBookingRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+    },
+    instantBookingLabelBlock: { flex: 1, gap: 2 },
+    instantBookingHint: { fontSize: 12, color: colors.textSecondary },
+
     photosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     photoThumbWrapper: { position: 'relative' },
     photoThumb: { width: 72, height: 72, borderRadius: 8 },
@@ -284,6 +352,14 @@ export default function EditSpot() {
     locationError: { color: '#C62828', fontSize: 12 },
 
     saveBtn: { marginTop: 4 },
+    dangerBtn: {
+      marginTop: 4, alignItems: 'center', justifyContent: 'center',
+      paddingVertical: 13, borderRadius: 12,
+      borderWidth: 1.5, borderColor: colors.border,
+    },
+    dangerBtnText: { fontWeight: '700', fontSize: 15, color: colors.text },
+    deleteBtn: { borderColor: '#C62828' },
+    deleteBtnText: { color: '#C62828' },
   });
 
   return (
@@ -406,6 +482,17 @@ export default function EditSpot() {
             </View>
           </View>
 
+          {/* Instant booking */}
+          <View style={styles.card}>
+            <View style={styles.instantBookingRow}>
+              <View style={styles.instantBookingLabelBlock}>
+                <Text style={styles.sectionLabel}>{t('owner.spot.new.instantBooking')}</Text>
+                <Text style={styles.instantBookingHint}>{t('owner.spot.new.instantBookingHint')}</Text>
+              </View>
+              <Switch value={instantBooking} onValueChange={setInstantBooking} trackColor={{ true: colors.teal }} />
+            </View>
+          </View>
+
           {/* Availability */}
           <View style={styles.card}>
             <Text style={styles.sectionLabel}>{t('owner.spot.edit.availability')}</Text>
@@ -431,6 +518,32 @@ export default function EditSpot() {
             disabled={saving}
             style={styles.saveBtn}
           />
+
+          <TouchableOpacity
+            style={styles.dangerBtn}
+            onPress={handleToggleActive}
+            disabled={statusBusy}
+          >
+            {statusBusy ? (
+              <ActivityIndicator color={colors.text} size="small" />
+            ) : (
+              <Text style={styles.dangerBtnText}>
+                {spot.active ? t('owner.spot.edit.deactivate') : t('owner.spot.edit.reactivate')}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.dangerBtn, styles.deleteBtn]}
+            onPress={handleDelete}
+            disabled={deleteBusy}
+          >
+            {deleteBusy ? (
+              <ActivityIndicator color="#C62828" size="small" />
+            ) : (
+              <Text style={[styles.dangerBtnText, styles.deleteBtnText]}>{t('owner.spot.edit.delete')}</Text>
+            )}
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </Screen>

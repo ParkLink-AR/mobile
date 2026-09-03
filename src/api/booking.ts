@@ -107,3 +107,42 @@ export async function confirmBookingApi(bookingId: string, paymentId: string): P
 export async function getUserBookingsApi(userId: string): Promise<BookingApiResponse[]> {
   return request(`/users/${userId}/bookings/history`);
 }
+
+/**
+ * A single booking by id -- used to check whether it landed on CONFIRMED or
+ * PENDING_OWNER_APPROVAL once the payment itself is approved.
+ *
+ * GET /bookings/{id}
+ */
+export async function getBookingApi(bookingId: string): Promise<BookingApiResponse> {
+  return request(`/bookings/${bookingId}`);
+}
+
+/**
+ * Every booking (any status) for a parking spot -- used by the owner's
+ * "solicitudes de reserva" screen. The caller must own the spot.
+ *
+ * GET /parking-spots/{spotId}/bookings/detailed
+ */
+export async function getBookingsForSpotApi(spotId: string): Promise<BookingApiResponse[]> {
+  return request(`/parking-spots/${spotId}/bookings/detailed`);
+}
+
+/**
+ * Approves a PENDING_OWNER_APPROVAL booking. Caller must own the spot.
+ *
+ * POST /bookings/{id}/approve
+ */
+export async function approveBookingApi(bookingId: string): Promise<BookingApiResponse> {
+  return request(`/bookings/${bookingId}/approve`, { method: 'POST' });
+}
+
+/**
+ * Rejects a PENDING_OWNER_APPROVAL booking and refunds the driver. Caller
+ * must own the spot.
+ *
+ * POST /bookings/{id}/reject
+ */
+export async function rejectBookingApi(bookingId: string): Promise<BookingApiResponse> {
+  return request(`/bookings/${bookingId}/reject`, { method: 'POST' });
+}

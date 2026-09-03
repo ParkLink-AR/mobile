@@ -11,6 +11,7 @@ import {
   removeFavorite,
   createParkingSpot as apiCreateParkingSpot,
   updateParkingSpot as apiUpdateParkingSpot,
+  updateParkingSpotStatus as apiUpdateParkingSpotStatus,
   uploadParkingSpotPhotos as apiUploadParkingSpotPhotos,
   deleteParkingSpotPhoto as apiDeleteParkingSpotPhoto,
   reorderParkingSpotPhotos as apiReorderParkingSpotPhotos,
@@ -39,6 +40,7 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     distanceMeters: raw.distanceMeters ?? 0,
     description: raw.description ?? '',
     active: raw.status === 'active',
+    instantBooking: raw.instantBooking,
   };
 }
 
@@ -163,6 +165,7 @@ export interface CreateParkingSpotInput {
   lat: number;
   lng: number;
   covered: boolean;
+  instantBooking: boolean;
   pricePerHour: number;
   schedule?: ScheduleEntry[];
   description?: string;
@@ -176,6 +179,7 @@ export async function createParkingSpot(input: CreateParkingSpotInput): Promise<
     lng: input.lng,
     pricePerHour: input.pricePerHour,
     covered: input.covered,
+    instantBooking: input.instantBooking,
     schedule: input.schedule,
     description: input.description,
   });
@@ -201,6 +205,7 @@ export interface UpdateParkingSpotInput {
   pricePerHour?: number;
   description?: string;
   covered?: boolean;
+  instantBooking?: boolean;
   schedule?: ScheduleEntry[];
   // The three go together: send all or none (see UpdateParkingSpotDto).
   address?: string;
@@ -216,6 +221,7 @@ export async function updateParkingSpot(
     pricePerHour: updates.pricePerHour,
     description: updates.description,
     covered: updates.covered,
+    instantBooking: updates.instantBooking,
     schedule: updates.schedule,
     address: updates.address,
     lat: updates.lat,
@@ -223,3 +229,13 @@ export async function updateParkingSpot(
   });
   return toParkingSpot(raw);
 }
+
+export async function updateParkingSpotStatus(
+  id: string,
+  status: 'active' | 'paused',
+): Promise<ParkingSpot> {
+  const raw = await apiUpdateParkingSpotStatus(id, status);
+  return toParkingSpot(raw);
+}
+
+export { deleteParkingSpot } from '@/src/api/parking';

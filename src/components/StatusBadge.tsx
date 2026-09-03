@@ -8,6 +8,7 @@ const LABELS: Record<BookingStatus, string> = {
   COMPLETED: 'FINALIZADA',
   CANCELLED: 'CANCELADA',
   EXPIRED: 'EXPIRADA',
+  PENDING_OWNER_APPROVAL: 'A CONFIRMAR',
 };
 
 export function StatusBadge({ status }: { status: BookingStatus }) {
@@ -18,6 +19,7 @@ export function StatusBadge({ status }: { status: BookingStatus }) {
     COMPLETED: colors.deepNavy,
     CANCELLED: colors.textSecondary,
     EXPIRED: colors.textSecondary,
+    PENDING_OWNER_APPROVAL: colors.warning,
   };
   const styles = StyleSheet.create({
     badge: {

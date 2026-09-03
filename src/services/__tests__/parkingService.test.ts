@@ -20,6 +20,7 @@ function makeApiSpot(overrides: Partial<ParkingSpotApiResponse> = {}): ParkingSp
     lng: -58.42,
     pricePerHour: 1200,
     covered: true,
+    instantBooking: true,
     schedule: MON_FRI_8_22,
     photos: [],
     rules: [],

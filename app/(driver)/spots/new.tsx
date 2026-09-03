@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, TextInput, Pressable, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView, Image, Switch } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
@@ -37,6 +37,7 @@ export default function NewSpot() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [addressSuggestionsOpen, setAddressSuggestionsOpen] = useState(false);
   const [covered, setCovered] = useState(true);
+  const [instantBooking, setInstantBooking] = useState(true);
   const [price, setPrice] = useState('');
   const [schedule, setSchedule] = useState<DayScheduleGroup[]>(DEFAULT_SCHEDULE);
   const [description, setDescription] = useState('');
@@ -139,6 +140,7 @@ export default function NewSpot() {
         lat: coordinates.lat,
         lng: coordinates.lng,
         covered,
+        instantBooking,
         pricePerHour: Number(price),
         schedule: dayGroupsToEntries(schedule),
         description: description.trim() || undefined,
@@ -200,6 +202,13 @@ export default function NewSpot() {
     toggleActive: { backgroundColor: colors.teal, borderColor: colors.teal },
     toggleText: { color: colors.text },
     toggleTextActive: { color: colors.white, fontWeight: '600' },
+
+    instantBookingRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      gap: 12, marginBottom: 4,
+    },
+    instantBookingLabelBlock: { flex: 1, gap: 2 },
+    instantBookingHint: { fontSize: 12, color: colors.textSecondary },
 
     sectionLabel: { marginBottom: 4 },
     button: { marginTop: 16 },
@@ -294,6 +303,14 @@ export default function NewSpot() {
               {t('owner.spot.new.uncovered')}
             </Text>
           </Pressable>
+        </View>
+
+        <View style={styles.instantBookingRow}>
+          <View style={styles.instantBookingLabelBlock}>
+            <Text style={typography.caption}>{t('owner.spot.new.instantBooking')}</Text>
+            <Text style={styles.instantBookingHint}>{t('owner.spot.new.instantBookingHint')}</Text>
+          </View>
+          <Switch value={instantBooking} onValueChange={setInstantBooking} trackColor={{ true: colors.teal }} />
         </View>
 
         <Text style={typography.caption}>{t('owner.spot.new.pricePerHour')}</Text>

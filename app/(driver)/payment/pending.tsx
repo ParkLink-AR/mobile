@@ -9,6 +9,7 @@ import { StatusIcon } from '@/src/components/StatusIcon';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { request } from '@/src/api/client';
+import { getBookingApi } from '@/src/api/booking';
 
 type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'unknown';
 
@@ -29,6 +30,9 @@ export default function PaymentPendingScreen() {
   const typography = useTypography();
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const [status, setStatus] = useState<PaymentStatus>('pending');
+  // Set only once the payment itself is approved -- distinguishes a spot
+  // that auto-confirms from one where the owner still has to sign off.
+  const [awaitingOwner, setAwaitingOwner] = useState(false);
   const pollCount = useRef(0);
 
   useEffect(() => {
@@ -48,6 +52,13 @@ export default function PaymentPendingScreen() {
         if (mpStatus === 'approved') {
           clearInterval(timer);
           setStatus('approved');
+          try {
+            const booking = await getBookingApi(bookingId);
+            setAwaitingOwner(booking.status === 'PENDING_OWNER_APPROVAL');
+          } catch {
+            // Booking fetch failing doesn't change the payment outcome --
+            // worst case the driver sees the generic "confirmada" message.
+          }
         } else if (mpStatus === 'rejected' || mpStatus === 'cancelled' || mpStatus === 'refunded') {
           clearInterval(timer);
           setStatus('rejected');
@@ -81,10 +92,14 @@ export default function PaymentPendingScreen() {
   if (status === 'approved') {
     return (
       <Screen style={styles.container}>
-        <StatusIcon variant="success" />
-        <Text style={typography.h1}>{t('driver.booking.success.title')}</Text>
+        <StatusIcon variant={awaitingOwner ? 'unknown' : 'success'} />
+        <Text style={typography.h1}>
+          {awaitingOwner ? t('driver.booking.pendingOwnerApproval.title') : t('driver.booking.success.title')}
+        </Text>
         <Card style={styles.card}>
-          <Text style={typography.body}>{t('driver.payment.approved')}</Text>
+          <Text style={typography.body}>
+            {awaitingOwner ? t('driver.booking.pendingOwnerApproval.body') : t('driver.payment.approved')}
+          </Text>
         </Card>
         <Button
           title={t('driver.booking.success.viewBookings')}

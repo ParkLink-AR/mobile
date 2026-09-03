@@ -149,6 +149,18 @@ export default function SpotDetail() {
             </TouchableOpacity>
           </View>
 
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => router.push(`/(driver)/spots/${id}/requests`)}
+          >
+            <View style={styles.sectionHeader}>
+              <Ionicons name="mail-outline" size={15} color={colors.textSecondary} />
+              <Text style={styles.sectionLabel}>{t('owner.spot.requests.link')}</Text>
+              <View style={{ flex: 1 }} />
+              <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+            </View>
+          </TouchableOpacity>
+
           {!!spot.description && (
             <View style={styles.card}>
               <View style={styles.sectionHeader}>

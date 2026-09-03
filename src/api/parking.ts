@@ -15,6 +15,7 @@ export interface ParkingSpotApiResponse {
   lng: number;
   pricePerHour: number;
   covered: boolean;
+  instantBooking: boolean;
   schedule: ScheduleEntry[];
   photos: string[];
   rules: string[];
@@ -76,6 +77,7 @@ export interface CreateParkingSpotInput {
   lng: number;
   pricePerHour: number;
   covered?: boolean;
+  instantBooking?: boolean;
   schedule?: ScheduleEntry[];
   rules?: string[];
 }
@@ -84,6 +86,7 @@ export interface UpdateParkingSpotApiInput {
   pricePerHour?: number;
   description?: string;
   covered?: boolean;
+  instantBooking?: boolean;
   schedule?: ScheduleEntry[];
   // The three go together: send all or none.
   address?: string;
@@ -99,6 +102,22 @@ export async function updateParkingSpot(
     method: 'PUT',
     body: JSON.stringify(input),
   });
+}
+
+export async function updateParkingSpotStatus(
+  id: string,
+  status: 'active' | 'paused',
+): Promise<ParkingSpotApiResponse> {
+  return request(`/parking-spots/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+// Blocked with a 409 (ApiError) if the spot still has bookings that haven't
+// finished -- the caller shows that message as-is.
+export async function deleteParkingSpot(id: string): Promise<void> {
+  await request(`/parking-spots/${id}`, { method: 'DELETE' });
 }
 
 export async function searchParkingSpots(

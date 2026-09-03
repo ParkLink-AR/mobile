@@ -33,6 +33,7 @@ export function getMockParkingSpots(): ParkingSpot[] {
       descriptionKey: 'spot.1.description',
       description: '',
       active: true,
+      instantBooking: true,
     },
     {
       id: 'spot-2',
@@ -61,6 +62,7 @@ export function getMockParkingSpots(): ParkingSpot[] {
       descriptionKey: 'spot.2.description',
       description: '',
       active: true,
+      instantBooking: true,
     },
     {
       id: 'spot-3',
@@ -89,6 +91,7 @@ export function getMockParkingSpots(): ParkingSpot[] {
       descriptionKey: 'spot.3.description',
       description: '',
       active: true,
+      instantBooking: true,
     },
     {
       id: 'spot-4',
@@ -117,6 +120,7 @@ export function getMockParkingSpots(): ParkingSpot[] {
       descriptionKey: 'spot.4.description',
       description: '',
       active: true,
+      instantBooking: true,
     },
     {
       id: 'spot-5',
@@ -145,6 +149,7 @@ export function getMockParkingSpots(): ParkingSpot[] {
       descriptionKey: 'spot.5.description',
       description: '',
       active: true,
+      instantBooking: true,
     },
     {
       id: 'spot-6',
@@ -173,6 +178,7 @@ export function getMockParkingSpots(): ParkingSpot[] {
       descriptionKey: 'spot.6.description',
       description: '',
       active: true,
+      instantBooking: true,
     },
     {
       id: 'spot-7',
@@ -201,6 +207,7 @@ export function getMockParkingSpots(): ParkingSpot[] {
       descriptionKey: 'spot.7.description',
       description: '',
       active: true,
+      instantBooking: true,
     },
     {
       id: 'spot-8',
@@ -229,6 +236,7 @@ export function getMockParkingSpots(): ParkingSpot[] {
       descriptionKey: 'spot.8.description',
       description: '',
       active: true,
+      instantBooking: true,
     },
   ];
 }
