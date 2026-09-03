@@ -13,6 +13,10 @@
 
   "driver.bookings.title": "Mis reservas",
   "driver.bookings.empty": "Todavía no tenés reservas. Cuando reserves una cochera, la vas a ver acá.",
+  "notifications.empty": "No tenés notificaciones por ahora.",
+  "notifications.ownerRequest.body": "Solicitud de reserva para el %{date} de %{start} a %{end}.",
+  "notifications.driverConfirmed.body": "Tu reserva del %{date} de %{start} a %{end} fue confirmada.",
+  "notifications.driverRejected.body": "Tu reserva fue rechazada. Ya te reembolsamos el pago.",
   "driver.favorites.title": "Mis favoritos",
   "driver.favorites.empty": "Todavía no tenés favoritos. Marcá una cochera con el corazón para verla acá.",
   "driver.profile.title": "Mi perfil",
@@ -219,6 +223,7 @@
   "tabs.driver.search": "Buscar",
   "tabs.driver.favorites": "Favoritos",
   "tabs.driver.bookings": "Reservas",
+  "tabs.driver.notifications": "Notificaciones",
   "tabs.driver.profile": "Perfil",
   "tabs.owner.home": "Inicio",
   "tabs.owner.spots": "Cocheras",

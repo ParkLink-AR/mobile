@@ -3,15 +3,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/src/theme/useThemeColors';
+import { useUnseenNotificationsCount } from '@/src/store/useNotificationsStore';
 import { t, useLanguage } from '@/src/i18n';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const TAB_KEYS: { name: string; labelKey: string; icon: IoniconName; activeIcon: IoniconName }[] = [
-  { name: 'index',     labelKey: 'tabs.driver.search',    icon: 'search-outline',   activeIcon: 'search' },
-  { name: 'favorites', labelKey: 'tabs.driver.favorites', icon: 'heart-outline',    activeIcon: 'heart' },
-  { name: 'bookings',  labelKey: 'tabs.driver.bookings',  icon: 'calendar-outline', activeIcon: 'calendar' },
-  { name: 'profile',   labelKey: 'tabs.driver.profile',   icon: 'person-outline',   activeIcon: 'person' },
+  { name: 'index',         labelKey: 'tabs.driver.search',        icon: 'search-outline',       activeIcon: 'search' },
+  { name: 'favorites',     labelKey: 'tabs.driver.favorites',     icon: 'heart-outline',         activeIcon: 'heart' },
+  { name: 'bookings',      labelKey: 'tabs.driver.bookings',      icon: 'calendar-outline',      activeIcon: 'calendar' },
+  { name: 'notifications', labelKey: 'tabs.driver.notifications', icon: 'notifications-outline', activeIcon: 'notifications' },
+  { name: 'profile',       labelKey: 'tabs.driver.profile',       icon: 'person-outline',        activeIcon: 'person' },
 ];
 
 // Flat, docked bar (icon+label, only the active tab's color changes) --
@@ -21,6 +23,7 @@ export function DockTabBar({ state, navigation }: BottomTabBarProps) {
   useLanguage();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const unseenCount = useUnseenNotificationsCount();
 
   const styles = StyleSheet.create({
     bar: {
@@ -38,6 +41,15 @@ export function DockTabBar({ state, navigation }: BottomTabBarProps) {
       gap: 3,
       paddingVertical: 4,
     },
+    iconWrapper: { position: 'relative' },
+    badge: {
+      position: 'absolute', top: -4, right: -8,
+      minWidth: 16, height: 16, borderRadius: 8,
+      backgroundColor: '#FF3B30',
+      alignItems: 'center', justifyContent: 'center',
+      paddingHorizontal: 3,
+    },
+    badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
     label: {
       fontSize: 11,
       fontWeight: '600',
@@ -67,7 +79,14 @@ export function DockTabBar({ state, navigation }: BottomTabBarProps) {
             }}
             android_ripple={{ borderless: true, radius: 32 }}
           >
-            <Ionicons name={focused ? tab.activeIcon : tab.icon} size={22} color={color} />
+            <View style={styles.iconWrapper}>
+              <Ionicons name={focused ? tab.activeIcon : tab.icon} size={22} color={color} />
+              {tab.name === 'notifications' && unseenCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unseenCount > 9 ? '9+' : unseenCount}</Text>
+                </View>
+              )}
+            </View>
             <Text style={[styles.label, { color }]}>{t(tab.labelKey)}</Text>
           </Pressable>
         );

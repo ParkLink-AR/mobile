@@ -13,6 +13,10 @@
 
   "driver.bookings.title": "マイ予約",
   "driver.bookings.empty": "まだ予約がありません。予約すると、ここに表示されます。",
+  "notifications.empty": "今のところ通知はありません。",
+  "notifications.ownerRequest.body": "%{date}の%{start}〜%{end}の予約リクエストです。",
+  "notifications.driverConfirmed.body": "%{date}の%{start}〜%{end}の予約が確定しました。",
+  "notifications.driverRejected.body": "予約が拒否されました。お支払いは返金済みです。",
   "driver.favorites.title": "お気に入り",
   "driver.favorites.empty": "まだお気に入りがありません。ハートをタップして保存しましょう。",
   "driver.profile.title": "マイプロフィール",
@@ -219,6 +223,7 @@
   "tabs.driver.search": "検索",
   "tabs.driver.favorites": "お気に入り",
   "tabs.driver.bookings": "予約",
+  "tabs.driver.notifications": "通知",
   "tabs.driver.profile": "プロフィール",
   "tabs.owner.home": "ホーム",
   "tabs.owner.spots": "駐車場",
