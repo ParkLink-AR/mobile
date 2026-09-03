@@ -40,6 +40,17 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite }: ParkingS
       alignItems: 'center', justifyContent: 'center',
       backgroundColor: 'rgba(0,0,0,0.35)',
     },
+    unavailableOverlay: {
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(60,60,60,0.55)',
+      alignItems: 'center', justifyContent: 'center',
+    },
+    unavailableBadge: {
+      backgroundColor: 'rgba(0,0,0,0.65)',
+      borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6,
+    },
+    unavailableBadgeText: { color: colors.white, fontWeight: '700', fontSize: 13 },
+    contentDimmed: { opacity: 0.5 },
     body: { padding: 14, gap: 6 },
     titleRow: {
       flexDirection: 'row',
@@ -121,6 +132,13 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite }: ParkingS
     <Card style={styles.card}>
       <View style={styles.photoWrapper}>
         <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
+        {!spot.active && (
+          <View style={styles.unavailableOverlay}>
+            <View style={styles.unavailableBadge}>
+              <Text style={styles.unavailableBadgeText}>{t('spot.unavailable')}</Text>
+            </View>
+          </View>
+        )}
         {onToggleFavorite && (
           <TouchableOpacity style={styles.favoriteBtn} onPress={handleFavoritePress}>
             <Ionicons
@@ -131,7 +149,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite }: ParkingS
           </TouchableOpacity>
         )}
       </View>
-      <View style={styles.body}>
+      <View style={[styles.body, !spot.active && styles.contentDimmed]}>
         <View style={styles.titleRow}>
           <Text style={styles.title} numberOfLines={1}>
             {spot.title}

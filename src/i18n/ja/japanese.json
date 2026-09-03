@@ -51,6 +51,7 @@
   "spot.description": "説明",
   "spot.address": "住所",
   "spot.available": "利用可能",
+  "spot.unavailable": "利用不可",
   "spot.pricePerHour": "1時間あたりの価格",
   "spot.pricePerHour.withUnit": "$%{price} / 時間",
   "spot.pricePerHour.short": "/時間",

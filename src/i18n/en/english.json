@@ -51,6 +51,7 @@
   "spot.description": "Description",
   "spot.address": "Address",
   "spot.available": "Available",
+  "spot.unavailable": "Not available",
   "spot.pricePerHour": "Price per hour",
   "spot.pricePerHour.withUnit": "$%{price} per hour",
   "spot.pricePerHour.short": "/hr",
