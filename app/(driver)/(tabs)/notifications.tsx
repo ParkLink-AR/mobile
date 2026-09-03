@@ -17,6 +17,8 @@ const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
   owner_request: 'time-outline',
   driver_confirmed: 'checkmark-circle',
   driver_rejected: 'close-circle',
+  driver_review_prompt: 'star-outline',
+  owner_review_prompt: 'star-outline',
 };
 
 export default function Notifications() {
@@ -90,6 +92,16 @@ export default function Notifications() {
     return colors.warning;
   }
 
+  function handlePress(item: AppNotification) {
+    if (item.kind === 'owner_request') {
+      router.push(`/(driver)/spot/${item.parkingSpotId}`);
+    } else if (item.kind === 'driver_review_prompt') {
+      router.push(`/(driver)/review/${item.bookingId}?role=driver`);
+    } else if (item.kind === 'owner_review_prompt') {
+      router.push(`/(driver)/review/${item.bookingId}?role=owner`);
+    }
+  }
+
   return (
     <Screen style={styles.container}>
       <Text style={typography.h1}>{t('tabs.driver.notifications')}</Text>
@@ -109,8 +121,8 @@ export default function Notifications() {
           <Card>
             <TouchableOpacity
               style={styles.row}
-              onPress={() => router.push(`/(driver)/spot/${item.parkingSpotId}`)}
-              disabled={item.kind !== 'owner_request'}
+              onPress={() => handlePress(item)}
+              disabled={item.kind === 'driver_confirmed' || item.kind === 'driver_rejected'}
             >
               <View style={[styles.iconBadge, { backgroundColor: iconColorFor(item.kind) + '20' }]}>
                 <Ionicons name={ICONS[item.kind]} size={18} color={iconColorFor(item.kind)} />
@@ -121,6 +133,8 @@ export default function Notifications() {
                   {item.kind === 'owner_request' && t('notifications.ownerRequest.body', { date: item.date, start: item.startTime, end: item.endTime })}
                   {item.kind === 'driver_confirmed' && t('notifications.driverConfirmed.body', { date: item.date, start: item.startTime, end: item.endTime })}
                   {item.kind === 'driver_rejected' && t('notifications.driverRejected.body')}
+                  {item.kind === 'driver_review_prompt' && t('notifications.driverReviewPrompt.body')}
+                  {item.kind === 'owner_review_prompt' && t('notifications.ownerReviewPrompt.body')}
                 </Text>
               </View>
             </TouchableOpacity>

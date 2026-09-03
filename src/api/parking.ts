@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { request, requestMultipart } from './client';
 import { ScheduleEntry } from '@/src/types';
+import { ReviewListApiResponse } from './booking';
 
 // Shape returned by parking-service (see parking-spots.service.ts's
 // ParkingSpotResponse) -- flattened lat/lng, no rating/reviews/tags yet
@@ -238,4 +239,8 @@ export async function getAvailability(
   to: string,
 ): Promise<{ days: DayAvailability[] }> {
   return request(`/parking-spots/${parkingSpotId}/availability?from=${from}&to=${to}`);
+}
+
+export async function getSpotReviewsApi(spotId: string): Promise<ReviewListApiResponse> {
+  return request(`/parking-spots/${spotId}/reviews`);
 }

@@ -266,3 +266,17 @@ export async function deleteAccount(userId: string, password: string): Promise<v
     body: JSON.stringify({ password }),
   });
 }
+
+export interface PublicProfileApiResponse {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+  created_at: string;
+}
+
+// Unlike GET /users/{id} (self only), this is viewable for anyone -- see
+// auth-service's get_public_profile. Used to show who owns a spot, or who's
+// requesting/made a booking.
+export async function getPublicProfileApi(userId: string): Promise<PublicProfileApiResponse> {
+  return request(`/users/${userId}/public-profile`);
+}

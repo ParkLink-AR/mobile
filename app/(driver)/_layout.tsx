@@ -23,11 +23,13 @@ export default function DriverLayout() {
       <Stack.Screen name="payment/failure" options={{ title: '', headerBackVisible: false }} />
       <Stack.Screen name="bookings/[id]" options={{ title: t('layout.driver.bookingDetail') }} />
       <Stack.Screen name="review/[bookingId]" options={{ title: t('layout.driver.review') }} />
+      <Stack.Screen name="profile/[userId]" options={{ title: t('layout.driver.profile') }} />
       {/* Owner / spot management */}
       <Stack.Screen name="spots/new" options={{ title: t('layout.owner.newSpot') }} />
       <Stack.Screen name="spots/[id]" options={{ title: t('owner.spot.detail.headerTitle') }} />
       <Stack.Screen name="spots/[id]/edit" options={{ title: t('owner.spot.edit.title') }} />
       <Stack.Screen name="spots/[id]/availability" options={{ title: t('layout.owner.availability') }} />
+      <Stack.Screen name="spots/[id]/requests" options={{ title: t('owner.spot.requests.title') }} />
       <Stack.Screen name="settlements" options={{ title: t('layout.owner.settlements') }} />
       <Stack.Screen name="settlements/[id]" options={{ title: t('layout.owner.settlementDetail') }} />
       {/* Profile */}

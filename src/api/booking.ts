@@ -15,6 +15,25 @@ export interface BookingApiResponse {
   updated_at: string;
 }
 
+export type ReviewTargetType = 'spot' | 'owner' | 'driver';
+
+export interface ReviewApiResponse {
+  id: string;
+  booking_id: string;
+  reviewer_id: string;
+  target_type: ReviewTargetType;
+  target_id: string;
+  rating: number;
+  comment?: string;
+  created_at: string;
+}
+
+export interface ReviewListApiResponse {
+  average_rating: number;
+  count: number;
+  reviews: ReviewApiResponse[];
+}
+
 // ── Request bodies ────────────────────────────────────────────────────────────
 
 export interface ScheduleEntryBody {
@@ -147,4 +166,41 @@ export async function approveBookingApi(bookingId: string): Promise<BookingApiRe
  */
 export async function rejectBookingApi(bookingId: string): Promise<BookingApiResponse> {
   return request(`/bookings/${bookingId}/reject`, { method: 'POST' });
+}
+
+/**
+ * Rates the spot, its owner, or the driver on a COMPLETED booking. The driver can
+ * submit 'spot'/'owner', the spot's owner can submit 'driver'.
+ *
+ * POST /bookings/{id}/reviews
+ */
+export async function submitReviewApi(
+  bookingId: string,
+  targetType: ReviewTargetType,
+  rating: number,
+  comment?: string,
+): Promise<ReviewApiResponse> {
+  return request(`/bookings/${bookingId}/reviews`, {
+    method: 'POST',
+    body: JSON.stringify({ targetType, rating, comment }),
+  });
+}
+
+/**
+ * Every review already left on a booking (by anyone, for any target) -- used to know
+ * what's still left to review.
+ *
+ * GET /bookings/{id}/reviews
+ */
+export async function getBookingReviewsApi(bookingId: string): Promise<ReviewApiResponse[]> {
+  return request(`/bookings/${bookingId}/reviews`);
+}
+
+/**
+ * Reviews left for a person, as owner or as driver -- powers the public profile screen.
+ *
+ * GET /users/{userId}/reviews?as=owner|driver
+ */
+export async function getUserReviewsApi(userId: string, as: 'owner' | 'driver'): Promise<ReviewListApiResponse> {
+  return request(`/users/${userId}/reviews?as=${as}`);
 }

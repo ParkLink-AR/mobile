@@ -16,6 +16,7 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
 import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
 import { useAvailability } from '@/src/hooks/useAvailability';
+import { getPublicProfileApi } from '@/src/api/auth';
 import type { FreeWindow } from '@/src/api/parking';
 import { ParkingSpot } from '@/src/types';
 
@@ -143,6 +144,7 @@ export default function SpotDetail() {
   useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
+  const [ownerName, setOwnerName] = useState<string | null>(null);
   const [durationHours, setDurationHours] = useState(1);
   const [selectedStartHour, setSelectedStartHour] = useState<number | null>(null);
   const user = useSessionStore((s) => s.user);
@@ -156,6 +158,11 @@ export default function SpotDetail() {
   useEffect(() => {
     getParkingSpotDetail(id).then((s) => setSpot(s ?? null));
   }, [id]);
+
+  useEffect(() => {
+    if (!spot) return;
+    getPublicProfileApi(spot.ownerId).then((profile) => setOwnerName(profile.name)).catch(() => {});
+  }, [spot?.ownerId]);
 
   // Auto-refreshing availability: refetches on day/duration change and every 30 s.
   // durationHours is passed so the hook re-runs when the user changes it.
@@ -222,6 +229,8 @@ export default function SpotDetail() {
     photo: { width: '100%', height: 200 },
     body: { padding: 16, gap: 10 },
     tagRow: { flexDirection: 'row', marginVertical: 4 },
+    ownerRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+    ownerRowText: { flex: 1, fontSize: 13, color: colors.textSecondary },
     row: { marginTop: 6 },
     total: { ...typography.h2, color: colors.teal, marginVertical: 10 },
     ownerBanner: {
@@ -294,6 +303,16 @@ export default function SpotDetail() {
         <TouchableOpacity onPress={() => router.push(`/(driver)/spot/${spot.id}/reviews`)}>
           <RatingStars rating={spot.rating} count={spot.reviewCount} />
         </TouchableOpacity>
+        {!!ownerName && (
+          <TouchableOpacity
+            style={styles.ownerRow}
+            onPress={() => router.push(`/(driver)/profile/${spot.ownerId}?as=owner`)}
+          >
+            <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
+            <Text style={styles.ownerRowText}>{t('spot.postedBy', { name: ownerName })}</Text>
+            <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} />
+          </TouchableOpacity>
+        )}
         <View style={styles.tagRow}>
           {spot.tags.map((tag) => (
             <Chip key={tag} label={TAG_LABEL_KEYS[tag] ? t(TAG_LABEL_KEYS[tag]) : tag} />

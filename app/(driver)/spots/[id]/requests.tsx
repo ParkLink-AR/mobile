@@ -2,13 +2,14 @@ import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { getBookingsForSpotApi, approveBookingApi, rejectBookingApi, BookingApiResponse } from '@/src/api/booking';
+import { getPublicProfileApi } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
 import { Booking } from '@/src/types';
 
@@ -45,12 +46,25 @@ export default function SpotBookingRequests() {
   const typography = useTypography();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [driverNames, setDriverNames] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     if (!id) return;
     getBookingsForSpotApi(id)
-      .then((list) => setBookings(list.map(mapApiBooking)))
+      .then((list) => {
+        const mapped = list.map(mapApiBooking);
+        setBookings(mapped);
+
+        const driverIds = [...new Set(mapped.map((b) => b.driverId))];
+        Promise.allSettled(
+          driverIds.map((driverId) =>
+            getPublicProfileApi(driverId).then((profile) => {
+              setDriverNames((prev) => ({ ...prev, [driverId]: profile.name }));
+            }),
+          ),
+        );
+      })
       .catch((err) => console.warn('[SpotBookingRequests] fetch error:', err));
   }, [id]);
 
@@ -83,6 +97,8 @@ export default function SpotBookingRequests() {
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    driverRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
+    driverRowText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.textSecondary },
     total: { color: colors.teal, fontWeight: '700', marginTop: 4 },
     actionsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
     actionBtn: {
@@ -112,6 +128,15 @@ export default function SpotBookingRequests() {
         }
         renderItem={({ item }) => (
           <Card>
+            <TouchableOpacity
+              style={styles.driverRow}
+              onPress={() => router.push(`/(driver)/profile/${item.driverId}?as=driver`)}
+              disabled={!driverNames[item.driverId]}
+            >
+              <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
+              {!!driverNames[item.driverId] && <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} />}
+            </TouchableOpacity>
             <View style={styles.row}>
               <Text style={typography.body}>
                 {item.date} · {item.startTime} {t('driver.booking.timeTo')} {item.endTime}
