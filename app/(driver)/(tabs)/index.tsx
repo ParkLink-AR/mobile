@@ -27,7 +27,7 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
 import { searchParkingSpots, SearchParkingSpotsFilters } from '@/src/services/parkingService';
-import { geocodeAddress, GeocodeCandidate } from '@/src/api/parking';
+import { geocodeAddress, reverseGeocode, GeocodeCandidate } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
@@ -65,6 +65,10 @@ export default function Search() {
   // Used to prevent the map's onPress from immediately clearing a marker
   // selection: the marker sets this to true, then the map onPress checks it.
   const markerJustPressed = useRef(false);
+  // locateMe() fills addressQuery with the reverse-geocoded address (same as
+  // the publish-spot screen) -- this stops that programmatic update from
+  // being treated as the user typing and re-triggering the suggestions dropdown.
+  const skipNextAddressSuggestions = useRef(false);
 
   // useLocationPermission requests the system permission dialog as soon as
   // this screen mounts. We do NOT call requestForegroundPermissionsAsync()
@@ -94,7 +98,6 @@ export default function Search() {
   async function locateMe() {
     // Switching to GPS overrides any active address search.
     setSearchAddress(null);
-    setAddressQuery('');
     setAddressError(null);
     setCandidates([]);
     setShowSuggestions(false);
@@ -113,7 +116,20 @@ export default function Search() {
         return;
       }
       const position = await Location.getCurrentPositionAsync({});
-      setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      setLocation({ lat, lng });
+
+      // Same as the publish/edit-spot screens' "use my current location" --
+      // show the resolved address where the user types, instead of leaving
+      // the search box empty after a GPS fix.
+      skipNextAddressSuggestions.current = true;
+      try {
+        const reversed = await reverseGeocode(lat, lng);
+        setAddressQuery(reversed.displayName);
+      } catch {
+        setAddressQuery(t('owner.spot.new.locationFallback'));
+      }
     } catch {
       setLocationError(t('search.location.error'));
     } finally {
@@ -125,6 +141,11 @@ export default function Search() {
   // Maps, Uber, etc.) -- debounced so it doesn't fire a request per
   // keystroke, and only once there's enough text to actually search with.
   useEffect(() => {
+    if (skipNextAddressSuggestions.current) {
+      skipNextAddressSuggestions.current = false;
+      return;
+    }
+
     const query = addressQuery.trim();
     if (query.length < 3) {
       setCandidates([]);
