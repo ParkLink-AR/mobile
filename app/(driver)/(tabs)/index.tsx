@@ -555,6 +555,10 @@ export default function Search() {
         android: { elevation: 4 },
       }),
     },
+    // Pushed above the compact selected-spot card so it never gets covered.
+    locateFabRaised: {
+      bottom: 108,
+    },
     mapCardWrapper: {
       position: 'absolute',
       bottom: 0,
@@ -922,7 +926,7 @@ export default function Search() {
 
           {/* Locate FAB */}
           <TouchableOpacity
-            style={styles.locateFab}
+            style={[styles.locateFab, selectedSpot && styles.locateFabRaised]}
             onPress={() => {
               if (location) {
                 mapRef.current?.animateToRegion(
@@ -957,7 +961,7 @@ export default function Search() {
                   })
                 }
               >
-                <ParkingSpotCard spot={selectedSpot} />
+                <ParkingSpotCard spot={selectedSpot} compact />
               </TouchableOpacity>
             </View>
           )}

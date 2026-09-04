@@ -25,9 +25,12 @@ interface ParkingSpotCardProps {
   spot: ParkingSpot;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
+  // Trimmed-down layout (no photo, no description/tags) for the map view's
+  // selected-spot preview, where screen space is shared with the map itself.
+  compact?: boolean;
 }
 
-export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite }: ParkingSpotCardProps) {
+export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }: ParkingSpotCardProps) {
   const colors = useThemeColors();
   useLanguage();
   const styles = StyleSheet.create({
@@ -52,6 +55,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite }: ParkingS
     unavailableBadgeText: { color: colors.white, fontWeight: '700', fontSize: 13 },
     contentDimmed: { opacity: 0.5 },
     body: { padding: 14, gap: 6 },
+    bodyCompact: { padding: 10, gap: 4 },
     titleRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -130,26 +134,28 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite }: ParkingS
 
   return (
     <Card style={styles.card}>
-      <View style={styles.photoWrapper}>
-        <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
-        {!spot.active && (
-          <View style={styles.unavailableOverlay}>
-            <View style={styles.unavailableBadge}>
-              <Text style={styles.unavailableBadgeText}>{t('spot.unavailable')}</Text>
+      {!compact && (
+        <View style={styles.photoWrapper}>
+          <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
+          {!spot.active && (
+            <View style={styles.unavailableOverlay}>
+              <View style={styles.unavailableBadge}>
+                <Text style={styles.unavailableBadgeText}>{t('spot.unavailable')}</Text>
+              </View>
             </View>
-          </View>
-        )}
-        {onToggleFavorite && (
-          <TouchableOpacity style={styles.favoriteBtn} onPress={handleFavoritePress}>
-            <Ionicons
-              name={isFavorite ? 'heart' : 'heart-outline'}
-              size={17}
-              color={isFavorite ? FAVORITE_RED : colors.white}
-            />
-          </TouchableOpacity>
-        )}
-      </View>
-      <View style={[styles.body, !spot.active && styles.contentDimmed]}>
+          )}
+          {onToggleFavorite && (
+            <TouchableOpacity style={styles.favoriteBtn} onPress={handleFavoritePress}>
+              <Ionicons
+                name={isFavorite ? 'heart' : 'heart-outline'}
+                size={17}
+                color={isFavorite ? FAVORITE_RED : colors.white}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+      <View style={[styles.body, compact && styles.bodyCompact, !spot.active && styles.contentDimmed]}>
         <View style={styles.titleRow}>
           <Text style={styles.title} numberOfLines={1}>
             {spot.title}
@@ -164,31 +170,36 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite }: ParkingS
         <Text style={styles.addressText} numberOfLines={1}>
           {spot.address}
         </Text>
-        <Text style={styles.description} numberOfLines={1}>
-          {spot.descriptionKey ? t(spot.descriptionKey) : spot.description}
-        </Text>
 
-        <View style={styles.tagRow}>
-          {spot.tags.map((tag) => {
-            const entry = TAG_KEY_MAP[tag];
-            return (
-              <View key={tag} style={styles.tag}>
-                {entry && (
-                  <Ionicons
-                    name={entry.iconName as any}
-                    size={12}
-                    color={colors.teal}
-                  />
-                )}
-                <Text style={styles.tagText}>
-                  {entry ? t(entry.i18nKey) : tag}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
+        {!compact && (
+          <>
+            <Text style={styles.description} numberOfLines={1}>
+              {spot.descriptionKey ? t(spot.descriptionKey) : spot.description}
+            </Text>
 
-        <View style={styles.divider} />
+            <View style={styles.tagRow}>
+              {spot.tags.map((tag) => {
+                const entry = TAG_KEY_MAP[tag];
+                return (
+                  <View key={tag} style={styles.tag}>
+                    {entry && (
+                      <Ionicons
+                        name={entry.iconName as any}
+                        size={12}
+                        color={colors.teal}
+                      />
+                    )}
+                    <Text style={styles.tagText}>
+                      {entry ? t(entry.i18nKey) : tag}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+
+            <View style={styles.divider} />
+          </>
+        )}
 
         <View style={styles.footerRow}>
           <View style={styles.ratingRow}>
