@@ -249,6 +249,7 @@
   "search.placeholder": "Where do you want to park?",
   "search.button": "Search",
   "search.nearBy": "Near: %{address}",
+  "search.clearAddress": "Clear address",
   "search.location.searching": "Looking for parking spots near your location",
   "search.location.locating": "Finding your location…",
   "search.location.refresh": "Refresh",

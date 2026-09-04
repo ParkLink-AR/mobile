@@ -249,6 +249,7 @@
   "search.placeholder": "¿Dónde querés estacionar?",
   "search.button": "Buscar",
   "search.nearBy": "Cerca de: %{address}",
+  "search.clearAddress": "Borrar dirección",
   "search.location.searching": "Buscando cocheras cerca de tu ubicación",
   "search.location.locating": "Buscando tu ubicación…",
   "search.location.refresh": "Actualizar",

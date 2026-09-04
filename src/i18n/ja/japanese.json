@@ -249,6 +249,7 @@
   "search.placeholder": "どこに駐車しますか？",
   "search.button": "検索",
   "search.nearBy": "近く: %{address}",
+  "search.clearAddress": "住所を消去",
   "search.location.searching": "現在地周辺の駐車場を検索中",
   "search.location.locating": "位置情報を取得中…",
   "search.location.refresh": "更新",

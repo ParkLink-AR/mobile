@@ -731,6 +731,19 @@ export default function Search() {
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               returnKeyType="search"
             />
+            {addressQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setAddressQuery('');
+                  setCandidates([]);
+                  setShowSuggestions(false);
+                  setAddressError(null);
+                }}
+                accessibilityLabel={t('search.clearAddress')}
+              >
+                <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
           </View>
           <TouchableOpacity
             style={styles.locateButton}
