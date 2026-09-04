@@ -532,11 +532,13 @@ export default function Search() {
       transform: [{ scale: 1.15 }],
     },
     pinText: { color: colors.white, fontSize: 12, fontWeight: '700' },
-    // "My location" FAB
+    // "My location" FAB -- top-right, clear of the selected-spot card that
+    // can pop up over the bottom of the map (avoids guessing that card's
+    // height to avoid overlapping it).
     locateFab: {
       position: 'absolute',
       right: 16,
-      bottom: 16,
+      top: 16,
       width: 44,
       height: 44,
       borderRadius: 22,
@@ -554,10 +556,6 @@ export default function Search() {
         },
         android: { elevation: 4 },
       }),
-    },
-    // Pushed above the compact selected-spot card so it never gets covered.
-    locateFabRaised: {
-      bottom: 108,
     },
     mapCardWrapper: {
       position: 'absolute',
@@ -926,7 +924,7 @@ export default function Search() {
 
           {/* Locate FAB */}
           <TouchableOpacity
-            style={[styles.locateFab, selectedSpot && styles.locateFabRaised]}
+            style={styles.locateFab}
             onPress={() => {
               if (location) {
                 mapRef.current?.animateToRegion(
