@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { deleteDeviceToken, putDeviceToken, type DevicePlatform } from '@/src/api/notifications';
 
 // @react-native-firebase/messaging only exists in a real development build
@@ -8,7 +9,16 @@ import { deleteDeviceToken, putDeviceToken, type DevicePlatform } from '@/src/ap
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Messaging = any;
 
+// Expo Go can never have this native module linked -- requiring it there
+// doesn't just fail cleanly, the native module registry logs its own
+// "Native module ... is not registered" console.error as a side effect
+// before our try/catch ever gets a chance to swallow the thrown error. Skip
+// the require entirely in that environment instead of triggering that noise
+// on every call.
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
 function loadMessaging(): Messaging | null {
+  if (isExpoGo) return null;
   try {
     return require('@react-native-firebase/messaging').default;
   } catch {
