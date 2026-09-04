@@ -95,12 +95,18 @@ export default function Search() {
   const [fromHourInput, setFromHourInput] = useState(8);
   const [toHourInput, setToHourInput] = useState(9);
 
-  async function locateMe() {
+  // fillAddress is true only when the user actually taps the locate button --
+  // the automatic GPS fix on first mount (see the permission effect below)
+  // should not fill the search box on its own.
+  async function locateMe(fillAddress = false) {
     // Switching to GPS overrides any active address search.
     setSearchAddress(null);
     setAddressError(null);
     setCandidates([]);
     setShowSuggestions(false);
+    if (!fillAddress) {
+      setAddressQuery('');
+    }
 
     setLocating(true);
     setLocationError(null);
@@ -120,15 +126,17 @@ export default function Search() {
       const lng = position.coords.longitude;
       setLocation({ lat, lng });
 
-      // Same as the publish/edit-spot screens' "use my current location" --
-      // show the resolved address where the user types, instead of leaving
-      // the search box empty after a GPS fix.
-      skipNextAddressSuggestions.current = true;
-      try {
-        const reversed = await reverseGeocode(lat, lng);
-        setAddressQuery(reversed.displayName);
-      } catch {
-        setAddressQuery(t('owner.spot.new.locationFallback'));
+      if (fillAddress) {
+        // Same as the publish/edit-spot screens' "use my current location" --
+        // show the resolved address where the user types, instead of leaving
+        // the search box empty after a GPS fix.
+        skipNextAddressSuggestions.current = true;
+        try {
+          const reversed = await reverseGeocode(lat, lng);
+          setAddressQuery(reversed.displayName);
+        } catch {
+          setAddressQuery(t('owner.spot.new.locationFallback'));
+        }
       }
     } catch {
       setLocationError(t('search.location.error'));
@@ -726,7 +734,7 @@ export default function Search() {
           </View>
           <TouchableOpacity
             style={styles.locateButton}
-            onPress={locateMe}
+            onPress={() => locateMe(true)}
             disabled={locating}
             accessibilityLabel={t('owner.spot.new.useCurrentLocation')}
           >
