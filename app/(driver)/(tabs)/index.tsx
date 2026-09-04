@@ -375,6 +375,16 @@ export default function Search() {
       color: colors.text,
       height: '100%',
     },
+    // Same "use my current location" button as the publish/edit spot screens
+    // (AddressAutocomplete's sibling square button), reused here next to search.
+    locateButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: colors.teal,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     statusText: {
       paddingHorizontal: 20,
       paddingTop: 8,
@@ -693,6 +703,18 @@ export default function Search() {
               returnKeyType="search"
             />
           </View>
+          <TouchableOpacity
+            style={styles.locateButton}
+            onPress={locateMe}
+            disabled={locating}
+            accessibilityLabel={t('owner.spot.new.useCurrentLocation')}
+          >
+            {locating ? (
+              <ActivityIndicator color={colors.white} size="small" />
+            ) : (
+              <Ionicons name="locate" size={20} color={colors.white} />
+            )}
+          </TouchableOpacity>
         </View>
 
         {showSuggestions && (
