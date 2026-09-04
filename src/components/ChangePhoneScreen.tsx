@@ -144,7 +144,7 @@ export default function ChangePhoneScreen() {
 
   if (step === 'code') {
     return (
-      <Screen style={styles.container}>
+      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
         <Text style={typography.h1}>{t('changePhone.code.title')}</Text>
         <Text style={typography.body}>{t('changePhone.code.helper', { phone: fullPhone })}</Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -170,7 +170,7 @@ export default function ChangePhoneScreen() {
   }
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <Text style={typography.h1}>{t('changePhone.title')}</Text>
       <View>
         <Text style={styles.current}>{user.phone}</Text>

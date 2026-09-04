@@ -286,7 +286,7 @@ export default function SpotDetail() {
   });
 
   return (
-    <Screen style={styles.screen} edges={['top', 'left', 'right']}>
+    <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView style={styles.container}>
       <View style={styles.photoWrapper}>
         <PhotoGallery photos={spot.photos} height={200} fallbackUri={spot.photoUrl} />

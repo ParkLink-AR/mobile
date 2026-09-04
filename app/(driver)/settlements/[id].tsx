@@ -36,7 +36,7 @@ export default function SettlementDetail() {
   });
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <Card>
         <Text style={typography.h1}>{settlement.period}</Text>
         <Text style={styles.amount}>${settlement.totalAmount.toLocaleString('es-AR')}</Text>

@@ -22,7 +22,7 @@ export default function PaymentSuccessScreen() {
   });
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <StatusIcon variant="success" />
       <Text style={typography.h1}>{t('driver.booking.success.title')}</Text>
       <Card style={styles.card}>

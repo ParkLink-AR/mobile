@@ -78,7 +78,7 @@ export default function DriverBookingDetail() {
 
   if (error) {
     return (
-      <Screen style={styles.container}>
+      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
         <View style={styles.centered}>
           <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
           <Text style={styles.errorText}>{t('driver.booking.detail.error')}</Text>
@@ -89,7 +89,7 @@ export default function DriverBookingDetail() {
 
   if (!booking) {
     return (
-      <Screen style={styles.container}>
+      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
         <ActivityIndicator style={{ marginTop: 40 }} color={colors.teal} />
       </Screen>
     );
@@ -98,7 +98,7 @@ export default function DriverBookingDetail() {
   const confirmedDate = booking.confirmedAt ? new Date(booking.confirmedAt) : null;
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <Card>
         <View style={styles.row}>
           <Text style={typography.h1}>{booking.parkingSpotTitle}</Text>

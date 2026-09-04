@@ -67,7 +67,7 @@ export default function SpotReviews() {
   });
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <Text style={typography.h1}>{spot.title}</Text>
       <Text style={[typography.caption, styles.subtitle]}>
         ★ {average.toFixed(1)} · {t('spot.reviews.count', { count })}

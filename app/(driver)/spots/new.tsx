@@ -226,7 +226,7 @@ export default function NewSpot() {
   });
 
   return (
-    <Screen style={styles.screen}>
+    <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={typography.caption}>{t('owner.spot.new.photos')}</Text>
         {photos.length === 0 ? (

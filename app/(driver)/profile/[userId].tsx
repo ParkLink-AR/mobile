@@ -78,7 +78,7 @@ export default function PublicProfile() {
   const memberSince = new Date(profile.created_at).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <Card style={styles.headerCard}>
         {profile.avatar_url ? (
           <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />

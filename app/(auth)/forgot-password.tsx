@@ -113,7 +113,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <Text style={typography.h1}>Recuperar contraseña</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {info ? <Text style={styles.info}>{info}</Text> : null}

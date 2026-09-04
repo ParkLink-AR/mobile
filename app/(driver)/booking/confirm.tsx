@@ -200,7 +200,7 @@ export default function ConfirmBooking() {
 
   if (loadError) {
     return (
-      <Screen style={{ flex: 1, padding: 24, alignItems: 'center', justifyContent: 'center' }}>
+      <Screen style={{ flex: 1, padding: 24, alignItems: 'center', justifyContent: 'center' }} edges={['left', 'right', 'bottom']}>
         <Text style={[typography.body, { color: colors.warning, textAlign: 'center' }]}>{loadError}</Text>
         <Button title={t('common.cancel')} onPress={() => router.back()} style={{ marginTop: 16 }} />
       </Screen>
@@ -220,7 +220,7 @@ export default function ConfirmBooking() {
   });
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Card>
           <Text style={typography.h2}>{spot.title}</Text>

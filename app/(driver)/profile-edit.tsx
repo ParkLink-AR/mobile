@@ -142,7 +142,7 @@ export default function DriverProfileEdit() {
   });
 
   return (
-    <Screen style={styles.outer}>
+    <Screen style={styles.outer} edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Text style={typography.h1}>{t('profile.edit.title')}</Text>

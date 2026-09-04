@@ -82,7 +82,7 @@ export default function VerifyCode() {
   }
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <Text style={typography.h1}>Confirmá tu email</Text>
       <Text style={typography.body}>
         Te mandamos un código de 6 dígitos a {email}. Ingresalo acá para activar tu cuenta.

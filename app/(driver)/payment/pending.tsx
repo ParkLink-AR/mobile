@@ -91,7 +91,7 @@ export default function PaymentPendingScreen() {
 
   if (status === 'approved') {
     return (
-      <Screen style={styles.container}>
+      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
         <StatusIcon variant={awaitingOwner ? 'unknown' : 'success'} />
         <Text style={typography.h1}>
           {awaitingOwner ? t('driver.booking.pendingOwnerApproval.title') : t('driver.booking.success.title')}
@@ -111,7 +111,7 @@ export default function PaymentPendingScreen() {
 
   if (status === 'rejected') {
     return (
-      <Screen style={styles.container}>
+      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
         <StatusIcon variant="error" />
         <Text style={typography.h1}>{t('driver.payment.rejected.title')}</Text>
         <Card style={styles.card}>
@@ -127,7 +127,7 @@ export default function PaymentPendingScreen() {
 
   if (status === 'unknown') {
     return (
-      <Screen style={styles.container}>
+      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
         <StatusIcon variant="unknown" />
         <Text style={typography.h1}>{t('driver.payment.unknown.title')}</Text>
         <Card style={styles.card}>
@@ -143,7 +143,7 @@ export default function PaymentPendingScreen() {
 
   // Pending: show spinner while polling + cancel button
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <ActivityIndicator size="large" color={colors.teal} />
       <Text style={typography.h2}>{t('driver.payment.pending.title')}</Text>
       <Text style={[typography.body, { textAlign: 'center' }]}>{t('driver.payment.pending.body')}</Text>

@@ -280,7 +280,7 @@ export default function Register() {
 
   if (registrationComplete) {
     return (
-      <Screen style={styles.container}>
+      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
         <View style={styles.successWrap}>
           <StatusIcon variant="success" />
           <Text style={[typography.h1, styles.successCenteredText]}>{t('register.success.title')}</Text>
@@ -297,7 +297,7 @@ export default function Register() {
 
   if (successMessage) {
     return (
-      <Screen style={styles.container}>
+      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
         <View style={styles.successWrap}>
           <StatusIcon variant="success" />
           <Text style={styles.successText}>{successMessage}</Text>
@@ -307,7 +307,7 @@ export default function Register() {
   }
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <Image
         source={require('@/assets/logo-parklink.png')}
         style={styles.logo}

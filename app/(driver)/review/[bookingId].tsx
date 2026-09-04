@@ -55,7 +55,7 @@ export default function ReviewScreen() {
 
   if (loading) {
     return (
-      <Screen style={styles.container}>
+      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
         <ActivityIndicator color={colors.teal} style={{ marginTop: 40 }} />
       </Screen>
     );
@@ -65,7 +65,7 @@ export default function ReviewScreen() {
 
   if (remaining.length === 0) {
     return (
-      <Screen style={{ ...styles.container, ...styles.emptyContainer }}>
+      <Screen style={{ ...styles.container, ...styles.emptyContainer }} edges={['left', 'right', 'bottom']}>
         <StatusIcon variant="success" />
         <Text style={typography.h2}>{t('review.allDone')}</Text>
         <Button title={t('common.close')} onPress={() => router.back()} />
@@ -74,7 +74,7 @@ export default function ReviewScreen() {
   }
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       {pendingTargets.map((target) =>
         submittedTargets.includes(target.targetType) ? null : (
           <ReviewBlock

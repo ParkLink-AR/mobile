@@ -28,7 +28,7 @@ export function SettingsContent() {
   });
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <Text style={[typography.caption, styles.sectionTitle]}>{t('settings.notifications.title')}</Text>
       <Card style={styles.card}>
         <Row label="Notificaciones push">

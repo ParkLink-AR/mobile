@@ -21,7 +21,7 @@ export default function PaymentFailureScreen() {
   });
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <StatusIcon variant="error" />
       <Text style={typography.h1}>{t('driver.payment.rejected.title')}</Text>
       <Card style={styles.card}>

@@ -82,7 +82,7 @@ export default function SpotAvailability() {
   });
 
   return (
-    <Screen style={styles.screen}>
+    <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.body}>
           <View style={styles.infoCard}>

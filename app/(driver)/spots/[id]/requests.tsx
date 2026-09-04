@@ -114,7 +114,7 @@ export default function SpotBookingRequests() {
   });
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <Text style={typography.h1}>{t('owner.spot.requests.title')}</Text>
       <FlatList
         data={bookings}
