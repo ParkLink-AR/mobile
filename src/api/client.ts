@@ -92,6 +92,9 @@ export async function request<T>(
       response = await rawFetch(path, options, newToken);
     } else {
       useSessionStore.getState().clearSession();
+      // Session is gone; abandon the request silently — the router will
+      // redirect to login in reaction to the store's user becoming null.
+      return undefined as T;
     }
   }
 
@@ -126,6 +129,7 @@ export async function requestMultipart<T>(path: string, formData: FormData): Pro
       response = await rawMultipartFetch(path, formData, newToken);
     } else {
       useSessionStore.getState().clearSession();
+      return undefined as T;
     }
   }
 
