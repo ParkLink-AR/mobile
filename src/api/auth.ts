@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { AuthTokens, AuthUser } from '@/src/types';
+import { AccountType, AuthTokens, AuthUser } from '@/src/types';
 import { request, requestMultipart } from './client';
 
 interface RegisterInput {
@@ -34,6 +34,13 @@ interface UserOutResponse {
   avatar_url?: string | null;
   email_verified: boolean;
   phone_verified: boolean;
+  account_type?: string | null;
+}
+
+function toAccountType(raw?: string | null): AccountType {
+  if (raw === 'OWNER') return 'owner';
+  if (raw === 'BOTH') return 'both';
+  return 'driver';
 }
 
 function toAuthUser(u: UserOutResponse): AuthUser {
@@ -50,6 +57,7 @@ function toAuthUser(u: UserOutResponse): AuthUser {
     avatarUrl: u.avatar_url ?? undefined,
     emailVerified: u.email_verified,
     phoneVerified: u.phone_verified,
+    accountType: toAccountType(u.account_type),
   };
 }
 
@@ -195,6 +203,22 @@ export async function updateUserProfile(
   const userResponse = await request<UserOutResponse>(`/users/${userId}`, {
     method: 'PUT',
     body: JSON.stringify(body),
+  });
+  return toAuthUser(userResponse);
+}
+
+export async function updateAccountType(
+  userId: string,
+  accountType: AccountType
+): Promise<AuthUser> {
+  const accountTypeMap: Record<AccountType, string> = {
+    driver: 'DRIVER',
+    owner: 'OWNER',
+    both: 'BOTH',
+  };
+  const userResponse = await request<UserOutResponse>(`/users/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ account_type: accountTypeMap[accountType] }),
   });
   return toAuthUser(userResponse);
 }

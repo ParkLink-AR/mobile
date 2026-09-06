@@ -25,7 +25,9 @@ import {
   requestPhoneRegistration,
   confirmPhoneRegistration,
   register,
+  login,
 } from '@/src/api/auth';
+import { useSessionStore } from '@/src/store/useSessionStore';
 import { ApiError } from '@/src/api/client';
 import { COUNTRIES, DEFAULT_COUNTRY, Country } from '@/src/data/countries';
 
@@ -40,10 +42,10 @@ function formatDate(d: Date): string {
 export default function Register() {
   const colors = useThemeColors();
   const typography = useTypography();
+  const setSession = useSessionStore((s) => s.setSession);
 
   const [step, setStep] = useState<Step>('email');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [registrationComplete, setRegistrationComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -210,7 +212,11 @@ export default function Register() {
         birthDate: birthDate.toISOString().slice(0, 10),
         password,
       });
-      setRegistrationComplete(true);
+      // Hace login automático para que account-type.tsx tenga sesión activa
+      // y pueda llamar a updateAccountType con un token válido.
+      const { user: newUser, tokens } = await login({ email, password });
+      setSession(newUser, tokens);
+      router.replace('/(auth)/account-type');
     } catch (err) {
       handleApiError(err, 'No se pudo crear la cuenta.');
     } finally {
@@ -277,23 +283,6 @@ export default function Register() {
     },
     dateButtonText: { fontSize: 15, color: birthDate ? colors.text : colors.textSecondary },
   });
-
-  if (registrationComplete) {
-    return (
-      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-        <View style={styles.successWrap}>
-          <StatusIcon variant="success" />
-          <Text style={[typography.h1, styles.successCenteredText]}>{t('register.success.title')}</Text>
-          <Text style={[typography.body, styles.successCenteredText]}>{t('register.success.message')}</Text>
-          <Button
-            title={t('register.success.button')}
-            onPress={() => router.replace({ pathname: '/(auth)/login', params: { email } })}
-            style={styles.successButton}
-          />
-        </View>
-      </Screen>
-    );
-  }
 
   if (successMessage) {
     return (
