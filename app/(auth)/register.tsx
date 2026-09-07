@@ -212,11 +212,9 @@ export default function Register() {
         birthDate: birthDate.toISOString().slice(0, 10),
         password,
       });
-      // Hace login automático para que account-type.tsx tenga sesión activa
-      // y pueda llamar a updateAccountType con un token válido.
       const { user: newUser, tokens } = await login({ email, password });
       setSession(newUser, tokens);
-      router.replace('/(auth)/account-type');
+      router.replace('/(both)/(tabs)' as never);
     } catch (err) {
       handleApiError(err, 'No se pudo crear la cuenta.');
     } finally {

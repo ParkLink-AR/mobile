@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { AuthUser, AuthTokens } from '@/src/types';
 import { secureStorage } from '@/src/services/secureStorage';
-import { useAccountTypeStore } from './useAccountTypeStore';
 
 interface SessionState {
   user: AuthUser | null;
@@ -23,7 +22,6 @@ export const useSessionStore = create<SessionState>()(
       refreshToken: null,
       hydrated: false,
       setSession: (user, tokens) => {
-        useAccountTypeStore.getState().setAccountType(user.accountType);
         set({
           user,
           accessToken: tokens.accessToken,
@@ -32,10 +30,7 @@ export const useSessionStore = create<SessionState>()(
       },
       setTokens: (tokens) =>
         set({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken }),
-      setUser: (user) => {
-        useAccountTypeStore.getState().setAccountType(user.accountType);
-        set({ user });
-      },
+      setUser: (user) => set({ user }),
       clearSession: () => set({ user: null, accessToken: null, refreshToken: null }),
     }),
     {

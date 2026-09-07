@@ -9,7 +9,6 @@ const mockAuthUser: AuthUser = {
   phone: '+5491100000000',
   emailVerified: true,
   phoneVerified: true,
-  accountType: 'driver',
 };
 
 const mockTokens: AuthTokens = {

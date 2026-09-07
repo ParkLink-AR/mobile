@@ -6,16 +6,8 @@ import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 import { login } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
-import { AccountType } from '@/src/types';
-
-function tabRouteFor(type: AccountType): string {
-  if (type === 'owner') return '/(owner)/(tabs)';
-  if (type === 'both') return '/(both)/(tabs)';
-  return '/(driver)/(tabs)';
-}
 
 export default function Login() {
   const colors = useThemeColors();
@@ -25,7 +17,6 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const setSession = useSessionStore((s) => s.setSession);
-  const getAccountType = () => useAccountTypeStore.getState().accountType;
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.surface, padding: 24, gap: 12, justifyContent: 'center' },
@@ -54,7 +45,7 @@ export default function Login() {
     try {
       const { user, tokens } = await login({ email: normalizedEmail, password });
       setSession(user, tokens);
-      router.replace(tabRouteFor(getAccountType()) as never);
+      router.replace('/(both)/(tabs)' as never);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         // Not verified yet -- send them to enter the code instead of just

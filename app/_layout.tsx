@@ -43,8 +43,6 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(driver)" />
-        <Stack.Screen name="(owner)" />
         <Stack.Screen name="(both)" />
       </Stack>
     </SafeAreaProvider>

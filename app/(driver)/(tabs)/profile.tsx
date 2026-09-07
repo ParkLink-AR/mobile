@@ -9,12 +9,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
 import { VerifiedBadge } from '@/src/components/VerifiedBadge';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
-import { AccountTypePicker } from '@/src/components/AccountTypePicker';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useSettingsStore, Language } from '@/src/store/useSettingsStore';
-import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 import { logout as logoutRequest, deleteAccount } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
 import { getParkingSpotsForOwner } from '@/src/services/parkingService';
@@ -37,11 +35,8 @@ export default function Profile() {
   const setLanguage = useSettingsStore((s) => s.setLanguage);
   const mode = useSettingsStore((s) => s.mode);
   const toggleMode = useSettingsStore((s) => s.toggleMode);
-  const accountType = useAccountTypeStore((s) => s.accountType);
-  const isOwnerMode = accountType === 'owner' || accountType === 'both';
   const [mySpots, setMySpots] = useState<ParkingSpot[]>([]);
   const [langModalVisible, setLangModalVisible] = useState(false);
-  const [accountTypePickerVisible, setAccountTypePickerVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
@@ -257,70 +252,12 @@ export default function Profile() {
           <Ionicons name="chevron-forward" size={16} color={colors.white} />
         </Pressable>
 
-        {/* My spots — solo visible para propietarios */}
-        {isOwnerMode && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{t('profile.mySpots')}</Text>
-              <View style={styles.sectionLine} />
-              <Pressable
-                style={({ pressed }) => [styles.addSpotBtn, { opacity: pressed ? 0.75 : 1 }]}
-                onPress={() => router.push('/(driver)/spots/new')}
-              >
-                <Ionicons name="add" size={14} color={colors.teal} />
-                <Text style={styles.addSpotBtnText}>{t('profile.mySpots.add')}</Text>
-              </Pressable>
-            </View>
-            {mySpots.length === 0 ? (
-              <View style={styles.spotsEmpty}>
-                <Ionicons name="car-outline" size={32} color={colors.textSecondary} />
-                <Text style={styles.spotsEmptyText}>{t('profile.mySpots.empty')}</Text>
-              </View>
-            ) : (
-              <View style={styles.spotsGrid}>
-                {mySpots.map((spot) => (
-                  <Pressable key={spot.id} onPress={() => router.push(`/(driver)/spots/${spot.id}`)}>
-                    <ParkingSpotCard spot={spot} />
-                  </Pressable>
-                ))}
-              </View>
-            )}
-          </>
-        )}
-
-        {/* Finances — solo visible para propietarios */}
-        {isOwnerMode && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{t('profile.finances')}</Text>
-              <View style={styles.sectionLine} />
-            </View>
-            <Pressable
-              style={({ pressed }) => [styles.actionBtn, styles.settlementsBtn, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => router.push('/(driver)/settlements')}
-            >
-              <Ionicons name="receipt-outline" size={18} color={colors.teal} />
-              <Text style={[styles.actionBtnText, styles.settlementsBtnText]}>{t('owner.view.settlements')}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.teal} />
-            </Pressable>
-          </>
-        )}
-
         {/* Preferences */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{t('profile.preferences')}</Text>
           <View style={styles.sectionLine} />
         </View>
         <View style={styles.prefCard}>
-          <Pressable
-            style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => setAccountTypePickerVisible(true)}
-          >
-            <Text style={styles.prefLabel}>{t('accountType.change')}</Text>
-            <View style={styles.langCurrent}>
-              <Ionicons name="chevron-forward" size={14} color={colors.teal} />
-            </View>
-          </Pressable>
 
           <View style={styles.prefDivider} />
 
@@ -491,10 +428,6 @@ export default function Profile() {
         </TouchableWithoutFeedback>
       </Modal>
 
-      <AccountTypePicker
-        visible={accountTypePickerVisible}
-        onClose={() => setAccountTypePickerVisible(false)}
-      />
     </Screen>
   );
 }

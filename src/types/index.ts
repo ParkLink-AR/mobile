@@ -3,8 +3,6 @@
 // que decide qué stack se muestra, no un campo del usuario.
 export type UserRole = 'driver' | 'owner';
 
-export type AccountType = 'driver' | 'owner' | 'both';
-
 export interface User {
   id: string;
   name: string;
@@ -30,7 +28,6 @@ export interface AuthUser {
   avatarUrl?: string;
   emailVerified: boolean;
   phoneVerified: boolean;
-  accountType: AccountType;
 }
 
 export interface AuthTokens {
