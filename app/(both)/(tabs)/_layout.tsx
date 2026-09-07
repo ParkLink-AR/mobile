@@ -39,7 +39,7 @@ export default function BothTabsLayout() {
       <Tabs.Screen name="index" options={{ title: t('tabs.both.search') }} />
       <Tabs.Screen name="bookings" options={{ title: t('tabs.both.bookings') }} />
       <Tabs.Screen name="spots" options={{ title: t('tabs.both.spots') }} />
-      <Tabs.Screen name="notifications" options={{ title: t('tabs.both.notifications') }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ title: t('tabs.both.profile') }} />
     </Tabs>
   );

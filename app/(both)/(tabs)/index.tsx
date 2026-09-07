@@ -1,2 +1,5 @@
-// Búsqueda de cocheras — misma pantalla que el driver.
-export { default } from '@/app/(driver)/(tabs)/index';
+import { SearchScreen } from '@/app/(driver)/(tabs)/index';
+
+export default function BothSearch() {
+  return <SearchScreen headerVariant="both" />;
+}

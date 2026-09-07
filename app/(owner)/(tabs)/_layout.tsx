@@ -28,7 +28,7 @@ export default function OwnerTabsLayout() {
       tabBar={(props) => <OwnerDockTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tabs.Screen name="index" options={{ title: t('tabs.owner.home') }} />
+      <Tabs.Screen name="index" options={{ title: t('tabs.owner.earnings') }} />
       <Tabs.Screen name="spots" options={{ title: t('tabs.owner.spots') }} />
       <Tabs.Screen name="bookings" options={{ title: t('tabs.owner.bookings') }} />
       <Tabs.Screen name="notifications" options={{ title: t('tabs.owner.notifications') }} />

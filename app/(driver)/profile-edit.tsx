@@ -13,7 +13,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
@@ -142,6 +142,16 @@ export default function DriverProfileEdit() {
   });
 
   return (
+    <>
+      <Stack.Screen
+        options={{
+          headerLeft: () => (
+            <Pressable onPress={() => router.back()} hitSlop={8}>
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </Pressable>
+          ),
+        }}
+      />
     <Screen style={styles.outer} edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -236,5 +246,6 @@ export default function DriverProfileEdit() {
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
+    </>
   );
 }

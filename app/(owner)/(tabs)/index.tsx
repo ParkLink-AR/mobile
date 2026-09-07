@@ -64,7 +64,7 @@ export default function OwnerHome() {
   return (
     <Screen style={styles.container} tabBarPadding>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={typography.h1}>{t('tabs.owner.home')}</Text>
+        <Text style={typography.h1}>{t('tabs.owner.earnings')}</Text>
 
         {/* Mis cocheras */}
         <View style={styles.sectionHeader}>

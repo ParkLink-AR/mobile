@@ -11,6 +11,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  Pressable,
 } from 'react-native';
 import MapView, { Marker, Region, PROVIDER_DEFAULT } from 'react-native-maps';
 import ClusteredMapView from 'react-native-map-clustering';
@@ -26,6 +27,7 @@ import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
+import { useUnseenNotificationsCount } from '@/src/store/useNotificationsStore';
 import { searchParkingSpots, SearchParkingSpotsFilters } from '@/src/services/parkingService';
 import { geocodeAddress, reverseGeocode, GeocodeCandidate } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
@@ -48,10 +50,11 @@ const DEFAULT_REGION: Region = {
   longitudeDelta: 0.05,
 };
 
-export default function Search() {
+export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'driver' | 'both' }) {
   const colors = useThemeColors();
   useLanguage();
   const user = useSessionStore((s) => s.user);
+  const unseenCount = useUnseenNotificationsCount();
   const favoriteIds = useFavoritesStore((s) => s.ids);
   const toggleFavorite = useFavoritesStore((s) => s.toggle);
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
@@ -345,6 +348,15 @@ export default function Search() {
       color: colors.text,
       letterSpacing: -0.3,
     },
+    bellButton: { position: 'relative', padding: 4 },
+    bellBadge: {
+      position: 'absolute', top: 0, right: 0,
+      minWidth: 16, height: 16, borderRadius: 8,
+      backgroundColor: '#FF3B30',
+      alignItems: 'center', justifyContent: 'center',
+      paddingHorizontal: 3,
+    },
+    bellBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
     // ── Search bar (address, or fall back to device location) ──────────────
     searchWrapper: {
       position: 'relative',
@@ -702,11 +714,31 @@ export default function Search() {
           style={styles.headerLogo}
           resizeMode="contain"
         />
-        <View style={styles.headerGreetingBlock}>
-          <Text style={styles.headerGreetingLabel}>{t('search.welcome')}</Text>
-          <Text style={styles.headerGreetingName}>{user?.name ?? ''}</Text>
-        </View>
-        <AccountMenu />
+        {headerVariant === 'both' ? (
+          <>
+            <View style={styles.headerGreetingBlock} />
+            <Pressable
+              onPress={() => router.push('/(both)/(tabs)/notifications')}
+              style={styles.bellButton}
+              accessibilityLabel={t('tabs.both.notifications')}
+            >
+              <Ionicons name="notifications-outline" size={24} color={colors.text} />
+              {unseenCount > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>{unseenCount > 9 ? '9+' : unseenCount}</Text>
+                </View>
+              )}
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <View style={styles.headerGreetingBlock}>
+              <Text style={styles.headerGreetingLabel}>{t('search.welcome')}</Text>
+              <Text style={styles.headerGreetingName}>{user?.name ?? ''}</Text>
+            </View>
+            <AccountMenu />
+          </>
+        )}
       </View>
 
       {/* ── Search bar ────────────────────────────────────────────── */}
@@ -1150,4 +1182,8 @@ export default function Search() {
       </Modal>
     </Screen>
   );
+}
+
+export default function Search() {
+  return <SearchScreen headerVariant="driver" />;
 }

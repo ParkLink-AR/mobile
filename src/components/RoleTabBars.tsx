@@ -17,7 +17,7 @@ interface TabKey {
 }
 
 const OWNER_TAB_KEYS: TabKey[] = [
-  { name: 'index',         labelKey: 'tabs.owner.home',          icon: 'home-outline',          activeIcon: 'home' },
+  { name: 'index',         labelKey: 'tabs.owner.earnings',      icon: 'receipt-outline',       activeIcon: 'receipt' },
   { name: 'spots',         labelKey: 'tabs.owner.spots',         icon: 'car-outline',           activeIcon: 'car' },
   { name: 'bookings',      labelKey: 'tabs.owner.bookings',      icon: 'calendar-outline',      activeIcon: 'calendar' },
   { name: 'notifications', labelKey: 'tabs.owner.notifications', icon: 'notifications-outline', activeIcon: 'notifications', showBadge: true },
@@ -25,11 +25,10 @@ const OWNER_TAB_KEYS: TabKey[] = [
 ];
 
 const BOTH_TAB_KEYS: TabKey[] = [
-  { name: 'index',         labelKey: 'tabs.both.search',         icon: 'search-outline',        activeIcon: 'search' },
-  { name: 'bookings',      labelKey: 'tabs.both.bookings',       icon: 'calendar-outline',      activeIcon: 'calendar' },
-  { name: 'spots',         labelKey: 'tabs.both.spots',          icon: 'car-outline',           activeIcon: 'car' },
-  { name: 'notifications', labelKey: 'tabs.both.notifications',  icon: 'notifications-outline', activeIcon: 'notifications', showBadge: true },
-  { name: 'profile',       labelKey: 'tabs.both.profile',        icon: 'person-outline',        activeIcon: 'person' },
+  { name: 'index',    labelKey: 'tabs.both.search',    icon: 'search-outline',   activeIcon: 'search' },
+  { name: 'bookings', labelKey: 'tabs.both.bookings',  icon: 'calendar-outline', activeIcon: 'calendar' },
+  { name: 'spots',    labelKey: 'tabs.both.spots',     icon: 'car-outline',      activeIcon: 'car' },
+  { name: 'profile',  labelKey: 'tabs.both.profile',   icon: 'person-outline',   activeIcon: 'person' },
 ];
 
 function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[] }) {
