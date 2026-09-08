@@ -44,6 +44,14 @@
         {
           "locationWhenInUsePermission": "ParkLink usa tu ubicación para mostrarte las cocheras disponibles cerca tuyo."
         }
+      ],
+      "./plugins/withFirebaseNotificationManifestFix",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#168B8D"
+        }
       ]
     ],
     "ios": {

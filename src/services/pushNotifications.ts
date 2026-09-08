@@ -1,30 +1,114 @@
 import { Platform } from 'react-native';
-import Constants, { ExecutionEnvironment } from 'expo-constants';
+import * as Notifications from 'expo-notifications';
 import { deleteDeviceToken, putDeviceToken, type DevicePlatform } from '@/src/api/notifications';
 
-// @react-native-firebase/messaging only exists in a real development build
-// (not Expo Go, not jest). Load it lazily and tolerate its absence so this
-// module is safe to import anywhere. The namespaced messaging API has no
-// bundled types worth threading through here.
-/* eslint-disable @typescript-eslint/no-explicit-any */
-type Messaging = any;
+const BRAND_COLOR = '#168B8D';
 
-// Expo Go can never have this native module linked -- requiring it there
-// doesn't just fail cleanly, the native module registry logs its own
-// "Native module ... is not registered" console.error as a side effect
-// before our try/catch ever gets a chance to swallow the thrown error. Skip
-// the require entirely in that environment instead of triggering that noise
-// on every call.
-const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+// Notifications about a booking. Both the ones we present in the foreground and
+// the ones FCM shows on its own (backend sends channel_id="bookings") land
+// here; HIGH importance makes them pop as a heads-up banner.
+export const BOOKINGS_CHANNEL_ID = 'bookings';
 
-function loadMessaging(): Messaging | null {
-  if (isExpoGo) return null;
+/** Creates the Android notification channel. Safe to call repeatedly. */
+export async function ensureNotificationChannel(): Promise<void> {
+  if (Platform.OS !== 'android') return;
   try {
-    return require('@react-native-firebase/messaging').default;
+    await Notifications.setNotificationChannelAsync(BOOKINGS_CHANNEL_ID, {
+      name: 'Reservas',
+      importance: Notifications.AndroidImportance.HIGH,
+      lightColor: BRAND_COLOR,
+      vibrationPattern: [0, 250, 250, 250],
+    });
+  } catch (err) {
+    console.warn('[push] ensureNotificationChannel failed:', err);
+  }
+}
+
+// By default expo-notifications suppresses notifications while the app is in
+// the foreground. We want them shown as real system banners (same as when the
+// app is backgrounded), so FCM messages that arrive with the app open look
+// identical to the ones the OS shows on its own.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+/**
+ * Presents an FCM message as a local system notification. Used for messages
+ * that arrive while the app is in the foreground -- Android does not surface
+ * those itself, so without this the user would see nothing.
+ */
+export async function presentLocalNotification(
+  title: string | undefined,
+  body: string | undefined,
+  route: string | null,
+): Promise<void> {
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: title ?? 'ParkLink',
+        body: body ?? '',
+        data: route ? { route } : {},
+        color: BRAND_COLOR,
+      },
+      // On Android, a bare { channelId } trigger delivers immediately on that
+      // channel (HIGH importance -> heads-up). iOS has no channels: null.
+      trigger: Platform.OS === 'android' ? { channelId: BOOKINGS_CHANNEL_ID } : null,
+    });
+  } catch (err) {
+    console.warn('[push] presentLocalNotification failed:', err);
+  }
+}
+
+/**
+ * Subscribes to taps on notifications presented by expo-notifications (the
+ * foreground ones). Returns an unsubscribe function.
+ */
+export function subscribeLocalNotificationTaps(onRoute: (path: string) => void): () => void {
+  const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+    const route = response.notification.request.content.data?.route;
+    if (typeof route === 'string' && route) onRoute(route);
+  });
+  return () => sub.remove();
+}
+
+// @react-native-firebase/messaging v22+ is modular-only: there is no default
+// `messaging()` export any more, just named functions that take the messaging
+// instance. It's also only present in a real build (not jest). Load it lazily
+// and tolerate its absence so this module stays safe to import anywhere.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type RNFBMessaging = {
+  mod: any; // the module namespace (getToken, requestPermission, AuthorizationStatus, …)
+  instance: any; // getMessaging()
+};
+
+function loadMessaging(): RNFBMessaging | null {
+  try {
+    const mod = require('@react-native-firebase/messaging');
+    return { mod, instance: mod.getMessaging() };
   } catch {
     return null;
   }
 }
+
+// RNFirebase wants a background message handler registered outside the React
+// tree (at module load). Every push we send carries a `notification` payload,
+// so Android displays it itself while backgrounded and this handler has nothing
+// to do -- it exists to satisfy the API (and silence the startup warning), and
+// is where a data-only message would be handled if we ever send one.
+(() => {
+  const m = loadMessaging();
+  if (!m) return;
+  try {
+    m.mod.setBackgroundMessageHandler(m.instance, async () => {});
+  } catch {
+    /* ignore */
+  }
+})();
 
 const platform: DevicePlatform = Platform.OS === 'ios' ? 'ios' : 'android';
 
@@ -38,26 +122,27 @@ let unsubscribeTokenRefresh: (() => void) | null = null;
  */
 export async function registerForPush(): Promise<void> {
   if (registered) return;
-  const messaging = loadMessaging();
-  if (!messaging) return;
+  const m = loadMessaging();
+  if (!m) return;
+  const { mod, instance } = m;
 
   try {
-    const status = await messaging().requestPermission();
+    const status = await mod.requestPermission(instance);
     const granted =
-      status === messaging.AuthorizationStatus.AUTHORIZED ||
-      status === messaging.AuthorizationStatus.PROVISIONAL;
+      status === mod.AuthorizationStatus.AUTHORIZED ||
+      status === mod.AuthorizationStatus.PROVISIONAL;
     if (!granted) return;
 
     if (Platform.OS === 'ios') {
-      await messaging().registerDeviceForRemoteMessages();
+      await mod.registerDeviceForRemoteMessages(instance);
     }
 
-    const token: string = await messaging().getToken();
+    const token: string = await mod.getToken(instance);
     await putDeviceToken(token, platform);
     registered = true;
 
     unsubscribeTokenRefresh?.();
-    unsubscribeTokenRefresh = messaging().onTokenRefresh((next: string) => {
+    unsubscribeTokenRefresh = mod.onTokenRefresh(instance, (next: string) => {
       putDeviceToken(next, platform).catch((err) =>
         console.warn('[push] token refresh sync failed:', err),
       );
@@ -73,13 +158,14 @@ export async function unregisterPush(): Promise<void> {
   unsubscribeTokenRefresh?.();
   unsubscribeTokenRefresh = null;
 
-  const messaging = loadMessaging();
-  if (!messaging) return;
+  const m = loadMessaging();
+  if (!m) return;
+  const { mod, instance } = m;
 
   try {
-    const token: string = await messaging().getToken();
+    const token: string = await mod.getToken(instance);
     if (token) await deleteDeviceToken(token);
-    await messaging().deleteToken();
+    await mod.deleteToken(instance);
   } catch {
     // ignore -- the token is cleaned up server-side on the next FCM receipt anyway
   }
@@ -104,10 +190,10 @@ function routeFor(data: Record<string, string> | undefined): string | null {
  * Route to open if the app was launched by tapping a notification (cold start).
  */
 export async function getLaunchNotificationRoute(): Promise<string | null> {
-  const messaging = loadMessaging();
-  if (!messaging) return null;
+  const m = loadMessaging();
+  if (!m) return null;
   try {
-    const message = await messaging().getInitialNotification();
+    const message = await m.mod.getInitialNotification(m.instance);
     return routeFor(message?.data);
   } catch {
     return null;
@@ -119,10 +205,10 @@ export async function getLaunchNotificationRoute(): Promise<string | null> {
  * unsubscribe function.
  */
 export function subscribeNotificationTaps(onRoute: (path: string) => void): () => void {
-  const messaging = loadMessaging();
-  if (!messaging) return () => {};
+  const m = loadMessaging();
+  if (!m) return () => {};
   try {
-    return messaging().onNotificationOpenedApp((message: { data?: Record<string, string> }) => {
+    return m.mod.onNotificationOpenedApp(m.instance, (message: { data?: Record<string, string> }) => {
       const path = routeFor(message?.data);
       if (path) onRoute(path);
     });
@@ -146,10 +232,11 @@ export type ForegroundNotification = {
 export function subscribeForegroundMessages(
   onMessage: (notification: ForegroundNotification) => void,
 ): () => void {
-  const messaging = loadMessaging();
-  if (!messaging) return () => {};
+  const m = loadMessaging();
+  if (!m) return () => {};
   try {
-    return messaging().onMessage(
+    return m.mod.onMessage(
+      m.instance,
       (message: {
         notification?: { title?: string; body?: string };
         data?: Record<string, string>;
