@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Alert } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
@@ -6,6 +7,7 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import {
   getLaunchNotificationRoute,
   registerForPush,
+  subscribeForegroundMessages,
   subscribeNotificationTaps,
   unregisterPush,
 } from '@/src/services/pushNotifications';
@@ -36,6 +38,17 @@ export default function RootLayout() {
       if (path) router.push(path as never);
     });
     return subscribeNotificationTaps((path) => router.push(path as never));
+  }, []);
+
+  // Foreground messages: FCM doesn't show these itself, so surface them as an
+  // in-app alert with a shortcut to the relevant screen.
+  useEffect(() => {
+    return subscribeForegroundMessages(({ title, body, route }) => {
+      Alert.alert(title ?? 'Notificación', body, [
+        ...(route ? [{ text: 'Ver', onPress: () => router.push(route as never) }] : []),
+        { text: 'Cerrar', style: 'cancel' as const },
+      ]);
+    });
   }, []);
 
   return (

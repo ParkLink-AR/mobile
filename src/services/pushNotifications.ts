@@ -87,10 +87,17 @@ export async function unregisterPush(): Promise<void> {
 
 /** Maps a notification `data` payload to an in-app route, or null. */
 function routeFor(data: Record<string, string> | undefined): string | null {
-  if (data?.type === 'booking.confirmed' && data.bookingId) {
-    return `/(driver)/bookings/${data.bookingId}`;
+  if (!data?.bookingId) return null;
+  switch (data.type) {
+    // Sent to the driver when their booking is confirmed.
+    case 'booking.confirmed':
+      return `/(driver)/bookings/${data.bookingId}`;
+    // Sent to the owner when a paid booking is waiting for them to accept/reject.
+    case 'booking.pending_approval':
+      return `/(owner)/bookings/${data.bookingId}`;
+    default:
+      return null;
   }
-  return null;
 }
 
 /**
@@ -119,6 +126,41 @@ export function subscribeNotificationTaps(onRoute: (path: string) => void): () =
       const path = routeFor(message?.data);
       if (path) onRoute(path);
     });
+  } catch {
+    return () => {};
+  }
+}
+
+export type ForegroundNotification = {
+  title?: string;
+  body?: string;
+  /** In-app route for this notification, or null if it doesn't map to one. */
+  route: string | null;
+};
+
+/**
+ * Subscribes to messages that arrive while the app is in the foreground. FCM
+ * does NOT show these as system notifications, so the caller decides how to
+ * surface them (e.g. an in-app alert). Returns an unsubscribe function.
+ */
+export function subscribeForegroundMessages(
+  onMessage: (notification: ForegroundNotification) => void,
+): () => void {
+  const messaging = loadMessaging();
+  if (!messaging) return () => {};
+  try {
+    return messaging().onMessage(
+      (message: {
+        notification?: { title?: string; body?: string };
+        data?: Record<string, string>;
+      }) => {
+        onMessage({
+          title: message?.notification?.title,
+          body: message?.notification?.body,
+          route: routeFor(message?.data),
+        });
+      },
+    );
   } catch {
     return () => {};
   }
