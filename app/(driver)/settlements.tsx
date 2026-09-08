@@ -2,7 +2,7 @@ import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
 import { Text, View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
@@ -13,6 +13,7 @@ import { Settlement } from '@/src/types';
 
 export default function Settlements() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
@@ -47,7 +48,7 @@ export default function Settlements() {
           </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => router.push(`/(driver)/settlements/${item.id}`)}>
+          <TouchableOpacity onPress={() => router.push(`${group}/settlements/${item.id}`)}>
             <Card>
               <Text style={typography.h2}>{item.period}</Text>
               <Text style={styles.amount}>${item.totalAmount.toLocaleString('es-AR')}</Text>

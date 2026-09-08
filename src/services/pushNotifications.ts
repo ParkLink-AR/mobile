@@ -88,7 +88,7 @@ export async function unregisterPush(): Promise<void> {
 /** Maps a notification `data` payload to an in-app route, or null. */
 function routeFor(data: Record<string, string> | undefined): string | null {
   if (data?.type === 'booking.confirmed' && data.bookingId) {
-    return `/(driver)/bookings/${data.bookingId}`;
+    return `/(both)/bookings/${data.bookingId}`;
   }
   return null;
 }

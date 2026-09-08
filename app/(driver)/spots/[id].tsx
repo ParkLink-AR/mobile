@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect, useSegments } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { PhotoGallery } from '@/src/components/PhotoGallery';
@@ -14,6 +14,7 @@ import { t, useLanguage } from '@/src/i18n';
 export default function SpotDetail() {
   const colors = useThemeColors();
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const { id } = useLocalSearchParams<{ id: string }>();
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
 
@@ -142,7 +143,7 @@ export default function SpotDetail() {
             ))}
             <TouchableOpacity
               style={styles.availabilityBtn}
-              onPress={() => router.push(`/(driver)/spots/${id}/availability`)}
+              onPress={() => router.push(`${group}/spots/${id}/availability`)}
             >
               <Text style={styles.availabilityLink}>{t('owner.spots.manageAvailability')}</Text>
               <Ionicons name="chevron-forward" size={13} color={colors.teal} />
@@ -151,7 +152,7 @@ export default function SpotDetail() {
 
           <TouchableOpacity
             style={styles.card}
-            onPress={() => router.push(`/(driver)/spots/${id}/requests`)}
+            onPress={() => router.push(`${group}/spots/${id}/requests`)}
           >
             <View style={styles.sectionHeader}>
               <Ionicons name="mail-outline" size={15} color={colors.textSecondary} />
@@ -173,7 +174,7 @@ export default function SpotDetail() {
 
           <Button
             title={t('owner.spot.edit.title')}
-            onPress={() => router.push(`/(driver)/spots/${id}/edit`)}
+            onPress={() => router.push(`${group}/spots/${id}/edit`)}
             style={styles.editBtn}
           />
         </View>

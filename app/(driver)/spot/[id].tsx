@@ -1,7 +1,7 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Chip } from '@/src/components/Chip';
 import { TAG_LABEL_KEYS, FAVORITE_RED } from '@/src/components/ParkingSpotCard';
@@ -142,6 +142,7 @@ export default function SpotDetail() {
   const colors = useThemeColors();
   const typography = useTypography();
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const { id } = useLocalSearchParams<{ id: string }>();
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [ownerName, setOwnerName] = useState<string | null>(null);
@@ -300,13 +301,13 @@ export default function SpotDetail() {
       </View>
       <View style={styles.body}>
         <Text style={typography.h1}>{spot.title}</Text>
-        <TouchableOpacity onPress={() => router.push(`/(driver)/spot/${spot.id}/reviews`)}>
+        <TouchableOpacity onPress={() => router.push(`${group}/spot/${spot.id}/reviews`)}>
           <RatingStars rating={spot.rating} count={spot.reviewCount} />
         </TouchableOpacity>
         {!!ownerName && (
           <TouchableOpacity
             style={styles.ownerRow}
-            onPress={() => router.push(`/(driver)/profile/${spot.ownerId}?as=owner`)}
+            onPress={() => router.push(`${group}/profile/${spot.ownerId}?as=owner`)}
           >
             <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
             <Text style={styles.ownerRowText}>{t('spot.postedBy', { name: ownerName })}</Text>
@@ -336,7 +337,7 @@ export default function SpotDetail() {
             </View>
             <TouchableOpacity
               style={styles.editBtn}
-              onPress={() => router.push(`/(driver)/spots/${spot.id}/edit`)}
+              onPress={() => router.push(`${group}/spots/${spot.id}/edit`)}
             >
               <Ionicons name="pencil-outline" size={16} color={colors.white} />
               <Text style={styles.editBtnText}>{t('spot.editSpot')}</Text>
@@ -440,7 +441,7 @@ export default function SpotDetail() {
               title={t('spot.bookNow')}
               onPress={() =>
                 router.push({
-                  pathname: '/(driver)/booking/confirm',
+                  pathname: `${group}/booking/confirm`,
                   params: {
                     spotId: spot.id,
                     hours: String(durationHours),

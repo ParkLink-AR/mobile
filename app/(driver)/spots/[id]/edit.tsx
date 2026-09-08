@@ -5,7 +5,7 @@ import {
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect, useSegments } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { RatingStars } from '@/src/components/RatingStars';
@@ -34,6 +34,7 @@ const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export default function EditSpot() {
   const colors = useThemeColors();
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const { id } = useLocalSearchParams<{ id: string }>();
   const markUpdated = useSpotsStore((s) => s.markUpdated);
   const clearSpots = useSpotsStore((s) => s.clearSpots);
@@ -269,7 +270,7 @@ export default function EditSpot() {
           await deleteParkingSpot(id);
           clearSpots();
           markUpdated();
-          router.replace('/(driver)/(tabs)/profile');
+          router.replace(`${group}/(tabs)/profile`);
         } catch (err) {
           alert(err instanceof ApiError ? err.detail : t('owner.spot.edit.errorDelete'));
           setDeleteBusy(false);

@@ -2,7 +2,7 @@ import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { Screen } from '@/src/components/Screen';
@@ -43,6 +43,7 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
 
 export default function DriverBookings() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
@@ -93,7 +94,7 @@ export default function DriverBookings() {
           </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => router.push(`/(driver)/bookings/${item.id}`)}>
+          <TouchableOpacity onPress={() => router.push(`${group}/bookings/${item.id}`)}>
             <Card>
               <View style={styles.row}>
                 <Text style={typography.h2}>{item.parkingSpotTitle}</Text>

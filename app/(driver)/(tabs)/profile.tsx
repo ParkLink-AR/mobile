@@ -4,7 +4,7 @@ import {
   Text, View, ScrollView, StyleSheet, Pressable, Image, TextInput, ActivityIndicator,
   Modal, Animated, TouchableWithoutFeedback,
 } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
 import { VerifiedBadge } from '@/src/components/VerifiedBadge';
@@ -26,6 +26,7 @@ const LANGS: { key: Language; label: string }[] = [
 
 export default function Profile() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
@@ -245,7 +246,7 @@ export default function Profile() {
         {/* Edit profile */}
         <Pressable
           style={({ pressed }) => [styles.actionBtn, styles.editBtn, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => router.push('/(driver)/profile-edit')}
+          onPress={() => router.push(`${group}/profile-edit`)}
         >
           <Ionicons name="pencil-outline" size={18} color={colors.white} />
           <Text style={[styles.actionBtnText, styles.editBtnText]}>{t('driver.profile.edit')}</Text>

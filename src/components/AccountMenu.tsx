@@ -69,8 +69,8 @@ export function AccountMenu() {
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
           <View style={styles.menu}>
-            <MenuItem iconName="person-outline" label={t('account.myAccount')} onPress={() => go('/(driver)/(tabs)/profile')} />
-            <MenuItem iconName="settings-outline" label={t('account.settings.label')} onPress={() => go('/(driver)/settings')} />
+            <MenuItem iconName="person-outline" label={t('account.myAccount')} onPress={() => go('/(both)/(tabs)/profile')} />
+            <MenuItem iconName="settings-outline" label={t('account.settings.label')} onPress={() => go('/(both)/settings')} />
             <MenuItem
               iconName={mode === 'dark' ? 'sunny-outline' : 'moon-outline'}
               label={mode === 'dark' ? t('account.menu.theme.light') : t('account.menu.theme.dark')}

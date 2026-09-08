@@ -2,7 +2,7 @@ import { t, useLanguage } from '@/src/i18n';
 import { ApiError } from '@/src/api/client';
 import { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, ScrollView, StyleSheet, Alert } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, useSegments, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
@@ -54,6 +54,7 @@ function artMidnightForDate(dateISO: string): number {
 
 export default function ConfirmBooking() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
   const { spotId, hours, startHour, endHour, bookingDate } = useLocalSearchParams<{
@@ -193,7 +194,7 @@ export default function ConfirmBooking() {
     // has confirmed (or rejected) the payment.
     setProcessing(false);
     router.replace({
-      pathname: '/(driver)/payment/pending',
+      pathname: `${group}/payment/pending`,
       params: { bookingId },
     });
   }

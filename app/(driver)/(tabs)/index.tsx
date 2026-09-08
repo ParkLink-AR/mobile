@@ -930,7 +930,7 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
               <TouchableOpacity
                 onPress={() =>
                   router.push({
-                    pathname: `/(driver)/spot/${item.id}`,
+                    pathname: headerVariant === 'both' ? `/(both)/spot/${item.id}` : `/(driver)/spot/${item.id}`,
                     params: { startHour: '8', endHour: '9' },
                   })
                 }
@@ -1050,7 +1050,7 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
               <TouchableOpacity
                 onPress={() =>
                   router.push({
-                    pathname: `/(driver)/spot/${selectedSpot.id}`,
+                    pathname: headerVariant === 'both' ? `/(both)/spot/${selectedSpot.id}` : `/(driver)/spot/${selectedSpot.id}`,
                     params: { startHour: '8', endHour: '9' },
                   })
                 }

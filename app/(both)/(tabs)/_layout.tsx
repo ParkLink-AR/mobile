@@ -37,6 +37,7 @@ export default function BothTabsLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="index" options={{ title: t('tabs.both.search') }} />
+      <Tabs.Screen name="favorites" options={{ title: t('tabs.both.favorites') }} />
       <Tabs.Screen name="bookings" options={{ title: t('tabs.both.bookings') }} />
       <Tabs.Screen name="spots" options={{ title: t('tabs.both.spots') }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />

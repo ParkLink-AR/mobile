@@ -25,10 +25,11 @@ const OWNER_TAB_KEYS: TabKey[] = [
 ];
 
 const BOTH_TAB_KEYS: TabKey[] = [
-  { name: 'index',    labelKey: 'tabs.both.search',    icon: 'search-outline',   activeIcon: 'search' },
-  { name: 'bookings', labelKey: 'tabs.both.bookings',  icon: 'calendar-outline', activeIcon: 'calendar' },
-  { name: 'spots',    labelKey: 'tabs.both.spots',     icon: 'car-outline',      activeIcon: 'car' },
-  { name: 'profile',  labelKey: 'tabs.both.profile',   icon: 'person-outline',   activeIcon: 'person' },
+  { name: 'index',     labelKey: 'tabs.both.search',    icon: 'search-outline',   activeIcon: 'search' },
+  { name: 'favorites', labelKey: 'tabs.both.favorites', icon: 'heart-outline',    activeIcon: 'heart' },
+  { name: 'bookings',  labelKey: 'tabs.both.bookings',  icon: 'calendar-outline', activeIcon: 'calendar' },
+  { name: 'spots',     labelKey: 'tabs.both.spots',     icon: 'car-outline',      activeIcon: 'car' },
+  { name: 'profile',   labelKey: 'tabs.both.profile',   icon: 'person-outline',   activeIcon: 'person' },
 ];
 
 function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[] }) {
@@ -67,9 +68,10 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
 
   return (
     <View style={styles.bar}>
-      {tabs.map((tab, index) => {
-        const route = state.routes[index];
-        const focused = state.index === index;
+      {tabs.map((tab) => {
+        const routeIndex = state.routes.findIndex((r) => r.name === tab.name);
+        const route = state.routes[routeIndex];
+        const focused = state.index === routeIndex;
         const color = focused ? colors.teal : colors.textSecondary;
 
         return (
