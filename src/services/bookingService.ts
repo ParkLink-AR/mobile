@@ -32,7 +32,7 @@ export interface CreateBookingInput {
 }
 
 export async function createBooking(input: CreateBookingInput): Promise<Booking> {
-  const subtotal = input.parkingSpot.pricePerHour * input.hours;
+  const subtotal = (input.parkingSpot.pricePerHour ?? 0) * input.hours;
   const serviceCharge = Math.round(subtotal * 0.05);
   const booking: Booking = {
     id: `booking-${nextId++}`,

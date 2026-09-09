@@ -18,12 +18,15 @@ function makeApiSpot(overrides: Partial<ParkingSpotApiResponse> = {}): ParkingSp
     address: 'Av. Santa Fe 3245, Palermo, CABA',
     lat: -34.588,
     lng: -58.42,
+    hourlyEnabled: true,
+    vehicleTypes: ['car'],
     pricePerHour: 1200,
     stayEnabled: false,
     pricePerDay: null,
     pricePerWeek: null,
     pricePerMonth: null,
     stayAvailableFrom: null,
+    stayAvailableUntil: null,
     maxStayDays: null,
     covered: true,
     instantBooking: true,
@@ -96,7 +99,7 @@ describe('parkingService', () => {
     const spots = await searchParkingSpots({ lat: -34.6, lng: -58.45, minPrice: 1000 });
 
     expect(spots.map((s) => s.id)).toEqual(['pricey']);
-    expect(spots.every((s) => getDriverVisiblePrice(s.pricePerHour) >= 1000)).toBe(true);
+    expect(spots.every((s) => s.pricePerHour !== null && getDriverVisiblePrice(s.pricePerHour) >= 1000)).toBe(true);
   });
 
   it('returns a spot by id', async () => {

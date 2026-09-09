@@ -918,7 +918,7 @@ export function SearchScreen() {
                 >
                   <View style={[styles.pin, isSelected && styles.pinSelected]}>
                     <Text style={styles.pinText}>
-                      ${getDriverVisiblePrice(spot.pricePerHour)}
+                      {spot.pricePerHour !== null ? `$${getDriverVisiblePrice(spot.pricePerHour)}` : t('spot.stayOnlyBadge')}
                     </Text>
                   </View>
                 </Marker>

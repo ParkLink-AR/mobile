@@ -9,9 +9,11 @@ import { useLocalSearchParams, router, useFocusEffect, useSegments } from 'expo-
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { RatingStars } from '@/src/components/RatingStars';
-import { AvailabilityPicker, DayScheduleGroup, dayGroupsToEntries, entriesToDayGroups } from '@/src/components/AvailabilityPicker';
+import { dayGroupsToEntries, entriesToDayGroups } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
 import { StaySettingsEditor, StaySettingsFormValue, EMPTY_STAY_SETTINGS } from '@/src/components/StaySettingsEditor';
+import { HourlySettingsEditor, HourlySettingsFormValue, EMPTY_HOURLY_SETTINGS } from '@/src/components/HourlySettingsEditor';
+import { VehicleTypePicker } from '@/src/components/VehicleTypePicker';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import {
   getParkingSpotDetail,
@@ -26,6 +28,7 @@ import { useSpotsStore } from '@/src/store/useSpotsStore';
 import { GeocodeCandidate, ParkingSpotPhotoAsset, reverseGeocode } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { ParkingSpot } from '@/src/types';
+import { VehicleType } from '@/src/constants/vehicleTypes';
 import { t, useLanguage } from '@/src/i18n';
 
 const MAX_PHOTOS = 10;
@@ -46,14 +49,12 @@ export default function EditSpot() {
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [addressSuggestionsOpen, setAddressSuggestionsOpen] = useState(false);
-  const [price, setPrice] = useState('');
   const [capacity, setCapacity] = useState('1');
   const [description, setDescription] = useState('');
   const [covered, setCovered] = useState(true);
+  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [instantBooking, setInstantBooking] = useState(true);
-  const [schedule, setSchedule] = useState<DayScheduleGroup[]>(
-    [0, 1, 2, 3, 4].map((d) => ({ dayIndex: d, slots: [{ startHour: 8, endHour: 20 }] })),
-  );
+  const [hourlySettings, setHourlySettings] = useState<HourlySettingsFormValue>(EMPTY_HOURLY_SETTINGS);
   const [staySettings, setStaySettings] = useState<StaySettingsFormValue>(EMPTY_STAY_SETTINGS);
   const [saving, setSaving] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
@@ -74,13 +75,17 @@ export default function EditSpot() {
         setSpot(s);
         setAddress(s.address);
         setCoordinates({ lat: s.lat, lng: s.lng });
-        setPrice(String(s.pricePerHour));
         setCapacity(String(s.capacity ?? 1));
         setDescription(s.description ?? '');
         setCovered(s.covered);
+        setVehicleTypes(s.vehicleTypes);
         setInstantBooking(s.instantBooking);
         setPhotos(s.photos);
-        if (s.schedule.length > 0) setSchedule(entriesToDayGroups(s.schedule));
+        setHourlySettings({
+          hourlyEnabled: s.hourlyEnabled,
+          pricePerHour: s.pricePerHour !== null ? String(s.pricePerHour) : '',
+          schedule: s.schedule.length > 0 ? entriesToDayGroups(s.schedule) : [],
+        });
         setStaySettings({
           stayEnabled: s.stayEnabled,
           pricePerDay: s.pricePerDay !== null ? String(s.pricePerDay) : '',
@@ -88,6 +93,7 @@ export default function EditSpot() {
           pricePerMonth: s.pricePerMonth !== null ? String(s.pricePerMonth) : '',
           maxStayDays: s.maxStayDays !== null ? String(s.maxStayDays) : '',
           stayAvailableFrom: s.stayAvailableFrom ?? '',
+          stayAvailableUntil: s.stayAvailableUntil ?? '',
         });
       });
     }, [id]),
@@ -199,12 +205,20 @@ export default function EditSpot() {
   if (!spot) return null;
 
   async function save() {
-    if (schedule.length === 0) {
+    if (!hourlySettings.hourlyEnabled && !staySettings.stayEnabled) {
+      alert(t('owner.spot.new.requiredMode'));
+      return;
+    }
+    if (vehicleTypes.length === 0) {
+      alert(t('owner.spot.new.requiredVehicleTypes'));
+      return;
+    }
+    if (hourlySettings.hourlyEnabled && hourlySettings.schedule.length === 0) {
       alert(t('owner.spot.edit.invalidHours'));
       return;
     }
-    const parsedPrice = Number(price);
-    if (!price.trim() || isNaN(parsedPrice) || parsedPrice <= 0) {
+    const parsedPrice = Number(hourlySettings.pricePerHour);
+    if (hourlySettings.hourlyEnabled && (!hourlySettings.pricePerHour.trim() || isNaN(parsedPrice) || parsedPrice <= 0)) {
       alert(t('owner.spot.edit.invalidPrice'));
       return;
     }
@@ -225,12 +239,14 @@ export default function EditSpot() {
     try {
       setSaving(true);
       await updateParkingSpot(id, {
-        pricePerHour: parsedPrice,
+        hourlyEnabled: hourlySettings.hourlyEnabled,
+        pricePerHour: hourlySettings.hourlyEnabled ? parsedPrice : undefined,
         description: description.trim(),
         covered,
+        vehicleTypes,
         instantBooking,
         capacity: Math.max(1, Math.trunc(Number(capacity)) || 1),
-        schedule: dayGroupsToEntries(schedule),
+        schedule: hourlySettings.hourlyEnabled ? dayGroupsToEntries(hourlySettings.schedule) : [],
         address: address.trim(),
         lat: coordinates.lat,
         lng: coordinates.lng,
@@ -240,6 +256,7 @@ export default function EditSpot() {
         pricePerMonth: staySettings.stayEnabled ? Number(staySettings.pricePerMonth) : undefined,
         maxStayDays: staySettings.stayEnabled ? Number(staySettings.maxStayDays) : undefined,
         stayAvailableFrom: staySettings.stayEnabled ? (staySettings.stayAvailableFrom.trim() || undefined) : undefined,
+        stayAvailableUntil: staySettings.stayEnabled ? (staySettings.stayAvailableUntil.trim() || undefined) : undefined,
       });
       // 1. Limpiar la caché para que la lista no muestre datos viejos
       //    mientras llega la respuesta del re-fetch.
@@ -507,19 +524,6 @@ export default function EditSpot() {
             {locationError && !addressSuggestionsOpen && <Text style={styles.locationError}>{locationError}</Text>}
           </View>
 
-          {/* Price */}
-          <View style={styles.card}>
-            <Text style={styles.sectionLabel}>{t('owner.spot.edit.pricePerHour')}</Text>
-            <TextInput
-              style={styles.input}
-              value={price}
-              onChangeText={setPrice}
-              keyboardType="numeric"
-              placeholder="1200"
-              placeholderTextColor={colors.textSecondary}
-            />
-          </View>
-
           {/* Capacity */}
           <View style={styles.card}>
             <Text style={styles.sectionLabel}>{t('owner.spot.new.capacity')}</Text>
@@ -559,6 +563,12 @@ export default function EditSpot() {
             </View>
           </View>
 
+          {/* Vehicle types */}
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>{t('owner.spot.new.vehicleTypes')}</Text>
+            <VehicleTypePicker value={vehicleTypes} onChange={setVehicleTypes} />
+          </View>
+
           {/* Instant booking */}
           <View style={styles.card}>
             <View style={styles.instantBookingRow}>
@@ -570,15 +580,16 @@ export default function EditSpot() {
             </View>
           </View>
 
-          {/* Availability */}
+          {/* Alquiler por hora */}
           <View style={styles.card}>
-            <Text style={styles.sectionLabel}>{t('owner.spot.edit.availability')}</Text>
-            <AvailabilityPicker value={schedule} onChange={setSchedule} />
+            <HourlySettingsEditor
+              value={hourlySettings}
+              onChange={(patch) => setHourlySettings((prev) => ({ ...prev, ...patch }))}
+            />
           </View>
 
           {/* Estadía */}
           <View style={styles.card}>
-            <Text style={styles.sectionLabel}>{t('owner.spot.stay.section')}</Text>
             <StaySettingsEditor
               value={staySettings}
               onChange={(patch) => setStaySettings((prev) => ({ ...prev, ...patch }))}

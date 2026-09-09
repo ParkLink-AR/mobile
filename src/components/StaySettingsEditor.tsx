@@ -1,5 +1,6 @@
 import { View, Text, TextInput, Switch, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/src/theme/useThemeColors';
+import { DatePickerField } from '@/src/components/DatePickerField';
 import { t } from '@/src/i18n';
 
 // Todo en string (no number) porque son valores de TextInput controlados --
@@ -13,6 +14,10 @@ export interface StaySettingsFormValue {
   pricePerMonth: string;
   maxStayDays: string;
   stayAvailableFrom: string; // YYYY-MM-DD, puede quedar vacío
+  // YYYY-MM-DD, puede quedar vacío -- vacío = sin fecha límite, la estadía
+  // queda ofrecida indefinidamente. Cargarla es lo que permite publicar la
+  // cochera por una ventana acotada (p.ej. sólo un fin de semana).
+  stayAvailableUntil: string;
 }
 
 export const EMPTY_STAY_SETTINGS: StaySettingsFormValue = {
@@ -22,6 +27,7 @@ export const EMPTY_STAY_SETTINGS: StaySettingsFormValue = {
   pricePerMonth: '',
   maxStayDays: '',
   stayAvailableFrom: '',
+  stayAvailableUntil: '',
 };
 
 interface StaySettingsEditorProps {
@@ -120,14 +126,25 @@ export function StaySettingsEditor({ value, onChange }: StaySettingsEditorProps)
           </View>
           <View>
             <Text style={styles.fieldLabel}>{t('owner.spot.stay.availableFrom')}</Text>
-            <TextInput
+            <DatePickerField
               style={styles.input}
               value={value.stayAvailableFrom}
-              onChangeText={(text) => onChange({ stayAvailableFrom: text })}
-              placeholder="AAAA-MM-DD"
-              placeholderTextColor={colors.textSecondary}
+              onChange={(v) => onChange({ stayAvailableFrom: v })}
+              placeholder={t('owner.spot.stay.datePlaceholder')}
+              minimumDate={new Date()}
             />
             <Text style={styles.hint}>{t('owner.spot.stay.availableFromHint')}</Text>
+          </View>
+          <View>
+            <Text style={styles.fieldLabel}>{t('owner.spot.stay.availableUntil')}</Text>
+            <DatePickerField
+              style={styles.input}
+              value={value.stayAvailableUntil}
+              onChange={(v) => onChange({ stayAvailableUntil: v })}
+              placeholder={t('owner.spot.stay.datePlaceholder')}
+              minimumDate={value.stayAvailableFrom ? new Date(`${value.stayAvailableFrom}T00:00:00`) : new Date()}
+            />
+            <Text style={styles.hint}>{t('owner.spot.stay.availableUntilHint')}</Text>
           </View>
         </View>
       )}

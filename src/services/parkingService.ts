@@ -1,4 +1,5 @@
 import { ParkingSpot, ScheduleEntry } from '@/src/types';
+import { VehicleType } from '@/src/constants/vehicleTypes';
 import {
   ParkingSpotApiResponse,
   ParkingSpotPhotoAsset,
@@ -27,18 +28,21 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     address: raw.address,
     lat: raw.lat,
     lng: raw.lng,
+    hourlyEnabled: raw.hourlyEnabled,
     pricePerHour: raw.pricePerHour,
     // '' significa "sin foto" -- ParkingSpotCard/PhotoGallery muestran un
     // placeholder propio en vez de pedirle una imagen a una URI vacía.
     photoUrl: raw.photos[0] ?? '',
     photos: raw.photos,
     covered: raw.covered,
+    vehicleTypes: raw.vehicleTypes,
     capacity: raw.capacity ?? 1,
     stayEnabled: raw.stayEnabled,
     pricePerDay: raw.pricePerDay,
     pricePerWeek: raw.pricePerWeek,
     pricePerMonth: raw.pricePerMonth,
     stayAvailableFrom: raw.stayAvailableFrom,
+    stayAvailableUntil: raw.stayAvailableUntil,
     maxStayDays: raw.maxStayDays,
     rating: raw.rating,
     reviewCount: raw.reviewCount,
@@ -141,7 +145,9 @@ export async function searchParkingSpots(
   });
   const spots = results.map(toParkingSpot);
   if (filters.minPrice === undefined) return spots;
-  return spots.filter((s) => getDriverVisiblePrice(s.pricePerHour) >= filters.minPrice!);
+  // Una cochera "solo estadía" no tiene pricePerHour -- no aplica al filtro
+  // de precio por hora, se excluye igual que ya hace maxPrice del lado del backend.
+  return spots.filter((s) => s.pricePerHour !== null && getDriverVisiblePrice(s.pricePerHour) >= filters.minPrice!);
 }
 
 export async function getParkingSpotDetail(id: string): Promise<ParkingSpot | undefined> {
@@ -178,10 +184,15 @@ export interface CreateParkingSpotInput {
   lat: number;
   lng: number;
   covered: boolean;
+  // Obligatorio y no vacío -- ver ParkingSpot.vehicleTypes en parking-service.
+  vehicleTypes: VehicleType[];
   instantBooking: boolean;
   // Lugares idénticos a alquilar contra el mismo id (playa). Omitido = 1.
   capacity?: number;
-  pricePerHour: number;
+  // Default true si se omite -- ver ParkingSpot.hourlyEnabled. pricePerHour
+  // es obligatorio salvo que se mande hourlyEnabled: false.
+  hourlyEnabled?: boolean;
+  pricePerHour?: number;
   schedule?: ScheduleEntry[];
   description?: string;
   // "Estadía" -- ver el comentario en ParkingSpot.stayEnabled. Si
@@ -193,6 +204,7 @@ export interface CreateParkingSpotInput {
   pricePerMonth?: number;
   maxStayDays?: number;
   stayAvailableFrom?: string;
+  stayAvailableUntil?: string;
 }
 
 export async function createParkingSpot(input: CreateParkingSpotInput): Promise<ParkingSpot> {
@@ -201,8 +213,10 @@ export async function createParkingSpot(input: CreateParkingSpotInput): Promise<
     address: input.address,
     lat: input.lat,
     lng: input.lng,
+    hourlyEnabled: input.hourlyEnabled,
     pricePerHour: input.pricePerHour,
     covered: input.covered,
+    vehicleTypes: input.vehicleTypes,
     instantBooking: input.instantBooking,
     capacity: input.capacity,
     schedule: input.schedule,
@@ -213,6 +227,7 @@ export async function createParkingSpot(input: CreateParkingSpotInput): Promise<
     pricePerMonth: input.pricePerMonth,
     maxStayDays: input.maxStayDays,
     stayAvailableFrom: input.stayAvailableFrom,
+    stayAvailableUntil: input.stayAvailableUntil,
   });
   return toParkingSpot(raw);
 }
@@ -233,9 +248,11 @@ export async function reorderParkingSpotPhotos(spotId: string, photos: string[])
 }
 
 export interface UpdateParkingSpotInput {
+  hourlyEnabled?: boolean;
   pricePerHour?: number;
   description?: string;
   covered?: boolean;
+  vehicleTypes?: VehicleType[];
   instantBooking?: boolean;
   capacity?: number;
   schedule?: ScheduleEntry[];
@@ -251,6 +268,7 @@ export interface UpdateParkingSpotInput {
   pricePerMonth?: number;
   maxStayDays?: number;
   stayAvailableFrom?: string;
+  stayAvailableUntil?: string;
 }
 
 export async function updateParkingSpot(
@@ -258,9 +276,11 @@ export async function updateParkingSpot(
   updates: UpdateParkingSpotInput,
 ): Promise<ParkingSpot | undefined> {
   const raw = await apiUpdateParkingSpot(id, {
+    hourlyEnabled: updates.hourlyEnabled,
     pricePerHour: updates.pricePerHour,
     description: updates.description,
     covered: updates.covered,
+    vehicleTypes: updates.vehicleTypes,
     instantBooking: updates.instantBooking,
     capacity: updates.capacity,
     schedule: updates.schedule,
@@ -273,6 +293,7 @@ export async function updateParkingSpot(
     pricePerMonth: updates.pricePerMonth,
     maxStayDays: updates.maxStayDays,
     stayAvailableFrom: updates.stayAvailableFrom,
+    stayAvailableUntil: updates.stayAvailableUntil,
   });
   return toParkingSpot(raw);
 }

@@ -173,7 +173,9 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
           </Text>
           <View style={styles.priceBadge}>
             <Text style={styles.priceText}>
-              ${getDriverVisiblePrice(spot.pricePerHour)}{t('spot.pricePerHour.short')}
+              {spot.pricePerHour !== null
+                ? `$${getDriverVisiblePrice(spot.pricePerHour)}${t('spot.pricePerHour.short')}`
+                : t('spot.stayOnlyBadge')}
             </Text>
           </View>
         </View>

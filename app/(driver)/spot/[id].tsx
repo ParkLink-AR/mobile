@@ -20,6 +20,7 @@ import { useAvailability } from '@/src/hooks/useAvailability';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { getStayQuote, type FreeWindow, type StayQuote, type StayUnit } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
+import { VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { ParkingSpot } from '@/src/types';
 
 // ── Day helpers ───────────────────────────────────────────────────────────────
@@ -245,8 +246,8 @@ export default function SpotDetail() {
   if (!spot) return null;
 
   const isOwner = !!user && spot.ownerId === user.id;
-  const visiblePricePerHour = getDriverVisiblePrice(spot.pricePerHour);
-  const total = visiblePricePerHour * durationHours;
+  const visiblePricePerHour = spot.pricePerHour !== null ? getDriverVisiblePrice(spot.pricePerHour) : null;
+  const total = (visiblePricePerHour ?? 0) * durationHours;
   const canBook = effectiveStartHour !== null;
 
   const styles = StyleSheet.create({
@@ -261,7 +262,7 @@ export default function SpotDetail() {
     },
     photo: { width: '100%', height: 200 },
     body: { padding: 16, gap: 10 },
-    tagRow: { flexDirection: 'row', marginVertical: 4 },
+    tagRow: { flexDirection: 'row', flexWrap: 'wrap', marginVertical: 4 },
     ownerRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
     ownerRowText: { flex: 1, fontSize: 13, color: colors.textSecondary },
     row: { marginTop: 6 },
@@ -366,6 +367,9 @@ export default function SpotDetail() {
           {spot.tags.map((tag) => (
             <Chip key={tag} label={TAG_LABEL_KEYS[tag] ? t(TAG_LABEL_KEYS[tag]) : tag} />
           ))}
+          {spot.vehicleTypes.map((vt) => (
+            <Chip key={vt} label={t(VEHICLE_TYPE_LABEL_KEYS[vt])} />
+          ))}
         </View>
         {(spot.descriptionKey || spot.description) ? (
           <Row
@@ -374,8 +378,12 @@ export default function SpotDetail() {
           />
         ) : null}
         <Row label={t('spot.address')} value={spot.address} />
-        <ScheduleRow label={t('spot.available')} schedule={spot.schedule} />
-        <Row label={t('spot.pricePerHour')} value={t('spot.pricePerHour.withUnit', { price: String(visiblePricePerHour) })} />
+        {spot.hourlyEnabled && (
+          <>
+            <ScheduleRow label={t('spot.available')} schedule={spot.schedule} />
+            <Row label={t('spot.pricePerHour')} value={t('spot.pricePerHour.withUnit', { price: String(visiblePricePerHour) })} />
+          </>
+        )}
 
         {isOwner ? (
           <>
@@ -393,6 +401,8 @@ export default function SpotDetail() {
           </>
         ) : (
           <>
+            {spot.hourlyEnabled && (
+              <>
             {/* Duration selector */}
             <View style={{ marginTop: 6 }}>
               <Text style={typography.caption}>{t('spot.selectHours')}</Text>
@@ -501,6 +511,8 @@ export default function SpotDetail() {
               }
               disabled={!canBook}
             />
+              </>
+            )}
 
             {spot.stayEnabled && (
               <View style={styles.stayCard}>

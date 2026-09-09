@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { request, requestMultipart } from './client';
 import { ScheduleEntry } from '@/src/types';
 import { ReviewListApiResponse } from './booking';
+import { VehicleType } from '@/src/constants/vehicleTypes';
 
 // Shape returned by parking-service (see parking-spots.service.ts's
 // ParkingSpotResponse) -- flattened lat/lng. rating/reviewCount are real
@@ -15,7 +16,10 @@ export interface ParkingSpotApiResponse {
   address: string;
   lat: number;
   lng: number;
-  pricePerHour: number;
+  // null cuando hourlyEnabled es false -- ver ParkingSpot.hourlyEnabled en
+  // parking-service.
+  hourlyEnabled: boolean;
+  pricePerHour: number | null;
   // "Estadía": alquiler por día/semana/mes en vez de por hora. Los precios
   // quedan en null cuando stayEnabled es false -- ver ParkingSpot.stayEnabled
   // en parking-service.
@@ -24,8 +28,10 @@ export interface ParkingSpotApiResponse {
   pricePerWeek: number | null;
   pricePerMonth: number | null;
   stayAvailableFrom: string | null; // YYYY-MM-DD
+  stayAvailableUntil: string | null; // YYYY-MM-DD
   maxStayDays: number | null;
   covered: boolean;
+  vehicleTypes: VehicleType[];
   instantBooking: boolean;
   capacity: number;
   schedule: ScheduleEntry[];
@@ -97,6 +103,7 @@ interface StayFields {
   pricePerMonth?: number;
   maxStayDays?: number;
   stayAvailableFrom?: string; // YYYY-MM-DD
+  stayAvailableUntil?: string; // YYYY-MM-DD
 }
 
 export interface CreateParkingSpotInput extends StayFields {
@@ -105,8 +112,13 @@ export interface CreateParkingSpotInput extends StayFields {
   address: string;
   lat: number;
   lng: number;
-  pricePerHour: number;
+  // Default true si se omite (compatibilidad) -- ver ParkingSpot.hourlyEnabled.
+  // pricePerHour es obligatorio salvo que se mande hourlyEnabled: false.
+  hourlyEnabled?: boolean;
+  pricePerHour?: number;
   covered?: boolean;
+  // Obligatorio y no vacío -- ver ParkingSpot.vehicleTypes en parking-service.
+  vehicleTypes: VehicleType[];
   instantBooking?: boolean;
   // Lugares idénticos a alquilar contra el mismo id (playa). Omitido = 1.
   capacity?: number;
@@ -115,9 +127,11 @@ export interface CreateParkingSpotInput extends StayFields {
 }
 
 export interface UpdateParkingSpotApiInput extends StayFields {
+  hourlyEnabled?: boolean;
   pricePerHour?: number;
   description?: string;
   covered?: boolean;
+  vehicleTypes?: VehicleType[];
   instantBooking?: boolean;
   capacity?: number;
   schedule?: ScheduleEntry[];

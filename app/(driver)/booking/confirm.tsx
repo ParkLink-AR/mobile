@@ -102,6 +102,14 @@ export default function ConfirmBooking() {
   //   7. pending.tsx polls payment-service until approved/rejected
   async function reserve() {
     if (!spot || !user || processing) return;
+    // Esta pantalla sólo se llega desde el flujo de reserva por hora (ver
+    // spot/[id].tsx, que lo esconde si !spot.hourlyEnabled) -- null acá
+    // sería un estado inesperado, no algo que el usuario pueda causar.
+    if (spot.pricePerHour === null) {
+      Alert.alert(t('driver.payment.errorTitle'), t('driver.booking.errorCreating'));
+      return;
+    }
+    const pricePerHour = spot.pricePerHour;
     setProcessing(true);
 
     // ── Step 0: pre-check availability before creating the booking ─────────
@@ -142,7 +150,7 @@ export default function ConfirmBooking() {
         user_id: user.id,
         start: startISO,
         end: endISO,
-        amount: Math.round(spot.pricePerHour * reservedHours * 100), // centavos
+        amount: Math.round(pricePerHour * reservedHours * 100), // centavos
         parking_spot: { id: spotId, schedule, capacity: spot.capacity },
       });
       bookingId = created.id;
@@ -165,7 +173,7 @@ export default function ConfirmBooking() {
     // ── Step 2: create MercadoPago preference ───────────────────────────────
     let checkoutUrl: string;
     try {
-      const visibleTotal = getDriverVisiblePrice(spot.pricePerHour) * reservedHours;
+      const visibleTotal = getDriverVisiblePrice(pricePerHour) * reservedHours;
       const preference = await createPaymentPreference({
         amount: visibleTotal,
         title: `Cochera ${spot.title}`,
@@ -209,6 +217,9 @@ export default function ConfirmBooking() {
   }
 
   if (!user || !spot) return <ActivityIndicator style={{ marginTop: 40 }} />;
+  // Ver el comentario en reserve(): esta pantalla sólo se llega desde el
+  // flujo de reserva por hora, así que esto no debería pasar en la práctica.
+  if (spot.pricePerHour === null) return <ActivityIndicator style={{ marginTop: 40 }} />;
 
   const visiblePricePerHour = getDriverVisiblePrice(spot.pricePerHour);
   const visibleTotal = visiblePricePerHour * reservedHours;

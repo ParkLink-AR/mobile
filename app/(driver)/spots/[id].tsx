@@ -106,9 +106,11 @@ export default function SpotDetail() {
                   <Text style={styles.spotAddress} numberOfLines={2}>{spot.address}</Text>
                 </View>
               </View>
-              <View style={styles.priceBadge}>
-                <Text style={styles.priceValue}>${getDriverVisiblePrice(spot.pricePerHour)}{t('spot.pricePerHour.short')}</Text>
-              </View>
+              {spot.hourlyEnabled && spot.pricePerHour !== null && (
+                <View style={styles.priceBadge}>
+                  <Text style={styles.priceValue}>${getDriverVisiblePrice(spot.pricePerHour)}{t('spot.pricePerHour.short')}</Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.divider} />
@@ -131,24 +133,26 @@ export default function SpotDetail() {
             </View>
           </View>
 
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
-              <Text style={styles.sectionLabel}>{t('owner.spot.edit.availability')}</Text>
+          {spot.hourlyEnabled && (
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+                <Text style={styles.sectionLabel}>{t('owner.spot.edit.availability')}</Text>
+              </View>
+              {formatScheduleForDisplay(spot.schedule).map((line) => (
+                <Text key={line.dayRange} style={styles.value}>
+                  {line.dayRange}: {line.hours}
+                </Text>
+              ))}
+              <TouchableOpacity
+                style={styles.availabilityBtn}
+                onPress={() => router.push(`${group}/spots/${id}/availability`)}
+              >
+                <Text style={styles.availabilityLink}>{t('owner.spots.manageAvailability')}</Text>
+                <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+              </TouchableOpacity>
             </View>
-            {formatScheduleForDisplay(spot.schedule).map((line) => (
-              <Text key={line.dayRange} style={styles.value}>
-                {line.dayRange}: {line.hours}
-              </Text>
-            ))}
-            <TouchableOpacity
-              style={styles.availabilityBtn}
-              onPress={() => router.push(`${group}/spots/${id}/availability`)}
-            >
-              <Text style={styles.availabilityLink}>{t('owner.spots.manageAvailability')}</Text>
-              <Ionicons name="chevron-forward" size={13} color={colors.teal} />
-            </TouchableOpacity>
-          </View>
+          )}
 
           <TouchableOpacity
             style={styles.card}

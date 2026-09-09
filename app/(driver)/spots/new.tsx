@@ -6,25 +6,22 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
-import { AvailabilityPicker, DayScheduleGroup, dayGroupsToEntries } from '@/src/components/AvailabilityPicker';
+import { dayGroupsToEntries } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
 import { StaySettingsEditor, StaySettingsFormValue, EMPTY_STAY_SETTINGS } from '@/src/components/StaySettingsEditor';
+import { HourlySettingsEditor, HourlySettingsFormValue, EMPTY_HOURLY_SETTINGS } from '@/src/components/HourlySettingsEditor';
+import { VehicleTypePicker } from '@/src/components/VehicleTypePicker';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { createParkingSpot, uploadParkingSpotPhotos } from '@/src/services/parkingService';
 import { GeocodeCandidate, ParkingSpotPhotoAsset, reverseGeocode } from '@/src/api/parking';
+import { VehicleType } from '@/src/constants/vehicleTypes';
 import { t, useLanguage } from '@/src/i18n';
 
 const MAX_PHOTOS = 10;
 const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-
-/** Default Mon–Fri, 08:00–20:00 */
-const DEFAULT_SCHEDULE: DayScheduleGroup[] = [0, 1, 2, 3, 4].map((dayIndex) => ({
-  dayIndex,
-  slots: [{ startHour: 8, endHour: 20 }],
-}));
 
 export default function NewSpot() {
   const colors = useThemeColors();
@@ -38,10 +35,10 @@ export default function NewSpot() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [addressSuggestionsOpen, setAddressSuggestionsOpen] = useState(false);
   const [covered, setCovered] = useState(true);
+  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [instantBooking, setInstantBooking] = useState(true);
-  const [price, setPrice] = useState('');
   const [capacity, setCapacity] = useState('1');
-  const [schedule, setSchedule] = useState<DayScheduleGroup[]>(DEFAULT_SCHEDULE);
+  const [hourlySettings, setHourlySettings] = useState<HourlySettingsFormValue>(EMPTY_HOURLY_SETTINGS);
   const [staySettings, setStaySettings] = useState<StaySettingsFormValue>(EMPTY_STAY_SETTINGS);
   const [description, setDescription] = useState('');
   const [publishing, setPublishing] = useState(false);
@@ -126,11 +123,23 @@ export default function NewSpot() {
   }
 
   async function publish() {
-    if (!user || !address.trim() || !coordinates || !price.trim()) {
+    if (!user || !address.trim() || !coordinates) {
       alert(t('owner.spot.new.requiredFields'));
       return;
     }
-    if (schedule.length === 0) {
+    if (!hourlySettings.hourlyEnabled && !staySettings.stayEnabled) {
+      alert(t('owner.spot.new.requiredMode'));
+      return;
+    }
+    if (vehicleTypes.length === 0) {
+      alert(t('owner.spot.new.requiredVehicleTypes'));
+      return;
+    }
+    if (hourlySettings.hourlyEnabled && !hourlySettings.pricePerHour.trim()) {
+      alert(t('owner.spot.new.requiredFields'));
+      return;
+    }
+    if (hourlySettings.hourlyEnabled && hourlySettings.schedule.length === 0) {
       alert(t('owner.spot.new.requiredSchedule'));
       return;
     }
@@ -153,10 +162,12 @@ export default function NewSpot() {
         lat: coordinates.lat,
         lng: coordinates.lng,
         covered,
+        vehicleTypes,
         instantBooking,
-        pricePerHour: Number(price),
+        hourlyEnabled: hourlySettings.hourlyEnabled,
+        pricePerHour: hourlySettings.hourlyEnabled ? Number(hourlySettings.pricePerHour) : undefined,
         capacity: Math.max(1, Math.trunc(Number(capacity)) || 1),
-        schedule: dayGroupsToEntries(schedule),
+        schedule: hourlySettings.hourlyEnabled ? dayGroupsToEntries(hourlySettings.schedule) : undefined,
         description: description.trim() || undefined,
         stayEnabled: staySettings.stayEnabled,
         pricePerDay: staySettings.stayEnabled ? Number(staySettings.pricePerDay) : undefined,
@@ -164,6 +175,7 @@ export default function NewSpot() {
         pricePerMonth: staySettings.stayEnabled ? Number(staySettings.pricePerMonth) : undefined,
         maxStayDays: staySettings.stayEnabled ? Number(staySettings.maxStayDays) : undefined,
         stayAvailableFrom: staySettings.stayEnabled ? (staySettings.stayAvailableFrom.trim() || undefined) : undefined,
+        stayAvailableUntil: staySettings.stayEnabled ? (staySettings.stayAvailableUntil.trim() || undefined) : undefined,
       });
       if (photos.length > 0) {
         // La cochera ya existe -- si esto falla, el dueño todavía puede
@@ -325,6 +337,9 @@ export default function NewSpot() {
           </Pressable>
         </View>
 
+        <Text style={[typography.caption, styles.sectionLabel]}>{t('owner.spot.new.vehicleTypes')}</Text>
+        <VehicleTypePicker value={vehicleTypes} onChange={setVehicleTypes} />
+
         <View style={styles.instantBookingRow}>
           <View style={styles.instantBookingLabelBlock}>
             <Text style={typography.caption}>{t('owner.spot.new.instantBooking')}</Text>
@@ -332,16 +347,6 @@ export default function NewSpot() {
           </View>
           <Switch value={instantBooking} onValueChange={setInstantBooking} trackColor={{ true: colors.teal }} />
         </View>
-
-        <Text style={typography.caption}>{t('owner.spot.new.pricePerHour')}</Text>
-        <TextInput
-          style={styles.input}
-          value={price}
-          onChangeText={setPrice}
-          keyboardType="numeric"
-          placeholder="$1.200"
-          placeholderTextColor={colors.textSecondary}
-        />
 
         <Text style={typography.caption}>{t('owner.spot.new.capacity')}</Text>
         <TextInput
@@ -356,12 +361,11 @@ export default function NewSpot() {
           {t('owner.spot.new.capacityHint')}
         </Text>
 
-        <Text style={[typography.caption, styles.sectionLabel]}>
-          {t('owner.spot.new.availability')}
-        </Text>
-        <AvailabilityPicker value={schedule} onChange={setSchedule} />
+        <HourlySettingsEditor
+          value={hourlySettings}
+          onChange={(patch) => setHourlySettings((prev) => ({ ...prev, ...patch }))}
+        />
 
-        <Text style={[typography.caption, styles.sectionLabel]}>{t('owner.spot.stay.section')}</Text>
         <StaySettingsEditor
           value={staySettings}
           onChange={(patch) => setStaySettings((prev) => ({ ...prev, ...patch }))}

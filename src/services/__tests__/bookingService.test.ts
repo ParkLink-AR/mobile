@@ -19,7 +19,7 @@ describe('bookingService', () => {
       hours: 2,
     });
     expect(booking.status).toBe('PENDING_PAYMENT');
-    expect(booking.subtotal).toBe(spot.pricePerHour * 2);
+    expect(booking.subtotal).toBe((spot.pricePerHour ?? 0) * 2);
     expect(booking.serviceCharge).toBe(Math.round(booking.subtotal * 0.05));
     expect(booking.total).toBe(booking.subtotal + booking.serviceCharge);
   });

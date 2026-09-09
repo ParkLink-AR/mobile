@@ -1,3 +1,5 @@
+import { VehicleType } from '@/src/constants/vehicleTypes';
+
 // El backend no tiene un rol fijo por usuario: cualquiera puede operar como
 // conductor o propietario. `ActiveMode` (useSessionStore) es el modo in-app
 // que decide qué stack se muestra, no un campo del usuario.
@@ -56,10 +58,14 @@ export interface ParkingSpot {
   address: string;
   lat: number;
   lng: number;
-  pricePerHour: number;
+  // null cuando hourlyEnabled es false (una cochera "solo estadía" no
+  // publica precio ni horario por hora).
+  hourlyEnabled: boolean;
+  pricePerHour: number | null;
   photoUrl: string;
   photos: string[];
   covered: boolean;
+  vehicleTypes: VehicleType[];
   // Lugares idénticos que se alquilan contra este id (playa). 1 = cochera común.
   capacity: number;
   // "Estadía": alquiler por día/semana/mes en vez de por hora. Los tres
@@ -69,6 +75,9 @@ export interface ParkingSpot {
   pricePerWeek: number | null;
   pricePerMonth: number | null;
   stayAvailableFrom: string | null; // YYYY-MM-DD
+  // Ventana acotada de estadía (p.ej. "solo este fin de semana") -- null =
+  // sin fecha límite.
+  stayAvailableUntil: string | null; // YYYY-MM-DD
   maxStayDays: number | null;
   rating: number;
   reviewCount: number;
