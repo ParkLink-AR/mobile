@@ -16,6 +16,15 @@ export interface ParkingSpotApiResponse {
   lat: number;
   lng: number;
   pricePerHour: number;
+  // "Estadía": alquiler por día/semana/mes en vez de por hora. Los precios
+  // quedan en null cuando stayEnabled es false -- ver ParkingSpot.stayEnabled
+  // en parking-service.
+  stayEnabled: boolean;
+  pricePerDay: number | null;
+  pricePerWeek: number | null;
+  pricePerMonth: number | null;
+  stayAvailableFrom: string | null; // YYYY-MM-DD
+  maxStayDays: number | null;
   covered: boolean;
   instantBooking: boolean;
   capacity: number;
@@ -44,6 +53,9 @@ export interface SearchParkingSpotsParams {
   // only -- parking-service doesn't filter by them yet.
   from?: string;
   to?: string;
+  // Sólo cocheras con la opción de estadía habilitada -- lo usa el buscador
+  // cuando el conductor busca específicamente un lugar por día/semana/mes.
+  stayOnly?: boolean;
 }
 
 // One candidate match for a free-text address query -- ambiguous street
@@ -74,7 +86,20 @@ export async function reverseGeocode(lat: number, lng: number): Promise<ReverseG
   return request(`/geocode/reverse?lat=${lat}&lng=${lng}`);
 }
 
-export interface CreateParkingSpotInput {
+// Campos de "estadía" comunes a create y update -- si stayEnabled es true,
+// parking-service exige las tres tarifas y maxStayDays (ver
+// CreateParkingSpotDto/UpdateParkingSpotDto ahí). stayAvailableFrom es
+// opcional aun con stayEnabled=true: si no se manda, se interpreta "desde hoy".
+interface StayFields {
+  stayEnabled?: boolean;
+  pricePerDay?: number;
+  pricePerWeek?: number;
+  pricePerMonth?: number;
+  maxStayDays?: number;
+  stayAvailableFrom?: string; // YYYY-MM-DD
+}
+
+export interface CreateParkingSpotInput extends StayFields {
   title: string;
   description?: string;
   address: string;
@@ -89,7 +114,7 @@ export interface CreateParkingSpotInput {
   rules?: string[];
 }
 
-export interface UpdateParkingSpotApiInput {
+export interface UpdateParkingSpotApiInput extends StayFields {
   pricePerHour?: number;
   description?: string;
   covered?: boolean;
@@ -139,6 +164,7 @@ export async function searchParkingSpots(
     ...(params.covered !== undefined ? { covered: String(params.covered) } : {}),
     ...(params.from !== undefined ? { from: params.from } : {}),
     ...(params.to !== undefined ? { to: params.to } : {}),
+    ...(params.stayOnly !== undefined ? { stayOnly: String(params.stayOnly) } : {}),
   });
   return request(`/parking-spots/search?${query.toString()}`);
 }
@@ -250,4 +276,37 @@ export async function getAvailability(
 
 export async function getSpotReviewsApi(spotId: string): Promise<ReviewListApiResponse> {
   return request(`/parking-spots/${spotId}/reviews`);
+}
+
+export type StayUnit = 'day' | 'week' | 'month';
+
+export interface StayQuote {
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  unit: StayUnit;
+  count: number;
+  totalDays: number;
+  // Centavos, mismo criterio que BookingApiResponse.amount (dividir por 100
+  // para mostrar pesos -- ver getDriverVisiblePrice / cómo se usa en
+  // booking/confirm.tsx).
+  amount: number;
+}
+
+/**
+ * Cotiza una estadía (día/semana/mes) para una cochera -- valida que la
+ * cochera acepte estadía, que startDate esté dentro de lo que permite el
+ * dueño, y que el rango no choque con otra reserva. Devuelve 400/404/409
+ * (ApiError) si no es posible; el caller (AddressAutocomplete-like picker en
+ * spot/[id].tsx) muestra ese mensaje tal cual.
+ *
+ * GET /parking-spots/{id}/stays/quote
+ */
+export async function getStayQuote(
+  parkingSpotId: string,
+  startDate: string,
+  unit: StayUnit,
+  count: number,
+): Promise<StayQuote> {
+  const query = new URLSearchParams({ startDate, unit, count: String(count) });
+  return request(`/parking-spots/${parkingSpotId}/stays/quote?${query.toString()}`);
 }

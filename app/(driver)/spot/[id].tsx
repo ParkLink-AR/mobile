@@ -17,7 +17,8 @@ import { useFavoritesStore } from '@/src/store/useFavoritesStore';
 import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
 import { useAvailability } from '@/src/hooks/useAvailability';
 import { getPublicProfileApi } from '@/src/api/auth';
-import type { FreeWindow } from '@/src/api/parking';
+import { getStayQuote, type FreeWindow, type StayQuote, type StayUnit } from '@/src/api/parking';
+import { ApiError } from '@/src/api/client';
 import { ParkingSpot } from '@/src/types';
 
 // ── Day helpers ───────────────────────────────────────────────────────────────
@@ -118,6 +119,19 @@ function startHoursFromFreeWindows(freeWindows: FreeWindow[], durationHours: num
   return [...new Set(hours)].sort((a, b) => a - b);
 }
 
+/** Today's calendar date (YYYY-MM-DD) in Buenos Aires (ART, UTC-3). */
+function todayInArt(): string {
+  const nowArt = new Date(Date.now() - 3 * 3600_000);
+  return `${nowArt.getUTCFullYear()}-${String(nowArt.getUTCMonth() + 1).padStart(2, '0')}-${String(nowArt.getUTCDate()).padStart(2, '0')}`;
+}
+
+/** Advances a YYYY-MM-DD calendar date by `days` days. */
+function addDaysISO(dateISO: string, days: number): string {
+  const [year, month, day] = dateISO.split('-').map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day + days));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+
 /** UTC epoch-ms of Buenos Aires midnight (00:00 ART = 03:00 UTC) for a YYYY-MM-DD date. */
 function artMidnightForDate(dateISO: string): number {
   const [year, month, day] = dateISO.split('-').map(Number);
@@ -210,6 +224,49 @@ export default function SpotDetail() {
     ? selectedStartHour
     : bookableHours[0] ?? null;
 
+  // ── Estadía (día/semana/mes) ────────────────────────────────────────────
+  const [stayUnit, setStayUnit] = useState<StayUnit>('day');
+  const [stayCount, setStayCount] = useState(1);
+  const [stayStartDateOverride, setStayStartDateOverride] = useState<string | null>(null);
+  const [stayQuote, setStayQuote] = useState<StayQuote | null>(null);
+  const [stayQuoteLoading, setStayQuoteLoading] = useState(false);
+  const [stayQuoteError, setStayQuoteError] = useState<string | null>(null);
+
+  // No antes de hoy ni antes de lo que el dueño configuró como
+  // stayAvailableFrom -- igual que effectiveStartHour arriba, se deriva en
+  // vez de sincronizarse con un useEffect, así un cambio en spot.stayAvailableFrom
+  // (o el simple paso del tiempo) nunca deja el override en un valor inválido.
+  const minStayStartDate = spot
+    ? spot.stayAvailableFrom && spot.stayAvailableFrom > todayInArt()
+      ? spot.stayAvailableFrom
+      : todayInArt()
+    : todayInArt();
+  const stayStartDate =
+    stayStartDateOverride && stayStartDateOverride >= minStayStartDate ? stayStartDateOverride : minStayStartDate;
+
+  useEffect(() => {
+    if (!spot?.stayEnabled) return;
+    let cancelled = false;
+    setStayQuoteLoading(true);
+    setStayQuoteError(null);
+    getStayQuote(spot.id, stayStartDate, stayUnit, stayCount)
+      .then((quote) => {
+        if (cancelled) return;
+        setStayQuote(quote);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setStayQuote(null);
+        setStayQuoteError(err instanceof ApiError ? err.detail : t('spot.stay.quoteError'));
+      })
+      .finally(() => {
+        if (!cancelled) setStayQuoteLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [spot?.id, spot?.stayEnabled, stayStartDate, stayUnit, stayCount]);
+
   if (!spot) return null;
 
   const isOwner = !!user && spot.ownerId === user.id;
@@ -284,6 +341,22 @@ export default function SpotDetail() {
     slotChipText: { fontSize: 14, fontWeight: '500', color: colors.teal },
     slotChipTextSelected: { color: colors.white },
     noSlotsText: { ...typography.body, color: colors.warning, marginTop: 4 },
+    // Estadía
+    stayCard: {
+      marginTop: 20, padding: 14, borderRadius: 12,
+      borderWidth: 1, borderColor: colors.teal + '44',
+      backgroundColor: colors.teal + '0c',
+    },
+    stayTitle: { ...typography.h2, fontSize: 16, marginBottom: 8 },
+    toggleRowStay: { flexDirection: 'row', gap: 8, marginTop: 4, marginBottom: 4 },
+    stayUnitChip: {
+      flex: 1, alignItems: 'center', paddingVertical: 8,
+      borderRadius: 10, borderWidth: 1, borderColor: colors.teal,
+      backgroundColor: colors.surface,
+    },
+    stayUnitChipSelected: { backgroundColor: colors.teal },
+    stayUnitChipText: { fontSize: 13, fontWeight: '600', color: colors.teal },
+    stayUnitChipTextSelected: { color: colors.white },
   });
 
   return (
@@ -453,6 +526,91 @@ export default function SpotDetail() {
               }
               disabled={!canBook}
             />
+
+            {spot.stayEnabled && (
+              <View style={styles.stayCard}>
+                <Text style={styles.stayTitle}>{t('spot.stay.section')}</Text>
+
+                <Text style={styles.slotLabel}>{t('spot.stay.unit')}</Text>
+                <View style={styles.toggleRowStay}>
+                  {(['day', 'week', 'month'] as StayUnit[]).map((unit) => (
+                    <TouchableOpacity
+                      key={unit}
+                      style={[styles.stayUnitChip, stayUnit === unit && styles.stayUnitChipSelected]}
+                      onPress={() => setStayUnit(unit)}
+                    >
+                      <Text style={[styles.stayUnitChipText, stayUnit === unit && styles.stayUnitChipTextSelected]}>
+                        {t(`spot.stay.unit.${unit}`)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.slotLabel}>{t('spot.stay.count')}</Text>
+                <View style={styles.durationRow}>
+                  <TouchableOpacity
+                    style={[styles.durationBtn, stayCount <= 1 && styles.durationBtnDisabled]}
+                    onPress={() => setStayCount((c) => Math.max(1, c - 1))}
+                    disabled={stayCount <= 1}
+                  >
+                    <Text style={styles.durationBtnText}>−</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.durationValue}>{stayCount}</Text>
+                  <TouchableOpacity
+                    style={styles.durationBtn}
+                    onPress={() => setStayCount((c) => c + 1)}
+                  >
+                    <Text style={styles.durationBtnText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.slotLabel}>{t('spot.stay.startDate')}</Text>
+                <View style={styles.durationRow}>
+                  <TouchableOpacity
+                    style={[styles.durationBtn, stayStartDate <= minStayStartDate && styles.durationBtnDisabled]}
+                    onPress={() => setStayStartDateOverride(addDaysISO(stayStartDate, -1))}
+                    disabled={stayStartDate <= minStayStartDate}
+                  >
+                    <Text style={styles.durationBtnText}>−</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.durationValue}>
+                    {new Date(stayStartDate + 'T12:00:00').toLocaleDateString('es-AR')}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.durationBtn}
+                    onPress={() => setStayStartDateOverride(addDaysISO(stayStartDate, 1))}
+                  >
+                    <Text style={styles.durationBtnText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {stayQuoteLoading ? (
+                  <ActivityIndicator size="small" color={colors.teal} style={{ marginTop: 10 }} />
+                ) : stayQuoteError ? (
+                  <Text style={styles.noSlotsText}>{stayQuoteError}</Text>
+                ) : stayQuote ? (
+                  <Text style={styles.total}>
+                    {t('spot.stay.total', { total: String(Math.round(getDriverVisiblePrice(stayQuote.amount / 100))) })}
+                  </Text>
+                ) : null}
+
+                <Button
+                  title={t('spot.stay.bookNow')}
+                  onPress={() =>
+                    router.push({
+                      pathname: `${group}/booking/confirm-stay`,
+                      params: {
+                        spotId: spot.id,
+                        startDate: stayStartDate,
+                        unit: stayUnit,
+                        count: String(stayCount),
+                      },
+                    })
+                  }
+                  disabled={!stayQuote || stayQuoteLoading}
+                />
+              </View>
+            )}
           </>
         )}
       </View>

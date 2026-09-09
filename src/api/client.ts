@@ -22,8 +22,19 @@ async function toApiError(response: Response): Promise<ApiError> {
   let detail = `Error ${response.status}`;
   try {
     const body = await response.json();
-    // booking-service uses `error`, payment/auth services use `detail` or `title`
-    detail = body.error || body.detail || body.message || body.title || detail;
+    // Each backend puts its real human-readable text in a different field --
+    // `detail` first: auth-service (FastAPI problem-details: {title, detail})
+    //   and payment-service (Express, when both `message` and `detail` are
+    //   present -- `message` there is a generic label and `detail` the
+    //   actual reason, e.g. {message: 'Error creating preference', detail: ...}).
+    // `message` next: parking-service (NestJS's default exception body is
+    //   {statusCode, message, error} -- `error` there is just the generic
+    //   HTTP reason phrase like "Conflict"/"Bad Request", NOT the real
+    //   message, so it must lose to `message` here) and payment-service's
+    //   single-field errors ({message: 'amount must be a positive number'}).
+    // `error` last: booking-service's ONLY content field ({code, error}) --
+    //   it never sets `message`, so this never shadows the parking-service case above.
+    detail = body.detail || body.message || body.error || body.title || detail;
   } catch {
     // Not a JSON body -- keep the generic message.
   }

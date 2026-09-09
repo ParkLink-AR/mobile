@@ -8,6 +8,7 @@ import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { AvailabilityPicker, DayScheduleGroup, dayGroupsToEntries } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
+import { StaySettingsEditor, StaySettingsFormValue, EMPTY_STAY_SETTINGS } from '@/src/components/StaySettingsEditor';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
@@ -41,6 +42,7 @@ export default function NewSpot() {
   const [price, setPrice] = useState('');
   const [capacity, setCapacity] = useState('1');
   const [schedule, setSchedule] = useState<DayScheduleGroup[]>(DEFAULT_SCHEDULE);
+  const [staySettings, setStaySettings] = useState<StaySettingsFormValue>(EMPTY_STAY_SETTINGS);
   const [description, setDescription] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [photos, setPhotos] = useState<ParkingSpotPhotoAsset[]>([]);
@@ -132,6 +134,16 @@ export default function NewSpot() {
       alert(t('owner.spot.new.requiredSchedule'));
       return;
     }
+    if (
+      staySettings.stayEnabled &&
+      (!staySettings.pricePerDay.trim() ||
+        !staySettings.pricePerWeek.trim() ||
+        !staySettings.pricePerMonth.trim() ||
+        !staySettings.maxStayDays.trim())
+    ) {
+      alert(t('owner.spot.stay.requiredFields'));
+      return;
+    }
 
     try {
       setPublishing(true);
@@ -146,6 +158,12 @@ export default function NewSpot() {
         capacity: Math.max(1, Math.trunc(Number(capacity)) || 1),
         schedule: dayGroupsToEntries(schedule),
         description: description.trim() || undefined,
+        stayEnabled: staySettings.stayEnabled,
+        pricePerDay: staySettings.stayEnabled ? Number(staySettings.pricePerDay) : undefined,
+        pricePerWeek: staySettings.stayEnabled ? Number(staySettings.pricePerWeek) : undefined,
+        pricePerMonth: staySettings.stayEnabled ? Number(staySettings.pricePerMonth) : undefined,
+        maxStayDays: staySettings.stayEnabled ? Number(staySettings.maxStayDays) : undefined,
+        stayAvailableFrom: staySettings.stayEnabled ? (staySettings.stayAvailableFrom.trim() || undefined) : undefined,
       });
       if (photos.length > 0) {
         // La cochera ya existe -- si esto falla, el dueño todavía puede
@@ -342,6 +360,12 @@ export default function NewSpot() {
           {t('owner.spot.new.availability')}
         </Text>
         <AvailabilityPicker value={schedule} onChange={setSchedule} />
+
+        <Text style={[typography.caption, styles.sectionLabel]}>{t('owner.spot.stay.section')}</Text>
+        <StaySettingsEditor
+          value={staySettings}
+          onChange={(patch) => setStaySettings((prev) => ({ ...prev, ...patch }))}
+        />
 
         <Text style={typography.caption}>{t('owner.spot.new.description')}</Text>
         <TextInput

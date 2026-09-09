@@ -11,6 +11,7 @@ import { Screen } from '@/src/components/Screen';
 import { RatingStars } from '@/src/components/RatingStars';
 import { AvailabilityPicker, DayScheduleGroup, dayGroupsToEntries, entriesToDayGroups } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
+import { StaySettingsEditor, StaySettingsFormValue, EMPTY_STAY_SETTINGS } from '@/src/components/StaySettingsEditor';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import {
   getParkingSpotDetail,
@@ -53,6 +54,7 @@ export default function EditSpot() {
   const [schedule, setSchedule] = useState<DayScheduleGroup[]>(
     [0, 1, 2, 3, 4].map((d) => ({ dayIndex: d, slots: [{ startHour: 8, endHour: 20 }] })),
   );
+  const [staySettings, setStaySettings] = useState<StaySettingsFormValue>(EMPTY_STAY_SETTINGS);
   const [saving, setSaving] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -79,6 +81,14 @@ export default function EditSpot() {
         setInstantBooking(s.instantBooking);
         setPhotos(s.photos);
         if (s.schedule.length > 0) setSchedule(entriesToDayGroups(s.schedule));
+        setStaySettings({
+          stayEnabled: s.stayEnabled,
+          pricePerDay: s.pricePerDay !== null ? String(s.pricePerDay) : '',
+          pricePerWeek: s.pricePerWeek !== null ? String(s.pricePerWeek) : '',
+          pricePerMonth: s.pricePerMonth !== null ? String(s.pricePerMonth) : '',
+          maxStayDays: s.maxStayDays !== null ? String(s.maxStayDays) : '',
+          stayAvailableFrom: s.stayAvailableFrom ?? '',
+        });
       });
     }, [id]),
   );
@@ -202,6 +212,16 @@ export default function EditSpot() {
       alert(t('owner.spot.new.requiredFields'));
       return;
     }
+    if (
+      staySettings.stayEnabled &&
+      (!staySettings.pricePerDay.trim() ||
+        !staySettings.pricePerWeek.trim() ||
+        !staySettings.pricePerMonth.trim() ||
+        !staySettings.maxStayDays.trim())
+    ) {
+      alert(t('owner.spot.stay.requiredFields'));
+      return;
+    }
     try {
       setSaving(true);
       await updateParkingSpot(id, {
@@ -214,6 +234,12 @@ export default function EditSpot() {
         address: address.trim(),
         lat: coordinates.lat,
         lng: coordinates.lng,
+        stayEnabled: staySettings.stayEnabled,
+        pricePerDay: staySettings.stayEnabled ? Number(staySettings.pricePerDay) : undefined,
+        pricePerWeek: staySettings.stayEnabled ? Number(staySettings.pricePerWeek) : undefined,
+        pricePerMonth: staySettings.stayEnabled ? Number(staySettings.pricePerMonth) : undefined,
+        maxStayDays: staySettings.stayEnabled ? Number(staySettings.maxStayDays) : undefined,
+        stayAvailableFrom: staySettings.stayEnabled ? (staySettings.stayAvailableFrom.trim() || undefined) : undefined,
       });
       // 1. Limpiar la caché para que la lista no muestre datos viejos
       //    mientras llega la respuesta del re-fetch.
@@ -548,6 +574,15 @@ export default function EditSpot() {
           <View style={styles.card}>
             <Text style={styles.sectionLabel}>{t('owner.spot.edit.availability')}</Text>
             <AvailabilityPicker value={schedule} onChange={setSchedule} />
+          </View>
+
+          {/* Estadía */}
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>{t('owner.spot.stay.section')}</Text>
+            <StaySettingsEditor
+              value={staySettings}
+              onChange={(patch) => setStaySettings((prev) => ({ ...prev, ...patch }))}
+            />
           </View>
 
           {/* Description */}

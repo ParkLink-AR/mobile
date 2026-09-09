@@ -34,6 +34,12 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     photos: raw.photos,
     covered: raw.covered,
     capacity: raw.capacity ?? 1,
+    stayEnabled: raw.stayEnabled,
+    pricePerDay: raw.pricePerDay,
+    pricePerWeek: raw.pricePerWeek,
+    pricePerMonth: raw.pricePerMonth,
+    stayAvailableFrom: raw.stayAvailableFrom,
+    maxStayDays: raw.maxStayDays,
     rating: raw.rating,
     reviewCount: raw.reviewCount,
     tags: raw.covered ? ['Cubierta'] : ['Descubierta'],
@@ -104,6 +110,8 @@ export interface SearchParkingSpotsFilters {
   // toISOToday). Go together: both or neither.
   fromHour?: number;
   toHour?: number;
+  // Sólo cocheras con "estadía" habilitada (día/semana/mes) -- ver ParkingSpot.stayEnabled.
+  stayOnly?: boolean;
 }
 
 // Builds an ISO 8601 datetime for `hour` today, with a fixed -03:00 offset
@@ -129,6 +137,7 @@ export async function searchParkingSpots(
     covered: filters.covered,
     from: filters.fromHour !== undefined ? toISOToday(filters.fromHour) : undefined,
     to: filters.toHour !== undefined ? toISOToday(filters.toHour) : undefined,
+    stayOnly: filters.stayOnly,
   });
   const spots = results.map(toParkingSpot);
   if (filters.minPrice === undefined) return spots;
@@ -175,6 +184,15 @@ export interface CreateParkingSpotInput {
   pricePerHour: number;
   schedule?: ScheduleEntry[];
   description?: string;
+  // "Estadía" -- ver el comentario en ParkingSpot.stayEnabled. Si
+  // stayEnabled es true, parking-service exige las tres tarifas y
+  // maxStayDays (stayAvailableFrom es opcional).
+  stayEnabled?: boolean;
+  pricePerDay?: number;
+  pricePerWeek?: number;
+  pricePerMonth?: number;
+  maxStayDays?: number;
+  stayAvailableFrom?: string;
 }
 
 export async function createParkingSpot(input: CreateParkingSpotInput): Promise<ParkingSpot> {
@@ -189,6 +207,12 @@ export async function createParkingSpot(input: CreateParkingSpotInput): Promise<
     capacity: input.capacity,
     schedule: input.schedule,
     description: input.description,
+    stayEnabled: input.stayEnabled,
+    pricePerDay: input.pricePerDay,
+    pricePerWeek: input.pricePerWeek,
+    pricePerMonth: input.pricePerMonth,
+    maxStayDays: input.maxStayDays,
+    stayAvailableFrom: input.stayAvailableFrom,
   });
   return toParkingSpot(raw);
 }
@@ -219,6 +243,14 @@ export interface UpdateParkingSpotInput {
   address?: string;
   lat?: number;
   lng?: number;
+  // "Estadía" -- cada campo es independiente (PATCH parcial), ver el
+  // comentario en UpdateParkingSpotApiInput/ParkingSpotsService.update.
+  stayEnabled?: boolean;
+  pricePerDay?: number;
+  pricePerWeek?: number;
+  pricePerMonth?: number;
+  maxStayDays?: number;
+  stayAvailableFrom?: string;
 }
 
 export async function updateParkingSpot(
@@ -235,6 +267,12 @@ export async function updateParkingSpot(
     address: updates.address,
     lat: updates.lat,
     lng: updates.lng,
+    stayEnabled: updates.stayEnabled,
+    pricePerDay: updates.pricePerDay,
+    pricePerWeek: updates.pricePerWeek,
+    pricePerMonth: updates.pricePerMonth,
+    maxStayDays: updates.maxStayDays,
+    stayAvailableFrom: updates.stayAvailableFrom,
   });
   return toParkingSpot(raw);
 }

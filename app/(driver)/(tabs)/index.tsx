@@ -93,6 +93,7 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
   const [minPriceInput, setMinPriceInput] = useState('');
   const [maxPriceInput, setMaxPriceInput] = useState('');
   const [coveredOnly, setCoveredOnly] = useState(false);
+  const [stayOnly, setStayOnly] = useState(false);
   const [distanceInput, setDistanceInput] = useState<number | undefined>(undefined);
   const [scheduleFilterOn, setScheduleFilterOn] = useState(false);
   const [fromHourInput, setFromHourInput] = useState(8);
@@ -258,6 +259,7 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
     setMinPriceInput(filters.minPrice ? String(filters.minPrice) : '');
     setMaxPriceInput(filters.maxPrice ? String(filters.maxPrice) : '');
     setCoveredOnly(filters.covered ?? false);
+    setStayOnly(filters.stayOnly ?? false);
     setDistanceInput(filters.maxDistanceMeters);
     setScheduleFilterOn(filters.fromHour !== undefined);
     setFromHourInput(filters.fromHour ?? 8);
@@ -270,6 +272,7 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
       minPrice: minPriceInput ? Number(minPriceInput) : undefined,
       maxPrice: maxPriceInput ? Number(maxPriceInput) : undefined,
       covered: coveredOnly || undefined,
+      stayOnly: stayOnly || undefined,
       maxDistanceMeters: distanceInput,
       fromHour: scheduleFilterOn ? fromHourInput : undefined,
       toHour: scheduleFilterOn ? toHourInput : undefined,
@@ -299,6 +302,12 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
     activeChips.push({
       label: t('search.filters.coveredOnly'),
       onRemove: () => setFilters((f) => ({ ...f, covered: undefined })),
+    });
+  }
+  if (filters.stayOnly) {
+    activeChips.push({
+      label: t('search.filters.stayOnly'),
+      onRemove: () => setFilters((f) => ({ ...f, stayOnly: undefined })),
     });
   }
   if (filters.maxDistanceMeters !== undefined) {
@@ -1102,6 +1111,15 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
                   label={coveredOnly ? t('search.filters.coveredOnly') : t('search.filters.coveredAny')}
                   selected={coveredOnly}
                   onPress={() => setCoveredOnly((v) => !v)}
+                />
+              </View>
+
+              <Text style={styles.sectionLabel}>{t('search.filters.stay')}</Text>
+              <View style={styles.chipsWrap}>
+                <Chip
+                  label={t('search.filters.stayOnly')}
+                  selected={stayOnly}
+                  onPress={() => setStayOnly((v) => !v)}
                 />
               </View>
 

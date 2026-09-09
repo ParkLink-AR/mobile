@@ -195,6 +195,15 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
                   </View>
                 );
               })}
+              {spot.stayEnabled && (
+                // No es parte de spot.tags (eso sólo refleja covered/uncovered) --
+                // se muestra acá aparte para que el buscador identifique de un
+                // vistazo qué cocheras aceptan estadía por día/semana/mes.
+                <View style={styles.tag}>
+                  <Ionicons name="calendar-outline" size={12} color={colors.teal} />
+                  <Text style={styles.tagText}>{t('spot.tag.stay')}</Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.divider} />

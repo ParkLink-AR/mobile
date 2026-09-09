@@ -59,6 +59,14 @@ export interface ParkingSpot {
   covered: boolean;
   // Lugares idénticos que se alquilan contra este id (playa). 1 = cochera común.
   capacity: number;
+  // "Estadía": alquiler por día/semana/mes en vez de por hora. Los tres
+  // precios y maxStayDays vienen en null cuando stayEnabled es false.
+  stayEnabled: boolean;
+  pricePerDay: number | null;
+  pricePerWeek: number | null;
+  pricePerMonth: number | null;
+  stayAvailableFrom: string | null; // YYYY-MM-DD
+  maxStayDays: number | null;
   rating: number;
   reviewCount: number;
   tags: string[];
