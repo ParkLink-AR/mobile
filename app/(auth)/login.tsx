@@ -6,6 +6,7 @@ import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
+import { useAccountTypeStore, tabRouteFor } from '@/src/store/useAccountTypeStore';
 import { login } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
 
@@ -45,7 +46,8 @@ export default function Login() {
     try {
       const { user, tokens } = await login({ email: normalizedEmail, password });
       setSession(user, tokens);
-      router.replace('/(both)/(tabs)' as never);
+      const { accountType, activeMode } = useAccountTypeStore.getState();
+      router.replace(tabRouteFor(accountType, activeMode) as never);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         // Not verified yet -- send them to enter the code instead of just

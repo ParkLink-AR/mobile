@@ -17,19 +17,11 @@ interface TabKey {
 }
 
 const OWNER_TAB_KEYS: TabKey[] = [
-  { name: 'index',         labelKey: 'tabs.owner.earnings',      icon: 'receipt-outline',       activeIcon: 'receipt' },
+  { name: 'index',         labelKey: 'tabs.owner.today',         icon: 'today-outline',         activeIcon: 'today' },
+  { name: 'calendar',      labelKey: 'tabs.owner.calendar',      icon: 'calendar-outline',      activeIcon: 'calendar' },
   { name: 'spots',         labelKey: 'tabs.owner.spots',         icon: 'car-outline',           activeIcon: 'car' },
-  { name: 'bookings',      labelKey: 'tabs.owner.bookings',      icon: 'calendar-outline',      activeIcon: 'calendar' },
   { name: 'notifications', labelKey: 'tabs.owner.notifications', icon: 'notifications-outline', activeIcon: 'notifications', showBadge: true },
   { name: 'profile',       labelKey: 'tabs.owner.profile',       icon: 'person-outline',        activeIcon: 'person' },
-];
-
-const BOTH_TAB_KEYS: TabKey[] = [
-  { name: 'index',     labelKey: 'tabs.both.search',    icon: 'search-outline',   activeIcon: 'search' },
-  { name: 'favorites', labelKey: 'tabs.both.favorites', icon: 'heart-outline',    activeIcon: 'heart' },
-  { name: 'bookings',  labelKey: 'tabs.both.bookings',  icon: 'calendar-outline', activeIcon: 'calendar' },
-  { name: 'spots',     labelKey: 'tabs.both.spots',     icon: 'car-outline',      activeIcon: 'car' },
-  { name: 'profile',   labelKey: 'tabs.both.profile',   icon: 'person-outline',   activeIcon: 'person' },
 ];
 
 function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[] }) {
@@ -108,8 +100,4 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
 
 export function OwnerDockTabBar(props: BottomTabBarProps) {
   return <TabBar {...props} tabs={OWNER_TAB_KEYS} />;
-}
-
-export function BothDockTabBar(props: BottomTabBarProps) {
-  return <TabBar {...props} tabs={BOTH_TAB_KEYS} />;
 }

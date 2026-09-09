@@ -52,7 +52,10 @@
   },
   "private": true,
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "setupFiles": [
+      "./jest.setup.js"
+    ]
   },
   "overrides": {
     "react-native-worklets": "0.12.1",

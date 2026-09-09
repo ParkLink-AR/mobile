@@ -1,22 +1,20 @@
 import { t, useLanguage } from '@/src/i18n';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Text, View, ScrollView, StyleSheet, Pressable, Image, TextInput, ActivityIndicator,
   Modal, Animated, TouchableWithoutFeedback,
 } from 'react-native';
-import { router, useFocusEffect, useSegments } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
 import { VerifiedBadge } from '@/src/components/VerifiedBadge';
-import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useSettingsStore, Language } from '@/src/store/useSettingsStore';
+import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 import { logout as logoutRequest, deleteAccount } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
-import { getParkingSpotsForOwner } from '@/src/services/parkingService';
-import { ParkingSpot } from '@/src/types';
 
 const LANGS: { key: Language; label: string }[] = [
   { key: 'es', label: 'Español' },
@@ -36,7 +34,9 @@ export default function Profile() {
   const setLanguage = useSettingsStore((s) => s.setLanguage);
   const mode = useSettingsStore((s) => s.mode);
   const toggleMode = useSettingsStore((s) => s.toggleMode);
-  const [mySpots, setMySpots] = useState<ParkingSpot[]>([]);
+  const accountType = useAccountTypeStore((s) => s.accountType);
+  const setActiveMode = useAccountTypeStore((s) => s.setActiveMode);
+  const isOwner = group === '/(owner)';
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
@@ -54,17 +54,13 @@ export default function Profile() {
     }).start();
   }, [mode]);
 
-  useEffect(() => {
-    if (user) getParkingSpotsForOwner(user.id).then(setMySpots);
-  }, [user?.id]);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (user) getParkingSpotsForOwner(user.id).then(setMySpots);
-    }, [user?.id])
-  );
-
   if (!user) return null;
+
+  function switchMode() {
+    const nextGroup = isOwner ? '/(driver)' : '/(owner)';
+    setActiveMode(isOwner ? 'driver' : 'owner');
+    router.replace(`${nextGroup}/(tabs)` as never);
+  }
 
   function closeDeleteModal() {
     if (deleteSuccess) return; // force going through the "Entendido" button, not the backdrop
@@ -164,20 +160,6 @@ export default function Profile() {
     themeValue: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     themeValueText: { fontSize: 14, fontWeight: '600' },
 
-    spotsEmpty: {
-      backgroundColor: colors.surface, borderRadius: 12,
-      borderWidth: 1, borderColor: colors.border,
-      padding: 24, alignItems: 'center', gap: 8,
-    },
-    spotsEmptyText: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
-    spotsGrid: { gap: 12 },
-    addSpotBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      paddingHorizontal: 10, paddingVertical: 5,
-      borderRadius: 8, borderWidth: 1.5, borderColor: colors.teal,
-    },
-    addSpotBtnText: { fontSize: 12, fontWeight: '600', color: colors.teal },
-
     modalOverlay: {
       flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
       justifyContent: 'center', alignItems: 'center',
@@ -253,12 +235,55 @@ export default function Profile() {
           <Ionicons name="chevron-forward" size={16} color={colors.white} />
         </Pressable>
 
+        {/* Finanzas / legales — solo propietario */}
+        {isOwner && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{t('profile.owner.section')}</Text>
+              <View style={styles.sectionLine} />
+            </View>
+            <Pressable
+              style={({ pressed }) => [styles.actionBtn, styles.settlementsBtn, { opacity: pressed ? 0.85 : 1 }]}
+              onPress={() => router.push(`${group}/settlements`)}
+            >
+              <Ionicons name="receipt-outline" size={18} color={colors.teal} />
+              <Text style={[styles.actionBtnText, styles.settlementsBtnText]}>{t('profile.finances')}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.teal} />
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.actionBtn, styles.settlementsBtn, { opacity: pressed ? 0.85 : 1 }]}
+              onPress={() => router.push(`${group}/legal`)}
+            >
+              <Ionicons name="document-text-outline" size={18} color={colors.teal} />
+              <Text style={[styles.actionBtnText, styles.settlementsBtnText]}>{t('profile.legal')}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.teal} />
+            </Pressable>
+          </>
+        )}
+
         {/* Preferences */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{t('profile.preferences')}</Text>
           <View style={styles.sectionLine} />
         </View>
         <View style={styles.prefCard}>
+
+          {accountType === 'both' && (
+            <>
+              <Pressable
+                style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={switchMode}
+              >
+                <Text style={styles.prefLabel}>{t('profile.changeMode')}</Text>
+                <View style={styles.langCurrent}>
+                  <Text style={styles.langCurrentText}>
+                    {isOwner ? t('accountType.driver.title') : t('accountType.owner.title')}
+                  </Text>
+                  <Ionicons name="swap-horizontal-outline" size={14} color={colors.teal} />
+                </View>
+              </Pressable>
+            </>
+          )}
 
           <View style={styles.prefDivider} />
 

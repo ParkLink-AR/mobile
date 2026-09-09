@@ -37,6 +37,11 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
     card: { padding: 0, overflow: 'hidden' },
     photoWrapper: { position: 'relative' },
     photo: { width: '100%', height: 148 },
+    photoPlaceholder: {
+      width: '100%', height: 148,
+      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: colors.background,
+    },
     favoriteBtn: {
       position: 'absolute', top: 10, right: 10,
       width: 30, height: 30, borderRadius: 15,
@@ -136,7 +141,13 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
     <Card style={styles.card}>
       {!compact && (
         <View style={styles.photoWrapper}>
-          <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
+          {spot.photoUrl ? (
+            <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
+          ) : (
+            <View style={styles.photoPlaceholder}>
+              <Ionicons name="image-outline" size={32} color={colors.textSecondary} />
+            </View>
+          )}
           {!spot.active && (
             <View style={styles.unavailableOverlay}>
               <View style={styles.unavailableBadge}>

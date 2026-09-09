@@ -15,6 +15,7 @@ import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
 import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
+import { artDateFromISO, artMidnightForDate, todayArtDateISO } from '@/src/services/dateUtils';
 import { useAvailability } from '@/src/hooks/useAvailability';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { getStayQuote, type FreeWindow, type StayQuote, type StayUnit } from '@/src/api/parking';
@@ -119,37 +120,11 @@ function startHoursFromFreeWindows(freeWindows: FreeWindow[], durationHours: num
   return [...new Set(hours)].sort((a, b) => a - b);
 }
 
-/** Today's calendar date (YYYY-MM-DD) in Buenos Aires (ART, UTC-3). */
-function todayInArt(): string {
-  const nowArt = new Date(Date.now() - 3 * 3600_000);
-  return `${nowArt.getUTCFullYear()}-${String(nowArt.getUTCMonth() + 1).padStart(2, '0')}-${String(nowArt.getUTCDate()).padStart(2, '0')}`;
-}
-
 /** Advances a YYYY-MM-DD calendar date by `days` days. */
 function addDaysISO(dateISO: string, days: number): string {
   const [year, month, day] = dateISO.split('-').map(Number);
   const d = new Date(Date.UTC(year, month - 1, day + days));
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-}
-
-/** UTC epoch-ms of Buenos Aires midnight (00:00 ART = 03:00 UTC) for a YYYY-MM-DD date. */
-function artMidnightForDate(dateISO: string): number {
-  const [year, month, day] = dateISO.split('-').map(Number);
-  return Date.UTC(year, month - 1, day, 3, 0, 0, 0); // 00:00 ART = 03:00 UTC
-}
-
-/**
- * Returns the YYYY-MM-DD calendar date in ART (UTC-3) for an ISO timestamp.
- * Used to anchor ART midnight correctly for any offset-aware or UTC timestamp.
- */
-function artDateFromISO(iso: string): string {
-  const date = new Date(iso);
-  // Shift to ART by subtracting 3 hours from UTC.
-  const art = new Date(date.getTime() - 3 * 3600_000);
-  const y = art.getUTCFullYear();
-  const m = String(art.getUTCMonth() + 1).padStart(2, '0');
-  const d = String(art.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
 }
 
 export default function SpotDetail() {
@@ -237,10 +212,10 @@ export default function SpotDetail() {
   // vez de sincronizarse con un useEffect, así un cambio en spot.stayAvailableFrom
   // (o el simple paso del tiempo) nunca deja el override en un valor inválido.
   const minStayStartDate = spot
-    ? spot.stayAvailableFrom && spot.stayAvailableFrom > todayInArt()
+    ? spot.stayAvailableFrom && spot.stayAvailableFrom > todayArtDateISO()
       ? spot.stayAvailableFrom
-      : todayInArt()
-    : todayInArt();
+      : todayArtDateISO()
+    : todayArtDateISO();
   const stayStartDate =
     stayStartDateOverride && stayStartDateOverride >= minStayStartDate ? stayStartDateOverride : minStayStartDate;
 

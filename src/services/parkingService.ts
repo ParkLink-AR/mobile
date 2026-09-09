@@ -19,8 +19,6 @@ import {
 import { ApiError } from '@/src/api/client';
 import { getDriverVisiblePrice } from './utils';
 
-const PLACEHOLDER_PHOTO_URL = 'https://loremflickr.com/400/300/parking,garage/all';
-
 function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
   return {
     id: raw.id,
@@ -30,7 +28,9 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     lat: raw.lat,
     lng: raw.lng,
     pricePerHour: raw.pricePerHour,
-    photoUrl: raw.photos[0] ?? PLACEHOLDER_PHOTO_URL,
+    // '' significa "sin foto" -- ParkingSpotCard/PhotoGallery muestran un
+    // placeholder propio en vez de pedirle una imagen a una URI vacía.
+    photoUrl: raw.photos[0] ?? '',
     photos: raw.photos,
     covered: raw.covered,
     capacity: raw.capacity ?? 1,

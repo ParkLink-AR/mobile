@@ -148,7 +148,10 @@ export default function DriverProfileEdit() {
         options={{
           headerLeft: () => (
             <Pressable onPress={() => router.back()} hitSlop={8}>
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
+              {/* El header del Stack padre siempre es deepNavy (fijo, no cambia con el
+                  tema) -- colors.white matchea su headerTintColor, no colors.text, que
+                  en modo claro es el mismo #042347 que el fondo (invisible). */}
+              <Ionicons name="arrow-back" size={24} color={colors.white} />
             </Pressable>
           ),
         }}

@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { deleteDeviceToken, putDeviceToken, type DevicePlatform } from '@/src/api/notifications';
+import { useAccountTypeStore, groupFor } from '@/src/store/useAccountTypeStore';
 
 // @react-native-firebase/messaging only exists in a real development build
 // (not Expo Go, not jest). Load it lazily and tolerate its absence so this
@@ -88,7 +89,8 @@ export async function unregisterPush(): Promise<void> {
 /** Maps a notification `data` payload to an in-app route, or null. */
 function routeFor(data: Record<string, string> | undefined): string | null {
   if (data?.type === 'booking.confirmed' && data.bookingId) {
-    return `/(both)/bookings/${data.bookingId}`;
+    const { accountType, activeMode } = useAccountTypeStore.getState();
+    return `${groupFor(accountType, activeMode)}/bookings/${data.bookingId}`;
   }
   return null;
 }
