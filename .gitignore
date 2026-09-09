@@ -18,9 +18,9 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
-# Firebase: google-services.json is committed on purpose (private personal
-# project). The iOS plist is not set up yet -- add it if/when iOS push is needed.
-GoogleService-Info.plist
+# Firebase config -- committed on purpose (private personal project).
+# google-services.json (Android) and GoogleService-Info.plist (iOS) are both in.
+# If this repo ever goes public, regenerate both and rotate the SA key.
 
 # Metro
 .metro-health-check*

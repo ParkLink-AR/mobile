@@ -32,20 +32,48 @@ Este es un proyecto personal privado, así que las credenciales de Firebase
 
 | Archivo | Repo | Para qué |
 |---|---|---|
-| `mobile/google-services.json` | mobile | config de la app Android (`com.parklink.mobile`) |
+| `mobile/google-services.json` | mobile | config de la app **Android** (`com.parklink.mobile`) |
+| `mobile/GoogleService-Info.plist` | mobile | config de la app **iOS** (`com.parklink.mobile`) |
 | `notifications-service/secrets/firebase-service-account.json` | notifications-service | que el backend mande push por FCM |
 
 `docker compose up` monta el JSON del backend en el contenedor y
 `notifications-service` lo toma solo (ver `root/compose.yaml`). No hay que setear
 nada. Para forzar log-only: `FIREBASE_CREDENTIALS_PATH=` (vacío) en el `.env`.
 
-> ⚠️ Si el repo alguna vez se hace público, **rotá las dos credenciales**
-> (Firebase Console → Service accounts → revoke/regenerate, y regenerá el
-> `google-services.json`).
+No hace falta agregar Firebase por Swift Package Manager en Xcode a mano: los
+plugins `@react-native-firebase/*` integran el SDK nativo solos en `pod install`
+(lo corre `expo prebuild` / `expo run:ios` / EAS).
 
-**iOS todavía no está configurado.** Si hace falta push en iOS:
-1. Firebase Console → agregar app iOS `com.parklink.mobile` → `GoogleService-Info.plist` en `mobile/`.
-2. Apple Developer → *APNs Auth Key* (`.p8`) → subirla en Firebase Console → Cloud Messaging.
+> ⚠️ Si el repo alguna vez se hace público, **rotá las tres credenciales**
+> (Firebase Console → Service accounts → regenerar; regenerá `google-services.json`
+> y `GoogleService-Info.plist`).
+
+### iOS: qué falta para push REAL (backend → FCM → APNs → device)
+
+El config de build ya está (plist commiteado). Para que el circuito completo
+ande hace falta lo que **Apple** cobra / exige:
+
+1. **Apple Developer Program — US$99/año** → generar la *APNs Auth Key* (`.p8`)
+   y subirla en Firebase Console → Project Settings → Cloud Messaging → *APNs
+   Authentication Key*. El `.p8` **no** se commitea (`.gitignore` lo bloquea).
+2. **Mac con Apple Silicon** + simulador iOS 16.4+ (o iPhone físico). El signing
+   gratuito ("Personal Team") no habilita la capability de Push Notifications.
+3. Build: `npx expo run:ios` (Xcode + CocoaPods) o `eas build -p ios --profile development`.
+
+### iOS: prueba GRATIS (sin los $99, sólo la parte de la app)
+
+Con una Mac y un simulador booteado, sin cuenta Apple:
+
+```bash
+cd mobile && npx expo run:ios          # build de simulador con signing gratis
+./scripts/push-sim.sh ios pending      # inyecta la push del propietario
+./scripts/push-sim.sh ios confirmed    # inyecta la del conductor
+```
+
+`push-sim.sh` usa `xcrun simctl push` → inyecta el payload **local** en el
+simulador. Prueba que la app muestre la notificación y que el tap navegue
+(`routeFor` → `/(owner|driver)/bookings/{id}`). **No** prueba el registro del
+token, el envío del backend, FCM ni APNs.
 
 ## Toolchain Android para `expo run:android`
 
