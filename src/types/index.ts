@@ -62,6 +62,10 @@ export interface ParkingSpot {
   // publica precio ni horario por hora).
   hourlyEnabled: boolean;
   pricePerHour: number | null;
+  // No-null implica que pricePerHour no aplica -- el precio real depende de
+  // qué tipo de vehículo elija el conductor (ver getVehiclePricePerHour en
+  // parkingService.ts).
+  pricePerHourByVehicleType: Partial<Record<VehicleType, number>> | null;
   photoUrl: string;
   photos: string[];
   covered: boolean;

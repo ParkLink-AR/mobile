@@ -46,8 +46,8 @@ export default function Login() {
     try {
       const { user, tokens } = await login({ email: normalizedEmail, password });
       setSession(user, tokens);
-      const { accountType, activeMode } = useAccountTypeStore.getState();
-      router.replace(tabRouteFor(accountType, activeMode) as never);
+      const { activeMode } = useAccountTypeStore.getState();
+      router.replace(tabRouteFor(activeMode) as never);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         // Not verified yet -- send them to enter the code instead of just

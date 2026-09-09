@@ -30,6 +30,7 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     lng: raw.lng,
     hourlyEnabled: raw.hourlyEnabled,
     pricePerHour: raw.pricePerHour,
+    pricePerHourByVehicleType: raw.pricePerHourByVehicleType,
     // '' significa "sin foto" -- ParkingSpotCard/PhotoGallery muestran un
     // placeholder propio en vez de pedirle una imagen a una URI vacía.
     photoUrl: raw.photos[0] ?? '',
@@ -53,6 +54,36 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     active: raw.status === 'active',
     instantBooking: raw.instantBooking,
   };
+}
+
+/**
+ * Precio por hora efectivo para un tipo de vehículo dado -- resuelve el
+ * override por vehículo cuando el dueño lo cargó, si no cae al pricePerHour
+ * único. null si esa cochera no tiene precio por hora para ese vehículo en
+ * particular (no debería pasar una vez elegido un vehicleType que la
+ * cochera acepta, pero cubre una pantalla de detalle desactualizada si el
+ * dueño cambió vehicleTypes mientras tanto).
+ */
+export function getSpotPricePerHour(spot: ParkingSpot, vehicleType: VehicleType): number | null {
+  if (spot.pricePerHourByVehicleType) {
+    return spot.pricePerHourByVehicleType[vehicleType] ?? null;
+  }
+  return spot.pricePerHour;
+}
+
+/**
+ * La tarifa por hora más baja entre los tipos de vehículo aceptados -- para
+ * mostrar un precio representativo ("desde $X") donde todavía no se eligió
+ * un vehículo (resultados de búsqueda, preview del mapa, tarjetas de lista).
+ */
+export function getMinPricePerHour(spot: ParkingSpot): number | null {
+  if (spot.pricePerHourByVehicleType) {
+    const values = Object.values(spot.pricePerHourByVehicleType).filter(
+      (v): v is number => typeof v === 'number',
+    );
+    return values.length > 0 ? Math.min(...values) : null;
+  }
+  return spot.pricePerHour;
 }
 
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -147,7 +178,12 @@ export async function searchParkingSpots(
   if (filters.minPrice === undefined) return spots;
   // Una cochera "solo estadía" no tiene pricePerHour -- no aplica al filtro
   // de precio por hora, se excluye igual que ya hace maxPrice del lado del backend.
-  return spots.filter((s) => s.pricePerHour !== null && getDriverVisiblePrice(s.pricePerHour) >= filters.minPrice!);
+  // Cuando el precio varía por vehículo se compara contra la tarifa más
+  // baja, mismo criterio que el maxPrice de parking-service.
+  return spots.filter((s) => {
+    const price = getMinPricePerHour(s);
+    return price !== null && getDriverVisiblePrice(price) >= filters.minPrice!;
+  });
 }
 
 export async function getParkingSpotDetail(id: string): Promise<ParkingSpot | undefined> {
@@ -193,6 +229,7 @@ export interface CreateParkingSpotInput {
   // es obligatorio salvo que se mande hourlyEnabled: false.
   hourlyEnabled?: boolean;
   pricePerHour?: number;
+  pricePerHourByVehicleType?: Partial<Record<VehicleType, number>>;
   schedule?: ScheduleEntry[];
   description?: string;
   // "Estadía" -- ver el comentario en ParkingSpot.stayEnabled. Si
@@ -215,6 +252,7 @@ export async function createParkingSpot(input: CreateParkingSpotInput): Promise<
     lng: input.lng,
     hourlyEnabled: input.hourlyEnabled,
     pricePerHour: input.pricePerHour,
+    pricePerHourByVehicleType: input.pricePerHourByVehicleType,
     covered: input.covered,
     vehicleTypes: input.vehicleTypes,
     instantBooking: input.instantBooking,
@@ -250,6 +288,9 @@ export async function reorderParkingSpotPhotos(spotId: string, photos: string[])
 export interface UpdateParkingSpotInput {
   hourlyEnabled?: boolean;
   pricePerHour?: number;
+  // `null` explícito borra el precio-por-vehículo y vuelve a pricePerHour
+  // único -- ver UpdateParkingSpotApiInput.
+  pricePerHourByVehicleType?: Partial<Record<VehicleType, number>> | null;
   description?: string;
   covered?: boolean;
   vehicleTypes?: VehicleType[];
@@ -278,6 +319,7 @@ export async function updateParkingSpot(
   const raw = await apiUpdateParkingSpot(id, {
     hourlyEnabled: updates.hourlyEnabled,
     pricePerHour: updates.pricePerHour,
+    pricePerHourByVehicleType: updates.pricePerHourByVehicleType,
     description: updates.description,
     covered: updates.covered,
     vehicleTypes: updates.vehicleTypes,

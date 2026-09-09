@@ -10,10 +10,11 @@ import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { getParkingSpotDetail, toISOToday } from '@/src/services/parkingService';
+import { getParkingSpotDetail, getSpotPricePerHour, toISOToday } from '@/src/services/parkingService';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { getAvailability } from '@/src/api/parking';
 import { ParkingSpot } from '@/src/types';
+import { VehicleType, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { createBookingApi, createPaymentPreference, type ScheduleEntryBody } from '@/src/api/booking';
 
 // ── Helpers for availability pre-check ───────────────────────────────────────
@@ -57,12 +58,13 @@ export default function ConfirmBooking() {
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
-  const { spotId, hours, startHour, endHour, bookingDate } = useLocalSearchParams<{
+  const { spotId, hours, startHour, endHour, bookingDate, vehicleType } = useLocalSearchParams<{
     spotId: string;
     hours: string;
     startHour?: string;
     endHour?: string;
     bookingDate?: string; // YYYY-MM-DD passed from spot/[id].tsx
+    vehicleType?: string; // elegido en spot/[id].tsx -- decide el precio si la cochera cobra distinto por vehículo
   }>();
   const user = useSessionStore((s) => s.user);
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
@@ -105,11 +107,12 @@ export default function ConfirmBooking() {
     // Esta pantalla sólo se llega desde el flujo de reserva por hora (ver
     // spot/[id].tsx, que lo esconde si !spot.hourlyEnabled) -- null acá
     // sería un estado inesperado, no algo que el usuario pueda causar.
-    if (spot.pricePerHour === null) {
+    const effectiveVehicleType = (vehicleType as VehicleType) ?? spot.vehicleTypes[0] ?? null;
+    const pricePerHour = effectiveVehicleType ? getSpotPricePerHour(spot, effectiveVehicleType) : spot.pricePerHour;
+    if (pricePerHour === null) {
       Alert.alert(t('driver.payment.errorTitle'), t('driver.booking.errorCreating'));
       return;
     }
-    const pricePerHour = spot.pricePerHour;
     setProcessing(true);
 
     // ── Step 0: pre-check availability before creating the booking ─────────
@@ -217,11 +220,13 @@ export default function ConfirmBooking() {
   }
 
   if (!user || !spot) return <ActivityIndicator style={{ marginTop: 40 }} />;
+  const effectiveVehicleType = (vehicleType as VehicleType) ?? spot.vehicleTypes[0] ?? null;
+  const pricePerHour = effectiveVehicleType ? getSpotPricePerHour(spot, effectiveVehicleType) : spot.pricePerHour;
   // Ver el comentario en reserve(): esta pantalla sólo se llega desde el
   // flujo de reserva por hora, así que esto no debería pasar en la práctica.
-  if (spot.pricePerHour === null) return <ActivityIndicator style={{ marginTop: 40 }} />;
+  if (pricePerHour === null) return <ActivityIndicator style={{ marginTop: 40 }} />;
 
-  const visiblePricePerHour = getDriverVisiblePrice(spot.pricePerHour);
+  const visiblePricePerHour = getDriverVisiblePrice(pricePerHour);
   const visibleTotal = visiblePricePerHour * reservedHours;
 
   const styles = StyleSheet.create({
@@ -249,6 +254,9 @@ export default function ConfirmBooking() {
           label={t('driver.booking.time')}
           value={`${String(start).padStart(2, '0')}:00 ${t('driver.booking.timeTo')} ${String(end).padStart(2, '0')}:00`}
         />
+        {spot.pricePerHourByVehicleType && effectiveVehicleType && (
+          <Row label={t('spot.vehicleType')} value={t(VEHICLE_TYPE_LABEL_KEYS[effectiveVehicleType])} />
+        )}
         <Row label={t('driver.booking.pricePerHour')} value={`$${visiblePricePerHour}`} />
         <Row label={t('driver.booking.hours')} value={`${reservedHours} ${t('driver.booking.hoursUnit')}`} />
         <Row label={t('driver.booking.total')} value={`$${visibleTotal}`} bold />

@@ -3,10 +3,13 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AccountType } from '@/src/types';
 
-// Which footer a 'both' account is currently looking at. Meaningless for
-// 'driver'/'owner' accounts (they only ever have one mode) -- see
-// tabRouteFor below, the single place that turns (accountType, activeMode)
-// into a route.
+// Which footer the app currently shows -- every account can be in either
+// mode at any time, regardless of what they picked at registration.
+// accountType (driver/owner/both) only decides the FIRST screen shown right
+// after registering (see account-type.tsx, which seeds activeMode from it
+// once); after that, activeMode is the only thing that decides the route --
+// see tabRouteFor below -- and the user can flip it from their profile
+// whenever they want, forever.
 type ActiveMode = 'driver' | 'owner';
 
 interface AccountTypeState {
@@ -49,12 +52,10 @@ if (useAccountTypeStore.persist.hasHydrated()) {
 }
 
 /** Single source of truth for "which route group does this account use". */
-export function groupFor(accountType: AccountType, activeMode: ActiveMode): '/(driver)' | '/(owner)' {
-  if (accountType === 'owner') return '/(owner)';
-  if (accountType === 'driver') return '/(driver)';
+export function groupFor(activeMode: ActiveMode): '/(driver)' | '/(owner)' {
   return activeMode === 'owner' ? '/(owner)' : '/(driver)';
 }
 
-export function tabRouteFor(accountType: AccountType, activeMode: ActiveMode): string {
-  return `${groupFor(accountType, activeMode)}/(tabs)`;
+export function tabRouteFor(activeMode: ActiveMode): string {
+  return `${groupFor(activeMode)}/(tabs)`;
 }

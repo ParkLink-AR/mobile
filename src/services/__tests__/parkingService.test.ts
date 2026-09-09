@@ -21,6 +21,7 @@ function makeApiSpot(overrides: Partial<ParkingSpotApiResponse> = {}): ParkingSp
     hourlyEnabled: true,
     vehicleTypes: ['car'],
     pricePerHour: 1200,
+    pricePerHourByVehicleType: null,
     stayEnabled: false,
     pricePerDay: null,
     pricePerWeek: null,

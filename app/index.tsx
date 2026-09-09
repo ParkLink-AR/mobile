@@ -5,7 +5,6 @@ import { useAccountTypeStore, tabRouteFor } from '@/src/store/useAccountTypeStor
 export default function Index() {
   const user = useSessionStore((s) => s.user);
   const sessionHydrated = useSessionStore((s) => s.hydrated);
-  const accountType = useAccountTypeStore((s) => s.accountType);
   const activeMode = useAccountTypeStore((s) => s.activeMode);
   const accountTypeHydrated = useAccountTypeStore((s) => s.hydrated);
 
@@ -13,5 +12,5 @@ export default function Index() {
   // decidir a dónde redirigir, evitando un flash al footer equivocado.
   if (!sessionHydrated || !accountTypeHydrated) return null;
   if (!user) return <Redirect href="/(auth)/login" />;
-  return <Redirect href={tabRouteFor(accountType, activeMode) as never} />;
+  return <Redirect href={tabRouteFor(activeMode) as never} />;
 }

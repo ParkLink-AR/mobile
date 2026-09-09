@@ -1,12 +1,26 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet, GestureResponderEvent } from 'react-native';
 import { Card } from '@/src/components/Card';
 import { getDriverVisiblePrice } from '@/src/services/utils';
+import { getMinPricePerHour } from '@/src/services/parkingService';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { ParkingSpot } from '@/src/types';
+import { VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { t, useLanguage } from '@/src/i18n';
 import { Ionicons } from '@expo/vector-icons';
 
 export const FAVORITE_RED = '#FF385C';
+
+// Precio a mostrar en la tarjeta cuando todavía no se eligió un tipo de
+// vehículo (previsualización del mapa, resultados de búsqueda) -- una
+// cochera sin alquiler por hora (sólo estadía) no tiene nada que mostrar acá,
+// aunque en teoría tuviera un pricePerHour viejo de cuando lo tenía activado.
+function priceBadgeLabel(spot: ParkingSpot): string {
+  if (!spot.hourlyEnabled) return t('spot.stayOnlyBadge');
+  const price = getMinPricePerHour(spot);
+  if (price === null) return t('spot.stayOnlyBadge');
+  const formatted = `$${getDriverVisiblePrice(price)}${t('spot.pricePerHour.short')}`;
+  return spot.pricePerHourByVehicleType ? t('spot.pricePerHour.from', { price: formatted }) : formatted;
+}
 
 // Tag keys stored in mock data mapped to their i18n key and icon
 const TAG_KEY_MAP: Record<string, { i18nKey: string; iconName: string }> = {
@@ -20,6 +34,14 @@ const TAG_KEY_MAP: Record<string, { i18nKey: string; iconName: string }> = {
 export const TAG_LABEL_KEYS: Record<string, string> = Object.fromEntries(
   Object.entries(TAG_KEY_MAP).map(([k, v]) => [k, v.i18nKey])
 );
+
+// Whether the spot confirms a paid booking automatically (spot.instantBooking)
+// or leaves it pending for the owner to approve -- exported so spot/[id].tsx
+// can render the exact same icon+label there, not just here on the card.
+export const INSTANT_BOOKING_TAG = {
+  instant: { i18nKey: 'spot.tag.instantBooking', iconName: 'flash-outline' },
+  approval: { i18nKey: 'spot.tag.requiresApproval', iconName: 'time-outline' },
+} as const;
 
 interface ParkingSpotCardProps {
   spot: ParkingSpot;
@@ -172,17 +194,39 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
             {spot.title}
           </Text>
           <View style={styles.priceBadge}>
-            <Text style={styles.priceText}>
-              {spot.pricePerHour !== null
-                ? `$${getDriverVisiblePrice(spot.pricePerHour)}${t('spot.pricePerHour.short')}`
-                : t('spot.stayOnlyBadge')}
-            </Text>
+            <Text style={styles.priceText}>{priceBadgeLabel(spot)}</Text>
           </View>
         </View>
 
         <Text style={styles.addressText} numberOfLines={1}>
           {spot.address}
         </Text>
+
+        {compact && (
+          // Preview del mapa: sólo lo más importante para decidir si vale la
+          // pena abrir el detalle -- si confirma sola o el dueño tiene que
+          // aprobarla, y para qué vehículo es apta -- sin descripción ni el
+          // resto de los tags, que no entran cómodos en este layout angosto.
+          <View style={styles.tagRow}>
+            {(() => {
+              const entry = spot.instantBooking ? INSTANT_BOOKING_TAG.instant : INSTANT_BOOKING_TAG.approval;
+              return (
+                <View style={styles.tag}>
+                  <Ionicons name={entry.iconName} size={12} color={colors.teal} />
+                  <Text style={styles.tagText}>{t(entry.i18nKey)}</Text>
+                </View>
+              );
+            })()}
+            {spot.vehicleTypes.length > 0 && (
+              <View style={styles.tag}>
+                <Ionicons name="car-outline" size={12} color={colors.teal} />
+                <Text style={styles.tagText} numberOfLines={1}>
+                  {spot.vehicleTypes.map((vt) => t(VEHICLE_TYPE_LABEL_KEYS[vt])).join(', ')}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {!compact && (
           <>
@@ -217,6 +261,15 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
                   <Text style={styles.tagText}>{t('spot.tag.stay')}</Text>
                 </View>
               )}
+              {(() => {
+                const entry = spot.instantBooking ? INSTANT_BOOKING_TAG.instant : INSTANT_BOOKING_TAG.approval;
+                return (
+                  <View style={styles.tag}>
+                    <Ionicons name={entry.iconName} size={12} color={colors.teal} />
+                    <Text style={styles.tagText}>{t(entry.i18nKey)}</Text>
+                  </View>
+                );
+              })()}
             </View>
 
             <View style={styles.divider} />

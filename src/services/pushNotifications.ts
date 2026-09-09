@@ -89,8 +89,8 @@ export async function unregisterPush(): Promise<void> {
 /** Maps a notification `data` payload to an in-app route, or null. */
 function routeFor(data: Record<string, string> | undefined): string | null {
   if (data?.type === 'booking.confirmed' && data.bookingId) {
-    const { accountType, activeMode } = useAccountTypeStore.getState();
-    return `${groupFor(accountType, activeMode)}/bookings/${data.bookingId}`;
+    const { activeMode } = useAccountTypeStore.getState();
+    return `${groupFor(activeMode)}/bookings/${data.bookingId}`;
   }
   return null;
 }

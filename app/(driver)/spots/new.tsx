@@ -9,10 +9,15 @@ import { Screen } from '@/src/components/Screen';
 import { dayGroupsToEntries } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
 import { StaySettingsEditor, StaySettingsFormValue, EMPTY_STAY_SETTINGS } from '@/src/components/StaySettingsEditor';
-import { HourlySettingsEditor, HourlySettingsFormValue, EMPTY_HOURLY_SETTINGS } from '@/src/components/HourlySettingsEditor';
+import {
+  HourlySettingsEditor,
+  HourlySettingsFormValue,
+  EMPTY_HOURLY_SETTINGS,
+  isHourlyPricingValid,
+  hourlyPricesByVehicleTypeToNumbers,
+} from '@/src/components/HourlySettingsEditor';
 import { VehicleTypePicker } from '@/src/components/VehicleTypePicker';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { createParkingSpot, uploadParkingSpotPhotos } from '@/src/services/parkingService';
 import { GeocodeCandidate, ParkingSpotPhotoAsset, reverseGeocode } from '@/src/api/parking';
@@ -25,7 +30,6 @@ const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export default function NewSpot() {
   const colors = useThemeColors();
-  const typography = useTypography();
   useLanguage();
   const user = useSessionStore((s) => s.user);
 
@@ -135,7 +139,7 @@ export default function NewSpot() {
       alert(t('owner.spot.new.requiredVehicleTypes'));
       return;
     }
-    if (hourlySettings.hourlyEnabled && !hourlySettings.pricePerHour.trim()) {
+    if (!isHourlyPricingValid(hourlySettings, vehicleTypes)) {
       alert(t('owner.spot.new.requiredFields'));
       return;
     }
@@ -165,7 +169,14 @@ export default function NewSpot() {
         vehicleTypes,
         instantBooking,
         hourlyEnabled: hourlySettings.hourlyEnabled,
-        pricePerHour: hourlySettings.hourlyEnabled ? Number(hourlySettings.pricePerHour) : undefined,
+        pricePerHour:
+          hourlySettings.hourlyEnabled && !hourlySettings.pricePerVehicleType
+            ? Number(hourlySettings.pricePerHour)
+            : undefined,
+        pricePerHourByVehicleType:
+          hourlySettings.hourlyEnabled && hourlySettings.pricePerVehicleType
+            ? hourlyPricesByVehicleTypeToNumbers(hourlySettings, vehicleTypes)
+            : undefined,
         capacity: Math.max(1, Math.trunc(Number(capacity)) || 1),
         schedule: hourlySettings.hourlyEnabled ? dayGroupsToEntries(hourlySettings.schedule) : undefined,
         description: description.trim() || undefined,
@@ -191,16 +202,42 @@ export default function NewSpot() {
   }
 
   const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: colors.surface },
-    scroll: { padding: 16, gap: 8, paddingBottom: 40 },
+    screen: { flex: 1, backgroundColor: colors.background },
+    body: { padding: 16, gap: 14 },
 
-    photoBox: {
-      borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border,
-      borderRadius: 10, height: 90,
-      alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+    sectionLabel: {
+      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4,
     },
-    photoPlus: { fontSize: 24, color: colors.textSecondary },
-    photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 14, borderWidth: 1, borderColor: colors.border,
+      padding: 16, gap: 10,
+    },
+
+    input: {
+      borderWidth: 1, borderColor: colors.border, borderRadius: 10,
+      padding: 12, fontSize: 15, color: colors.text,
+    },
+    multiline: { minHeight: 80, textAlignVertical: 'top' },
+
+    toggleRow: { flexDirection: 'row', gap: 8 },
+    toggle: {
+      flex: 1, borderWidth: 1.5, borderColor: colors.border,
+      borderRadius: 10, paddingVertical: 10, alignItems: 'center',
+    },
+    toggleActive: { backgroundColor: colors.teal, borderColor: colors.teal },
+    toggleText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+    toggleTextActive: { color: colors.surface, fontWeight: '700' },
+
+    instantBookingRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+    },
+    instantBookingLabelBlock: { flex: 1, gap: 2 },
+    instantBookingHint: { fontSize: 12, color: colors.textSecondary },
+
+    photosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     photoThumbWrapper: { position: 'relative' },
     photoThumb: { width: 72, height: 72, borderRadius: 8 },
     coverBadge: {
@@ -220,173 +257,174 @@ export default function NewSpot() {
       alignItems: 'center', justifyContent: 'center',
     },
 
-    input: {
-      borderWidth: 1, borderColor: colors.border, borderRadius: 8,
-      padding: 12, fontSize: 15, marginBottom: 4, color: colors.text,
-    },
-    multiline: { minHeight: 80, textAlignVertical: 'top' },
-
-    toggleRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
-    toggle: {
-      flex: 1, borderWidth: 1, borderColor: colors.border,
-      borderRadius: 8, paddingVertical: 10, alignItems: 'center',
-    },
-    toggleActive: { backgroundColor: colors.teal, borderColor: colors.teal },
-    toggleText: { color: colors.text },
-    toggleTextActive: { color: colors.white, fontWeight: '600' },
-
-    instantBookingRow: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      gap: 12, marginBottom: 4,
-    },
-    instantBookingLabelBlock: { flex: 1, gap: 2 },
-    instantBookingHint: { fontSize: 12, color: colors.textSecondary },
-
-    sectionLabel: { marginBottom: 4 },
-    button: { marginTop: 16 },
-
-    addressRow: { flexDirection: 'row', gap: 8, marginBottom: 4, zIndex: 20, elevation: 20 },
+    locationCard: { zIndex: 20, elevation: 20 },
+    addressRow: { flexDirection: 'row', gap: 8 },
     locateButton: {
       width: 46, height: 46, borderRadius: 8,
       backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center',
     },
-    locationConfirmedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 },
+    locationConfirmedRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     locationConfirmed: { color: colors.success, fontSize: 12, fontWeight: '700' },
-    locationError: { color: '#C62828', fontSize: 12, marginBottom: 8 },
+    locationError: { color: '#C62828', fontSize: 12 },
+
+    publishBtn: { marginTop: 4 },
   });
 
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={typography.caption}>{t('owner.spot.new.photos')}</Text>
-        {photos.length === 0 ? (
-          <Pressable style={styles.photoBox} onPress={pickPhotos}>
-            <Text style={styles.photoPlus}>+</Text>
-            <Text style={typography.caption}>{t('owner.spot.new.photosTap')}</Text>
-          </Pressable>
-        ) : (
-          <View style={styles.photoRow}>
-            {photos.map((photo, index) => (
-              <View key={photo.uri} style={styles.photoThumbWrapper}>
-                <Image source={{ uri: photo.uri }} style={styles.photoThumb} />
-                {index === 0 && (
-                  <View style={styles.coverBadge}>
-                    <Text style={styles.coverBadgeText}>{t('owner.spot.new.cover')}</Text>
-                  </View>
-                )}
-                <TouchableOpacity style={styles.removePhotoBtn} onPress={() => removePhoto(index)}>
-                  <Ionicons name="close" size={13} color={colors.white} />
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.body}>
+          {/* Photos */}
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>{t('owner.spot.new.photos')}</Text>
+            <View style={styles.photosRow}>
+              {photos.map((photo, index) => (
+                <View key={photo.uri} style={styles.photoThumbWrapper}>
+                  <Image source={{ uri: photo.uri }} style={styles.photoThumb} />
+                  {index === 0 && (
+                    <View style={styles.coverBadge}>
+                      <Text style={styles.coverBadgeText}>{t('owner.spot.new.cover')}</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity style={styles.removePhotoBtn} onPress={() => removePhoto(index)}>
+                    <Ionicons name="close" size={13} color={colors.white} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {photos.length < MAX_PHOTOS && (
+                <TouchableOpacity style={styles.addPhotoThumb} onPress={pickPhotos}>
+                  <Ionicons name="add" size={22} color={colors.textSecondary} />
                 </TouchableOpacity>
-              </View>
-            ))}
-            {photos.length < MAX_PHOTOS && (
-              <TouchableOpacity style={styles.addPhotoThumb} onPress={pickPhotos}>
-                <Text style={styles.photoPlus}>+</Text>
+              )}
+            </View>
+          </View>
+
+          {/* Location */}
+          <View style={[styles.card, styles.locationCard]}>
+            <Text style={styles.sectionLabel}>{t('owner.spot.new.address')}</Text>
+            <View style={styles.addressRow}>
+              <AddressAutocomplete
+                value={address}
+                onChangeText={handleAddressChange}
+                onSelect={selectAddress}
+                placeholder={t('owner.spot.new.addressPlaceholder')}
+                onSuggestionsVisibilityChange={setAddressSuggestionsOpen}
+              />
+              <TouchableOpacity
+                style={styles.locateButton}
+                onPress={useCurrentLocation}
+                disabled={locating}
+                accessibilityLabel={t('owner.spot.new.useCurrentLocation')}
+              >
+                {locating ? (
+                  <ActivityIndicator color={colors.white} size="small" />
+                ) : (
+                  <Ionicons name="locate" size={20} color={colors.white} />
+                )}
               </TouchableOpacity>
+            </View>
+            {coordinates && !addressSuggestionsOpen && (
+              <View style={styles.locationConfirmedRow}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                <Text style={styles.locationConfirmed}>{t('owner.spot.new.locationConfirmed')}</Text>
+              </View>
             )}
+            {locationError && !addressSuggestionsOpen && <Text style={styles.locationError}>{locationError}</Text>}
           </View>
-        )}
 
-        <Text style={typography.caption}>{t('owner.spot.new.address')}</Text>
-        <View style={styles.addressRow}>
-          <AddressAutocomplete
-            value={address}
-            onChangeText={handleAddressChange}
-            onSelect={selectAddress}
-            placeholder={t('owner.spot.new.addressPlaceholder')}
-            onSuggestionsVisibilityChange={setAddressSuggestionsOpen}
+          {/* Capacity */}
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>{t('owner.spot.new.capacity')}</Text>
+            <TextInput
+              style={styles.input}
+              value={capacity}
+              onChangeText={(text) => setCapacity(text.replace(/[^0-9]/g, ''))}
+              keyboardType="number-pad"
+              placeholder="1"
+              placeholderTextColor={colors.textSecondary}
+            />
+            <Text style={{ fontSize: 12, color: colors.textSecondary }}>
+              {t('owner.spot.new.capacityHint')}
+            </Text>
+          </View>
+
+          {/* Type */}
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>{t('owner.spot.new.type')}</Text>
+            <View style={styles.toggleRow}>
+              <Pressable
+                style={[styles.toggle, covered && styles.toggleActive]}
+                onPress={() => setCovered(true)}
+              >
+                <Text style={covered ? styles.toggleTextActive : styles.toggleText}>
+                  {t('owner.spot.new.covered')}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.toggle, !covered && styles.toggleActive]}
+                onPress={() => setCovered(false)}
+              >
+                <Text style={!covered ? styles.toggleTextActive : styles.toggleText}>
+                  {t('owner.spot.new.uncovered')}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Vehicle types */}
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>{t('owner.spot.new.vehicleTypes')}</Text>
+            <VehicleTypePicker value={vehicleTypes} onChange={setVehicleTypes} />
+          </View>
+
+          {/* Instant booking */}
+          <View style={styles.card}>
+            <View style={styles.instantBookingRow}>
+              <View style={styles.instantBookingLabelBlock}>
+                <Text style={styles.sectionLabel}>{t('owner.spot.new.instantBooking')}</Text>
+                <Text style={styles.instantBookingHint}>{t('owner.spot.new.instantBookingHint')}</Text>
+              </View>
+              <Switch value={instantBooking} onValueChange={setInstantBooking} trackColor={{ true: colors.teal }} />
+            </View>
+          </View>
+
+          {/* Alquiler por hora */}
+          <View style={styles.card}>
+            <HourlySettingsEditor
+              value={hourlySettings}
+              onChange={(patch) => setHourlySettings((prev) => ({ ...prev, ...patch }))}
+              vehicleTypes={vehicleTypes}
+            />
+          </View>
+
+          {/* Estadía */}
+          <View style={styles.card}>
+            <StaySettingsEditor
+              value={staySettings}
+              onChange={(patch) => setStaySettings((prev) => ({ ...prev, ...patch }))}
+            />
+          </View>
+
+          {/* Description */}
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>{t('owner.spot.new.description')}</Text>
+            <TextInput
+              style={[styles.input, styles.multiline]}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              placeholder={t('owner.spot.new.descriptionPlaceholder')}
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
+
+          <Button
+            title={publishing ? t('owner.spot.new.publishing') : t('owner.spot.new.publish')}
+            onPress={publish}
+            disabled={publishing}
+            style={styles.publishBtn}
           />
-          <TouchableOpacity
-            style={styles.locateButton}
-            onPress={useCurrentLocation}
-            disabled={locating}
-            accessibilityLabel={t('owner.spot.new.useCurrentLocation')}
-          >
-            {locating ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <Ionicons name="locate" size={20} color={colors.white} />
-            )}
-          </TouchableOpacity>
         </View>
-        {coordinates && !addressSuggestionsOpen && (
-          <View style={styles.locationConfirmedRow}>
-            <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-            <Text style={styles.locationConfirmed}>{t('owner.spot.new.locationConfirmed')}</Text>
-          </View>
-        )}
-        {locationError && !addressSuggestionsOpen && <Text style={styles.locationError}>{locationError}</Text>}
-
-        <Text style={typography.caption}>{t('owner.spot.new.type')}</Text>
-        <View style={styles.toggleRow}>
-          <Pressable
-            style={[styles.toggle, covered && styles.toggleActive]}
-            onPress={() => setCovered(true)}
-          >
-            <Text style={covered ? styles.toggleTextActive : styles.toggleText}>
-              {t('owner.spot.new.covered')}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.toggle, !covered && styles.toggleActive]}
-            onPress={() => setCovered(false)}
-          >
-            <Text style={!covered ? styles.toggleTextActive : styles.toggleText}>
-              {t('owner.spot.new.uncovered')}
-            </Text>
-          </Pressable>
-        </View>
-
-        <Text style={[typography.caption, styles.sectionLabel]}>{t('owner.spot.new.vehicleTypes')}</Text>
-        <VehicleTypePicker value={vehicleTypes} onChange={setVehicleTypes} />
-
-        <View style={styles.instantBookingRow}>
-          <View style={styles.instantBookingLabelBlock}>
-            <Text style={typography.caption}>{t('owner.spot.new.instantBooking')}</Text>
-            <Text style={styles.instantBookingHint}>{t('owner.spot.new.instantBookingHint')}</Text>
-          </View>
-          <Switch value={instantBooking} onValueChange={setInstantBooking} trackColor={{ true: colors.teal }} />
-        </View>
-
-        <Text style={typography.caption}>{t('owner.spot.new.capacity')}</Text>
-        <TextInput
-          style={styles.input}
-          value={capacity}
-          onChangeText={(text) => setCapacity(text.replace(/[^0-9]/g, ''))}
-          keyboardType="number-pad"
-          placeholder="1"
-          placeholderTextColor={colors.textSecondary}
-        />
-        <Text style={[typography.caption, { color: colors.textSecondary, marginBottom: 4 }]}>
-          {t('owner.spot.new.capacityHint')}
-        </Text>
-
-        <HourlySettingsEditor
-          value={hourlySettings}
-          onChange={(patch) => setHourlySettings((prev) => ({ ...prev, ...patch }))}
-        />
-
-        <StaySettingsEditor
-          value={staySettings}
-          onChange={(patch) => setStaySettings((prev) => ({ ...prev, ...patch }))}
-        />
-
-        <Text style={typography.caption}>{t('owner.spot.new.description')}</Text>
-        <TextInput
-          style={[styles.input, styles.multiline]}
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          placeholder={t('owner.spot.new.descriptionPlaceholder')}
-          placeholderTextColor={colors.textSecondary}
-        />
-
-        <Button
-          title={publishing ? t('owner.spot.new.publishing') : t('owner.spot.new.publish')}
-          onPress={publish}
-          disabled={publishing}
-          style={styles.button}
-        />
       </ScrollView>
     </Screen>
   );

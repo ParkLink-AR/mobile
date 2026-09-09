@@ -12,7 +12,13 @@ import { RatingStars } from '@/src/components/RatingStars';
 import { dayGroupsToEntries, entriesToDayGroups } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
 import { StaySettingsEditor, StaySettingsFormValue, EMPTY_STAY_SETTINGS } from '@/src/components/StaySettingsEditor';
-import { HourlySettingsEditor, HourlySettingsFormValue, EMPTY_HOURLY_SETTINGS } from '@/src/components/HourlySettingsEditor';
+import {
+  HourlySettingsEditor,
+  HourlySettingsFormValue,
+  EMPTY_HOURLY_SETTINGS,
+  isHourlyPricingValid,
+  hourlyPricesByVehicleTypeToNumbers,
+} from '@/src/components/HourlySettingsEditor';
 import { VehicleTypePicker } from '@/src/components/VehicleTypePicker';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import {
@@ -84,6 +90,10 @@ export default function EditSpot() {
         setHourlySettings({
           hourlyEnabled: s.hourlyEnabled,
           pricePerHour: s.pricePerHour !== null ? String(s.pricePerHour) : '',
+          pricePerVehicleType: s.pricePerHourByVehicleType !== null,
+          pricePerHourByVehicleType: Object.fromEntries(
+            Object.entries(s.pricePerHourByVehicleType ?? {}).map(([vt, price]) => [vt, String(price)]),
+          ),
           schedule: s.schedule.length > 0 ? entriesToDayGroups(s.schedule) : [],
         });
         setStaySettings({
@@ -217,8 +227,7 @@ export default function EditSpot() {
       alert(t('owner.spot.edit.invalidHours'));
       return;
     }
-    const parsedPrice = Number(hourlySettings.pricePerHour);
-    if (hourlySettings.hourlyEnabled && (!hourlySettings.pricePerHour.trim() || isNaN(parsedPrice) || parsedPrice <= 0)) {
+    if (!isHourlyPricingValid(hourlySettings, vehicleTypes)) {
       alert(t('owner.spot.edit.invalidPrice'));
       return;
     }
@@ -240,7 +249,16 @@ export default function EditSpot() {
       setSaving(true);
       await updateParkingSpot(id, {
         hourlyEnabled: hourlySettings.hourlyEnabled,
-        pricePerHour: hourlySettings.hourlyEnabled ? parsedPrice : undefined,
+        pricePerHour:
+          hourlySettings.hourlyEnabled && !hourlySettings.pricePerVehicleType
+            ? Number(hourlySettings.pricePerHour)
+            : undefined,
+        // `null` explícito borra un mapa anterior si el dueño volvió a
+        // precio único -- omitir el campo (undefined) dejaría el mapa viejo
+        // vigente en la DB aunque el toggle esté apagado acá.
+        pricePerHourByVehicleType: hourlySettings.hourlyEnabled
+          ? (hourlySettings.pricePerVehicleType ? hourlyPricesByVehicleTypeToNumbers(hourlySettings, vehicleTypes) : null)
+          : undefined,
         description: description.trim(),
         covered,
         vehicleTypes,
@@ -585,6 +603,7 @@ export default function EditSpot() {
             <HourlySettingsEditor
               value={hourlySettings}
               onChange={(patch) => setHourlySettings((prev) => ({ ...prev, ...patch }))}
+              vehicleTypes={vehicleTypes}
             />
           </View>
 

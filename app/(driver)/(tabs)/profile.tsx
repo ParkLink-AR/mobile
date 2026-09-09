@@ -34,7 +34,6 @@ export default function Profile() {
   const setLanguage = useSettingsStore((s) => s.setLanguage);
   const mode = useSettingsStore((s) => s.mode);
   const toggleMode = useSettingsStore((s) => s.toggleMode);
-  const accountType = useAccountTypeStore((s) => s.accountType);
   const setActiveMode = useAccountTypeStore((s) => s.setActiveMode);
   const isOwner = group === '/(owner)';
   const [langModalVisible, setLangModalVisible] = useState(false);
@@ -268,22 +267,22 @@ export default function Profile() {
         </View>
         <View style={styles.prefCard}>
 
-          {accountType === 'both' && (
-            <>
-              <Pressable
-                style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
-                onPress={switchMode}
-              >
-                <Text style={styles.prefLabel}>{t('profile.changeMode')}</Text>
-                <View style={styles.langCurrent}>
-                  <Text style={styles.langCurrentText}>
-                    {isOwner ? t('accountType.driver.title') : t('accountType.owner.title')}
-                  </Text>
-                  <Ionicons name="swap-horizontal-outline" size={14} color={colors.teal} />
-                </View>
-              </Pressable>
-            </>
-          )}
+          {/* Cualquier cuenta puede pasar a modo conductor o propietario en
+              cualquier momento -- lo que eligió al registrarse sólo decidió
+              qué pantalla vio esa primera vez, no lo dejó encerrado en un
+              solo modo (ver el comentario en useAccountTypeStore.groupFor). */}
+          <Pressable
+            style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={switchMode}
+          >
+            <Text style={styles.prefLabel}>{t('profile.changeMode')}</Text>
+            <View style={styles.langCurrent}>
+              <Text style={styles.langCurrentText}>
+                {isOwner ? t('accountType.driver.title') : t('accountType.owner.title')}
+              </Text>
+              <Ionicons name="swap-horizontal-outline" size={14} color={colors.teal} />
+            </View>
+          </Pressable>
 
           <View style={styles.prefDivider} />
 

@@ -20,6 +20,10 @@ export interface ParkingSpotApiResponse {
   // parking-service.
   hourlyEnabled: boolean;
   pricePerHour: number | null;
+  // No-null implica que pricePerHour no aplica -- el precio real depende de
+  // qué tipo de vehículo elija el conductor. Ver ParkingSpot.pricePerHourByVehicleType
+  // en parking-service.
+  pricePerHourByVehicleType: Partial<Record<VehicleType, number>> | null;
   // "Estadía": alquiler por día/semana/mes en vez de por hora. Los precios
   // quedan en null cuando stayEnabled es false -- ver ParkingSpot.stayEnabled
   // en parking-service.
@@ -113,9 +117,11 @@ export interface CreateParkingSpotInput extends StayFields {
   lat: number;
   lng: number;
   // Default true si se omite (compatibilidad) -- ver ParkingSpot.hourlyEnabled.
-  // pricePerHour es obligatorio salvo que se mande hourlyEnabled: false.
+  // pricePerHour es obligatorio salvo que se mande hourlyEnabled: false o
+  // pricePerHourByVehicleType (uno de los dos, no ambos).
   hourlyEnabled?: boolean;
   pricePerHour?: number;
+  pricePerHourByVehicleType?: Partial<Record<VehicleType, number>>;
   covered?: boolean;
   // Obligatorio y no vacío -- ver ParkingSpot.vehicleTypes en parking-service.
   vehicleTypes: VehicleType[];
@@ -129,6 +135,9 @@ export interface CreateParkingSpotInput extends StayFields {
 export interface UpdateParkingSpotApiInput extends StayFields {
   hourlyEnabled?: boolean;
   pricePerHour?: number;
+  // `null` explícito borra el precio-por-vehículo y vuelve a pricePerHour
+  // único -- ver UpdateParkingSpotDto en parking-service.
+  pricePerHourByVehicleType?: Partial<Record<VehicleType, number>> | null;
   description?: string;
   covered?: boolean;
   vehicleTypes?: VehicleType[];

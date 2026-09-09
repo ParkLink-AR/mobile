@@ -69,9 +69,13 @@ export default function AccountTypeScreen() {
       const updatedUser = await updateAccountType(user.id, selected);
       setUser(updatedUser); // sincroniza useAccountTypeStore.accountType via setUser
       setAccountType(selected);
-      // 'both' arranca siempre en modo conductor -- se cambia después desde el perfil.
-      if (selected === 'both') setActiveMode('driver');
-      router.replace(tabRouteFor(selected, 'driver') as never);
+      // Esta elección sólo decide qué pantalla ve el usuario ahora, en su
+      // primer inicio de sesión -- 'both' arranca en modo conductor, igual
+      // que elegir 'driver' directo. Cualquiera puede pasar al otro modo
+      // después desde el perfil, sin importar qué haya elegido acá.
+      const initialMode = selected === 'owner' ? 'owner' : 'driver';
+      setActiveMode(initialMode);
+      router.replace(tabRouteFor(initialMode) as never);
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : 'No se pudo guardar la selección. Intentá de nuevo.');
     } finally {

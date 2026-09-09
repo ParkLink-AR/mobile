@@ -60,24 +60,44 @@ async function rawFetch(
   return fetch(`${API_URL}${path}`, { ...options, headers, cache: 'no-store' });
 }
 
+// auth-service rotates refresh tokens on every use (revokes the used one,
+// issues a new pair) -- if two requests 401 around the same time (e.g. two
+// screens fetching in parallel right when the access token expires), each
+// independently calling /auth/refresh with the same refresh token would let
+// only the first succeed; the second would arrive with an already-revoked
+// token, fail, and clearSession() the user out from under the first call's
+// brand-new session. Sharing one in-flight promise means every concurrent
+// 401 awaits the same single refresh instead of racing each other.
+let refreshInFlight: Promise<string | null> | null = null;
+
 async function refreshSession(): Promise<string | null> {
-  const { refreshToken, setTokens } = useSessionStore.getState();
-  if (!refreshToken) return null;
+  if (refreshInFlight) return refreshInFlight;
 
-  const response = await rawFetch(
-    '/auth/refresh',
-    { method: 'POST', body: JSON.stringify({ refresh_token: refreshToken }) },
-    null
-  );
-  if (!response.ok) return null;
+  refreshInFlight = (async () => {
+    const { refreshToken, setTokens } = useSessionStore.getState();
+    if (!refreshToken) return null;
 
-  const data = await response.json();
-  setTokens({
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    expiresIn: data.expires_in,
-  });
-  return data.access_token as string;
+    const response = await rawFetch(
+      '/auth/refresh',
+      { method: 'POST', body: JSON.stringify({ refresh_token: refreshToken }) },
+      null
+    );
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    setTokens({
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      expiresIn: data.expires_in,
+    });
+    return data.access_token as string;
+  })();
+
+  try {
+    return await refreshInFlight;
+  } finally {
+    refreshInFlight = null;
+  }
 }
 
 export async function request<T>(
