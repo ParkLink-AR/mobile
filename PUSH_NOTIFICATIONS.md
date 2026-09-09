@@ -25,34 +25,27 @@ npx expo run:android      # o run:ios
 En jest / si `@react-native-firebase/messaging` no está,
 `src/services/pushNotifications.ts` **no hace nada** (sin romper).
 
-## Setup de Firebase (una vez, archivos gitignored — no van al repo)
+## Firebase — ya viene configurado
 
-Los tres archivos son secretos: bajalos de la Firebase Console (proyecto
-`parklink-app`) o pedíselos a alguien del equipo por un canal seguro.
+Este es un proyecto personal privado, así que las credenciales de Firebase
+(proyecto `parklink-app`) están **commiteadas en el repo**:
 
-1. **Firebase Console** → proyecto `parklink-app` (plan Spark gratuito alcanza —
-   FCM no cuesta nada).
-2. **Android** → app con package `com.parklink.mobile` → descargar
-   `google-services.json` → dejarlo en `mobile/google-services.json`.
-3. **iOS** → app con bundle id `com.parklink.mobile` → descargar
-   `GoogleService-Info.plist` → dejarlo en `mobile/GoogleService-Info.plist`.
-4. **iOS APNs** → Apple Developer → crear *APNs Auth Key* (`.p8`) → subirla en
-   Firebase Console → Project Settings → Cloud Messaging → *Apple app configuration*.
-5. **Backend** → Firebase Console → Project Settings → *Service accounts* →
-   *Generate new private key* → dejar el JSON en
-   `notifications-service/secrets/firebase-service-account.json` y setear en el
-   `.env` del stack:
-   ```
-   FIREBASE_CREDENTIALS_PATH=/run/secrets/firebase-service-account.json
-   ```
-   Sin esto, `notifications-service` arranca igual pero en **modo log-only**
-   (loguea qué mandaría, no manda nada).
+| Archivo | Repo | Para qué |
+|---|---|---|
+| `mobile/google-services.json` | mobile | config de la app Android (`com.parklink.mobile`) |
+| `notifications-service/secrets/firebase-service-account.json` | notifications-service | que el backend mande push por FCM |
 
-Android y backend tienen que ser del **mismo proyecto de Firebase**.
+`docker compose up` monta el JSON del backend en el contenedor y
+`notifications-service` lo toma solo (ver `root/compose.yaml`). No hay que setear
+nada. Para forzar log-only: `FIREBASE_CREDENTIALS_PATH=` (vacío) en el `.env`.
 
-Sin `google-services.json`, `npx expo run:android` falla al compilar el módulo
-nativo. Para trabajar sin push, sacá temporalmente el plugin
-`@react-native-firebase/app` de `app.json` y las deps `@react-native-firebase/*`.
+> ⚠️ Si el repo alguna vez se hace público, **rotá las dos credenciales**
+> (Firebase Console → Service accounts → revoke/regenerate, y regenerá el
+> `google-services.json`).
+
+**iOS todavía no está configurado.** Si hace falta push en iOS:
+1. Firebase Console → agregar app iOS `com.parklink.mobile` → `GoogleService-Info.plist` en `mobile/`.
+2. Apple Developer → *APNs Auth Key* (`.p8`) → subirla en Firebase Console → Cloud Messaging.
 
 ## Toolchain Android para `expo run:android`
 
