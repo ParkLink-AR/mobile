@@ -9,7 +9,11 @@ import { RatingStars } from '@/src/components/RatingStars';
 import { PhotoGallery } from '@/src/components/PhotoGallery';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
-import { DatePickerField } from '@/src/components/DatePickerField';
+import {
+  AvailabilityDatePickerField,
+  hourlyAvailabilityFetcher,
+  stayAvailabilityFetcher,
+} from '@/src/components/AvailabilityDatePickerField';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
@@ -492,10 +496,11 @@ export default function SpotDetail() {
                   </View>
                 )}
 
-                {/* Date picker (calendar) */}
+                {/* Date picker (calendar, coloreado por disponibilidad real) */}
                 <View style={styles.card}>
                   <Text style={styles.sectionLabel}>{t('spot.selectDay')}</Text>
-                  <DatePickerField
+                  <AvailabilityDatePickerField
+                    fetchAvailability={hourlyAvailabilityFetcher(spot.id)}
                     value={selectedDateISO}
                     onChange={setSelectedDateOverride}
                     placeholder={t('spot.datePlaceholder')}
@@ -642,7 +647,8 @@ export default function SpotDetail() {
                 </View>
 
                 <Text style={styles.fieldLabel}>{t('spot.stay.startDate')}</Text>
-                <DatePickerField
+                <AvailabilityDatePickerField
+                  fetchAvailability={stayAvailabilityFetcher(spot.id, stayUnit, stayCount)}
                   value={stayStartDate}
                   onChange={setStayStartDateOverride}
                   placeholder={t('spot.datePlaceholder')}

@@ -15,6 +15,7 @@ import { ApiError } from '@/src/api/client';
 
 const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
   owner_request: 'time-outline',
+  owner_new_booking: 'checkmark-circle',
   driver_confirmed: 'checkmark-circle',
   driver_rejected: 'close-circle',
   driver_review_prompt: 'star-outline',
@@ -90,7 +91,7 @@ export default function Notifications() {
   });
 
   function iconColorFor(kind: AppNotification['kind']) {
-    if (kind === 'driver_confirmed') return colors.success;
+    if (kind === 'driver_confirmed' || kind === 'owner_new_booking') return colors.success;
     if (kind === 'driver_rejected') return '#C62828';
     return colors.warning;
   }
@@ -125,7 +126,7 @@ export default function Notifications() {
             <TouchableOpacity
               style={styles.row}
               onPress={() => handlePress(item)}
-              disabled={item.kind === 'driver_confirmed' || item.kind === 'driver_rejected'}
+              disabled={item.kind === 'driver_confirmed' || item.kind === 'driver_rejected' || item.kind === 'owner_new_booking'}
             >
               <View style={[styles.iconBadge, { backgroundColor: iconColorFor(item.kind) + '20' }]}>
                 <Ionicons name={ICONS[item.kind]} size={18} color={iconColorFor(item.kind)} />
@@ -134,6 +135,7 @@ export default function Notifications() {
                 <Text style={styles.itemTitle}>{item.spotTitle}</Text>
                 <Text style={styles.itemBody}>
                   {item.kind === 'owner_request' && t('notifications.ownerRequest.body', { date: item.date, start: item.startTime, end: item.endTime })}
+                  {item.kind === 'owner_new_booking' && t('notifications.ownerNewBooking.body', { date: item.date, start: item.startTime, end: item.endTime })}
                   {item.kind === 'driver_confirmed' && t('notifications.driverConfirmed.body', { date: item.date, start: item.startTime, end: item.endTime })}
                   {item.kind === 'driver_rejected' && t('notifications.driverRejected.body')}
                   {item.kind === 'driver_review_prompt' && t('notifications.driverReviewPrompt.body')}

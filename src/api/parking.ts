@@ -342,3 +342,27 @@ export async function getStayQuote(
   const query = new URLSearchParams({ startDate, unit, count: String(count) });
   return request(`/parking-spots/${parkingSpotId}/stays/quote?${query.toString()}`);
 }
+
+export interface StayDayAvailability {
+  date: string; // YYYY-MM-DD
+  status: 'available' | 'unavailable';
+}
+
+/**
+ * Calendario de disponibilidad para elegir fecha de inicio de estadía --
+ * contraparte de getAvailability (horaria) para el otro modo de reserva.
+ * unit/count importan: una estadía más larga ocupa más días, así que
+ * "disponible" depende de cuánto dure la que se está por pedir.
+ *
+ * GET /parking-spots/{id}/stays/availability
+ */
+export async function getStayAvailability(
+  parkingSpotId: string,
+  from: string,
+  to: string,
+  unit: StayUnit,
+  count: number,
+): Promise<{ days: StayDayAvailability[] }> {
+  const query = new URLSearchParams({ from, to, unit, count: String(count) });
+  return request(`/parking-spots/${parkingSpotId}/stays/availability?${query.toString()}`);
+}

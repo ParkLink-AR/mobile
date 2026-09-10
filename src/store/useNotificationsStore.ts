@@ -34,7 +34,15 @@ export const useNotificationsStore = create(
         ids.forEach((id) => seen.add(id));
         set({ seenIds: [...seen] });
       },
-      clear: () => set({ items: [], seenIds: [] }),
+      // Sólo borra la lista en memoria (se vuelve a pedir sola en el
+      // próximo login, vía refresh()) -- seenIds NO se toca acá: es el
+      // registro persistente de qué notificaciones ya se vieron, y tiene
+      // que sobrevivir a un logout/login para que el badge de "no leídas"
+      // no vuelva a contar como nuevo algo que el usuario ya abrió antes de
+      // cerrar sesión. Los ids son `${bookingId}-${kind}` con bookingId un
+      // UUID único global, así que conservarlos entre cuentas en el mismo
+      // dispositivo no arrastra el estado de "visto" de un usuario a otro.
+      clear: () => set({ items: [] }),
     }),
     {
       name: 'notifications-storage',

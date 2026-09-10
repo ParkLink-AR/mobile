@@ -4,6 +4,7 @@ import { getParkingSpotDetail } from '@/src/api/parking';
 
 export type NotificationKind =
   | 'owner_request'
+  | 'owner_new_booking'
   | 'driver_confirmed'
   | 'driver_rejected'
   | 'driver_review_prompt'
@@ -66,6 +67,17 @@ async function getOwnerNotifications(ownerId: string): Promise<AppNotification[]
             .filter((b) => b.status === 'PENDING_OWNER_APPROVAL')
             .map((b) => fmt(b, spot.title, 'owner_request'));
 
+          // Reserva ya confirmada (instantánea, o aprobada por el dueño hace
+          // rato) -- sin esto, un dueño con reserva instantánea prendida
+          // nunca se entera de que le reservaron la cochera hasta que la
+          // busca a mano. No hace falta distinguir instantánea de "recién
+          // la aprobé yo": deja de ser CONFIRMED en cuanto termina (pasa a
+          // COMPLETED), así que esto nunca convive con el recordatorio de
+          // reseña de abajo para la misma reserva.
+          const newBookings = bookings
+            .filter((b) => b.status === 'CONFIRMED')
+            .map((b) => fmt(b, spot.title, 'owner_new_booking'));
+
           const completed = bookings.filter((b) => b.status === 'COMPLETED');
           const reviewPrompts = (
             await Promise.all(
@@ -75,7 +87,7 @@ async function getOwnerNotifications(ownerId: string): Promise<AppNotification[]
             )
           ).filter((n): n is AppNotification => n !== null);
 
-          return [...requests, ...reviewPrompts];
+          return [...requests, ...newBookings, ...reviewPrompts];
         })
         .catch(() => []),
     ),

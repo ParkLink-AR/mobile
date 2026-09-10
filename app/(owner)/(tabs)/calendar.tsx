@@ -104,6 +104,14 @@ export default function OwnerCalendar() {
   }, [bookings]);
 
   const grid = useMemo(() => buildMonthGrid(visibleYear, visibleMonth), [visibleYear, visibleMonth]);
+  // Semanas como filas explícitas de 7 -- ver el comentario en
+  // AvailabilityDatePickerField.tsx: celdas al 100/7% con flexWrap corren
+  // la última columna (domingo) a la fila siguiente por redondeo.
+  const weeks = useMemo(() => {
+    const result: typeof grid[] = [];
+    for (let i = 0; i < grid.length; i += 7) result.push(grid.slice(i, i + 7));
+    return result;
+  }, [grid]);
   const monthLabel = new Date(Date.UTC(visibleYear, visibleMonth, 1)).toLocaleDateString('es-AR', {
     month: 'long',
     year: 'numeric',
@@ -135,9 +143,10 @@ export default function OwnerCalendar() {
     weekRow: { flexDirection: 'row' },
     weekDayCell: { flex: 1, alignItems: 'center', paddingBottom: 6 },
     weekDayText: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
-    grid: { flexDirection: 'row', flexWrap: 'wrap' },
+    grid: { gap: 2 },
+    weekRowGrid: { flexDirection: 'row' },
     dayCell: {
-      width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', gap: 3,
+      flex: 1, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', gap: 3,
     },
     dayCircle: {
       width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
@@ -204,25 +213,29 @@ export default function OwnerCalendar() {
             </View>
 
             <View style={styles.grid}>
-              {grid.map((cell) => {
-                const isSelected = cell.dateISO === selectedDate;
-                const isToday = cell.dateISO === today;
-                const hasBookings = (bookingsByDate[cell.dateISO]?.length ?? 0) > 0;
-                return (
-                  <Pressable
-                    key={cell.dateISO}
-                    style={styles.dayCell}
-                    onPress={() => setSelectedDate(cell.dateISO)}
-                  >
-                    <View style={[styles.dayCircle, isSelected && styles.dayCircleSelected, !isSelected && isToday && styles.dayCircleToday]}>
-                      <Text style={[styles.dayText, !cell.inMonth && styles.dayTextOutOfMonth, isSelected && styles.dayTextSelected]}>
-                        {cell.day}
-                      </Text>
-                    </View>
-                    <View style={[styles.dot, !hasBookings && styles.dotHidden]} />
-                  </Pressable>
-                );
-              })}
+              {weeks.map((week, weekIndex) => (
+                <View key={weekIndex} style={styles.weekRowGrid}>
+                  {week.map((cell) => {
+                    const isSelected = cell.dateISO === selectedDate;
+                    const isToday = cell.dateISO === today;
+                    const hasBookings = (bookingsByDate[cell.dateISO]?.length ?? 0) > 0;
+                    return (
+                      <Pressable
+                        key={cell.dateISO}
+                        style={styles.dayCell}
+                        onPress={() => setSelectedDate(cell.dateISO)}
+                      >
+                        <View style={[styles.dayCircle, isSelected && styles.dayCircleSelected, !isSelected && isToday && styles.dayCircleToday]}>
+                          <Text style={[styles.dayText, !cell.inMonth && styles.dayTextOutOfMonth, isSelected && styles.dayTextSelected]}>
+                            {cell.day}
+                          </Text>
+                        </View>
+                        <View style={[styles.dot, !hasBookings && styles.dotHidden]} />
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ))}
             </View>
 
             <Pressable style={styles.todayLink} onPress={goToToday}>
