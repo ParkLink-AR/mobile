@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   Platform,
   Pressable,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import MapView, { Marker, Region, PROVIDER_DEFAULT } from 'react-native-maps';
 import ClusteredMapView from 'react-native-map-clustering';
@@ -21,11 +23,13 @@ import { Chip } from '@/src/components/Chip';
 import { Button } from '@/src/components/Button';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
 import { Screen } from '@/src/components/Screen';
+import { DatePickerField } from '@/src/components/DatePickerField';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
-import { searchParkingSpots, SearchParkingSpotsFilters } from '@/src/services/parkingService';
+import { searchParkingSpots, getMinPricePerHour, SearchParkingSpotsFilters } from '@/src/services/parkingService';
+import { todayArtDateISO } from '@/src/services/dateUtils';
 import { geocodeAddress, reverseGeocode, GeocodeCandidate } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { ParkingSpot } from '@/src/types';
@@ -33,11 +37,20 @@ import { t, useLanguage } from '@/src/i18n';
 import { useLocationPermission } from '@/src/hooks/useLocationPermission';
 import { MAP_STYLE } from '@/src/theme/mapStyle';
 
-const DISTANCE_OPTIONS = [
-  { label: '< 500 m', value: 500 },
-  { label: '< 1 km', value: 1000 },
-  { label: '< 2 km', value: 2000 },
-];
+// Precio a mostrar en el pin del mapa: por hora si la cochera lo ofrece
+// (aunque también tenga estadía -- ver el pedido del usuario de priorizar
+// el precio por hora), si no por día (estadía). Mismo criterio de "precio
+// mínimo" que ParkingSpotCard.priceBadgeLabel cuando varía por vehículo.
+function mapPinPrice(spot: ParkingSpot): string {
+  if (spot.hourlyEnabled) {
+    const price = getMinPricePerHour(spot);
+    if (price !== null) return `$${getDriverVisiblePrice(price)}`;
+  }
+  if (spot.stayEnabled && spot.pricePerDay !== null) {
+    return `$${getDriverVisiblePrice(spot.pricePerDay)}${t('spot.pricePerDay.short')}`;
+  }
+  return t('spot.stayOnlyBadge');
+}
 
 // Default center: Buenos Aires
 const DEFAULT_REGION: Region = {
@@ -91,10 +104,59 @@ export function SearchScreen() {
   const [maxPriceInput, setMaxPriceInput] = useState('');
   const [coveredOnly, setCoveredOnly] = useState(false);
   const [stayOnly, setStayOnly] = useState(false);
-  const [distanceInput, setDistanceInput] = useState<number | undefined>(undefined);
+  const [hourlyOnlyFilter, setHourlyOnlyFilter] = useState(false);
+  const [instantBookingOnly, setInstantBookingOnly] = useState(false);
+  // Km en texto libre (no un preset) -- se convierte a metros recién al aplicar.
+  const [distanceKmInput, setDistanceKmInput] = useState('');
   const [scheduleFilterOn, setScheduleFilterOn] = useState(false);
+  const [dateInput, setDateInput] = useState(''); // YYYY-MM-DD, '' = hoy
   const [fromHourInput, setFromHourInput] = useState(8);
   const [toHourInput, setToHourInput] = useState(9);
+
+  // Selecciona uno de los dos a la vez -- elegir "por hora" apaga "estadía"
+  // y viceversa; tocar el mismo que ya está prendido lo apaga (vuelve a
+  // "todas"). Por defecto (ninguno prendido) se ven ambos tipos.
+  function toggleStayOnly() {
+    setStayOnly((v) => {
+      const next = !v;
+      if (next) setHourlyOnlyFilter(false);
+      return next;
+    });
+  }
+  function toggleHourlyOnly() {
+    setHourlyOnlyFilter((v) => {
+      const next = !v;
+      if (next) setStayOnly(false);
+      return next;
+    });
+  }
+
+  // ── Swipe-to-dismiss del modal de filtros ───────────────────────────────
+  // Sólo el header (agarradera + título, fuera del ScrollView) escucha el
+  // gesto -- así no compite con el scroll del ScrollView de adentro salvo
+  // cuando ese scroll ya está en el tope: recién ahí arrastrar hacia abajo
+  // mueve la hoja en vez de intentar (inútilmente) scrollear más arriba.
+  const filterScrollOffset = useRef(0);
+  const filterSheetY = useRef(new Animated.Value(0)).current;
+  const filterPanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        filterScrollOffset.current <= 0 && gesture.dy > 4 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+      onPanResponderMove: (_, gesture) => {
+        if (gesture.dy > 0) filterSheetY.setValue(gesture.dy);
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dy > 100 || gesture.vy > 0.8) {
+          Animated.timing(filterSheetY, { toValue: 800, duration: 180, useNativeDriver: true }).start(() => {
+            setModalVisible(false);
+            filterSheetY.setValue(0);
+          });
+        } else {
+          Animated.spring(filterSheetY, { toValue: 0, useNativeDriver: true, bounciness: 6 }).start();
+        }
+      },
+    })
+  ).current;
 
   // fillAddress is true only when the user actually taps the locate button --
   // the automatic GPS fix on first mount (see the permission effect below)
@@ -257,20 +319,27 @@ export function SearchScreen() {
     setMaxPriceInput(filters.maxPrice ? String(filters.maxPrice) : '');
     setCoveredOnly(filters.covered ?? false);
     setStayOnly(filters.stayOnly ?? false);
-    setDistanceInput(filters.maxDistanceMeters);
+    setHourlyOnlyFilter(filters.hourlyOnly ?? false);
+    setInstantBookingOnly(filters.instantBooking ?? false);
+    setDistanceKmInput(filters.maxDistanceMeters !== undefined ? String(filters.maxDistanceMeters / 1000) : '');
     setScheduleFilterOn(filters.fromHour !== undefined);
+    setDateInput(filters.date ?? '');
     setFromHourInput(filters.fromHour ?? 8);
     setToHourInput(filters.toHour ?? 9);
     setModalVisible(true);
   }
 
   function applyFilters() {
+    const km = Number(distanceKmInput);
     setFilters({
       minPrice: minPriceInput ? Number(minPriceInput) : undefined,
       maxPrice: maxPriceInput ? Number(maxPriceInput) : undefined,
       covered: coveredOnly || undefined,
       stayOnly: stayOnly || undefined,
-      maxDistanceMeters: distanceInput,
+      hourlyOnly: hourlyOnlyFilter || undefined,
+      instantBooking: instantBookingOnly || undefined,
+      maxDistanceMeters: distanceKmInput.trim() && km > 0 ? Math.round(km * 1000) : undefined,
+      date: scheduleFilterOn ? (dateInput || undefined) : undefined,
       fromHour: scheduleFilterOn ? fromHourInput : undefined,
       toHour: scheduleFilterOn ? toHourInput : undefined,
     });
@@ -280,6 +349,11 @@ export function SearchScreen() {
   function clearFilters() {
     setFilters({});
     setModalVisible(false);
+  }
+
+  /** "10/09" -- mismo formato corto que el resto de la app usa para fechas. */
+  function formatShortDate(dateISO: string): string {
+    return new Date(`${dateISO}T12:00:00`).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
   }
 
   const activeChips: { label: string; onRemove: () => void }[] = [];
@@ -307,16 +381,30 @@ export function SearchScreen() {
       onRemove: () => setFilters((f) => ({ ...f, stayOnly: undefined })),
     });
   }
-  if (filters.maxDistanceMeters !== undefined) {
+  if (filters.hourlyOnly) {
     activeChips.push({
-      label: DISTANCE_OPTIONS.find((d) => d.value === filters.maxDistanceMeters)?.label ?? '',
+      label: t('search.filters.hourlyOnly'),
+      onRemove: () => setFilters((f) => ({ ...f, hourlyOnly: undefined })),
+    });
+  }
+  if (filters.instantBooking) {
+    activeChips.push({
+      label: t('search.filters.instantBookingOnly'),
+      onRemove: () => setFilters((f) => ({ ...f, instantBooking: undefined })),
+    });
+  }
+  if (filters.maxDistanceMeters !== undefined) {
+    const km = filters.maxDistanceMeters / 1000;
+    activeChips.push({
+      label: t('search.filters.distanceValue', { km: String(Number(km.toFixed(1))) }),
       onRemove: () => setFilters((f) => ({ ...f, maxDistanceMeters: undefined })),
     });
   }
   if (filters.fromHour !== undefined && filters.toHour !== undefined) {
+    const dateLabel = filters.date ? `${formatShortDate(filters.date)} ` : '';
     activeChips.push({
-      label: `${String(filters.fromHour).padStart(2, '0')}:00–${String(filters.toHour).padStart(2, '0')}:00`,
-      onRemove: () => setFilters((f) => ({ ...f, fromHour: undefined, toHour: undefined })),
+      label: `${dateLabel}${String(filters.fromHour).padStart(2, '0')}:00–${String(filters.toHour).padStart(2, '0')}:00`,
+      onRemove: () => setFilters((f) => ({ ...f, date: undefined, fromHour: undefined, toHour: undefined })),
     });
   }
 
@@ -641,7 +729,8 @@ export function SearchScreen() {
       color: colors.text,
       backgroundColor: colors.background,
     },
-    scheduleRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
+    dateRow: { marginTop: 4 },
+    scheduleRow: { flexDirection: 'row', gap: 12, marginTop: 10 },
     hourBlock: { flex: 1, gap: 4 },
     hourLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '500' },
     hourControl: {
@@ -917,9 +1006,7 @@ export function SearchScreen() {
                   tracksViewChanges={false}
                 >
                   <View style={[styles.pin, isSelected && styles.pinSelected]}>
-                    <Text style={styles.pinText}>
-                      {spot.pricePerHour !== null ? `$${getDriverVisiblePrice(spot.pricePerHour)}` : t('spot.stayOnlyBadge')}
-                    </Text>
+                    <Text style={styles.pinText}>{mapPinPrice(spot)}</Text>
                   </View>
                 </Marker>
               );
@@ -1008,11 +1095,18 @@ export function SearchScreen() {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setModalVisible(false)} />
+          <Animated.View
+            style={[styles.modalContent, { transform: [{ translateY: filterSheetY }] }]}
+            {...filterPanResponder.panHandlers}
+          >
             <View style={styles.modalHandle} />
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalTitle}>{t('search.filters.title')}</Text>
-
+            <Text style={styles.modalTitle}>{t('search.filters.title')}</Text>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              onScroll={(e) => { filterScrollOffset.current = e.nativeEvent.contentOffset.y; }}
+              scrollEventThrottle={16}
+            >
               <Text style={styles.sectionLabel}>{t('search.filters.pricePerHour')}</Text>
               <View style={styles.row}>
                 <TextInput
@@ -1042,28 +1136,38 @@ export function SearchScreen() {
                 />
               </View>
 
-              <Text style={styles.sectionLabel}>{t('search.filters.stay')}</Text>
+              <Text style={styles.sectionLabel}>{t('search.filters.reservationType')}</Text>
               <View style={styles.chipsWrap}>
+                <Chip
+                  label={t('search.filters.hourlyOnly')}
+                  selected={hourlyOnlyFilter}
+                  onPress={toggleHourlyOnly}
+                />
                 <Chip
                   label={t('search.filters.stayOnly')}
                   selected={stayOnly}
-                  onPress={() => setStayOnly((v) => !v)}
+                  onPress={toggleStayOnly}
+                />
+              </View>
+
+              <Text style={styles.sectionLabel}>{t('search.filters.confirmation')}</Text>
+              <View style={styles.chipsWrap}>
+                <Chip
+                  label={t('search.filters.instantBookingOnly')}
+                  selected={instantBookingOnly}
+                  onPress={() => setInstantBookingOnly((v) => !v)}
                 />
               </View>
 
               <Text style={styles.sectionLabel}>{t('search.filters.distance')}</Text>
-              <View style={styles.chipsWrap}>
-                {DISTANCE_OPTIONS.map((option) => (
-                  <Chip
-                    key={option.value}
-                    label={option.label}
-                    selected={distanceInput === option.value}
-                    onPress={() =>
-                      setDistanceInput((current) => (current === option.value ? undefined : option.value))
-                    }
-                  />
-                ))}
-              </View>
+              <TextInput
+                style={styles.input}
+                placeholder={t('search.filters.distancePlaceholder')}
+                placeholderTextColor={colors.textSecondary}
+                keyboardType="numeric"
+                value={distanceKmInput}
+                onChangeText={setDistanceKmInput}
+              />
 
               <Text style={styles.sectionLabel}>{t('search.filters.schedule')}</Text>
               <View style={styles.chipsWrap}>
@@ -1074,44 +1178,55 @@ export function SearchScreen() {
                 />
               </View>
               {scheduleFilterOn && (
-                <View style={styles.scheduleRow}>
-                  <View style={styles.hourBlock}>
-                    <Text style={styles.hourLabel}>{t('search.filters.from')}</Text>
-                    <View style={styles.hourControl}>
-                      <TouchableOpacity
-                        style={styles.hourBtn}
-                        onPress={() => setFromHourInput((h) => Math.max(0, Math.min(h - 1, toHourInput - 1)))}
-                      >
-                        <Ionicons name="remove" size={14} color={colors.text} />
-                      </TouchableOpacity>
-                      <Text style={styles.hourValue}>{String(fromHourInput).padStart(2, '0')}:00</Text>
-                      <TouchableOpacity
-                        style={styles.hourBtn}
-                        onPress={() => setFromHourInput((h) => Math.min(toHourInput - 1, h + 1))}
-                      >
-                        <Ionicons name="add" size={14} color={colors.text} />
-                      </TouchableOpacity>
+                <>
+                  <View style={styles.dateRow}>
+                    <DatePickerField
+                      value={dateInput}
+                      onChange={setDateInput}
+                      placeholder={t('search.filters.datePlaceholder')}
+                      minimumDate={new Date(`${todayArtDateISO()}T00:00:00`)}
+                      style={styles.input}
+                    />
+                  </View>
+                  <View style={styles.scheduleRow}>
+                    <View style={styles.hourBlock}>
+                      <Text style={styles.hourLabel}>{t('search.filters.from')}</Text>
+                      <View style={styles.hourControl}>
+                        <TouchableOpacity
+                          style={styles.hourBtn}
+                          onPress={() => setFromHourInput((h) => Math.max(0, Math.min(h - 1, toHourInput - 1)))}
+                        >
+                          <Ionicons name="remove" size={14} color={colors.text} />
+                        </TouchableOpacity>
+                        <Text style={styles.hourValue}>{String(fromHourInput).padStart(2, '0')}:00</Text>
+                        <TouchableOpacity
+                          style={styles.hourBtn}
+                          onPress={() => setFromHourInput((h) => Math.min(toHourInput - 1, h + 1))}
+                        >
+                          <Ionicons name="add" size={14} color={colors.text} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                    <View style={styles.hourBlock}>
+                      <Text style={styles.hourLabel}>{t('search.filters.until')}</Text>
+                      <View style={styles.hourControl}>
+                        <TouchableOpacity
+                          style={styles.hourBtn}
+                          onPress={() => setToHourInput((h) => Math.max(fromHourInput + 1, h - 1))}
+                        >
+                          <Ionicons name="remove" size={14} color={colors.text} />
+                        </TouchableOpacity>
+                        <Text style={styles.hourValue}>{String(toHourInput).padStart(2, '0')}:00</Text>
+                        <TouchableOpacity
+                          style={styles.hourBtn}
+                          onPress={() => setToHourInput((h) => Math.min(23, Math.max(h + 1, fromHourInput + 1)))}
+                        >
+                          <Ionicons name="add" size={14} color={colors.text} />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
-                  <View style={styles.hourBlock}>
-                    <Text style={styles.hourLabel}>{t('search.filters.until')}</Text>
-                    <View style={styles.hourControl}>
-                      <TouchableOpacity
-                        style={styles.hourBtn}
-                        onPress={() => setToHourInput((h) => Math.max(fromHourInput + 1, h - 1))}
-                      >
-                        <Ionicons name="remove" size={14} color={colors.text} />
-                      </TouchableOpacity>
-                      <Text style={styles.hourValue}>{String(toHourInput).padStart(2, '0')}:00</Text>
-                      <TouchableOpacity
-                        style={styles.hourBtn}
-                        onPress={() => setToHourInput((h) => Math.min(23, Math.max(h + 1, fromHourInput + 1)))}
-                      >
-                        <Ionicons name="add" size={14} color={colors.text} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
+                </>
               )}
 
               <Button
@@ -1123,7 +1238,7 @@ export function SearchScreen() {
                 {t('search.filters.clear')}
               </Text>
             </ScrollView>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </Screen>

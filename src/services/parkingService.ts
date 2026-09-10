@@ -19,6 +19,7 @@ import {
 } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { getDriverVisiblePrice } from './utils';
+import { todayArtDateISO } from './dateUtils';
 
 function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
   return {
@@ -141,38 +142,51 @@ export interface SearchParkingSpotsFilters {
   maxPrice?: number;
   covered?: boolean;
   maxDistanceMeters?: number;
-  // Desired reservation window, today only (no date picker yet -- see
-  // toISOToday). Go together: both or neither.
+  // Desired reservation window -- date (YYYY-MM-DD, ART) + hour range.
+  // Go together: both hours or neither. `date` alone (sin fromHour/toHour)
+  // se ignora -- sin franja horaria no hay nada que pedirle a
+  // BookingClientService.getBookableSpotIds. undefined = hoy.
+  date?: string;
   fromHour?: number;
   toHour?: number;
   // Sólo cocheras con "estadía" habilitada (día/semana/mes) -- ver ParkingSpot.stayEnabled.
   stayOnly?: boolean;
+  // Contraparte de stayOnly -- sólo cocheras con alquiler por hora habilitado.
+  // Mobile los trata como mutuamente excluyentes en la UI del buscador.
+  hourlyOnly?: boolean;
+  // Sólo cocheras con confirmación automática (sin esperar al dueño).
+  instantBooking?: boolean;
 }
 
-// Builds an ISO 8601 datetime for `hour` today, with a fixed -03:00 offset
-// (same assumption the backend makes everywhere else -- Buenos Aires has no
-// DST) rather than the device's own timezone, which may not be ART.
-export function toISOToday(hour: number): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
+// Builds an ISO 8601 datetime for `hour` on `dateISO` (YYYY-MM-DD), with a
+// fixed -03:00 offset (same assumption the backend makes everywhere else --
+// Buenos Aires has no DST) rather than the device's own timezone, which may
+// not be ART.
+export function toISODateTime(dateISO: string, hour: number): string {
   const paddedHour = String(hour).padStart(2, '0');
-  return `${year}-${month}-${day}T${paddedHour}:00:00-03:00`;
+  return `${dateISO}T${paddedHour}:00:00-03:00`;
+}
+
+/** Same as toISODateTime, but for today (ART) -- used wherever there's no date picker. */
+export function toISOToday(hour: number): string {
+  return toISODateTime(todayArtDateISO(), hour);
 }
 
 export async function searchParkingSpots(
   filters: SearchParkingSpotsFilters & { lat: number; lng: number }
 ): Promise<ParkingSpot[]> {
+  const dateISO = filters.date ?? todayArtDateISO();
   const results = await apiSearchParkingSpots({
     lat: filters.lat,
     lng: filters.lng,
     radius: filters.maxDistanceMeters,
     maxPrice: filters.maxPrice,
     covered: filters.covered,
-    from: filters.fromHour !== undefined ? toISOToday(filters.fromHour) : undefined,
-    to: filters.toHour !== undefined ? toISOToday(filters.toHour) : undefined,
+    from: filters.fromHour !== undefined ? toISODateTime(dateISO, filters.fromHour) : undefined,
+    to: filters.toHour !== undefined ? toISODateTime(dateISO, filters.toHour) : undefined,
     stayOnly: filters.stayOnly,
+    hourlyOnly: filters.hourlyOnly,
+    instantBooking: filters.instantBooking,
   });
   const spots = results.map(toParkingSpot);
   if (filters.minPrice === undefined) return spots;
