@@ -77,7 +77,14 @@ export default function ConfirmBooking() {
 
   // Use the date selected in spot/[id].tsx; fall back to today.
   function toISO(dateISO: string | undefined, hour: number): string {
-    const base = dateISO ?? toISOToday(0).slice(0, 10); // "YYYY-MM-DD"
+    let base = dateISO ?? toISOToday(0).slice(0, 10); // "YYYY-MM-DD"
+    // Un turno puede terminar a las 24:00 (p.ej. reservar 23→24hs): 24 no es
+    // una hora válida en RFC3339, así que se pasa a las 00:00 del día
+    // siguiente para que booking-service no rechace el timestamp.
+    if (hour >= 24) {
+      base = addOneDay(base);
+      hour -= 24;
+    }
     const paddedHour = String(hour).padStart(2, '0');
     return `${base}T${paddedHour}:00:00-03:00`;
   }
