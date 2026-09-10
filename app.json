@@ -57,10 +57,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.parklink.mobile",
-      "googleServicesFile": "./GoogleService-Info.plist",
-      "config": {
-        "googleMapsApiKey": ""
-      }
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "extra": {
       "router": {},

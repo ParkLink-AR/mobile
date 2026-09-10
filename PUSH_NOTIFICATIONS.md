@@ -75,6 +75,26 @@ simulador. Prueba que la app muestre la notificación y que el tap navegue
 (`routeFor` → `/(owner|driver)/bookings/{id}`). **No** prueba el registro del
 token, el envío del backend, FCM ni APNs.
 
+## Google Maps API key (pantalla "Mapa")
+
+La key **no** está commiteada. Sin ella la app anda en todos lados menos la
+pestaña "Mapa": en Android `react-native-maps` crashea (`API key not found`),
+en iOS el mapa queda en blanco.
+
+1. https://console.cloud.google.com → habilitá **"Maps SDK for Android"** y
+   **"Maps SDK for iOS"** → APIs & Services → Credentials → *Create credentials
+   → API key*. La misma key sirve para las dos plataformas.
+2. Ponela en `mobile/.env.local` (gitignoreado, Expo lo carga solo):
+
+   ```bash
+   echo 'GOOGLE_MAPS_API_KEY=AIza...' >> .env.local
+   ```
+
+3. `npx expo prebuild --clean` y rebuild.
+
+`app.config.js` inyecta esa variable en `ios.config.googleMapsApiKey` y
+`android.config.googleMaps.apiKey` en build time.
+
 ## Toolchain Android para `expo run:android`
 
 - **Android Studio + SDK** + variable `ANDROID_HOME`.
