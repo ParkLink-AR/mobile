@@ -44,15 +44,20 @@
         {
           "locationWhenInUsePermission": "ParkLink usa tu ubicación para mostrarte las cocheras disponibles cerca tuyo."
         }
+      ],
+      "./plugins/withFirebaseNotificationManifestFix",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#168B8D"
+        }
       ]
     ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.parklink.mobile",
-      "googleServicesFile": "./GoogleService-Info.plist",
-      "config": {
-        "googleMapsApiKey": ""
-      }
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "extra": {
       "router": {},

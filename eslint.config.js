@@ -65,6 +65,7 @@ module.exports = tseslint.config(
       'ios/**',
       'android/**',
       'scripts/**',
+      'plugins/**',
     ],
   },
 );

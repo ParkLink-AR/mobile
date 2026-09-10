@@ -18,9 +18,9 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
-# Firebase config -- download per-project from the Firebase console, never commit
-google-services.json
-GoogleService-Info.plist
+# Firebase config -- committed on purpose (private personal project).
+# google-services.json (Android) and GoogleService-Info.plist (iOS) are both in.
+# If this repo ever goes public, regenerate both and rotate the SA key.
 
 # Metro
 .metro-health-check*
