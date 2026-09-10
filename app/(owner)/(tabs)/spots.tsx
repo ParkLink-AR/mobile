@@ -1,7 +1,7 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
 import { Text, View, FlatList, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
@@ -14,6 +14,7 @@ import { ParkingSpot } from '@/src/types';
 
 export default function OwnerSpots() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
@@ -56,7 +57,7 @@ export default function OwnerSpots() {
         <Text style={typography.h1}>{t('tabs.owner.spots')}</Text>
         <Pressable
           style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.75 : 1 }]}
-          onPress={() => router.push('/(owner)/spots/new')}
+          onPress={() => router.push(`${group}/spots/new`)}
         >
           <Ionicons name="add" size={16} color={colors.teal} />
           <Text style={styles.addBtnText}>{t('profile.mySpots.add')}</Text>
@@ -71,7 +72,7 @@ export default function OwnerSpots() {
           <Text style={styles.emptyText}>{t('profile.mySpots.empty')}</Text>
           <Button
             title={t('profile.mySpots.add')}
-            onPress={() => router.push('/(owner)/spots/new')}
+            onPress={() => router.push(`${group}/spots/new`)}
             style={styles.emptyBtn}
           />
         </View>
@@ -82,7 +83,7 @@ export default function OwnerSpots() {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
-            <Pressable onPress={() => router.push(`/(owner)/spots/${item.id}`)}>
+            <Pressable onPress={() => router.push(`${group}/spots/${item.id}`)}>
               <ParkingSpotCard spot={item} />
             </Pressable>
           )}

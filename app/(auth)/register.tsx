@@ -214,7 +214,7 @@ export default function Register() {
       });
       const { user: newUser, tokens } = await login({ email, password });
       setSession(newUser, tokens);
-      router.replace('/(both)/(tabs)' as never);
+      router.replace('/(auth)/account-type' as never);
     } catch (err) {
       handleApiError(err, 'No se pudo crear la cuenta.');
     } finally {

@@ -74,39 +74,31 @@ export default function ReviewScreen() {
   }
 
   return (
-    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-      {pendingTargets.map((target) =>
-        submittedTargets.includes(target.targetType) ? null : (
-          <ReviewBlock
-            key={target.targetType}
-            bookingId={bookingId}
-            targetType={target.targetType}
-            title={t(target.titleKey)}
-            onSubmitted={() => setSubmittedTargets((prev) => [...prev, target.targetType])}
-          />
-        ),
-      )}
-    </Screen>
+    <ReviewForm
+      bookingId={bookingId}
+      targets={remaining}
+      onSubmitted={(targetTypes) => setSubmittedTargets((prev) => [...prev, ...targetTypes])}
+    />
   );
 }
 
-function ReviewBlock({
+function ReviewForm({
   bookingId,
-  targetType,
-  title,
+  targets,
   onSubmitted,
 }: {
   bookingId: string;
-  targetType: ReviewTargetType;
-  title: string;
-  onSubmitted: () => void;
+  targets: PendingTarget[];
+  onSubmitted: (targetTypes: ReviewTargetType[]) => void;
 }) {
   const colors = useThemeColors();
-  const [stars, setStars] = useState(5);
-  const [comment, setComment] = useState('');
+  const [ratings, setRatings] = useState<Record<string, { stars: number; comment: string }>>(() =>
+    Object.fromEntries(targets.map((target) => [target.targetType, { stars: 5, comment: '' }])),
+  );
   const [submitting, setSubmitting] = useState(false);
 
   const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.surface, padding: 16, gap: 16 },
     card: { gap: 10 },
     blockTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
     starsRow: { flexDirection: 'row', gap: 8 },
@@ -123,36 +115,66 @@ function ReviewBlock({
     },
   });
 
+  function setStars(targetType: ReviewTargetType, stars: number) {
+    setRatings((prev) => ({ ...prev, [targetType]: { ...prev[targetType], stars } }));
+  }
+
+  function setComment(targetType: ReviewTargetType, comment: string) {
+    setRatings((prev) => ({ ...prev, [targetType]: { ...prev[targetType], comment } }));
+  }
+
   async function submit() {
     setSubmitting(true);
-    try {
-      await submitReviewApi(bookingId, targetType, stars, comment.trim() || undefined);
-      onSubmitted();
-    } catch {
+    const results = await Promise.allSettled(
+      targets.map((target) => {
+        const { stars, comment } = ratings[target.targetType];
+        return submitReviewApi(bookingId, target.targetType, stars, comment.trim() || undefined).then(
+          () => target.targetType,
+        );
+      }),
+    );
+
+    const succeeded = results
+      .filter((r): r is PromiseFulfilledResult<ReviewTargetType> => r.status === 'fulfilled')
+      .map((r) => r.value);
+
+    if (succeeded.length > 0) onSubmitted(succeeded);
+    if (succeeded.length < targets.length) {
       alert(t('review.errorSubmit'));
       setSubmitting(false);
     }
   }
 
   return (
-    <Card style={styles.card}>
-      <Text style={styles.blockTitle}>{title}</Text>
-      <View style={styles.starsRow}>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <Pressable key={n} onPress={() => setStars(n)}>
-            <Text style={[styles.star, n <= stars && styles.starActive]}>★</Text>
-          </Pressable>
-        ))}
-      </View>
-      <TextInput
-        style={styles.input}
-        placeholder={t('driver.review.placeholder')}
-        placeholderTextColor={colors.textSecondary}
-        multiline
-        value={comment}
-        onChangeText={setComment}
+    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
+      {targets.map((target) => {
+        const { stars, comment } = ratings[target.targetType];
+        return (
+          <Card key={target.targetType} style={styles.card}>
+            <Text style={styles.blockTitle}>{t(target.titleKey)}</Text>
+            <View style={styles.starsRow}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Pressable key={n} onPress={() => setStars(target.targetType, n)}>
+                  <Text style={[styles.star, n <= stars && styles.starActive]}>★</Text>
+                </Pressable>
+              ))}
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder={t('driver.review.placeholder')}
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              value={comment}
+              onChangeText={(text) => setComment(target.targetType, text)}
+            />
+          </Card>
+        );
+      })}
+      <Button
+        title={submitting ? t('review.submitting') : t('driver.review.submit')}
+        onPress={submit}
+        disabled={submitting}
       />
-      <Button title={submitting ? t('review.submitting') : t('driver.review.submit')} onPress={submit} disabled={submitting} />
-    </Card>
+    </Screen>
   );
 }

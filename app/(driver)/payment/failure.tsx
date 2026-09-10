@@ -1,6 +1,6 @@
 import { t, useLanguage } from '@/src/i18n';
 import { Text, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -12,6 +12,7 @@ import { useTypography } from '@/src/theme/typography';
 // MP redirects here when a payment is rejected or cancelled.
 export default function PaymentFailureScreen() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
 
@@ -29,7 +30,7 @@ export default function PaymentFailureScreen() {
       </Card>
       <Button
         title={t('driver.payment.rejected.retry')}
-        onPress={() => router.replace('/(driver)/(tabs)/index')}
+        onPress={() => router.replace(`${group}/(tabs)/index`)}
       />
     </Screen>
   );

@@ -10,12 +10,14 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors } from '@/src/theme/useThemeColors';
 
 interface PhotoGalleryProps {
   /** All photos for the spot, in order (photos[0] is the cover). */
   photos: string[];
   height: number;
-  /** Shown when `photos` is empty (e.g. spot.photoUrl, which already falls back to a placeholder). */
+  /** Used when `photos` is empty (e.g. spot.photoUrl). Falsy ('') renders an icon placeholder instead of an image. */
   fallbackUri: string;
 }
 
@@ -26,8 +28,9 @@ interface PhotoGalleryProps {
  */
 export function PhotoGallery({ photos, height, fallbackUri }: PhotoGalleryProps) {
   const { width } = useWindowDimensions();
+  const colors = useThemeColors();
   const [index, setIndex] = useState(0);
-  const uris = photos.length > 0 ? photos : [fallbackUri];
+  const uris = photos.length > 0 ? photos : fallbackUri ? [fallbackUri] : [];
   const scrollRef = useRef<ScrollView>(null);
 
   // Web only: RN's ScrollView handles touch-drag and trackpad/wheel scroll
@@ -92,6 +95,11 @@ export function PhotoGallery({ photos, height, fallbackUri }: PhotoGalleryProps)
     // doubled up into a messy seam. That card already owns the transition.
     container: { position: 'relative' },
     photo: { width, height },
+    placeholder: {
+      width, height,
+      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: colors.background,
+    },
     counter: {
       position: 'absolute', bottom: 12, right: 14,
       backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 12,
@@ -99,6 +107,14 @@ export function PhotoGallery({ photos, height, fallbackUri }: PhotoGalleryProps)
     },
     counterText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   });
+
+  if (uris.length === 0) {
+    return (
+      <View style={styles.placeholder}>
+        <Ionicons name="image-outline" size={40} color={colors.textSecondary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

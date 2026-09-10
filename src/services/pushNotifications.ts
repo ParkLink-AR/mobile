@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { deleteDeviceToken, putDeviceToken, type DevicePlatform } from '@/src/api/notifications';
+import { useAccountTypeStore, groupFor } from '@/src/store/useAccountTypeStore';
 
 const BRAND_COLOR = '#168B8D';
 
@@ -175,10 +176,15 @@ export async function unregisterPush(): Promise<void> {
 function routeFor(data: Record<string, string> | undefined): string | null {
   if (!data?.bookingId) return null;
   switch (data.type) {
-    // Sent to the driver when their booking is confirmed.
-    case 'booking.confirmed':
-      return `/(driver)/bookings/${data.bookingId}`;
-    // Sent to the owner when a paid booking is waiting for them to accept/reject.
+    // Sent to the driver when their booking is confirmed. This one is
+    // role-agnostic -- open it in whichever mode the user is currently in.
+    case 'booking.confirmed': {
+      const { activeMode } = useAccountTypeStore.getState();
+      return `${groupFor(activeMode)}/bookings/${data.bookingId}`;
+    }
+    // Sent to the owner when a paid booking is waiting for them to accept/
+    // reject. Intrinsically an owner action, so always open the owner view
+    // regardless of the current mode.
     case 'booking.pending_approval':
       return `/(owner)/bookings/${data.bookingId}`;
     default:

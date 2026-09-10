@@ -22,8 +22,19 @@ async function toApiError(response: Response): Promise<ApiError> {
   let detail = `Error ${response.status}`;
   try {
     const body = await response.json();
-    // booking-service uses `error`, payment/auth services use `detail` or `title`
-    detail = body.error || body.detail || body.message || body.title || detail;
+    // Each backend puts its real human-readable text in a different field --
+    // `detail` first: auth-service (FastAPI problem-details: {title, detail})
+    //   and payment-service (Express, when both `message` and `detail` are
+    //   present -- `message` there is a generic label and `detail` the
+    //   actual reason, e.g. {message: 'Error creating preference', detail: ...}).
+    // `message` next: parking-service (NestJS's default exception body is
+    //   {statusCode, message, error} -- `error` there is just the generic
+    //   HTTP reason phrase like "Conflict"/"Bad Request", NOT the real
+    //   message, so it must lose to `message` here) and payment-service's
+    //   single-field errors ({message: 'amount must be a positive number'}).
+    // `error` last: booking-service's ONLY content field ({code, error}) --
+    //   it never sets `message`, so this never shadows the parking-service case above.
+    detail = body.detail || body.message || body.error || body.title || detail;
   } catch {
     // Not a JSON body -- keep the generic message.
   }
@@ -49,24 +60,44 @@ async function rawFetch(
   return fetch(`${API_URL}${path}`, { ...options, headers, cache: 'no-store' });
 }
 
+// auth-service rotates refresh tokens on every use (revokes the used one,
+// issues a new pair) -- if two requests 401 around the same time (e.g. two
+// screens fetching in parallel right when the access token expires), each
+// independently calling /auth/refresh with the same refresh token would let
+// only the first succeed; the second would arrive with an already-revoked
+// token, fail, and clearSession() the user out from under the first call's
+// brand-new session. Sharing one in-flight promise means every concurrent
+// 401 awaits the same single refresh instead of racing each other.
+let refreshInFlight: Promise<string | null> | null = null;
+
 async function refreshSession(): Promise<string | null> {
-  const { refreshToken, setTokens } = useSessionStore.getState();
-  if (!refreshToken) return null;
+  if (refreshInFlight) return refreshInFlight;
 
-  const response = await rawFetch(
-    '/auth/refresh',
-    { method: 'POST', body: JSON.stringify({ refresh_token: refreshToken }) },
-    null
-  );
-  if (!response.ok) return null;
+  refreshInFlight = (async () => {
+    const { refreshToken, setTokens } = useSessionStore.getState();
+    if (!refreshToken) return null;
 
-  const data = await response.json();
-  setTokens({
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    expiresIn: data.expires_in,
-  });
-  return data.access_token as string;
+    const response = await rawFetch(
+      '/auth/refresh',
+      { method: 'POST', body: JSON.stringify({ refresh_token: refreshToken }) },
+      null
+    );
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    setTokens({
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      expiresIn: data.expires_in,
+    });
+    return data.access_token as string;
+  })();
+
+  try {
+    return await refreshInFlight;
+  } finally {
+    refreshInFlight = null;
+  }
 }
 
 export async function request<T>(

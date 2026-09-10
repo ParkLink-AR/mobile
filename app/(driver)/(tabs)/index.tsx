@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
-  Image,
   FlatList,
   StyleSheet,
   TouchableOpacity,
@@ -16,18 +15,16 @@ import {
 import MapView, { Marker, Region, PROVIDER_DEFAULT } from 'react-native-maps';
 import ClusteredMapView from 'react-native-map-clustering';
 import * as Location from 'expo-location';
-import { router } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Chip } from '@/src/components/Chip';
 import { Button } from '@/src/components/Button';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
-import { AccountMenu } from '@/src/components/AccountMenu';
 import { Screen } from '@/src/components/Screen';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
-import { useUnseenNotificationsCount } from '@/src/store/useNotificationsStore';
 import { searchParkingSpots, SearchParkingSpotsFilters } from '@/src/services/parkingService';
 import { geocodeAddress, reverseGeocode, GeocodeCandidate } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
@@ -50,11 +47,11 @@ const DEFAULT_REGION: Region = {
   longitudeDelta: 0.05,
 };
 
-export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'driver' | 'both' }) {
+export function SearchScreen() {
   const colors = useThemeColors();
+  const group = `/${useSegments()[0]}`;
   useLanguage();
   const user = useSessionStore((s) => s.user);
-  const unseenCount = useUnseenNotificationsCount();
   const favoriteIds = useFavoritesStore((s) => s.ids);
   const toggleFavorite = useFavoritesStore((s) => s.toggle);
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
@@ -93,6 +90,7 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
   const [minPriceInput, setMinPriceInput] = useState('');
   const [maxPriceInput, setMaxPriceInput] = useState('');
   const [coveredOnly, setCoveredOnly] = useState(false);
+  const [stayOnly, setStayOnly] = useState(false);
   const [distanceInput, setDistanceInput] = useState<number | undefined>(undefined);
   const [scheduleFilterOn, setScheduleFilterOn] = useState(false);
   const [fromHourInput, setFromHourInput] = useState(8);
@@ -258,6 +256,7 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
     setMinPriceInput(filters.minPrice ? String(filters.minPrice) : '');
     setMaxPriceInput(filters.maxPrice ? String(filters.maxPrice) : '');
     setCoveredOnly(filters.covered ?? false);
+    setStayOnly(filters.stayOnly ?? false);
     setDistanceInput(filters.maxDistanceMeters);
     setScheduleFilterOn(filters.fromHour !== undefined);
     setFromHourInput(filters.fromHour ?? 8);
@@ -270,6 +269,7 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
       minPrice: minPriceInput ? Number(minPriceInput) : undefined,
       maxPrice: maxPriceInput ? Number(maxPriceInput) : undefined,
       covered: coveredOnly || undefined,
+      stayOnly: stayOnly || undefined,
       maxDistanceMeters: distanceInput,
       fromHour: scheduleFilterOn ? fromHourInput : undefined,
       toHour: scheduleFilterOn ? toHourInput : undefined,
@@ -301,6 +301,12 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
       onRemove: () => setFilters((f) => ({ ...f, covered: undefined })),
     });
   }
+  if (filters.stayOnly) {
+    activeChips.push({
+      label: t('search.filters.stayOnly'),
+      onRemove: () => setFilters((f) => ({ ...f, stayOnly: undefined })),
+    });
+  }
   if (filters.maxDistanceMeters !== undefined) {
     activeChips.push({
       label: DISTANCE_OPTIONS.find((d) => d.value === filters.maxDistanceMeters)?.label ?? '',
@@ -322,41 +328,6 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
       flex: 1,
       backgroundColor: colors.background,
     },
-    // ── Header ──────────────────────────────────────────────────────────────
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 20,
-      paddingTop: 8,
-      paddingBottom: 14,
-      gap: 12,
-      backgroundColor: colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    headerLogo: { width: 28, height: 28 },
-    headerGreetingBlock: { flex: 1 },
-    headerGreetingLabel: {
-      fontSize: 12,
-      color: colors.textSecondary,
-      fontWeight: '400',
-      letterSpacing: 0.2,
-    },
-    headerGreetingName: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: colors.text,
-      letterSpacing: -0.3,
-    },
-    bellButton: { position: 'relative', padding: 4 },
-    bellBadge: {
-      position: 'absolute', top: 0, right: 0,
-      minWidth: 16, height: 16, borderRadius: 8,
-      backgroundColor: '#FF3B30',
-      alignItems: 'center', justifyContent: 'center',
-      paddingHorizontal: 3,
-    },
-    bellBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
     // ── Search bar (address, or fall back to device location) ──────────────
     searchWrapper: {
       position: 'relative',
@@ -707,40 +678,6 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
 
   return (
     <Screen style={styles.container}>
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <View style={styles.header}>
-        <Image
-          source={require('@/assets/favicon.png')}
-          style={styles.headerLogo}
-          resizeMode="contain"
-        />
-        {headerVariant === 'both' ? (
-          <>
-            <View style={styles.headerGreetingBlock} />
-            <Pressable
-              onPress={() => router.push('/(both)/(tabs)/notifications')}
-              style={styles.bellButton}
-              accessibilityLabel={t('tabs.both.notifications')}
-            >
-              <Ionicons name="notifications-outline" size={24} color={colors.text} />
-              {unseenCount > 0 && (
-                <View style={styles.bellBadge}>
-                  <Text style={styles.bellBadgeText}>{unseenCount > 9 ? '9+' : unseenCount}</Text>
-                </View>
-              )}
-            </Pressable>
-          </>
-        ) : (
-          <>
-            <View style={styles.headerGreetingBlock}>
-              <Text style={styles.headerGreetingLabel}>{t('search.welcome')}</Text>
-              <Text style={styles.headerGreetingName}>{user?.name ?? ''}</Text>
-            </View>
-            <AccountMenu />
-          </>
-        )}
-      </View>
-
       {/* ── Search bar ────────────────────────────────────────────── */}
       <View style={styles.searchWrapper}>
         <View style={styles.searchSection}>
@@ -930,7 +867,7 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
               <TouchableOpacity
                 onPress={() =>
                   router.push({
-                    pathname: `/(driver)/spot/${item.id}`,
+                    pathname: `${group}/spot/${item.id}`,
                     params: { startHour: '8', endHour: '9' },
                   })
                 }
@@ -981,7 +918,7 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
                 >
                   <View style={[styles.pin, isSelected && styles.pinSelected]}>
                     <Text style={styles.pinText}>
-                      ${getDriverVisiblePrice(spot.pricePerHour)}
+                      {spot.pricePerHour !== null ? `$${getDriverVisiblePrice(spot.pricePerHour)}` : t('spot.stayOnlyBadge')}
                     </Text>
                   </View>
                 </Marker>
@@ -1050,7 +987,7 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
               <TouchableOpacity
                 onPress={() =>
                   router.push({
-                    pathname: `/(driver)/spot/${selectedSpot.id}`,
+                    pathname: `${group}/spot/${selectedSpot.id}`,
                     params: { startHour: '8', endHour: '9' },
                   })
                 }
@@ -1102,6 +1039,15 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
                   label={coveredOnly ? t('search.filters.coveredOnly') : t('search.filters.coveredAny')}
                   selected={coveredOnly}
                   onPress={() => setCoveredOnly((v) => !v)}
+                />
+              </View>
+
+              <Text style={styles.sectionLabel}>{t('search.filters.stay')}</Text>
+              <View style={styles.chipsWrap}>
+                <Chip
+                  label={t('search.filters.stayOnly')}
+                  selected={stayOnly}
+                  onPress={() => setStayOnly((v) => !v)}
                 />
               </View>
 
@@ -1185,5 +1131,5 @@ export function SearchScreen({ headerVariant = 'driver' }: { headerVariant?: 'dr
 }
 
 export default function Search() {
-  return <SearchScreen headerVariant="driver" />;
+  return <SearchScreen />;
 }

@@ -31,6 +31,7 @@ export default function OwnerLayout() {
       <Stack.Screen name="change-email" options={{ title: t('changeEmail.title') }} />
       <Stack.Screen name="change-phone" options={{ title: t('changePhone.title') }} />
       <Stack.Screen name="settings" options={{ title: t('owner.settings.title') }} />
+      <Stack.Screen name="legal" options={{ title: t('legal.title') }} />
     </Stack>
   );
 }

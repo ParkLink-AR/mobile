@@ -2,6 +2,8 @@ import { request } from './client';
 
 // ── Wire shapes returned by booking-service ──────────────────────────────────
 
+export type BookingKind = 'HOURLY' | 'STAY';
+
 export interface BookingApiResponse {
   id: string;
   parking_spot_id: string;
@@ -12,6 +14,7 @@ export interface BookingApiResponse {
   hold_expires_at?: string;
   amount: number;
   payment_id?: string;
+  kind: BookingKind;
   updated_at: string;
 }
 
@@ -45,11 +48,21 @@ export interface ScheduleEntryBody {
 export interface CreateBookingBody {
   user_id: string;
   start: string; // RFC3339
-  end: string;   // RFC3339
-  amount: number;
+  end: string;   // RFC3339. For kind "STAY" this is only a placeholder after
+                 // `start` -- booking-service recomputes the real end date
+                 // (and amount) itself from a parking-service quote, see below.
+  amount: number; // Ignored by booking-service for kind "STAY" -- see stay_unit/stay_count.
+  // "HOURLY" (default, omit for the existing slot-booking flow) or "STAY". For
+  // "STAY", stay_unit/stay_count are required and booking-service prices the
+  // booking itself instead of trusting `amount` -- see getStayQuote in
+  // api/parking.ts, which the caller should already have used to show the
+  // driver this same price before confirming.
+  kind?: BookingKind;
+  stay_unit?: import('./parking').StayUnit;
+  stay_count?: number;
   // booking-service validates the requested range against this instead of
   // fetching it itself -- see booking-service PR "CreateBooking validates
-  // against caller-supplied schedule".
+  // against caller-supplied schedule". Irrelevant for kind "STAY" -- send [].
   parking_spot: {
     id: string;
     schedule: ScheduleEntryBody[];

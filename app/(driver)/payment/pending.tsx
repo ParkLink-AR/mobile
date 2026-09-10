@@ -1,7 +1,7 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, useSegments, router } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -26,6 +26,7 @@ const MAX_POLLS = 60; // 2 minutes max
 
 export default function PaymentPendingScreen() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
@@ -103,7 +104,7 @@ export default function PaymentPendingScreen() {
         </Card>
         <Button
           title={t('driver.booking.success.viewBookings')}
-          onPress={() => router.replace('/(driver)/(tabs)/bookings')}
+          onPress={() => router.replace(`${group}/(tabs)/bookings`)}
         />
       </Screen>
     );
@@ -119,7 +120,7 @@ export default function PaymentPendingScreen() {
         </Card>
         <Button
           title={t('driver.payment.rejected.retry')}
-          onPress={() => router.replace('/(driver)/(tabs)/index')}
+          onPress={() => router.replace(`${group}/(tabs)/index`)}
         />
       </Screen>
     );
@@ -135,7 +136,7 @@ export default function PaymentPendingScreen() {
         </Card>
         <Button
           title={t('driver.booking.success.viewBookings')}
-          onPress={() => router.replace('/(driver)/(tabs)/bookings')}
+          onPress={() => router.replace(`${group}/(tabs)/bookings`)}
         />
       </Screen>
     );
@@ -149,7 +150,7 @@ export default function PaymentPendingScreen() {
       <Text style={[typography.body, { textAlign: 'center' }]}>{t('driver.payment.pending.body')}</Text>
       <Button
         title={t('common.cancel')}
-        onPress={() => router.replace('/(driver)/(tabs)/index')}
+        onPress={() => router.replace(`${group}/(tabs)/index`)}
         style={{ marginTop: 24, backgroundColor: 'transparent', borderWidth: 1, borderColor: '#888' }}
       />
     </Screen>

@@ -1,6 +1,6 @@
 import { t, useLanguage } from '@/src/i18n';
 import { Text, StyleSheet } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, useSegments, router } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -10,6 +10,7 @@ import { useTypography } from '@/src/theme/typography';
 
 export default function BookingSuccess() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
   const { spotTitle, date, startTime, endTime, total } = useLocalSearchParams<{
@@ -38,7 +39,7 @@ export default function BookingSuccess() {
       </Card>
       <Button
         title={t('driver.booking.success.viewBookings')}
-        onPress={() => router.replace('/(driver)/(tabs)/bookings')}
+        onPress={() => router.replace(`${group}/(tabs)/bookings`)}
       />
     </Screen>
   );

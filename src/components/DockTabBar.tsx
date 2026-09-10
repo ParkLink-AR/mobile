@@ -58,9 +58,10 @@ export function DockTabBar({ state, navigation }: BottomTabBarProps) {
 
   return (
     <View style={styles.bar}>
-      {TAB_KEYS.map((tab, index) => {
-        const route = state.routes[index];
-        const focused = state.index === index;
+      {TAB_KEYS.map((tab) => {
+        const routeIndex = state.routes.findIndex((r) => r.name === tab.name);
+        const route = state.routes[routeIndex];
+        const focused = state.index === routeIndex;
         const color = focused ? colors.teal : colors.textSecondary;
 
         return (

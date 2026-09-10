@@ -2,7 +2,7 @@ import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
@@ -23,6 +23,7 @@ const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
 
 export default function Notifications() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
@@ -96,11 +97,11 @@ export default function Notifications() {
 
   function handlePress(item: AppNotification) {
     if (item.kind === 'owner_request') {
-      router.push(`/(driver)/spot/${item.parkingSpotId}`);
+      router.push(`${group}/spot/${item.parkingSpotId}`);
     } else if (item.kind === 'driver_review_prompt') {
-      router.push(`/(driver)/review/${item.bookingId}?role=driver`);
+      router.push(`${group}/review/${item.bookingId}?role=driver`);
     } else if (item.kind === 'owner_review_prompt') {
-      router.push(`/(driver)/review/${item.bookingId}?role=owner`);
+      router.push(`${group}/review/${item.bookingId}?role=owner`);
     }
   }
 

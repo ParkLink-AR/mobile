@@ -1,6 +1,6 @@
 import { t, useLanguage } from '@/src/i18n';
 import { Text, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -13,6 +13,7 @@ import { useTypography } from '@/src/theme/typography';
 // and send the user to their bookings list.
 export default function PaymentSuccessScreen() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
 
@@ -30,7 +31,7 @@ export default function PaymentSuccessScreen() {
       </Card>
       <Button
         title={t('driver.booking.success.viewBookings')}
-        onPress={() => router.replace('/(driver)/(tabs)/bookings')}
+        onPress={() => router.replace(`${group}/(tabs)/bookings`)}
       />
     </Screen>
   );

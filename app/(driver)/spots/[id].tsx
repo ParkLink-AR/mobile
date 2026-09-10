@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect, useSegments } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { PhotoGallery } from '@/src/components/PhotoGallery';
@@ -14,6 +14,7 @@ import { t, useLanguage } from '@/src/i18n';
 export default function SpotDetail() {
   const colors = useThemeColors();
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const { id } = useLocalSearchParams<{ id: string }>();
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
 
@@ -105,9 +106,11 @@ export default function SpotDetail() {
                   <Text style={styles.spotAddress} numberOfLines={2}>{spot.address}</Text>
                 </View>
               </View>
-              <View style={styles.priceBadge}>
-                <Text style={styles.priceValue}>${getDriverVisiblePrice(spot.pricePerHour)}{t('spot.pricePerHour.short')}</Text>
-              </View>
+              {spot.hourlyEnabled && spot.pricePerHour !== null && (
+                <View style={styles.priceBadge}>
+                  <Text style={styles.priceValue}>${getDriverVisiblePrice(spot.pricePerHour)}{t('spot.pricePerHour.short')}</Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.divider} />
@@ -130,28 +133,30 @@ export default function SpotDetail() {
             </View>
           </View>
 
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
-              <Text style={styles.sectionLabel}>{t('owner.spot.edit.availability')}</Text>
+          {spot.hourlyEnabled && (
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+                <Text style={styles.sectionLabel}>{t('owner.spot.edit.availability')}</Text>
+              </View>
+              {formatScheduleForDisplay(spot.schedule).map((line) => (
+                <Text key={line.dayRange} style={styles.value}>
+                  {line.dayRange}: {line.hours}
+                </Text>
+              ))}
+              <TouchableOpacity
+                style={styles.availabilityBtn}
+                onPress={() => router.push(`${group}/spots/${id}/availability`)}
+              >
+                <Text style={styles.availabilityLink}>{t('owner.spots.manageAvailability')}</Text>
+                <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+              </TouchableOpacity>
             </View>
-            {formatScheduleForDisplay(spot.schedule).map((line) => (
-              <Text key={line.dayRange} style={styles.value}>
-                {line.dayRange}: {line.hours}
-              </Text>
-            ))}
-            <TouchableOpacity
-              style={styles.availabilityBtn}
-              onPress={() => router.push(`/(driver)/spots/${id}/availability`)}
-            >
-              <Text style={styles.availabilityLink}>{t('owner.spots.manageAvailability')}</Text>
-              <Ionicons name="chevron-forward" size={13} color={colors.teal} />
-            </TouchableOpacity>
-          </View>
+          )}
 
           <TouchableOpacity
             style={styles.card}
-            onPress={() => router.push(`/(driver)/spots/${id}/requests`)}
+            onPress={() => router.push(`${group}/spots/${id}/requests`)}
           >
             <View style={styles.sectionHeader}>
               <Ionicons name="mail-outline" size={15} color={colors.textSecondary} />
@@ -173,7 +178,7 @@ export default function SpotDetail() {
 
           <Button
             title={t('owner.spot.edit.title')}
-            onPress={() => router.push(`/(driver)/spots/${id}/edit`)}
+            onPress={() => router.push(`${group}/spots/${id}/edit`)}
             style={styles.editBtn}
           />
         </View>

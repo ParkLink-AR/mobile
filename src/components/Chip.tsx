@@ -1,4 +1,5 @@
 import { Pressable, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 
 interface ChipProps {
@@ -6,9 +7,11 @@ interface ChipProps {
   onPress?: () => void;
   onRemove?: () => void;
   selected?: boolean;
+  /** Optional leading icon (e.g. the instant-booking/requires-approval indicator). */
+  icon?: keyof typeof Ionicons.glyphMap;
 }
 
-export function Chip({ label, onPress, onRemove, selected }: ChipProps) {
+export function Chip({ label, onPress, onRemove, selected, icon }: ChipProps) {
   const colors = useThemeColors();
   const styles = StyleSheet.create({
     chip: {
@@ -53,6 +56,9 @@ export function Chip({ label, onPress, onRemove, selected }: ChipProps) {
       style={[styles.chip, selected && styles.chipSelected]}
       onPress={onRemove ?? onPress}
     >
+      {icon && (
+        <Ionicons name={icon} size={13} color={selected ? colors.white : colors.teal} />
+      )}
       <Text style={[styles.text, selected && styles.textSelected]} numberOfLines={1} ellipsizeMode="tail">
         {label}
       </Text>

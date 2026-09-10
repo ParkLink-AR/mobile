@@ -13,7 +13,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { router, Stack } from 'expo-router';
+import { router, useSegments, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
@@ -29,6 +29,7 @@ const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export default function DriverProfileEdit() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user)!;
@@ -147,7 +148,10 @@ export default function DriverProfileEdit() {
         options={{
           headerLeft: () => (
             <Pressable onPress={() => router.back()} hitSlop={8}>
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
+              {/* El header del Stack padre siempre es deepNavy (fijo, no cambia con el
+                  tema) -- colors.white matchea su headerTintColor, no colors.text, que
+                  en modo claro es el mismo #042347 que el fondo (invisible). */}
+              <Ionicons name="arrow-back" size={24} color={colors.white} />
             </Pressable>
           ),
         }}
@@ -213,7 +217,7 @@ export default function DriverProfileEdit() {
                   </View>
                 )}
               </View>
-              <Text style={styles.changeLink} onPress={() => router.push('/(driver)/change-email')}>
+              <Text style={styles.changeLink} onPress={() => router.push(`${group}/change-email`)}>
                 {t('profile.edit.changeEmail')}
               </Text>
             </View>
@@ -232,7 +236,7 @@ export default function DriverProfileEdit() {
                   </View>
                 )}
               </View>
-              <Text style={styles.changeLink} onPress={() => router.push('/(driver)/change-phone')}>
+              <Text style={styles.changeLink} onPress={() => router.push(`${group}/change-phone`)}>
                 {t('profile.edit.changePhone')}
               </Text>
             </View>

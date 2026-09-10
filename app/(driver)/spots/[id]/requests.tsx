@@ -2,7 +2,7 @@ import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { Screen } from '@/src/components/Screen';
@@ -42,6 +42,7 @@ function mapApiBooking(b: BookingApiResponse): Booking {
 
 export default function SpotBookingRequests() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -130,7 +131,7 @@ export default function SpotBookingRequests() {
           <Card>
             <TouchableOpacity
               style={styles.driverRow}
-              onPress={() => router.push(`/(driver)/profile/${item.driverId}?as=driver`)}
+              onPress={() => router.push(`${group}/profile/${item.driverId}?as=driver`)}
               disabled={!driverNames[item.driverId]}
             >
               <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
