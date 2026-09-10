@@ -352,9 +352,11 @@ export default function EditSpot() {
     spotTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
     spotAddress: { fontSize: 13, color: colors.textSecondary },
 
+    // Misma tipografía que el label interno de HourlySettingsEditor/
+    // StaySettingsEditor ("Alquiler por hora"/"Estadía") -- el usuario pidió
+    // que todos los títulos de sección del formulario luzcan igual a esos.
     sectionLabel: {
-      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
-      letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4,
+      fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 4,
     },
 
     card: {

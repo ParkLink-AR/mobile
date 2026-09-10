@@ -59,13 +59,20 @@ export interface SearchParkingSpotsParams {
   maxPrice?: number;
   covered?: boolean;
   // Desired reservation window, ISO 8601 with offset. Go together: send
-  // both or neither (see SearchParkingSpotDto). Declared for the contract
-  // only -- parking-service doesn't filter by them yet.
+  // both or neither (see SearchParkingSpotDto). parking-service uses these
+  // to filter out spots that are already booked for that window (see
+  // ParkingSpotsService.search -> BookingClientService.getBookableSpotIds).
   from?: string;
   to?: string;
   // Sólo cocheras con la opción de estadía habilitada -- lo usa el buscador
   // cuando el conductor busca específicamente un lugar por día/semana/mes.
   stayOnly?: boolean;
+  // Contraparte de stayOnly: sólo cocheras con alquiler por hora habilitado.
+  // Mobile los trata como mutuamente excluyentes en su UI (elegir uno
+  // deselecciona el otro), pero acá van sueltos -- el back no impone esa regla.
+  hourlyOnly?: boolean;
+  // Sólo cocheras con confirmación automática (sin esperar aprobación del dueño).
+  instantBooking?: boolean;
 }
 
 // One candidate match for a free-text address query -- ambiguous street
@@ -188,6 +195,8 @@ export async function searchParkingSpots(
     ...(params.from !== undefined ? { from: params.from } : {}),
     ...(params.to !== undefined ? { to: params.to } : {}),
     ...(params.stayOnly !== undefined ? { stayOnly: String(params.stayOnly) } : {}),
+    ...(params.hourlyOnly !== undefined ? { hourlyOnly: String(params.hourlyOnly) } : {}),
+    ...(params.instantBooking !== undefined ? { instantBooking: String(params.instantBooking) } : {}),
   });
   return request(`/parking-spots/search?${query.toString()}`);
 }
