@@ -32,7 +32,13 @@ import { ApiError } from '@/src/api/client';
 import { COUNTRIES, DEFAULT_COUNTRY, Country } from '@/src/data/countries';
 
 type Step = 'email' | 'email-code' | 'phone' | 'phone-code' | 'personal';
-const STEP_ORDER: Step[] = ['email', 'email-code', 'phone', 'phone-code', 'personal'];
+// El backend puede no tener Twilio configurado (ver mobile/.env) -- en ese
+// caso el código de SMS nunca llega, así que el wizard salta directo de
+// 'phone' a 'personal' sin pasar por 'phone-code'.
+const SKIP_PHONE_VERIFICATION = process.env.EXPO_PUBLIC_SKIP_PHONE_VERIFICATION === 'true';
+const STEP_ORDER: Step[] = SKIP_PHONE_VERIFICATION
+  ? ['email', 'email-code', 'phone', 'personal']
+  : ['email', 'email-code', 'phone', 'phone-code', 'personal'];
 const RESEND_COOLDOWN_SECONDS = 60;
 
 function formatDate(d: Date): string {
@@ -150,6 +156,10 @@ export default function Register() {
     setError(null);
     if (!phoneNumber.trim()) {
       setError('Ingresá tu número.');
+      return;
+    }
+    if (SKIP_PHONE_VERIFICATION) {
+      setStep('personal');
       return;
     }
     setLoading(true);
@@ -373,7 +383,10 @@ export default function Register() {
           {loading ? (
             <ActivityIndicator color={colors.teal} />
           ) : (
-            <Button title="Enviar código" onPress={handleSendPhoneCode} />
+            <Button
+              title={SKIP_PHONE_VERIFICATION ? 'Continuar' : 'Enviar código'}
+              onPress={handleSendPhoneCode}
+            />
           )}
           <Text style={styles.link} onPress={goBack}>
             Atrás
