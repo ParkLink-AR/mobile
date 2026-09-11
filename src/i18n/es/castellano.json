@@ -375,7 +375,7 @@
   "changePhone.newPhone.label": "Nuevo celular",
   "changePhone.newPhone.button": "Enviar código",
   "changePhone.code.title": "Confirmá tu nuevo celular",
-  "changePhone.code.helper": "Te mandamos un código de 6 dígitos por WhatsApp a %{phone}.",
+  "changePhone.code.helper": "Te mandamos un código de 6 dígitos por SMS a %{phone}.",
   "changePhone.code.button": "Confirmar",
   "changePhone.success": "Celular actualizado correctamente",
   "register.success.title": "¡Registro exitoso!",

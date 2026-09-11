@@ -32,8 +32,8 @@ import { ApiError } from '@/src/api/client';
 import { COUNTRIES, DEFAULT_COUNTRY, Country } from '@/src/data/countries';
 
 type Step = 'email' | 'email-code' | 'phone' | 'phone-code' | 'personal';
-// El backend puede no tener WhatsApp configurado (ver mobile/.env) -- en ese
-// caso el código nunca llega, así que el wizard salta directo de
+// El backend puede no tener Twilio configurado (ver mobile/.env) -- en ese
+// caso el código de SMS nunca llega, así que el wizard salta directo de
 // 'phone' a 'personal' sin pasar por 'phone-code'.
 const SKIP_PHONE_VERIFICATION = process.env.EXPO_PUBLIC_SKIP_PHONE_VERIFICATION === 'true';
 const STEP_ORDER: Step[] = SKIP_PHONE_VERIFICATION
@@ -427,7 +427,7 @@ export default function Register() {
       {step === 'phone-code' && (
         <>
           <Text style={typography.h1}>Confirmá tu teléfono</Text>
-          <Text style={typography.body}>Te mandamos un código de 6 dígitos por WhatsApp a {fullPhone}.</Text>
+          <Text style={typography.body}>Te mandamos un código de 6 dígitos por SMS a {fullPhone}.</Text>
           <TextInput
             style={styles.codeInput}
             placeholder="000000"
