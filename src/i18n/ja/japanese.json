@@ -375,7 +375,7 @@
   "changePhone.newPhone.label": "新しい電話番号",
   "changePhone.newPhone.button": "コードを送信",
   "changePhone.code.title": "新しい電話番号を確認",
-  "changePhone.code.helper": "%{phone} にSMSで6桁のコードを送信しました。",
+  "changePhone.code.helper": "%{phone} にWhatsAppで6桁のコードを送信しました。",
   "changePhone.code.button": "確認",
   "changePhone.success": "電話番号が更新されました",
   "register.success.title": "登録が完了しました！",

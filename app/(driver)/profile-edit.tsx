@@ -223,7 +223,7 @@ export default function DriverProfileEdit() {
             </View>
           </View>
 
-          {/* Phone -- same reasoning, verified via SMS in its own screen. */}
+          {/* Phone -- same reasoning, verified via WhatsApp in its own screen. */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>{t('profile.edit.phone')}</Text>
             <View style={styles.readOnlyRow}>
