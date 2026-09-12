@@ -48,6 +48,7 @@
     "android": "expo start --android --clear",
     "ios": "expo start --ios --clear",
     "web": "expo start --web",
+    "build:web": "expo export -p web && node scripts/fix-cf-pages-assets.js",
     "test": "jest",
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"app/**/*.{ts,tsx}\""
   },
