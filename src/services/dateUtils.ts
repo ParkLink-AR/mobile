@@ -24,3 +24,14 @@ export function artDateFromISO(iso: string): string {
 export function todayArtDateISO(): string {
   return artDateFromISO(new Date().toISOString());
 }
+
+/** Hora actual (0-23) en ART. */
+export function nowArtHour(): number {
+  return new Date(new Date().getTime() - 3 * 3600_000).getUTCHours();
+}
+
+/** Avanza un YYYY-MM-DD un día. */
+export function addOneDayISO(dateISO: string): string {
+  const [year, month, day] = dateISO.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+}

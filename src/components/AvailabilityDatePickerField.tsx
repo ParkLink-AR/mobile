@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, ActivityIndicator, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { getAvailability, getStayAvailability, type StayUnit } from '@/src/api/parking';
+import { getAvailability, getStayAvailability } from '@/src/api/parking';
 import { todayArtDateISO } from '@/src/services/dateUtils';
 import { t } from '@/src/i18n';
 
@@ -50,16 +50,17 @@ export function hourlyAvailabilityFetcher(parkingSpotId: string) {
 }
 
 /**
- * Adaptador de disponibilidad para el picker de fecha de inicio de
- * estadía -- a diferencia del de arriba, esto sí depende de qué unidad/
- * cantidad eligió el conductor (una estadía de una semana ocupa más días
- * que una de un día, así que "disponible" cambia con la duración). GET
- * .../stays/availability ya trae todo el rango pedido en un solo pedido
- * (no hace falta trocear como el de arriba -- ver StaysService).
+ * Adaptador de disponibilidad para el picker de fecha de inicio/fin de
+ * estadía -- a diferencia del de arriba, acá "disponible" es una guía día
+ * por día (¿tiene ESE día alguna reserva encima?), no una garantía para el
+ * rango completo que el conductor termine eligiendo -- ver el comentario en
+ * StaysService.getAvailabilityCalendar. GET .../stays/availability ya trae
+ * todo el rango pedido en un solo pedido (no hace falta trocear como el de
+ * arriba).
  */
-export function stayAvailabilityFetcher(parkingSpotId: string, unit: StayUnit, count: number) {
+export function stayAvailabilityFetcher(parkingSpotId: string) {
   return async (from: string, to: string): Promise<Record<string, boolean>> => {
-    const res = await getStayAvailability(parkingSpotId, from, to, unit, count);
+    const res = await getStayAvailability(parkingSpotId, from, to);
     const byDate: Record<string, boolean> = {};
     for (const day of res.days) byDate[day.date] = day.status === 'available';
     return byDate;

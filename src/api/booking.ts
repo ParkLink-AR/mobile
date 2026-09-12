@@ -47,19 +47,21 @@ export interface ScheduleEntryBody {
 
 export interface CreateBookingBody {
   user_id: string;
-  start: string; // RFC3339
-  end: string;   // RFC3339. For kind "STAY" this is only a placeholder after
-                 // `start` -- booking-service recomputes the real end date
-                 // (and amount) itself from a parking-service quote, see below.
-  amount: number; // Ignored by booking-service for kind "STAY" -- see stay_unit/stay_count.
+  // RFC3339. For kind "STAY", `start` is the driver's chosen check-in
+  // instant (date + hour) -- booking-service re-derives the authoritative
+  // start/end/amount itself from a parking-service quote (see below), but
+  // it reads the check-in hour straight out of this value, so it must be
+  // the real one, not a placeholder.
+  start: string;
+  end: string; // For kind "STAY", re-derived server-side too -- send the quote's endDateTime.
+  amount: number; // Ignored by booking-service for kind "STAY" -- see stay_end_date.
   // "HOURLY" (default, omit for the existing slot-booking flow) or "STAY". For
-  // "STAY", stay_unit/stay_count are required and booking-service prices the
+  // "STAY", stay_end_date is required and booking-service prices the
   // booking itself instead of trusting `amount` -- see getStayQuote in
   // api/parking.ts, which the caller should already have used to show the
   // driver this same price before confirming.
   kind?: BookingKind;
-  stay_unit?: import('./parking').StayUnit;
-  stay_count?: number;
+  stay_end_date?: string; // YYYY-MM-DD
   // booking-service validates the requested range against this instead of
   // fetching it itself -- see booking-service PR "CreateBooking validates
   // against caller-supplied schedule". Irrelevant for kind "STAY" -- send [].

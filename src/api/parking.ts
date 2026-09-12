@@ -310,14 +310,23 @@ export async function getSpotReviewsApi(spotId: string): Promise<ReviewListApiRe
   return request(`/parking-spots/${spotId}/reviews`);
 }
 
-export type StayUnit = 'day' | 'week' | 'month';
+export interface StayBreakdown {
+  months: number;
+  weeks: number;
+  days: number;
+}
 
 export interface StayQuote {
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
-  unit: StayUnit;
-  count: number;
+  // RFC3339 con offset de Buenos Aires -- la hora de check-in elegida,
+  // aplicada tanto al inicio como al fin (ver confirm-stay.tsx, que los usa
+  // tal cual como start/end de la reserva).
+  startDateTime: string;
+  endDateTime: string;
   totalDays: number;
+  // Cómo se descompuso totalDays para cobrar -- p.ej. 9 días = {weeks:1, days:2}.
+  breakdown: StayBreakdown;
   // Centavos, mismo criterio que BookingApiResponse.amount (dividir por 100
   // para mostrar pesos -- ver getDriverVisiblePrice / cómo se usa en
   // booking/confirm.tsx).
@@ -325,21 +334,21 @@ export interface StayQuote {
 }
 
 /**
- * Cotiza una estadía (día/semana/mes) para una cochera -- valida que la
- * cochera acepte estadía, que startDate esté dentro de lo que permite el
- * dueño, y que el rango no choque con otra reserva. Devuelve 400/404/409
- * (ApiError) si no es posible; el caller (AddressAutocomplete-like picker en
- * spot/[id].tsx) muestra ese mensaje tal cual.
+ * Cotiza una estadía (rango de fechas + hora de check-in) para una cochera --
+ * valida que la cochera acepte estadía, que el rango esté dentro de lo que
+ * permite el dueño, y que no choque con otra reserva. Devuelve 400/404/409
+ * (ApiError) si no es posible; el caller (spot/[id].tsx) muestra ese mensaje
+ * tal cual.
  *
  * GET /parking-spots/{id}/stays/quote
  */
 export async function getStayQuote(
   parkingSpotId: string,
   startDate: string,
-  unit: StayUnit,
-  count: number,
+  endDate: string,
+  startHour: number,
 ): Promise<StayQuote> {
-  const query = new URLSearchParams({ startDate, unit, count: String(count) });
+  const query = new URLSearchParams({ startDate, endDate, startHour: String(startHour) });
   return request(`/parking-spots/${parkingSpotId}/stays/quote?${query.toString()}`);
 }
 
@@ -349,10 +358,12 @@ export interface StayDayAvailability {
 }
 
 /**
- * Calendario de disponibilidad para elegir fecha de inicio de estadía --
- * contraparte de getAvailability (horaria) para el otro modo de reserva.
- * unit/count importan: una estadía más larga ocupa más días, así que
- * "disponible" depende de cuánto dure la que se está por pedir.
+ * Calendario de disponibilidad para elegir fecha de inicio/fin de estadía --
+ * contraparte de getAvailability (horaria) para el otro modo de reserva. Es
+ * una guía día por día (¿tiene ESE día alguna reserva encima?), no una
+ * garantía para el rango completo que el conductor termine eligiendo -- el
+ * chequeo real pasa en getStayQuote, con fecha de inicio, fin y hora de
+ * check-in ya elegidas.
  *
  * GET /parking-spots/{id}/stays/availability
  */
@@ -360,9 +371,7 @@ export async function getStayAvailability(
   parkingSpotId: string,
   from: string,
   to: string,
-  unit: StayUnit,
-  count: number,
 ): Promise<{ days: StayDayAvailability[] }> {
-  const query = new URLSearchParams({ from, to, unit, count: String(count) });
+  const query = new URLSearchParams({ from, to });
   return request(`/parking-spots/${parkingSpotId}/stays/availability?${query.toString()}`);
 }

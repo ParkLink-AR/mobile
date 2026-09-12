@@ -11,33 +11,34 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail } from '@/src/services/parkingService';
-import { getDriverVisiblePrice } from '@/src/services/utils';
-import { getStayQuote, type StayQuote, type StayUnit } from '@/src/api/parking';
+import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
+import { getStayQuote, type StayQuote } from '@/src/api/parking';
 import { ParkingSpot } from '@/src/types';
 import { createBookingApi, createPaymentPreference } from '@/src/api/booking';
 
 /**
- * Confirmación + pago de una estadía (día/semana/mes) -- contraparte de
- * booking/confirm.tsx (por hora), separada en su propia pantalla en vez de
- * ramificar esa por dos motivos: los parámetros son distintos (startDate +
- * unit + count, no startHour/endHour) y el monto acá SIEMPRE sale de
- * parking-service (vía getStayQuote), nunca se calcula a mano en el cliente
- * -- ver StaysService en parking-service y el comentario en
- * CreateBookingBody.amount sobre por qué booking-service ignora el amount
- * que mande el cliente para una estadía.
+ * Confirmación + pago de una estadía (rango de fechas + hora de check-in) --
+ * contraparte de booking/confirm.tsx (por hora), separada en su propia
+ * pantalla en vez de ramificar esa por dos motivos: los parámetros son
+ * distintos (startDate/endDate/startHour, no startHour/endHour de una franja
+ * horaria) y el monto acá SIEMPRE sale de parking-service (vía
+ * getStayQuote), nunca se calcula a mano en el cliente -- ver StaysService
+ * en parking-service y el comentario en CreateBookingBody.amount sobre por
+ * qué booking-service ignora el amount que mande el cliente para una
+ * estadía.
  */
 export default function ConfirmStayBooking() {
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
-  const { spotId, startDate, unit, count } = useLocalSearchParams<{
+  const { spotId, startDate, endDate, startHour } = useLocalSearchParams<{
     spotId: string;
     startDate: string; // YYYY-MM-DD
-    unit: StayUnit;
-    count: string;
+    endDate: string; // YYYY-MM-DD
+    startHour: string;
   }>();
-  const stayCount = Math.max(Number(count) || 1, 1);
+  const stayStartHour = Number(startHour) || 0;
   const user = useSessionStore((s) => s.user);
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [quote, setQuote] = useState<StayQuote | null>(null);
@@ -52,35 +53,32 @@ export default function ConfirmStayBooking() {
       if (!s) setLoadError(t('driver.booking.spotNotFound'));
       else setSpot(s);
     });
-    getStayQuote(spotId, startDate, unit, stayCount)
+    getStayQuote(spotId, startDate, endDate, stayStartHour)
       .then(setQuote)
       .catch((err) => setLoadError(err instanceof ApiError ? err.detail : t('spot.stay.quoteError')));
-  }, [spotId, startDate, unit, stayCount]);
+  }, [spotId, startDate, endDate, stayStartHour]);
 
   // Mismo flujo que booking/confirm.tsx (POST /bookings -> POST
   // /payments/create-preference -> WebBrowser -> pending.tsx), sin el
-  // pre-check de disponibilidad por hora (no aplica acá) y con kind/stay_unit/
-  // stay_count en vez de horas -- ver CreateBookingBody.
+  // pre-check de disponibilidad por hora (no aplica acá) y con kind/
+  // stay_end_date en vez de horas -- ver CreateBookingBody.
   async function reserve() {
     if (!spot || !quote || !user || processing) return;
     setProcessing(true);
 
     let bookingId: string;
     try {
-      const startISO = `${quote.startDate}T00:00:00-03:00`;
-      // Placeholder posterior a start: booking-service lo descarta y usa el
-      // endDate que ya calculó parking-service en el quote (ver dto.go /
-      // create_booking_handler.go allá).
-      const endISO = `${quote.startDate}T01:00:00-03:00`;
-
       const created = await createBookingApi({
         user_id: user.id,
-        start: startISO,
-        end: endISO,
+        // Instantes reales que ya calculó y validó parking-service (mismo
+        // check-in/check-out que se le mostró al conductor acá) -- no un
+        // placeholder, aunque booking-service los re-deriva igual desde su
+        // propia llamada a GetStayQuote antes de confiar en nada de esto.
+        start: quote.startDateTime,
+        end: quote.endDateTime,
         amount: quote.amount,
         kind: 'STAY',
-        stay_unit: unit,
-        stay_count: stayCount,
+        stay_end_date: quote.endDate,
         parking_spot: { id: spotId, schedule: [], capacity: spot.capacity },
       });
       bookingId = created.id;
@@ -107,9 +105,8 @@ export default function ConfirmStayBooking() {
         amount: visibleTotal,
         title: `Cochera ${spot.title}`,
         description: t('spot.stay.paymentDescription', {
-          count: String(stayCount),
-          unit: t(`spot.stay.unit.${unit}`),
-          date: new Date(quote.startDate + 'T12:00:00').toLocaleDateString('es-AR'),
+          start: new Date(quote.startDate + 'T12:00:00').toLocaleDateString('es-AR'),
+          end: new Date(quote.endDate + 'T12:00:00').toLocaleDateString('es-AR'),
         }),
         payerEmail: user.email,
         externalReference: bookingId,
@@ -164,7 +161,8 @@ export default function ConfirmStayBooking() {
         <Text style={[typography.caption, styles.sectionTitle]}>{t('driver.booking.summary')}</Text>
         <Row label={t('spot.stay.startDate')} value={new Date(quote.startDate + 'T12:00:00').toLocaleDateString('es-AR')} />
         <Row label={t('spot.stay.endDate')} value={new Date(quote.endDate + 'T12:00:00').toLocaleDateString('es-AR')} />
-        <Row label={t('spot.stay.unit')} value={`${stayCount} ${t(`spot.stay.unit.${unit}`)}`} />
+        <Row label={t('spot.stay.startHour')} value={`${String(stayStartHour).padStart(2, '0')}:00`} />
+        <Row label={t('spot.stay.duration')} value={formatStayBreakdown(quote.breakdown)} />
         <Row label={t('driver.booking.total')} value={`$${visibleTotal}`} bold />
         <Text style={[typography.caption, styles.sectionTitle]}>{t('driver.booking.methodPayment')}</Text>
         <Card>

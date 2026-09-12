@@ -14,16 +14,16 @@ import {
   hourlyAvailabilityFetcher,
   stayAvailabilityFetcher,
 } from '@/src/components/AvailabilityDatePickerField';
-import { getDriverVisiblePrice } from '@/src/services/utils';
+import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
 import { getParkingSpotDetail, formatScheduleForDisplay, getSpotPricePerHour, getMinPricePerHour } from '@/src/services/parkingService';
-import { artDateFromISO, artMidnightForDate, todayArtDateISO } from '@/src/services/dateUtils';
+import { addOneDayISO, artDateFromISO, artMidnightForDate, nowArtHour, todayArtDateISO } from '@/src/services/dateUtils';
 import { useAvailability } from '@/src/hooks/useAvailability';
 import { getPublicProfileApi } from '@/src/api/auth';
-import { getStayQuote, type FreeWindow, type StayQuote, type StayUnit } from '@/src/api/parking';
+import { getStayQuote, type FreeWindow, type StayQuote } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { VehicleType, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { ParkingSpot } from '@/src/types';
@@ -99,6 +99,11 @@ function startHoursFromFreeWindows(freeWindows: FreeWindow[], durationHours: num
 
 // Same ceiling the old duration stepper had (1-12h).
 const MAX_BOOKING_HOURS = 12;
+
+// Check-in de una estadía: no depende del horario publicado (una cochera de
+// solo estadía no tiene ninguno) -- cualquier hora del día es una opción
+// válida.
+const STAY_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => hour);
 
 export default function SpotDetail() {
   const colors = useThemeColors();
@@ -210,10 +215,10 @@ export default function SpotDetail() {
     ? effectiveEndHour - effectiveStartHour
     : 0;
 
-  // ── Estadía (día/semana/mes) ────────────────────────────────────────────
-  const [stayUnit, setStayUnit] = useState<StayUnit>('day');
-  const [stayCount, setStayCount] = useState(1);
+  // ── Estadía (rango de fechas + hora de check-in) ────────────────────────
   const [stayStartDateOverride, setStayStartDateOverride] = useState<string | null>(null);
+  const [stayEndDateOverride, setStayEndDateOverride] = useState<string | null>(null);
+  const [stayStartHour, setStayStartHour] = useState(nowArtHour);
   const [stayQuote, setStayQuote] = useState<StayQuote | null>(null);
   const [stayQuoteLoading, setStayQuoteLoading] = useState(false);
   const [stayQuoteError, setStayQuoteError] = useState<string | null>(null);
@@ -230,12 +235,19 @@ export default function SpotDetail() {
   const stayStartDate =
     stayStartDateOverride && stayStartDateOverride >= minStayStartDate ? stayStartDateOverride : minStayStartDate;
 
+  // Al menos 1 día de estadía -- mismo criterio de "derivar, no sincronizar"
+  // que minStayStartDate: si stayStartDate avanza más allá del fin elegido
+  // (o el fin nunca se eligió), el mínimo se recalcula solo.
+  const minStayEndDate = addOneDayISO(stayStartDate);
+  const stayEndDate =
+    stayEndDateOverride && stayEndDateOverride >= minStayEndDate ? stayEndDateOverride : minStayEndDate;
+
   useEffect(() => {
     if (!spot?.stayEnabled) return;
     let cancelled = false;
     setStayQuoteLoading(true);
     setStayQuoteError(null);
-    getStayQuote(spot.id, stayStartDate, stayUnit, stayCount)
+    getStayQuote(spot.id, stayStartDate, stayEndDate, stayStartHour)
       .then((quote) => {
         if (cancelled) return;
         setStayQuote(quote);
@@ -251,7 +263,7 @@ export default function SpotDetail() {
     return () => {
       cancelled = true;
     };
-  }, [spot?.id, spot?.stayEnabled, stayStartDate, stayUnit, stayCount]);
+  }, [spot?.id, spot?.stayEnabled, stayStartDate, stayEndDate, stayStartHour]);
 
   if (!spot) return null;
 
@@ -324,16 +336,6 @@ export default function SpotDetail() {
       padding: 16, gap: 10,
     },
 
-    // Duration selector
-    durationRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    durationBtn: {
-      width: 36, height: 36, borderRadius: 18,
-      backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center',
-    },
-    durationBtnDisabled: { backgroundColor: colors.teal + '44' },
-    durationBtnText: { fontSize: 20, fontWeight: '700', color: colors.white },
-    durationValue: { ...typography.h2, minWidth: 40, textAlign: 'center' },
-
     // Calendar date field (same box style as the publish/edit forms)
     dateInput: {
       borderWidth: 1, borderColor: colors.border, borderRadius: 10,
@@ -354,15 +356,8 @@ export default function SpotDetail() {
     noSlotsText: { ...typography.body, color: colors.warning },
 
     // Estadía
-    toggleRowStay: { flexDirection: 'row', gap: 8 },
-    stayUnitChip: {
-      flex: 1, alignItems: 'center', paddingVertical: 8,
-      borderRadius: 10, borderWidth: 1, borderColor: colors.teal,
-      backgroundColor: colors.surface,
-    },
-    stayUnitChipSelected: { backgroundColor: colors.teal },
-    stayUnitChipText: { fontSize: 13, fontWeight: '600', color: colors.teal },
-    stayUnitChipTextSelected: { color: colors.white },
+    stayHourHint: { ...typography.caption, color: colors.textSecondary },
+    stayBreakdownText: { ...typography.body, color: colors.textSecondary },
   });
 
   return (
@@ -613,42 +608,9 @@ export default function SpotDetail() {
               <View style={styles.card}>
                 <Text style={styles.sectionLabel}>{t('spot.stay.section')}</Text>
 
-                <Text style={styles.fieldLabel}>{t('spot.stay.unit')}</Text>
-                <View style={styles.toggleRowStay}>
-                  {(['day', 'week', 'month'] as StayUnit[]).map((unit) => (
-                    <TouchableOpacity
-                      key={unit}
-                      style={[styles.stayUnitChip, stayUnit === unit && styles.stayUnitChipSelected]}
-                      onPress={() => setStayUnit(unit)}
-                    >
-                      <Text style={[styles.stayUnitChipText, stayUnit === unit && styles.stayUnitChipTextSelected]}>
-                        {t(`spot.stay.unit.${unit}`)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <Text style={styles.fieldLabel}>{t('spot.stay.count')}</Text>
-                <View style={styles.durationRow}>
-                  <TouchableOpacity
-                    style={[styles.durationBtn, stayCount <= 1 && styles.durationBtnDisabled]}
-                    onPress={() => setStayCount((c) => Math.max(1, c - 1))}
-                    disabled={stayCount <= 1}
-                  >
-                    <Text style={styles.durationBtnText}>−</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.durationValue}>{stayCount}</Text>
-                  <TouchableOpacity
-                    style={styles.durationBtn}
-                    onPress={() => setStayCount((c) => c + 1)}
-                  >
-                    <Text style={styles.durationBtnText}>+</Text>
-                  </TouchableOpacity>
-                </View>
-
                 <Text style={styles.fieldLabel}>{t('spot.stay.startDate')}</Text>
                 <AvailabilityDatePickerField
-                  fetchAvailability={stayAvailabilityFetcher(spot.id, stayUnit, stayCount)}
+                  fetchAvailability={stayAvailabilityFetcher(spot.id)}
                   value={stayStartDate}
                   onChange={setStayStartDateOverride}
                   placeholder={t('spot.datePlaceholder')}
@@ -656,14 +618,47 @@ export default function SpotDetail() {
                   style={styles.dateInput}
                 />
 
+                <Text style={styles.fieldLabel}>{t('spot.stay.endDate')}</Text>
+                <AvailabilityDatePickerField
+                  fetchAvailability={stayAvailabilityFetcher(spot.id)}
+                  value={stayEndDate}
+                  onChange={setStayEndDateOverride}
+                  placeholder={t('spot.datePlaceholder')}
+                  minimumDate={new Date(`${minStayEndDate}T00:00:00`)}
+                  style={styles.dateInput}
+                />
+
+                <Text style={styles.fieldLabel}>{t('spot.stay.startHour')}</Text>
+                <View style={styles.slotRow}>
+                  {STAY_HOUR_OPTIONS.map((hour) => {
+                    const isSelected = hour === stayStartHour;
+                    return (
+                      <TouchableOpacity
+                        key={hour}
+                        style={[styles.slotChip, isSelected && styles.slotChipSelected]}
+                        onPress={() => setStayStartHour(hour)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.slotChipText, isSelected && styles.slotChipTextSelected]}>
+                          {String(hour).padStart(2, '0')}:00
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <Text style={styles.stayHourHint}>{t('spot.stay.startHour.hint')}</Text>
+
                 {stayQuoteLoading ? (
                   <ActivityIndicator size="small" color={colors.teal} />
                 ) : stayQuoteError ? (
                   <Text style={styles.noSlotsText}>{stayQuoteError}</Text>
                 ) : stayQuote ? (
-                  <Text style={styles.total}>
-                    {t('spot.stay.total', { total: String(Math.round(getDriverVisiblePrice(stayQuote.amount / 100))) })}
-                  </Text>
+                  <>
+                    <Text style={styles.stayBreakdownText}>{formatStayBreakdown(stayQuote.breakdown)}</Text>
+                    <Text style={styles.total}>
+                      {t('spot.stay.total', { total: String(Math.round(getDriverVisiblePrice(stayQuote.amount / 100))) })}
+                    </Text>
+                  </>
                 ) : null}
 
                 <Button
@@ -674,8 +669,8 @@ export default function SpotDetail() {
                       params: {
                         spotId: spot.id,
                         startDate: stayStartDate,
-                        unit: stayUnit,
-                        count: String(stayCount),
+                        endDate: stayEndDate,
+                        startHour: String(stayStartHour),
                       },
                     })
                   }
