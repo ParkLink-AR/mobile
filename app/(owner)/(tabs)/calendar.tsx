@@ -112,9 +112,14 @@ export default function OwnerCalendar() {
     for (let i = 0; i < grid.length; i += 7) result.push(grid.slice(i, i + 7));
     return result;
   }, [grid]);
+  // timeZone: 'UTC' es necesario -- sin esto, toLocaleDateString convierte la
+  // medianoche UTC del día 1 a la hora local (ej. Argentina, UTC-3), que cae
+  // en el día anterior y muestra el mes equivocado en el título, aunque la
+  // grilla de abajo (que usa getUTCFullYear/getUTCMonth) esté bien.
   const monthLabel = new Date(Date.UTC(visibleYear, visibleMonth, 1)).toLocaleDateString('es-AR', {
     month: 'long',
     year: 'numeric',
+    timeZone: 'UTC',
   });
   const selectedDayBookings = bookingsByDate[selectedDate] ?? [];
 
