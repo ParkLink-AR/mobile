@@ -37,6 +37,7 @@ export default function Profile() {
   const setActiveMode = useAccountTypeStore((s) => s.setActiveMode);
   const isOwner = group === '/(owner)';
   const [langModalVisible, setLangModalVisible] = useState(false);
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
@@ -59,6 +60,13 @@ export default function Profile() {
     const nextGroup = isOwner ? '/(driver)' : '/(owner)';
     setActiveMode(isOwner ? 'driver' : 'owner');
     router.replace(`${nextGroup}/(tabs)` as never);
+  }
+
+  async function handleLogout() {
+    setLogoutModalVisible(false);
+    if (refreshToken) await logoutRequest(refreshToken).catch(() => {});
+    clearSession();
+    router.replace('/(auth)/login');
   }
 
   function closeDeleteModal() {
@@ -324,11 +332,7 @@ export default function Profile() {
         </View>
         <Pressable
           style={({ pressed }) => [styles.actionBtn, styles.logoutBtn, { opacity: pressed ? 0.8 : 1 }]}
-          onPress={async () => {
-            if (refreshToken) await logoutRequest(refreshToken).catch(() => {});
-            clearSession();
-            router.replace('/(auth)/login');
-          }}
+          onPress={() => setLogoutModalVisible(true)}
         >
           <Ionicons name="log-out-outline" size={20} color="#EF4444" />
           <Text style={[styles.actionBtnText, styles.logoutBtnText]}>{t('account.logout')}</Text>
@@ -341,6 +345,39 @@ export default function Profile() {
           <Text style={styles.deleteAccountLinkText}>{t('account.deleteAccount')}</Text>
         </Pressable>
       </ScrollView>
+
+      {/* Logout confirmation modal */}
+      <Modal
+        visible={logoutModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLogoutModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setLogoutModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalSheet}>
+                <Text style={styles.modalTitle}>{t('account.logout.confirmTitle')}</Text>
+                <Text style={styles.deleteWarning}>{t('account.logout.confirmMessage')}</Text>
+                <View style={styles.deleteActions}>
+                  <Pressable
+                    style={({ pressed }) => [styles.deleteCancelBtn, { opacity: pressed ? 0.7 : 1 }]}
+                    onPress={() => setLogoutModalVisible(false)}
+                  >
+                    <Text style={styles.deleteCancelBtnText}>{t('common.cancel')}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.deleteConfirmBtn, { opacity: pressed ? 0.85 : 1 }]}
+                    onPress={handleLogout}
+                  >
+                    <Text style={styles.deleteConfirmBtnText}>{t('account.logout.confirm')}</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       {/* Delete account confirmation modal */}
       <Modal
