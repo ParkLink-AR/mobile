@@ -10,7 +10,7 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getUserBookingsApi, BookingApiResponse } from '@/src/api/booking';
-import { getParkingSpotDetail } from '@/src/api/parking';
+import { getParkingSpotsByIds } from '@/src/api/parking';
 import { Booking } from '@/src/types';
 
 /** Maps the backend wire shape to the UI Booking type. */
@@ -54,16 +54,13 @@ export default function DriverBookings() {
       if (!user) return;
       getUserBookingsApi(user.id)
         .then(async (list) => {
-          // Deduplicate spot ids and fetch titles in parallel
+          // Deduplicate spot ids and fetch all their titles in a single batch request
           const uniqueSpotIds = [...new Set(list.map((b) => b.parking_spot_id))];
-          const spotTitleMap: Record<string, string> = {};
-          await Promise.allSettled(
-            uniqueSpotIds.map((id) =>
-              getParkingSpotDetail(id)
-                .then((spot) => { spotTitleMap[id] = spot.title; })
-                .catch(() => { spotTitleMap[id] = id; }) // fallback to id on error
-            )
+          const spots = await getParkingSpotsByIds(uniqueSpotIds).catch(() => []);
+          const spotTitleMap: Record<string, string> = Object.fromEntries(
+            spots.map((spot) => [spot.id, spot.title]),
           );
+          // Any id not found by the batch call (deleted spot, etc.) falls back to showing the id
           setBookings(list.map((b) => mapApiBooking(b, spotTitleMap[b.parking_spot_id] ?? b.parking_spot_id)));
         })
         .catch((err) => console.warn('[Bookings] fetch error:', err));

@@ -205,6 +205,17 @@ export async function getParkingSpotDetail(id: string): Promise<ParkingSpotApiRe
   return request(`/parking-spots/${id}`);
 }
 
+/**
+ * Detalle de varias cocheras en un solo request (GET /parking-spots?ids=a,b,c)
+ * -- usado por la lista de reservas del driver para resolver todos los
+ * títulos de una sola vez en vez de un request por cochera. Cualquier id que
+ * no exista o no esté ACTIVE/PAUSED simplemente no aparece en el array.
+ */
+export async function getParkingSpotsByIds(ids: string[]): Promise<ParkingSpotApiResponse[]> {
+  if (ids.length === 0) return [];
+  return request(`/parking-spots?ids=${ids.join(',')}`);
+}
+
 export async function getParkingSpotsForOwner(ownerId: string): Promise<ParkingSpotApiResponse[]> {
   return request(`/users/${ownerId}/parking-spots`);
 }
