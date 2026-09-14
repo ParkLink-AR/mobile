@@ -13,17 +13,27 @@ export const BOOKINGS_CHANNEL_ID = 'bookings';
 // expo-notifications registers a global device-push-token listener the
 // instant it's imported (see its DevicePushTokenAutoRegistration.fx module),
 // and that listener throws on Android as soon as it fires if we're inside
-// Expo Go -- remote push was removed from Expo Go in SDK 53. Loading the
-// module lazily, only outside Expo Go, keeps this file safe to import
-// anywhere (same pattern as @react-native-firebase/messaging below).
-// isRunningInExpoGo() is the exact check expo-notifications itself uses
-// internally, so this only skips inside real Expo Go -- a development build
-// (expo-dev-client) or any bare/standalone build on a simulator/emulator or
-// device still gets the real thing.
+// Expo Go -- remote push was removed from Expo Go in SDK 53. Checking
+// isRunningInExpoGo() first (the exact check expo-notifications itself uses
+// internally) avoids that entirely -- a development build (expo-dev-client)
+// or any bare/standalone build on a simulator/emulator or device still gets
+// the real thing. The try/catch is a second, broader safety net: on ANY
+// simulator/emulator/build where this native module is missing or
+// misconfigured for some unrelated reason, we still get `null` here instead
+// of an uncaught crash -- every function below already no-ops on null.
 type NotificationsModule = typeof import('expo-notifications');
-const Notifications: NotificationsModule | null = isRunningInExpoGo()
-  ? null
-  : require('expo-notifications');
+
+function loadNotifications(): NotificationsModule | null {
+  if (isRunningInExpoGo()) return null;
+  try {
+    return require('expo-notifications');
+  } catch (err) {
+    console.warn('[push] expo-notifications unavailable:', err);
+    return null;
+  }
+}
+
+const Notifications = loadNotifications();
 
 /** Creates the Android notification channel. Safe to call repeatedly. No-op in Expo Go. */
 export async function ensureNotificationChannel(): Promise<void> {
@@ -43,15 +53,20 @@ export async function ensureNotificationChannel(): Promise<void> {
 // By default expo-notifications suppresses notifications while the app is in
 // the foreground. We want them shown as real system banners (same as when the
 // app is backgrounded), so FCM messages that arrive with the app open look
-// identical to the ones the OS shows on its own. No-op in Expo Go.
-Notifications?.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// identical to the ones the OS shows on its own. No-op in Expo Go, and
+// tolerates any other setup error instead of crashing at import time.
+try {
+  Notifications?.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+} catch (err) {
+  console.warn('[push] setNotificationHandler failed:', err);
+}
 
 /**
  * Presents an FCM message as a local system notification. Used for messages
@@ -88,11 +103,16 @@ export async function presentLocalNotification(
  */
 export function subscribeLocalNotificationTaps(onRoute: (path: string) => void): () => void {
   if (!Notifications) return () => {};
-  const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-    const route = response.notification.request.content.data?.route;
-    if (typeof route === 'string' && route) onRoute(route);
-  });
-  return () => sub.remove();
+  try {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const route = response.notification.request.content.data?.route;
+      if (typeof route === 'string' && route) onRoute(route);
+    });
+    return () => sub.remove();
+  } catch (err) {
+    console.warn('[push] subscribeLocalNotificationTaps failed:', err);
+    return () => {};
+  }
 }
 
 // @react-native-firebase/messaging v22+ is modular-only: there is no default
