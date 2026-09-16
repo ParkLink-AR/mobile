@@ -38,6 +38,7 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
     serviceCharge: 0,
     total: amount,
     status: b.status as Booking['status'],
+    verificationCode: b.verification_code,
   };
 }
 
@@ -73,6 +74,17 @@ export default function DriverBookings() {
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     total: { color: colors.teal, fontWeight: '700', marginTop: 4 },
+    codeChip: {
+      alignSelf: 'flex-start',
+      marginTop: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.teal,
+    },
+    codeChipText: { color: colors.teal, fontWeight: '700', fontSize: 12 },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   });
@@ -101,6 +113,11 @@ export default function DriverBookings() {
                 {item.date} · {item.startTime} {t('driver.booking.timeTo')} {item.endTime}
               </Text>
               <Text style={styles.total}>${item.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+              {item.status === 'CONFIRMED' && item.verificationCode && (
+                <View style={styles.codeChip}>
+                  <Text style={styles.codeChipText}>{t('driver.booking.code', { code: item.verificationCode })}</Text>
+                </View>
+              )}
             </Card>
           </TouchableOpacity>
         )}
