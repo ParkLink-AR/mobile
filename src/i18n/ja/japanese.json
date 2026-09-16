@@ -216,6 +216,7 @@
   "owner.spot.edit.invalidPrice": "有効な価格を入力してください",
   "owner.spot.edit.invalidHours": "開始時刻は終了時刻より前である必要があります",
   "owner.spot.edit.errorSave": "変更の保存中にエラーが発生しました",
+  "owner.spot.edit.errorLoad": "駐車スペースを読み込めませんでした。接続を確認してもう一度お試しください。",
   "owner.spot.edit.deactivate": "スペースを非公開にする",
   "owner.spot.edit.deactivateTitle": "このスペースを非公開にしますか？",
   "owner.spot.edit.deactivateBody": "検索結果に表示されなくなり、新しい予約はできなくなります。既存の予約には影響しません。",
@@ -263,6 +264,7 @@
   "common.confirm": "確認",
   "common.yes": "はい",
   "common.no": "いいえ",
+  "common.retry": "再試行",
 
   "account.settings.label": "設定",
   "account.myAccount": "マイアカウント",

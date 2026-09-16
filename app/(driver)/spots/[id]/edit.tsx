@@ -73,10 +73,12 @@ export default function EditSpot() {
   } | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
   const [photosBusy, setPhotosBusy] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      getParkingSpotDetail(id).then((s) => {
+  const load = useCallback(() => {
+    setLoadError(false);
+    getParkingSpotDetail(id)
+      .then((s) => {
         if (!s) return;
         setSpot(s);
         setAddress(s.address);
@@ -105,9 +107,14 @@ export default function EditSpot() {
           stayAvailableFrom: s.stayAvailableFrom ?? '',
           stayAvailableUntil: s.stayAvailableUntil ?? '',
         });
+      })
+      .catch((err) => {
+        console.warn('[EditSpot] fetch error:', err);
+        setLoadError(true);
       });
-    }, [id]),
-  );
+  }, [id]);
+
+  useFocusEffect(load);
 
   async function pickAndUploadPhotos() {
     if (photos.length >= MAX_PHOTOS) {
@@ -210,6 +217,23 @@ export default function EditSpot() {
     } finally {
       setLocating(false);
     }
+  }
+
+  if (loadError) {
+    // Estilos inline, no del StyleSheet de más abajo (const styles, línea
+    // ~361): ese está declarado después de este return en el cuerpo del
+    // componente y referenciarlo acá rompería con "Cannot access before
+    // initialization" (temporal dead zone de `const`).
+    return (
+      <Screen>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
+          <Text style={{ color: colors.text, fontSize: 15, textAlign: 'center' }}>
+            {t('owner.spot.edit.errorLoad')}
+          </Text>
+          <Button title={t('common.retry')} onPress={load} />
+        </View>
+      </Screen>
+    );
   }
 
   if (!spot) return null;

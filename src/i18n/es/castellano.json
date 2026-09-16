@@ -216,6 +216,7 @@
   "owner.spot.edit.invalidPrice": "Ingresá un precio válido",
   "owner.spot.edit.invalidHours": "El horario de inicio debe ser menor al de cierre",
   "owner.spot.edit.errorSave": "Error al guardar los cambios",
+  "owner.spot.edit.errorLoad": "No se pudo cargar la cochera. Revisá tu conexión e intentá de nuevo.",
   "owner.spot.edit.deactivate": "Desactivar cochera",
   "owner.spot.edit.deactivateTitle": "¿Desactivar esta cochera?",
   "owner.spot.edit.deactivateBody": "Deja de aparecer en las búsquedas y no se puede volver a reservar. Las reservas que ya tenga no se ven afectadas.",
@@ -263,6 +264,7 @@
   "common.confirm": "Confirmar",
   "common.yes": "Sí",
   "common.no": "No",
+  "common.retry": "Reintentar",
 
   "account.settings.label": "Configuración",
   "account.myAccount": "Mi cuenta",

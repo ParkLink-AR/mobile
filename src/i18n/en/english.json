@@ -216,6 +216,7 @@
   "owner.spot.edit.invalidPrice": "Please enter a valid price",
   "owner.spot.edit.invalidHours": "Start time must be before end time",
   "owner.spot.edit.errorSave": "Error saving changes",
+  "owner.spot.edit.errorLoad": "Couldn't load the parking spot. Check your connection and try again.",
   "owner.spot.edit.deactivate": "Deactivate spot",
   "owner.spot.edit.deactivateTitle": "Deactivate this spot?",
   "owner.spot.edit.deactivateBody": "It stops showing up in search and can't be booked again. Existing bookings aren't affected.",
@@ -263,6 +264,7 @@
   "common.confirm": "Confirm",
   "common.yes": "Yes",
   "common.no": "No",
+  "common.retry": "Retry",
 
   "account.settings.label": "Settings",
   "account.myAccount": "My account",
