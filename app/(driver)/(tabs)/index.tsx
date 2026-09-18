@@ -105,7 +105,6 @@ export function SearchScreen() {
   const [coveredOnly, setCoveredOnly] = useState(false);
   const [stayOnly, setStayOnly] = useState(false);
   const [hourlyOnlyFilter, setHourlyOnlyFilter] = useState(false);
-  const [instantBookingOnly, setInstantBookingOnly] = useState(false);
   // Km en texto libre (no un preset) -- se convierte a metros recién al aplicar.
   const [distanceKmInput, setDistanceKmInput] = useState('');
   const [scheduleFilterOn, setScheduleFilterOn] = useState(false);
@@ -320,7 +319,6 @@ export function SearchScreen() {
     setCoveredOnly(filters.covered ?? false);
     setStayOnly(filters.stayOnly ?? false);
     setHourlyOnlyFilter(filters.hourlyOnly ?? false);
-    setInstantBookingOnly(filters.instantBooking ?? false);
     setDistanceKmInput(filters.maxDistanceMeters !== undefined ? String(filters.maxDistanceMeters / 1000) : '');
     setScheduleFilterOn(filters.fromHour !== undefined);
     setDateInput(filters.date ?? '');
@@ -337,7 +335,6 @@ export function SearchScreen() {
       covered: coveredOnly || undefined,
       stayOnly: stayOnly || undefined,
       hourlyOnly: hourlyOnlyFilter || undefined,
-      instantBooking: instantBookingOnly || undefined,
       maxDistanceMeters: distanceKmInput.trim() && km > 0 ? Math.round(km * 1000) : undefined,
       date: scheduleFilterOn ? (dateInput || undefined) : undefined,
       fromHour: scheduleFilterOn ? fromHourInput : undefined,
@@ -385,12 +382,6 @@ export function SearchScreen() {
     activeChips.push({
       label: t('search.filters.hourlyOnly'),
       onRemove: () => setFilters((f) => ({ ...f, hourlyOnly: undefined })),
-    });
-  }
-  if (filters.instantBooking) {
-    activeChips.push({
-      label: t('search.filters.instantBookingOnly'),
-      onRemove: () => setFilters((f) => ({ ...f, instantBooking: undefined })),
     });
   }
   if (filters.maxDistanceMeters !== undefined) {
@@ -1147,15 +1138,6 @@ export function SearchScreen() {
                   label={t('search.filters.stayOnly')}
                   selected={stayOnly}
                   onPress={toggleStayOnly}
-                />
-              </View>
-
-              <Text style={styles.sectionLabel}>{t('search.filters.confirmation')}</Text>
-              <View style={styles.chipsWrap}>
-                <Chip
-                  label={t('search.filters.instantBookingOnly')}
-                  selected={instantBookingOnly}
-                  onPress={() => setInstantBookingOnly((v) => !v)}
                 />
               </View>
 

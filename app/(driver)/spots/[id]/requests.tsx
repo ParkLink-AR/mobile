@@ -17,15 +17,10 @@ import {
 } from '@/src/api/booking';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
+import { mapBookingDateRange, formatBookingWhen } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 function mapApiBooking(b: BookingApiResponse): Booking {
-  const start = new Date(b.start);
-  const end = new Date(b.end);
-  const hours = Math.max(1, Math.round((end.getTime() - start.getTime()) / 3_600_000));
-  const dateISO = b.start.slice(0, 10);
-  const startTime = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-  const endTime = end.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
   const amount = typeof b.amount === 'number' ? b.amount / 100 : 0;
 
   return {
@@ -35,10 +30,8 @@ function mapApiBooking(b: BookingApiResponse): Booking {
     driverId: b.user_id,
     driverName: '',
     ownerId: '',
-    date: dateISO,
-    startTime,
-    endTime,
-    hours,
+    kind: b.kind,
+    ...mapBookingDateRange(b.start, b.end),
     subtotal: amount,
     serviceCharge: 0,
     total: amount,
@@ -128,17 +121,17 @@ export default function SpotBookingRequests() {
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     driverRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
     driverRowText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.textSecondary },
-    total: { color: colors.teal, fontWeight: '700', marginTop: 4 },
+    total: { color: colors.ownerAccent, fontWeight: '700', marginTop: 4 },
     actionsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
     actionBtn: {
       flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
       paddingVertical: 9, borderRadius: 10,
     },
-    approveBtn: { backgroundColor: colors.teal },
+    approveBtn: { backgroundColor: colors.ownerAccent },
     rejectBtn: { borderWidth: 1.5, borderColor: '#C62828' },
     approveBtnText: { color: colors.white, fontWeight: '700' },
     rejectBtnText: { color: '#C62828', fontWeight: '700' },
-    verifyBtn: { backgroundColor: colors.teal },
+    verifyBtn: { backgroundColor: colors.ownerAccent },
     verifyBtnText: { color: colors.white, fontWeight: '700' },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
@@ -175,7 +168,7 @@ export default function SpotBookingRequests() {
     modalCancelBtnText: { color: colors.textSecondary, fontWeight: '700' },
     modalConfirmBtn: {
       flex: 1, alignItems: 'center', justifyContent: 'center',
-      paddingVertical: 10, borderRadius: 10, backgroundColor: colors.teal,
+      paddingVertical: 10, borderRadius: 10, backgroundColor: colors.ownerAccent,
     },
     modalConfirmBtnText: { color: colors.white, fontWeight: '700' },
   });
@@ -194,76 +187,78 @@ export default function SpotBookingRequests() {
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <TouchableOpacity
-              style={styles.driverRow}
-              onPress={() => router.push(`${group}/profile/${item.driverId}?as=driver`)}
-              disabled={!driverNames[item.driverId]}
-            >
-              <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
-              {!!driverNames[item.driverId] && <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} />}
-            </TouchableOpacity>
-            <View style={styles.row}>
-              <Text style={typography.body}>
-                {item.date} · {item.startTime} {t('driver.booking.timeTo')} {item.endTime}
-              </Text>
-              <StatusBadge status={item.status} />
-            </View>
-            <Text style={styles.total}>${item.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-
-            {item.status === 'PENDING_OWNER_APPROVAL' && (
-              <View style={styles.actionsRow}>
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.rejectBtn]}
-                  onPress={() => handleReject(item.id)}
-                  disabled={busyId === item.id}
-                >
-                  {busyId === item.id ? (
-                    <ActivityIndicator color="#C62828" size="small" />
-                  ) : (
-                    <>
-                      <Ionicons name="close" size={16} color="#C62828" />
-                      <Text style={styles.rejectBtnText}>{t('owner.spot.requests.reject')}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.approveBtn]}
-                  onPress={() => handleApprove(item.id)}
-                  disabled={busyId === item.id}
-                >
-                  {busyId === item.id ? (
-                    <ActivityIndicator color={colors.white} size="small" />
-                  ) : (
-                    <>
-                      <Ionicons name="checkmark" size={16} color={colors.white} />
-                      <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push(`${group}/bookings/${item.id}`)} activeOpacity={0.7}>
+            <Card>
+              <TouchableOpacity
+                style={styles.driverRow}
+                onPress={() => router.push(`${group}/profile/${item.driverId}?as=driver`)}
+                disabled={!driverNames[item.driverId]}
+              >
+                <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
+                {!!driverNames[item.driverId] && <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} />}
+              </TouchableOpacity>
+              <View style={styles.row}>
+                <Text style={typography.body}>
+                  {formatBookingWhen(item, t('driver.booking.timeTo'))}
+                </Text>
+                <StatusBadge status={item.status} />
               </View>
-            )}
+              <Text style={styles.total}>${item.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
 
-            {item.status === 'CONFIRMED' && (
-              <View style={styles.actionsRow}>
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.verifyBtn]}
-                  onPress={() => openCodeModal(item.id)}
-                  disabled={busyId === item.id}
-                >
-                  {busyId === item.id ? (
-                    <ActivityIndicator color={colors.white} size="small" />
-                  ) : (
-                    <>
-                      <Ionicons name="keypad-outline" size={16} color={colors.white} />
-                      <Text style={styles.verifyBtnText}>{t('owner.spot.requests.verifyCode')}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
-          </Card>
+              {item.status === 'PENDING_OWNER_APPROVAL' && (
+                <View style={styles.actionsRow}>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.rejectBtn]}
+                    onPress={() => handleReject(item.id)}
+                    disabled={busyId === item.id}
+                  >
+                    {busyId === item.id ? (
+                      <ActivityIndicator color="#C62828" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="close" size={16} color="#C62828" />
+                        <Text style={styles.rejectBtnText}>{t('owner.spot.requests.reject')}</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.approveBtn]}
+                    onPress={() => handleApprove(item.id)}
+                    disabled={busyId === item.id}
+                  >
+                    {busyId === item.id ? (
+                      <ActivityIndicator color={colors.white} size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark" size={16} color={colors.white} />
+                        <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {item.status === 'CONFIRMED' && (
+                <View style={styles.actionsRow}>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.verifyBtn]}
+                    onPress={() => openCodeModal(item.id)}
+                    disabled={busyId === item.id}
+                  >
+                    {busyId === item.id ? (
+                      <ActivityIndicator color={colors.white} size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="keypad-outline" size={16} color={colors.white} />
+                        <Text style={styles.verifyBtnText}>{t('owner.spot.requests.verifyCode')}</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+            </Card>
+          </TouchableOpacity>
         )}
       />
 

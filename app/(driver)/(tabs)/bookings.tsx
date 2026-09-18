@@ -11,16 +11,11 @@ import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getUserBookingsApi, BookingApiResponse } from '@/src/api/booking';
 import { getParkingSpotsByIds } from '@/src/api/parking';
+import { mapBookingDateRange, formatBookingWhen } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 /** Maps the backend wire shape to the UI Booking type. */
 function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
-  const start = new Date(b.start);
-  const end = new Date(b.end);
-  const hours = Math.max(1, Math.round((end.getTime() - start.getTime()) / 3_600_000));
-  const dateISO = b.start.slice(0, 10);
-  const startTime = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-  const endTime = end.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
   const amount = typeof b.amount === 'number' ? b.amount / 100 : 0; // centavos → pesos
 
   return {
@@ -30,10 +25,8 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
     driverId: b.user_id,
     driverName: '',
     ownerId: '',
-    date: dateISO,
-    startTime,
-    endTime,
-    hours,
+    kind: b.kind,
+    ...mapBookingDateRange(b.start, b.end),
     subtotal: amount,
     serviceCharge: 0,
     total: amount,
@@ -110,7 +103,7 @@ export default function DriverBookings() {
                 <StatusBadge status={item.status} />
               </View>
               <Text style={typography.caption}>
-                {item.date} · {item.startTime} {t('driver.booking.timeTo')} {item.endTime}
+                {formatBookingWhen(item, t('driver.booking.timeTo'))}
               </Text>
               <Text style={styles.total}>${item.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
               {item.status === 'CONFIRMED' && item.verificationCode && (

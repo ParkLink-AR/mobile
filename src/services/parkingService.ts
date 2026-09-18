@@ -53,7 +53,6 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     distanceMeters: raw.distanceMeters ?? 0,
     description: raw.description ?? '',
     active: raw.status === 'active',
-    instantBooking: raw.instantBooking,
   };
 }
 
@@ -154,8 +153,6 @@ export interface SearchParkingSpotsFilters {
   // Contraparte de stayOnly -- sólo cocheras con alquiler por hora habilitado.
   // Mobile los trata como mutuamente excluyentes en la UI del buscador.
   hourlyOnly?: boolean;
-  // Sólo cocheras con confirmación automática (sin esperar al dueño).
-  instantBooking?: boolean;
 }
 
 // Builds an ISO 8601 datetime for `hour` on `dateISO` (YYYY-MM-DD), with a
@@ -186,7 +183,6 @@ export async function searchParkingSpots(
     to: filters.toHour !== undefined ? toISODateTime(dateISO, filters.toHour) : undefined,
     stayOnly: filters.stayOnly,
     hourlyOnly: filters.hourlyOnly,
-    instantBooking: filters.instantBooking,
   });
   const spots = results.map(toParkingSpot);
   if (filters.minPrice === undefined) return spots;
@@ -236,7 +232,6 @@ export interface CreateParkingSpotInput {
   covered: boolean;
   // Obligatorio y no vacío -- ver ParkingSpot.vehicleTypes en parking-service.
   vehicleTypes: VehicleType[];
-  instantBooking: boolean;
   // Lugares idénticos a alquilar contra el mismo id (playa). Omitido = 1.
   capacity?: number;
   // Default true si se omite -- ver ParkingSpot.hourlyEnabled. pricePerHour
@@ -269,7 +264,6 @@ export async function createParkingSpot(input: CreateParkingSpotInput): Promise<
     pricePerHourByVehicleType: input.pricePerHourByVehicleType,
     covered: input.covered,
     vehicleTypes: input.vehicleTypes,
-    instantBooking: input.instantBooking,
     capacity: input.capacity,
     schedule: input.schedule,
     description: input.description,
@@ -308,7 +302,6 @@ export interface UpdateParkingSpotInput {
   description?: string;
   covered?: boolean;
   vehicleTypes?: VehicleType[];
-  instantBooking?: boolean;
   capacity?: number;
   schedule?: ScheduleEntry[];
   // The three go together: send all or none (see UpdateParkingSpotDto).
@@ -337,7 +330,6 @@ export async function updateParkingSpot(
     description: updates.description,
     covered: updates.covered,
     vehicleTypes: updates.vehicleTypes,
-    instantBooking: updates.instantBooking,
     capacity: updates.capacity,
     schedule: updates.schedule,
     address: updates.address,

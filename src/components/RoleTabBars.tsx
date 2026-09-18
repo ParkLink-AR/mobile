@@ -64,7 +64,7 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
         const routeIndex = state.routes.findIndex((r) => r.name === tab.name);
         const route = state.routes[routeIndex];
         const focused = state.index === routeIndex;
-        const color = focused ? colors.teal : colors.textSecondary;
+        const color = focused ? colors.ownerAccent : colors.textSecondary;
 
         return (
           <Pressable

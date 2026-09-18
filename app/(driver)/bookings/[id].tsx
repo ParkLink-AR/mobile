@@ -8,20 +8,17 @@ import { StatusBadge } from '@/src/components/StatusBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
+import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 import { getBookingApi, BookingApiResponse } from '@/src/api/booking';
 import { getParkingSpotDetail } from '@/src/api/parking';
+import { getPublicProfileApi } from '@/src/api/auth';
+import { mapBookingDateRange, formatBookingWhen } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 /** Maps the backend wire shape to the UI Booking type -- same mapping as the
  * driver's booking list (see (tabs)/bookings.tsx), plus payment_id/updated_at
  * which the list doesn't need but the detail view does. */
 function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
-  const start = new Date(b.start);
-  const end = new Date(b.end);
-  const hours = Math.max(1, Math.round((end.getTime() - start.getTime()) / 3_600_000));
-  const dateISO = b.start.slice(0, 10);
-  const startTime = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-  const endTime = end.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
   const amount = typeof b.amount === 'number' ? b.amount / 100 : 0;
 
   return {
@@ -31,10 +28,8 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
     driverId: b.user_id,
     driverName: '',
     ownerId: '',
-    date: dateISO,
-    startTime,
-    endTime,
-    hours,
+    kind: b.kind,
+    ...mapBookingDateRange(b.start, b.end),
     subtotal: amount,
     serviceCharge: 0,
     total: amount,
@@ -45,12 +40,27 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
   };
 }
 
+/** Duración legible: horas para HOURLY, días de check-in a check-out para STAY. */
+function durationLabel(booking: Booking): string {
+  if (booking.kind === 'HOURLY') {
+    return t('driver.booking.durationHours', { hours: String(booking.hours) });
+  }
+  const days = Math.max(1, Math.round(
+    (new Date(`${booking.endDate}T00:00:00`).getTime() - new Date(`${booking.date}T00:00:00`).getTime()) / 86_400_000,
+  ));
+  return t('driver.booking.durationDays', { days: String(days) });
+}
+
 export default function DriverBookingDetail() {
   useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const activeMode = useAccountTypeStore((s) => s.activeMode);
+  const isOwnerView = activeMode === 'owner';
+  const accent = isOwnerView ? colors.ownerAccent : colors.teal;
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [driverName, setDriverName] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -59,12 +69,17 @@ export default function DriverBookingDetail() {
       .then(async (raw) => {
         const spot = await getParkingSpotDetail(raw.parking_spot_id).catch(() => null);
         setBooking(mapApiBooking(raw, spot?.title ?? raw.parking_spot_id));
+        if (isOwnerView) {
+          getPublicProfileApi(raw.user_id)
+            .then((profile) => setDriverName(profile.name))
+            .catch(() => {});
+        }
       })
       .catch((err) => {
         console.warn('[BookingDetail] fetch error:', err);
         setError(true);
       });
-  }, [id]);
+  }, [id, isOwnerView]);
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.surface, padding: 16, gap: 16 },
@@ -75,17 +90,19 @@ export default function DriverBookingDetail() {
     detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     detailLabel: { fontSize: 13, color: colors.textSecondary },
     detailValue: { fontSize: 13, color: colors.text, fontWeight: '600' },
+    kindRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    kindText: { fontSize: 13, fontWeight: '600', color: accent },
     codeCard: {
       backgroundColor: colors.background,
       borderWidth: 1,
-      borderColor: colors.teal,
+      borderColor: accent,
       borderRadius: 10,
       padding: 14,
       alignItems: 'center',
       gap: 4,
     },
     codeLabel: { fontSize: 12, color: colors.textSecondary },
-    codeValue: { fontSize: 32, fontWeight: '700', color: colors.teal, letterSpacing: 6 },
+    codeValue: { fontSize: 32, fontWeight: '700', color: accent, letterSpacing: 6 },
     codeHint: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
   });
 
@@ -103,7 +120,7 @@ export default function DriverBookingDetail() {
   if (!booking) {
     return (
       <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-        <ActivityIndicator style={{ marginTop: 40 }} color={colors.teal} />
+        <ActivityIndicator style={{ marginTop: 40 }} color={accent} />
       </Screen>
     );
   }
@@ -118,6 +135,20 @@ export default function DriverBookingDetail() {
           <StatusBadge status={booking.status} />
         </View>
 
+        <View style={styles.kindRow}>
+          <Ionicons name={booking.kind === 'STAY' ? 'calendar-outline' : 'time-outline'} size={14} color={accent} />
+          <Text style={styles.kindText}>
+            {t(booking.kind === 'STAY' ? 'driver.booking.kind.stay' : 'driver.booking.kind.hourly')}
+          </Text>
+        </View>
+
+        {isOwnerView && driverName && (
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>{t('driver.booking.detail.driver')}</Text>
+            <Text style={styles.detailValue}>{driverName}</Text>
+          </View>
+        )}
+
         {booking.status === 'CONFIRMED' && booking.verificationCode && (
           <View style={styles.codeCard}>
             <Text style={styles.codeLabel}>{t('driver.booking.codeLabel')}</Text>
@@ -126,9 +157,13 @@ export default function DriverBookingDetail() {
           </View>
         )}
 
-        <Text style={typography.body}>
-          {booking.date} · {booking.startTime} {t('driver.booking.timeTo')} {booking.endTime}
-        </Text>
+        <Text style={typography.body}>{formatBookingWhen(booking, t('driver.booking.timeTo'))}</Text>
+
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>{t('driver.booking.detail.duration')}</Text>
+          <Text style={styles.detailValue}>{durationLabel(booking)}</Text>
+        </View>
+
         <Text style={typography.body}>{t('driver.booking.total')}: ${booking.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
 
         {(booking.paymentId || confirmedDate) && (

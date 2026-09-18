@@ -91,7 +91,6 @@ export interface ParkingSpot {
   description: string;
   descriptionKey?: string;
   active: boolean;
-  instantBooking: boolean;
 }
 
 export type BookingStatus =
@@ -114,7 +113,12 @@ export interface Booking {
   driverId: string;
   driverName: string;
   ownerId: string;
+  kind: 'HOURLY' | 'STAY';
   date: string;
+  // Fecha de checkout, ART (YYYY-MM-DD) -- igual a `date` para HOURLY; en
+  // STAY cae en un día posterior (el checkout es a la misma hora que el
+  // check-in, ver stays.service.ts en parking-service, no medianoche).
+  endDate: string;
   startTime: string;
   endTime: string;
   hours: number;

@@ -1,7 +1,7 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View, FlatList, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
@@ -12,6 +12,7 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { getOwnerBookings } from '@/src/services/ownerBookings';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { todayArtDateISO } from '@/src/services/dateUtils';
+import { formatBookingWhen } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 // Mismo criterio que spot/[id].tsx: 0=Lunes … 6=Domingo.
@@ -59,6 +60,7 @@ function buildMonthGrid(year: number, month: number): DayCell[] {
 
 export default function OwnerCalendar() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
@@ -144,7 +146,7 @@ export default function OwnerCalendar() {
     monthLabel: { fontSize: 17, fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
     navBtn: { padding: 6 },
     todayLink: { alignSelf: 'center' },
-    todayLinkText: { fontSize: 13, fontWeight: '600', color: colors.teal },
+    todayLinkText: { fontSize: 13, fontWeight: '600', color: colors.ownerAccent },
     weekRow: { flexDirection: 'row' },
     weekDayCell: { flex: 1, alignItems: 'center', paddingBottom: 6 },
     weekDayText: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
@@ -156,12 +158,12 @@ export default function OwnerCalendar() {
     dayCircle: {
       width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
     },
-    dayCircleSelected: { backgroundColor: colors.teal },
-    dayCircleToday: { borderWidth: 1.5, borderColor: colors.teal },
+    dayCircleSelected: { backgroundColor: colors.ownerAccent },
+    dayCircleToday: { borderWidth: 1.5, borderColor: colors.ownerAccent },
     dayText: { fontSize: 14, color: colors.text },
     dayTextOutOfMonth: { color: colors.textSecondary, opacity: 0.4 },
     dayTextSelected: { color: colors.white, fontWeight: '700' },
-    dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.teal },
+    dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.ownerAccent },
     dotHidden: { opacity: 0 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     sectionTitle: {
@@ -253,7 +255,7 @@ export default function OwnerCalendar() {
             </View>
 
             {loading && bookings.length === 0 && (
-              <ActivityIndicator color={colors.teal} style={{ marginTop: 8 }} />
+              <ActivityIndicator color={colors.ownerAccent} style={{ marginTop: 8 }} />
             )}
           </View>
         }
@@ -266,19 +268,21 @@ export default function OwnerCalendar() {
           ) : null
         }
         renderItem={({ item }) => (
-          <Card style={styles.bookingCard}>
-            <Text style={styles.spotTitle}>{item.parkingSpotTitle}</Text>
-            <View style={styles.driverRow}>
-              <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
-            </View>
-            <View style={styles.timeRow}>
-              <Text style={typography.body}>
-                {item.startTime} {t('driver.booking.timeTo')} {item.endTime}
-              </Text>
-              <StatusBadge status={item.status} />
-            </View>
-          </Card>
+          <Pressable onPress={() => router.push(`${group}/bookings/${item.id}`)}>
+            <Card style={styles.bookingCard}>
+              <Text style={styles.spotTitle}>{item.parkingSpotTitle}</Text>
+              <View style={styles.driverRow}>
+                <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
+              </View>
+              <View style={styles.timeRow}>
+                <Text style={typography.body}>
+                  {formatBookingWhen(item, t('driver.booking.timeTo'))}
+                </Text>
+                <StatusBadge status={item.status} />
+              </View>
+            </Card>
+          </Pressable>
         )}
       />
     </Screen>

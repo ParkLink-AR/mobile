@@ -3,6 +3,7 @@ import { ColorPalette } from '../types';
 export const darkPalette: ColorPalette = {
   deepNavy: '#042347',
   teal: '#168B8D',
+  ownerAccent: '#F2711C',
   white: '#FFFFFF',
   success: '#16A34A',
   warning: '#D97706',

@@ -1,6 +1,6 @@
 import { getBookingsForSpotApi, BookingApiResponse } from '@/src/api/booking';
 import { getParkingSpotsForOwner } from './parkingService';
-import { artDateFromISO } from './dateUtils';
+import { mapBookingDateRange } from './bookingDates';
 import { Booking } from '@/src/types';
 
 // "Reservas reales" para las pantallas Hoy/Calendario del propietario:
@@ -10,11 +10,6 @@ import { Booking } from '@/src/types';
 const RELEVANT_STATUSES = new Set(['CONFIRMED', 'PENDING_OWNER_APPROVAL', 'COMPLETED']);
 
 function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
-  const start = new Date(b.start);
-  const end = new Date(b.end);
-  const hours = Math.max(1, Math.round((end.getTime() - start.getTime()) / 3_600_000));
-  const startTime = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-  const endTime = end.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
   const amount = typeof b.amount === 'number' ? b.amount / 100 : 0;
 
   return {
@@ -24,10 +19,8 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
     driverId: b.user_id,
     driverName: '',
     ownerId: '',
-    date: artDateFromISO(b.start),
-    startTime,
-    endTime,
-    hours,
+    kind: b.kind,
+    ...mapBookingDateRange(b.start, b.end),
     subtotal: amount,
     serviceCharge: 0,
     total: amount,
