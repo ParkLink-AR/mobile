@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import { isRunningInExpoGo } from 'expo';
 import { deleteDeviceToken, putDeviceToken, type DevicePlatform } from '@/src/api/notifications';
 import { useAccountTypeStore, groupFor } from '@/src/store/useAccountTypeStore';
 
@@ -10,9 +10,34 @@ const BRAND_COLOR = '#168B8D';
 // here; HIGH importance makes them pop as a heads-up banner.
 export const BOOKINGS_CHANNEL_ID = 'bookings';
 
-/** Creates the Android notification channel. Safe to call repeatedly. */
+// expo-notifications registers a global device-push-token listener the
+// instant it's imported (see its DevicePushTokenAutoRegistration.fx module),
+// and that listener throws on Android as soon as it fires if we're inside
+// Expo Go -- remote push was removed from Expo Go in SDK 53. Checking
+// isRunningInExpoGo() first (the exact check expo-notifications itself uses
+// internally) avoids that entirely -- a development build (expo-dev-client)
+// or any bare/standalone build on a simulator/emulator or device still gets
+// the real thing. The try/catch is a second, broader safety net: on ANY
+// simulator/emulator/build where this native module is missing or
+// misconfigured for some unrelated reason, we still get `null` here instead
+// of an uncaught crash -- every function below already no-ops on null.
+type NotificationsModule = typeof import('expo-notifications');
+
+function loadNotifications(): NotificationsModule | null {
+  if (isRunningInExpoGo()) return null;
+  try {
+    return require('expo-notifications');
+  } catch (err) {
+    console.warn('[push] expo-notifications unavailable:', err);
+    return null;
+  }
+}
+
+const Notifications = loadNotifications();
+
+/** Creates the Android notification channel. Safe to call repeatedly. No-op in Expo Go. */
 export async function ensureNotificationChannel(): Promise<void> {
-  if (Platform.OS !== 'android') return;
+  if (Platform.OS !== 'android' || !Notifications) return;
   try {
     await Notifications.setNotificationChannelAsync(BOOKINGS_CHANNEL_ID, {
       name: 'Reservas',
@@ -28,26 +53,33 @@ export async function ensureNotificationChannel(): Promise<void> {
 // By default expo-notifications suppresses notifications while the app is in
 // the foreground. We want them shown as real system banners (same as when the
 // app is backgrounded), so FCM messages that arrive with the app open look
-// identical to the ones the OS shows on its own.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// identical to the ones the OS shows on its own. No-op in Expo Go, and
+// tolerates any other setup error instead of crashing at import time.
+try {
+  Notifications?.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+} catch (err) {
+  console.warn('[push] setNotificationHandler failed:', err);
+}
 
 /**
  * Presents an FCM message as a local system notification. Used for messages
  * that arrive while the app is in the foreground -- Android does not surface
- * those itself, so without this the user would see nothing.
+ * those itself, so without this the user would see nothing. No-op in Expo Go
+ * (which never receives FCM messages to present in the first place).
  */
 export async function presentLocalNotification(
   title: string | undefined,
   body: string | undefined,
   route: string | null,
 ): Promise<void> {
+  if (!Notifications) return;
   try {
     await Notifications.scheduleNotificationAsync({
       content: {
@@ -67,20 +99,30 @@ export async function presentLocalNotification(
 
 /**
  * Subscribes to taps on notifications presented by expo-notifications (the
- * foreground ones). Returns an unsubscribe function.
+ * foreground ones). Returns an unsubscribe function. No-op in Expo Go.
  */
 export function subscribeLocalNotificationTaps(onRoute: (path: string) => void): () => void {
-  const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-    const route = response.notification.request.content.data?.route;
-    if (typeof route === 'string' && route) onRoute(route);
-  });
-  return () => sub.remove();
+  if (!Notifications) return () => {};
+  try {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const route = response.notification.request.content.data?.route;
+      if (typeof route === 'string' && route) onRoute(route);
+    });
+    return () => sub.remove();
+  } catch (err) {
+    console.warn('[push] subscribeLocalNotificationTaps failed:', err);
+    return () => {};
+  }
 }
 
 // @react-native-firebase/messaging v22+ is modular-only: there is no default
 // `messaging()` export any more, just named functions that take the messaging
-// instance. It's also only present in a real build (not jest). Load it lazily
-// and tolerate its absence so this module stays safe to import anywhere.
+// instance. It's also only present in a real build (not jest, not Expo Go --
+// requiring it there doesn't just fail cleanly, the native module registry
+// throws an *uncaught* "Native module ... is not registered" error as a side
+// effect of the require() call itself, before our try/catch below ever gets a
+// chance to run. Skip the require entirely in Expo Go instead of relying on
+// the catch to save us -- same reasoning as the expo-notifications guard above.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type RNFBMessaging = {
   mod: any; // the module namespace (getToken, requestPermission, AuthorizationStatus, …)
@@ -88,6 +130,7 @@ type RNFBMessaging = {
 };
 
 function loadMessaging(): RNFBMessaging | null {
+  if (isRunningInExpoGo()) return null;
   try {
     const mod = require('@react-native-firebase/messaging');
     return { mod, instance: mod.getMessaging() };
