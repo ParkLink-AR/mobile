@@ -15,6 +15,11 @@ export interface BookingApiResponse {
   amount: number;
   payment_id?: string;
   kind: BookingKind;
+  // Only present when the caller IS this booking's driver -- booking-service omits
+  // it for everyone else (e.g. the owner), since the whole point is a verbal,
+  // in-person exchange. See VerifyBookingCodeUseCase/bookingResponseFromEntity.
+  verification_code?: string;
+  verified_at?: string;
   updated_at: string;
 }
 
@@ -185,6 +190,21 @@ export async function approveBookingApi(bookingId: string): Promise<BookingApiRe
  */
 export async function rejectBookingApi(bookingId: string): Promise<BookingApiResponse> {
   return request(`/bookings/${bookingId}/reject`, { method: 'POST' });
+}
+
+/**
+ * Verifies the 4-digit in-person code the driver read aloud to the owner. On a
+ * match, transitions the booking CONFIRMED -> IN_PROGRESS. Caller must own the
+ * spot; throws ApiError with a human-readable `detail` on a wrong code or once
+ * too many wrong codes have been entered.
+ *
+ * POST /bookings/{id}/verify-code
+ */
+export async function verifyBookingCodeApi(bookingId: string, code: string): Promise<BookingApiResponse> {
+  return request(`/bookings/${bookingId}/verify-code`, {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
 }
 
 /**

@@ -100,7 +100,12 @@ export type BookingStatus =
   | 'COMPLETED'
   | 'CANCELLED'
   | 'EXPIRED'
-  | 'PENDING_OWNER_APPROVAL';
+  | 'PENDING_OWNER_APPROVAL'
+  // Reached from CONFIRMED once the owner enters the driver's in-person
+  // verification code correctly. Converges into COMPLETED the same way CONFIRMED
+  // does once the booking's time window ends -- see booking-service's
+  // ExpireCompletedBookings.
+  | 'IN_PROGRESS';
 
 export interface Booking {
   id: string;
@@ -119,6 +124,12 @@ export interface Booking {
   status: BookingStatus;
   paymentId?: string;
   confirmedAt?: string;
+  // Only ever populated for the booking's own driver (booking-service omits it for
+  // everyone else) -- the 4-digit code the driver reads aloud to the spot's owner
+  // in person. Present once status is CONFIRMED; absent before or once verified
+  // (server clears attempts tracking but keeps the code, we just stop needing it).
+  verificationCode?: string;
+  verifiedAt?: string;
 }
 
 export interface Review {

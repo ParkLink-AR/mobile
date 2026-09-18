@@ -41,6 +41,7 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
     status: b.status as Booking['status'],
     paymentId: b.payment_id,
     confirmedAt: b.updated_at,
+    verificationCode: b.verification_code,
   };
 }
 
@@ -74,6 +75,18 @@ export default function DriverBookingDetail() {
     detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     detailLabel: { fontSize: 13, color: colors.textSecondary },
     detailValue: { fontSize: 13, color: colors.text, fontWeight: '600' },
+    codeCard: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.teal,
+      borderRadius: 10,
+      padding: 14,
+      alignItems: 'center',
+      gap: 4,
+    },
+    codeLabel: { fontSize: 12, color: colors.textSecondary },
+    codeValue: { fontSize: 32, fontWeight: '700', color: colors.teal, letterSpacing: 6 },
+    codeHint: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
   });
 
   if (error) {
@@ -104,6 +117,15 @@ export default function DriverBookingDetail() {
           <Text style={typography.h1}>{booking.parkingSpotTitle}</Text>
           <StatusBadge status={booking.status} />
         </View>
+
+        {booking.status === 'CONFIRMED' && booking.verificationCode && (
+          <View style={styles.codeCard}>
+            <Text style={styles.codeLabel}>{t('driver.booking.codeLabel')}</Text>
+            <Text style={styles.codeValue}>{booking.verificationCode}</Text>
+            <Text style={styles.codeHint}>{t('driver.booking.codeHint')}</Text>
+          </View>
+        )}
+
         <Text style={typography.body}>
           {booking.date} · {booking.startTime} {t('driver.booking.timeTo')} {booking.endTime}
         </Text>
