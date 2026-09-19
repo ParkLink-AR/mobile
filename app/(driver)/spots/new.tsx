@@ -229,7 +229,7 @@ export default function NewSpot() {
     },
     toggleActive: { backgroundColor: colors.ownerAccent, borderColor: colors.ownerAccent },
     toggleText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
-    toggleTextActive: { color: colors.surface, fontWeight: '700' },
+    toggleTextActive: { color: colors.deepNavy, fontWeight: '700' },
 
     photosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     photoThumbWrapper: { position: 'relative' },
@@ -303,6 +303,7 @@ export default function NewSpot() {
                 onSelect={selectAddress}
                 placeholder={t('owner.spot.new.addressPlaceholder')}
                 onSuggestionsVisibilityChange={setAddressSuggestionsOpen}
+                accentColor={colors.ownerAccent}
               />
               <TouchableOpacity
                 style={styles.locateButton}
@@ -311,9 +312,9 @@ export default function NewSpot() {
                 accessibilityLabel={t('owner.spot.new.useCurrentLocation')}
               >
                 {locating ? (
-                  <ActivityIndicator color={colors.white} size="small" />
+                  <ActivityIndicator color={colors.deepNavy} size="small" />
                 ) : (
-                  <Ionicons name="locate" size={20} color={colors.white} />
+                  <Ionicons name="locate" size={20} color={colors.deepNavy} />
                 )}
               </TouchableOpacity>
             </View>
@@ -406,6 +407,8 @@ export default function NewSpot() {
             onPress={publish}
             disabled={publishing}
             style={styles.publishBtn}
+            color={colors.ownerAccent}
+            textColor={colors.deepNavy}
           />
         </View>
       </ScrollView>

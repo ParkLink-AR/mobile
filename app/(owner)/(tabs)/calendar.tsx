@@ -162,7 +162,7 @@ export default function OwnerCalendar() {
     dayCircleToday: { borderWidth: 1.5, borderColor: colors.ownerAccent },
     dayText: { fontSize: 14, color: colors.text },
     dayTextOutOfMonth: { color: colors.textSecondary, opacity: 0.4 },
-    dayTextSelected: { color: colors.white, fontWeight: '700' },
+    dayTextSelected: { color: colors.deepNavy, fontWeight: '700' },
     dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.ownerAccent },
     dotHidden: { opacity: 0 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },

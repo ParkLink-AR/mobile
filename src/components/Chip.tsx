@@ -9,10 +9,16 @@ interface ChipProps {
   selected?: boolean;
   /** Optional leading icon (e.g. the instant-booking/requires-approval indicator). */
   icon?: keyof typeof Ionicons.glyphMap;
+  // Defaults to the driver/Conductor teal -- pass colors.ownerAccent (+ a dark
+  // selectedTextColor, since it's a light tone) from Propietario-only screens.
+  color?: string;
+  selectedTextColor?: string;
 }
 
-export function Chip({ label, onPress, onRemove, selected, icon }: ChipProps) {
+export function Chip({ label, onPress, onRemove, selected, icon, color, selectedTextColor }: ChipProps) {
   const colors = useThemeColors();
+  const accent = color ?? colors.teal;
+  const onAccent = selectedTextColor ?? colors.white;
   const styles = StyleSheet.create({
     chip: {
       flexDirection: 'row',
@@ -29,8 +35,8 @@ export function Chip({ label, onPress, onRemove, selected, icon }: ChipProps) {
       backgroundColor: colors.surface,
     },
     chipSelected: {
-      backgroundColor: colors.teal,
-      borderColor: colors.teal,
+      backgroundColor: accent,
+      borderColor: accent,
     },
     text: {
       flexShrink: 1,
@@ -40,7 +46,7 @@ export function Chip({ label, onPress, onRemove, selected, icon }: ChipProps) {
       color: colors.text,
     },
     textSelected: {
-      color: colors.white,
+      color: onAccent,
     },
     removeText: {
       fontSize: 11,
@@ -57,7 +63,7 @@ export function Chip({ label, onPress, onRemove, selected, icon }: ChipProps) {
       onPress={onRemove ?? onPress}
     >
       {icon && (
-        <Ionicons name={icon} size={13} color={selected ? colors.white : colors.teal} />
+        <Ionicons name={icon} size={13} color={selected ? onAccent : accent} />
       )}
       <Text style={[styles.text, selected && styles.textSelected]} numberOfLines={1} ellipsizeMode="tail">
         {label}

@@ -3,7 +3,7 @@ import { ColorPalette } from '../types';
 export const lightPalette: ColorPalette = {
   deepNavy: '#042347',
   teal: '#168B8D',
-  ownerAccent: '#F2711C',
+  ownerAccent: '#FFA94D',
   white: '#FFFFFF',
   success: '#16A34A',
   warning: '#D97706',

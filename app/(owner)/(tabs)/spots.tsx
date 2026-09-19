@@ -74,6 +74,8 @@ export default function OwnerSpots() {
             title={t('profile.mySpots.add')}
             onPress={() => router.push(`${group}/spots/new`)}
             style={styles.emptyBtn}
+            color={colors.ownerAccent}
+            textColor={colors.deepNavy}
           />
         </View>
       ) : (

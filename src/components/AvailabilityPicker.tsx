@@ -134,9 +134,9 @@ export function AvailabilityPicker({ value, onChange }: AvailabilityPickerProps)
       alignItems: 'center', justifyContent: 'center',
       borderWidth: 1.5, borderColor: colors.border,
     },
-    chipActive: { backgroundColor: colors.teal, borderColor: colors.teal },
+    chipActive: { backgroundColor: colors.ownerAccent, borderColor: colors.ownerAccent },
     chipText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
-    chipTextActive: { color: '#fff' },
+    chipTextActive: { color: colors.deepNavy },
 
     dayBlock: {
       marginTop: 10,
@@ -146,7 +146,7 @@ export function AvailabilityPicker({ value, onChange }: AvailabilityPickerProps)
     },
     dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     dayBlockLabel: {
-      fontSize: 12, fontWeight: '700', color: colors.teal,
+      fontSize: 12, fontWeight: '700', color: colors.ownerAccent,
       textTransform: 'uppercase', letterSpacing: 0.5,
     },
 
@@ -187,9 +187,9 @@ export function AvailabilityPicker({ value, onChange }: AvailabilityPickerProps)
       flexDirection: 'row', alignItems: 'center', gap: 4,
       alignSelf: 'flex-start', marginTop: 4,
       paddingHorizontal: 10, paddingVertical: 6,
-      borderRadius: 8, borderWidth: 1, borderColor: colors.teal,
+      borderRadius: 8, borderWidth: 1, borderColor: colors.ownerAccent,
     },
-    addSlotText: { fontSize: 12, fontWeight: '600', color: colors.teal },
+    addSlotText: { fontSize: 12, fontWeight: '600', color: colors.ownerAccent },
   });
 
   return (
@@ -295,7 +295,7 @@ export function AvailabilityPicker({ value, onChange }: AvailabilityPickerProps)
             onPress={() => addSlot(day.dayIndex)}
             accessibilityLabel={t('owner.availability.addSlot')}
           >
-            <Ionicons name="add" size={14} color={colors.teal} />
+            <Ionicons name="add" size={14} color={colors.ownerAccent} />
             <Text style={styles.addSlotText}>{t('owner.availability.addSlot')}</Text>
           </TouchableOpacity>
         </View>

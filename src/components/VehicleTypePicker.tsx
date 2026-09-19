@@ -2,6 +2,7 @@ import { View, StyleSheet } from 'react-native';
 import { Chip } from '@/src/components/Chip';
 import { VEHICLE_TYPES, VEHICLE_TYPE_LABEL_KEYS, VehicleType } from '@/src/constants/vehicleTypes';
 import { t } from '@/src/i18n';
+import { useThemeColors } from '@/src/theme/useThemeColors';
 
 interface VehicleTypePickerProps {
   value: VehicleType[];
@@ -13,7 +14,10 @@ interface VehicleTypePickerProps {
  * chips tocables, mismo componente que ya se usa para mostrar tags de sólo
  * lectura (spot/[id].tsx), acá con onPress para togglear cada uno.
  */
+// Only ever rendered from the owner-only spot create/edit forms -- always the
+// owner accent, no need to branch on the current mode.
 export function VehicleTypePicker({ value, onChange }: VehicleTypePickerProps) {
+  const colors = useThemeColors();
   const styles = StyleSheet.create({
     row: { flexDirection: 'row', flexWrap: 'wrap' },
   });
@@ -30,6 +34,8 @@ export function VehicleTypePicker({ value, onChange }: VehicleTypePickerProps) {
           label={t(VEHICLE_TYPE_LABEL_KEYS[type])}
           selected={value.includes(type)}
           onPress={() => toggle(type)}
+          color={colors.ownerAccent}
+          selectedTextColor={colors.deepNavy}
         />
       ))}
     </View>

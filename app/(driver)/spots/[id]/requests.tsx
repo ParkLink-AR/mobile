@@ -129,10 +129,10 @@ export default function SpotBookingRequests() {
     },
     approveBtn: { backgroundColor: colors.ownerAccent },
     rejectBtn: { borderWidth: 1.5, borderColor: '#C62828' },
-    approveBtnText: { color: colors.white, fontWeight: '700' },
+    approveBtnText: { color: colors.deepNavy, fontWeight: '700' },
     rejectBtnText: { color: '#C62828', fontWeight: '700' },
     verifyBtn: { backgroundColor: colors.ownerAccent },
-    verifyBtnText: { color: colors.white, fontWeight: '700' },
+    verifyBtnText: { color: colors.deepNavy, fontWeight: '700' },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
     overlay: {
@@ -170,7 +170,7 @@ export default function SpotBookingRequests() {
       flex: 1, alignItems: 'center', justifyContent: 'center',
       paddingVertical: 10, borderRadius: 10, backgroundColor: colors.ownerAccent,
     },
-    modalConfirmBtnText: { color: colors.white, fontWeight: '700' },
+    modalConfirmBtnText: { color: colors.deepNavy, fontWeight: '700' },
   });
 
   return (
@@ -228,10 +228,10 @@ export default function SpotBookingRequests() {
                     disabled={busyId === item.id}
                   >
                     {busyId === item.id ? (
-                      <ActivityIndicator color={colors.white} size="small" />
+                      <ActivityIndicator color={colors.deepNavy} size="small" />
                     ) : (
                       <>
-                        <Ionicons name="checkmark" size={16} color={colors.white} />
+                        <Ionicons name="checkmark" size={16} color={colors.deepNavy} />
                         <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
                       </>
                     )}
@@ -247,10 +247,10 @@ export default function SpotBookingRequests() {
                     disabled={busyId === item.id}
                   >
                     {busyId === item.id ? (
-                      <ActivityIndicator color={colors.white} size="small" />
+                      <ActivityIndicator color={colors.deepNavy} size="small" />
                     ) : (
                       <>
-                        <Ionicons name="keypad-outline" size={16} color={colors.white} />
+                        <Ionicons name="keypad-outline" size={16} color={colors.deepNavy} />
                         <Text style={styles.verifyBtnText}>{t('owner.spot.requests.verifyCode')}</Text>
                       </>
                     )}
@@ -287,7 +287,7 @@ export default function SpotBookingRequests() {
                 disabled={codeInput.length !== 4 || busyId === codeModalBookingId}
               >
                 {busyId === codeModalBookingId ? (
-                  <ActivityIndicator color={colors.white} size="small" />
+                  <ActivityIndicator color={colors.deepNavy} size="small" />
                 ) : (
                   <Text style={styles.modalConfirmBtnText}>{t('owner.spot.requests.verifyCodeConfirm')}</Text>
                 )}

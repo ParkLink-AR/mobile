@@ -5,10 +5,13 @@ import { Card } from '@/src/components/Card';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSettingsStore, Language } from '@/src/store/useSettingsStore';
+import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 import { t } from '@/src/i18n';
 
 export function SettingsContent() {
   const colors = useThemeColors();
+  // Shared by driver/(driver)/settings.tsx and owner's re-export of it.
+  const accent = useAccountTypeStore((s) => s.activeMode) === 'owner' ? colors.ownerAccent : colors.teal;
   const typography = useTypography();
   const [pushEnabled, setPushEnabled] = useState(true);
   const [emailEnabled, setEmailEnabled] = useState(false);
@@ -32,11 +35,11 @@ export function SettingsContent() {
       <Text style={[typography.caption, styles.sectionTitle]}>{t('settings.notifications.title')}</Text>
       <Card style={styles.card}>
         <Row label="Notificaciones push">
-          <Switch value={pushEnabled} onValueChange={setPushEnabled} trackColor={{ true: colors.teal }} />
+          <Switch value={pushEnabled} onValueChange={setPushEnabled} trackColor={{ true: accent }} />
         </Row>
         <View style={styles.divider} />
         <Row label="Notificaciones por email">
-          <Switch value={emailEnabled} onValueChange={setEmailEnabled} trackColor={{ true: colors.teal }} />
+          <Switch value={emailEnabled} onValueChange={setEmailEnabled} trackColor={{ true: accent }} />
         </Row>
       </Card>
 

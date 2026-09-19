@@ -31,6 +31,10 @@ export default function DriverProfileEdit() {
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
+  // Shared by driver's and owner's "Editar perfil" (owner re-exports this screen).
+  const isOwner = group === '/(owner)';
+  const accent = isOwner ? colors.ownerAccent : colors.teal;
+  const accentOnColor = isOwner ? colors.deepNavy : colors.white;
   const typography = useTypography();
   const user = useSessionStore((s) => s.user)!;
   const setUser = useSessionStore((s) => s.setUser);
@@ -107,18 +111,18 @@ export default function DriverProfileEdit() {
     avatarSection: { alignItems: 'center', gap: 10 },
     avatarWrapper: {
       width: 96, height: 96, borderRadius: 48,
-      backgroundColor: colors.teal,
+      backgroundColor: accent,
       alignItems: 'center', justifyContent: 'center',
       overflow: 'hidden',
     },
     avatarImage: { width: 96, height: 96, borderRadius: 48 },
-    avatarText: { color: colors.white, fontSize: 32, fontWeight: '700' },
+    avatarText: { color: accentOnColor, fontSize: 32, fontWeight: '700' },
     changePhotoBtn: {
       flexDirection: 'row', alignItems: 'center', gap: 6,
       paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
-      borderWidth: 1.5, borderColor: colors.teal,
+      borderWidth: 1.5, borderColor: accent,
     },
-    changePhotoBtnText: { fontSize: 13, fontWeight: '600', color: colors.teal },
+    changePhotoBtnText: { fontSize: 13, fontWeight: '600', color: accent },
 
     fieldGroup: { gap: 4 },
     label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', color: colors.textSecondary },
@@ -139,7 +143,7 @@ export default function DriverProfileEdit() {
     readOnlyValue: { fontSize: 15, color: colors.text },
     verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
     verifiedText: { fontSize: 11, fontWeight: '700', color: colors.success },
-    changeLink: { fontSize: 13, fontWeight: '600', color: colors.teal },
+    changeLink: { fontSize: 13, fontWeight: '600', color: accent },
   });
 
   return (
@@ -172,7 +176,7 @@ export default function DriverProfileEdit() {
               )}
             </Pressable>
             <Pressable style={styles.changePhotoBtn} onPress={pickImage}>
-              <Ionicons name="camera-outline" size={15} color={colors.teal} />
+              <Ionicons name="camera-outline" size={15} color={accent} />
               <Text style={styles.changePhotoBtnText}>
                 {avatarUri ? t('profile.edit.changePhoto') : t('profile.edit.addPhoto')}
               </Text>
@@ -243,9 +247,9 @@ export default function DriverProfileEdit() {
           </View>
 
           {saving ? (
-            <ActivityIndicator color={colors.teal} />
+            <ActivityIndicator color={accent} />
           ) : (
-            <Button title={t('common.save')} onPress={save} />
+            <Button title={t('common.save')} onPress={save} color={accent} textColor={accentOnColor} />
           )}
         </ScrollView>
       </KeyboardAvoidingView>

@@ -56,7 +56,7 @@ export default function ReviewScreen() {
   if (loading) {
     return (
       <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-        <ActivityIndicator color={colors.teal} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={role === 'owner' ? colors.ownerAccent : colors.teal} style={{ marginTop: 40 }} />
       </Screen>
     );
   }
@@ -68,7 +68,12 @@ export default function ReviewScreen() {
       <Screen style={{ ...styles.container, ...styles.emptyContainer }} edges={['left', 'right', 'bottom']}>
         <StatusIcon variant="success" />
         <Text style={typography.h2}>{t('review.allDone')}</Text>
-        <Button title={t('common.close')} onPress={() => router.back()} />
+        <Button
+          title={t('common.close')}
+          onPress={() => router.back()}
+          color={role === 'owner' ? colors.ownerAccent : undefined}
+          textColor={role === 'owner' ? colors.deepNavy : undefined}
+        />
       </Screen>
     );
   }
@@ -92,6 +97,7 @@ function ReviewForm({
   onSubmitted: (targetTypes: ReviewTargetType[]) => void;
 }) {
   const colors = useThemeColors();
+  const { role } = useLocalSearchParams<{ role: 'driver' | 'owner' }>();
   const [ratings, setRatings] = useState<Record<string, { stars: number; comment: string }>>(() =>
     Object.fromEntries(targets.map((target) => [target.targetType, { stars: 5, comment: '' }])),
   );
@@ -174,6 +180,8 @@ function ReviewForm({
         title={submitting ? t('review.submitting') : t('driver.review.submit')}
         onPress={submit}
         disabled={submitting}
+        color={role === 'owner' ? colors.ownerAccent : undefined}
+        textColor={role === 'owner' ? colors.deepNavy : undefined}
       />
     </Screen>
   );

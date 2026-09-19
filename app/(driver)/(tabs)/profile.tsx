@@ -36,6 +36,10 @@ export default function Profile() {
   const toggleMode = useSettingsStore((s) => s.toggleMode);
   const setActiveMode = useAccountTypeStore((s) => s.setActiveMode);
   const isOwner = group === '/(owner)';
+  // Shared by driver's and owner's Perfil (owner re-exports this screen) --
+  // ownerAccent is a light tone (needs dark text/icons), teal is dark (needs white).
+  const accent = isOwner ? colors.ownerAccent : colors.teal;
+  const accentOnColor = isOwner ? colors.deepNavy : colors.white;
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -121,9 +125,9 @@ export default function Profile() {
     },
     avatar: {
       width: 64, height: 64, borderRadius: 32,
-      backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center',
+      backgroundColor: accent, alignItems: 'center', justifyContent: 'center',
     },
-    avatarText: { color: colors.white, fontSize: 22, fontWeight: '700' },
+    avatarText: { color: accentOnColor, fontSize: 22, fontWeight: '700' },
     profileInfo: { flex: 1, gap: 4 },
     profileName: { fontSize: 18, fontWeight: '700', color: colors.text },
     profileEmail: { fontSize: 13, color: colors.textSecondary },
@@ -139,12 +143,12 @@ export default function Profile() {
       flexDirection: 'row', alignItems: 'center', gap: 10,
       borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16,
     },
-    editBtn: { backgroundColor: colors.teal },
-    settlementsBtn: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.teal },
+    editBtn: { backgroundColor: accent },
+    settlementsBtn: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.ownerAccent },
     logoutBtn: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: '#EF4444' },
     actionBtnText: { flex: 1, fontSize: 15, fontWeight: '600' },
-    editBtnText: { color: colors.white },
-    settlementsBtnText: { color: colors.teal },
+    editBtnText: { color: accentOnColor },
+    settlementsBtnText: { color: colors.ownerAccent },
     logoutBtnText: { color: '#EF4444' },
 
     deleteAccountLink: { alignSelf: 'center', marginTop: 2, padding: 8 },
@@ -162,7 +166,7 @@ export default function Profile() {
     prefLabel: { fontSize: 14, fontWeight: '500', color: colors.text },
 
     langCurrent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    langCurrentText: { fontSize: 14, fontWeight: '600', color: colors.teal },
+    langCurrentText: { fontSize: 14, fontWeight: '600', color: accent },
 
     themeValue: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     themeValueText: { fontSize: 14, fontWeight: '600' },
@@ -183,9 +187,9 @@ export default function Profile() {
       width: '100%', flexDirection: 'row', alignItems: 'center', gap: 14,
       paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12,
     },
-    langOptionActive: { backgroundColor: colors.teal + '22' },
+    langOptionActive: { backgroundColor: accent + '22' },
     langOptionLabel: { flex: 1, fontSize: 16, fontWeight: '600' },
-    langOptionLabelActive: { color: colors.teal },
+    langOptionLabelActive: { color: accent },
     langOptionLabelInactive: { color: colors.text },
 
     deleteWarning: {
@@ -237,9 +241,9 @@ export default function Profile() {
           style={({ pressed }) => [styles.actionBtn, styles.editBtn, { opacity: pressed ? 0.85 : 1 }]}
           onPress={() => router.push(`${group}/profile-edit`)}
         >
-          <Ionicons name="pencil-outline" size={18} color={colors.white} />
+          <Ionicons name="pencil-outline" size={18} color={accentOnColor} />
           <Text style={[styles.actionBtnText, styles.editBtnText]}>{t('driver.profile.edit')}</Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.white} />
+          <Ionicons name="chevron-forward" size={16} color={accentOnColor} />
         </Pressable>
 
         {/* Finanzas / legales — solo propietario */}
@@ -253,17 +257,17 @@ export default function Profile() {
               style={({ pressed }) => [styles.actionBtn, styles.settlementsBtn, { opacity: pressed ? 0.85 : 1 }]}
               onPress={() => router.push(`${group}/settlements`)}
             >
-              <Ionicons name="receipt-outline" size={18} color={colors.teal} />
+              <Ionicons name="receipt-outline" size={18} color={colors.ownerAccent} />
               <Text style={[styles.actionBtnText, styles.settlementsBtnText]}>{t('profile.finances')}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.teal} />
+              <Ionicons name="chevron-forward" size={16} color={colors.ownerAccent} />
             </Pressable>
             <Pressable
               style={({ pressed }) => [styles.actionBtn, styles.settlementsBtn, { opacity: pressed ? 0.85 : 1 }]}
               onPress={() => router.push(`${group}/legal`)}
             >
-              <Ionicons name="document-text-outline" size={18} color={colors.teal} />
+              <Ionicons name="document-text-outline" size={18} color={colors.ownerAccent} />
               <Text style={[styles.actionBtnText, styles.settlementsBtnText]}>{t('profile.legal')}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.teal} />
+              <Ionicons name="chevron-forward" size={16} color={colors.ownerAccent} />
             </Pressable>
           </>
         )}
@@ -288,7 +292,7 @@ export default function Profile() {
               <Text style={styles.langCurrentText}>
                 {isOwner ? t('accountType.driver.title') : t('accountType.owner.title')}
               </Text>
-              <Ionicons name="swap-horizontal-outline" size={14} color={colors.teal} />
+              <Ionicons name="swap-horizontal-outline" size={14} color={accent} />
             </View>
           </Pressable>
 
@@ -301,7 +305,7 @@ export default function Profile() {
             <Text style={styles.prefLabel}>{t('profile.language')}</Text>
             <View style={styles.langCurrent}>
               <Text style={styles.langCurrentText}>{currentLang.label}</Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.teal} />
+              <Ionicons name="chevron-forward" size={14} color={accent} />
             </View>
           </Pressable>
 
@@ -314,10 +318,10 @@ export default function Profile() {
             <Text style={styles.prefLabel}>{t('profile.theme')}</Text>
             <Animated.View style={styles.themeValue}>
               {isDark
-                ? <Ionicons name="moon" size={16} color={colors.teal} />
+                ? <Ionicons name="moon" size={16} color={accent} />
                 : <Ionicons name="sunny" size={16} color={colors.textSecondary} />
               }
-              <Text style={[styles.themeValueText, { color: isDark ? colors.teal : colors.textSecondary }]}>
+              <Text style={[styles.themeValueText, { color: isDark ? accent : colors.textSecondary }]}>
                 {isDark ? t('profile.theme.dark') : t('profile.theme.light')}
               </Text>
               <Ionicons name="swap-horizontal-outline" size={14} color={colors.textSecondary} />
@@ -392,14 +396,14 @@ export default function Profile() {
               <View style={styles.modalSheet}>
                 {deleteSuccess ? (
                   <>
-                    <Ionicons name="checkmark-circle" size={44} color={colors.teal} />
+                    <Ionicons name="checkmark-circle" size={44} color={accent} />
                     <Text style={styles.modalTitle}>{t('account.deleteAccount.successTitle')}</Text>
                     <Text style={styles.deleteWarning}>{t('account.deleteAccount.successMessage')}</Text>
                     <Pressable
-                      style={({ pressed }) => [styles.deleteConfirmBtn, { width: '100%', backgroundColor: colors.teal, opacity: pressed ? 0.85 : 1 }]}
+                      style={({ pressed }) => [styles.deleteConfirmBtn, { width: '100%', backgroundColor: accent, opacity: pressed ? 0.85 : 1 }]}
                       onPress={handleDeleteSuccessAcknowledge}
                     >
-                      <Text style={styles.deleteConfirmBtnText}>{t('account.deleteAccount.successAck')}</Text>
+                      <Text style={[styles.deleteConfirmBtnText, { color: accentOnColor }]}>{t('account.deleteAccount.successAck')}</Text>
                     </Pressable>
                   </>
                 ) : (
@@ -479,7 +483,7 @@ export default function Profile() {
                         {l.label}
                       </Text>
                       {active && (
-                        <Ionicons name="checkmark-circle" size={20} color={colors.teal} />
+                        <Ionicons name="checkmark-circle" size={20} color={accent} />
                       )}
                     </Pressable>
                   );

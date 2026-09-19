@@ -7,6 +7,7 @@ import { ParkingSpot } from '@/src/types';
 import { VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { t, useLanguage } from '@/src/i18n';
 import { Ionicons } from '@expo/vector-icons';
+import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 
 export const FAVORITE_RED = '#FF385C';
 
@@ -46,6 +47,10 @@ interface ParkingSpotCardProps {
 
 export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }: ParkingSpotCardProps) {
   const colors = useThemeColors();
+  // Reused as-is by the owner's "Cocheras" list (see (owner)/(tabs)/spots.tsx)
+  // and by the driver's search results -- same component, accent follows
+  // whichever mode is currently active so it's never teal in owner screens.
+  const accent = useAccountTypeStore((s) => s.activeMode) === 'owner' ? colors.ownerAccent : colors.teal;
   useLanguage();
   const styles = StyleSheet.create({
     card: { padding: 0, overflow: 'hidden' },
@@ -89,13 +94,13 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
       letterSpacing: -0.2,
     },
     priceBadge: {
-      backgroundColor: colors.teal + '18',
+      backgroundColor: accent + '18',
       borderRadius: 8,
       paddingHorizontal: 8,
       paddingVertical: 3,
     },
     priceText: {
-      color: colors.teal,
+      color: accent,
       fontWeight: '700',
       fontSize: 14,
     },
@@ -202,7 +207,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
           <View style={styles.tagRow}>
             {spot.vehicleTypes.length > 0 && (
               <View style={styles.tag}>
-                <Ionicons name="car-outline" size={12} color={colors.teal} />
+                <Ionicons name="car-outline" size={12} color={accent} />
                 <Text style={styles.tagText} numberOfLines={1}>
                   {spot.vehicleTypes.map((vt) => t(VEHICLE_TYPE_LABEL_KEYS[vt])).join(', ')}
                 </Text>
@@ -226,7 +231,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
                       <Ionicons
                         name={entry.iconName as any}
                         size={12}
-                        color={colors.teal}
+                        color={accent}
                       />
                     )}
                     <Text style={styles.tagText}>
@@ -240,7 +245,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
                 // se muestra acá aparte para que el buscador identifique de un
                 // vistazo qué cocheras aceptan estadía por día/semana/mes.
                 <View style={styles.tag}>
-                  <Ionicons name="calendar-outline" size={12} color={colors.teal} />
+                  <Ionicons name="calendar-outline" size={12} color={accent} />
                   <Text style={styles.tagText}>{t('spot.tag.stay')}</Text>
                 </View>
               )}

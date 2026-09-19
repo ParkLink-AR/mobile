@@ -19,6 +19,9 @@ interface AddressAutocompleteProps {
    * confirmed" message), since the dropdown floats over that space instead
    * of pushing it down. */
   onSuggestionsVisibilityChange?: (visible: boolean) => void;
+  // Defaults to the driver/Conductor teal -- pass colors.ownerAccent from the
+  // owner-only spot create/edit forms.
+  accentColor?: string;
 }
 
 /** Live, as-you-type address search (debounced) with a dropdown of every
@@ -32,9 +35,11 @@ export function AddressAutocomplete({
   onSelect,
   placeholder,
   onSuggestionsVisibilityChange,
+  accentColor,
 }: AddressAutocompleteProps) {
   useLanguage();
   const colors = useThemeColors();
+  const accent = accentColor ?? colors.teal;
   const [candidates, setCandidates] = useState<GeocodeCandidate[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
@@ -184,7 +189,7 @@ export function AddressAutocomplete({
                   style={styles.candidateRow}
                   onPress={() => handleSelect(item)}
                 >
-                  <Ionicons name="location-outline" size={18} color={colors.teal} />
+                  <Ionicons name="location-outline" size={18} color={accent} />
                   <Text style={styles.candidateMain} numberOfLines={2}>
                     {item.displayName}
                   </Text>
