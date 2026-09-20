@@ -47,6 +47,7 @@
   "driver.booking.detail.error": "予約の詳細を読み込めませんでした。もう一度お試しください。",
   "driver.booking.detail.paidAt": "支払い日時",
   "driver.booking.detail.paymentRef": "支払い参照番号",
+  "driver.booking.detail.paymentSection": "支払い",
   "driver.booking.totalPaid": "支払い合計: $%{total}",
   "driver.booking.processing": "処理中...",
   "driver.booking.confirmCash": "予約を確定 · $%{total}",

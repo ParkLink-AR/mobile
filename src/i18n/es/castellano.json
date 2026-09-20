@@ -47,6 +47,7 @@
   "driver.booking.detail.error": "No pudimos cargar el detalle de esta reserva. Intentá de nuevo.",
   "driver.booking.detail.paidAt": "Pagado el",
   "driver.booking.detail.paymentRef": "Referencia de pago",
+  "driver.booking.detail.paymentSection": "Pago",
   "driver.booking.totalPaid": "Total pagado: $%{total}",
   "driver.booking.processing": "Procesando...",
   "driver.booking.confirmCash": "Confirmar reserva · $%{total}",
