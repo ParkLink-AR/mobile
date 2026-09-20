@@ -486,7 +486,7 @@ export default function EditSpot() {
 
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.body}>
           {/* Spot info (read-only) */}
           <View style={styles.infoCard}>
