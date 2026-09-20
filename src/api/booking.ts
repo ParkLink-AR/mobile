@@ -84,7 +84,7 @@ export interface CreateBookingBody {
 
 /**
  * Creates a booking in PENDING_PAYMENT status, atomically reserving the slot
- * for the hold window (default 15 min). Returns the booking with its id.
+ * for the hold window (default 5 min). Returns the booking with its id.
  *
  * POST /bookings
  */
