@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
 import { VerifiedBadge } from '@/src/components/VerifiedBadge';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useSettingsStore, Language, FontSize } from '@/src/store/useSettingsStore';
 import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
@@ -27,6 +27,8 @@ export default function Profile() {
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const user = useSessionStore((s) => s.user);
   const refreshToken = useSessionStore((s) => s.refreshToken);
   const clearSession = useSessionStore((s) => s.clearSession);
@@ -107,43 +109,43 @@ export default function Profile() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    scrollContent: { padding: 16, paddingBottom: 120, gap: 16 },
+    scrollContent: { padding: 16, paddingBottom: 80, gap: 16 },
 
     profileCard: {
-      backgroundColor: colors.surface, borderRadius: 14, padding: 20,
+      backgroundColor: colors.surface, borderRadius: 14, padding: sc(20),
       borderWidth: 1, borderColor: colors.border,
-      flexDirection: 'row', alignItems: 'center', gap: 16,
+      flexDirection: 'column', alignItems: 'center', gap: sc(10),
     },
     avatar: {
-      width: 64, height: 64, borderRadius: 32,
+      width: sc(72), height: sc(72), borderRadius: sc(36),
       backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center',
     },
-    avatarText: { color: colors.white, fontSize: 22, fontWeight: '700' },
-    profileInfo: { flex: 1, gap: 4 },
-    profileName: { fontSize: 18, fontWeight: '700', color: colors.text },
-    profileEmail: { fontSize: 13, color: colors.textSecondary },
+    avatarText: { color: colors.white, fontSize: sc(26), fontWeight: '700' },
+    profileInfo: { width: '100%', alignItems: 'center', gap: sc(6) },
+    profileName: { fontSize: sc(18), fontWeight: '700', color: colors.text, textAlign: 'center' },
+    profileEmail: { fontSize: sc(14), color: colors.textSecondary, textAlign: 'center' },
 
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
     sectionTitle: {
-      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase',
     },
     sectionLine: { flex: 1, height: 1, backgroundColor: colors.border },
 
     actionBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 10,
-      borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16,
+      flexDirection: 'row', alignItems: 'center', gap: sc(10),
+      borderRadius: 12, paddingVertical: sc(14), paddingHorizontal: sc(16),
     },
     editBtn: { backgroundColor: colors.teal },
     settlementsBtn: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.teal },
     logoutBtn: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: '#EF4444' },
-    actionBtnText: { flex: 1, fontSize: 15, fontWeight: '600' },
+    actionBtnText: { flex: 1, fontSize: sc(15), fontWeight: '600' },
     editBtnText: { color: colors.white },
     settlementsBtnText: { color: colors.teal },
     logoutBtnText: { color: '#EF4444' },
 
     deleteAccountLink: { alignSelf: 'center', marginTop: 2, padding: 8 },
-    deleteAccountLinkText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+    deleteAccountLinkText: { fontSize: sc(13), fontWeight: '600', color: colors.textSecondary },
 
     prefCard: {
       backgroundColor: colors.surface, borderRadius: 14,
@@ -151,13 +153,13 @@ export default function Profile() {
     },
     prefRow: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      paddingHorizontal: 16, paddingVertical: 14,
+      paddingHorizontal: sc(16), paddingVertical: sc(14),
     },
     prefDivider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
-    prefLabel: { fontSize: 14, fontWeight: '500', color: colors.text },
+    prefLabel: { fontSize: sc(14), fontWeight: '500', color: colors.text },
 
     langCurrent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    langCurrentText: { fontSize: 14, fontWeight: '600', color: colors.teal },
+    langCurrentText: { fontSize: sc(14), fontWeight: '600', color: colors.teal },
 
 
     modalOverlay: {
@@ -169,39 +171,39 @@ export default function Profile() {
       backgroundColor: colors.surface, alignItems: 'center', gap: 8,
     },
     modalTitle: {
-      fontSize: 16, fontWeight: '700', color: colors.text,
+      fontSize: sc(16), fontWeight: '700', color: colors.text,
       marginBottom: 16, textAlign: 'center',
     },
     langOption: {
       width: '100%', flexDirection: 'row', alignItems: 'center', gap: 14,
-      paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12,
+      paddingVertical: sc(14), paddingHorizontal: 16, borderRadius: 12,
     },
     langOptionActive: { backgroundColor: colors.teal + '22' },
-    langOptionLabel: { flex: 1, fontSize: 16, fontWeight: '600' },
+    langOptionLabel: { flex: 1, fontSize: sc(16), fontWeight: '600' },
     langOptionLabelActive: { color: colors.teal },
     langOptionLabelInactive: { color: colors.text },
 
     deleteWarning: {
-      fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 18,
+      fontSize: sc(13), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(18),
       marginBottom: 16,
     },
     deleteInput: {
       width: '100%', borderWidth: 1, borderColor: colors.border, borderRadius: 10,
-      padding: 12, fontSize: 15, color: colors.text, marginBottom: 4,
+      padding: sc(12), fontSize: sc(15), color: colors.text, marginBottom: 4,
     },
-    deleteErrorText: { color: '#EF4444', fontSize: 13, marginBottom: 8, textAlign: 'center' },
+    deleteErrorText: { color: '#EF4444', fontSize: sc(13), marginBottom: 8, textAlign: 'center' },
     deleteActions: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 8 },
     deleteCancelBtn: {
-      flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+      flex: 1, borderRadius: 10, paddingVertical: sc(12), alignItems: 'center',
       borderWidth: 1.5, borderColor: colors.border,
     },
-    deleteCancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.text },
+    deleteCancelBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.text },
     deleteConfirmBtn: {
-      flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+      flex: 1, borderRadius: 10, paddingVertical: sc(12), alignItems: 'center',
       backgroundColor: '#EF4444',
     },
     deleteConfirmBtnDisabled: { opacity: 0.6 },
-    deleteConfirmBtnText: { fontSize: 15, fontWeight: '600', color: colors.white },
+    deleteConfirmBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.white },
   });
 
   return (
@@ -213,14 +215,24 @@ export default function Profile() {
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
             {user.avatarUrl ? (
-              <Image source={{ uri: user.avatarUrl }} style={{ width: 64, height: 64, borderRadius: 32 }} />
+              <Image source={{ uri: user.avatarUrl }} style={{ width: sc(72), height: sc(72), borderRadius: sc(36) }} />
             ) : (
               <Text style={styles.avatarText}>{initials}</Text>
             )}
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{[user.name, user.lastName].filter(Boolean).join(' ')}</Text>
-            <Text style={styles.profileEmail}>{user.email}</Text>
+            {(() => {
+              const atIdx = user.email.indexOf('@');
+              const local = atIdx >= 0 ? user.email.slice(0, atIdx) : user.email;
+              const domain = atIdx >= 0 ? user.email.slice(atIdx) : '';
+              return (
+                <>
+                  <Text style={styles.profileEmail}>{local}</Text>
+                  {domain ? <Text style={styles.profileEmail}>{domain}</Text> : null}
+                </>
+              );
+            })()}
             <VerifiedBadge />
           </View>
         </View>
@@ -230,9 +242,9 @@ export default function Profile() {
           style={({ pressed }) => [styles.actionBtn, styles.editBtn, { opacity: pressed ? 0.85 : 1 }]}
           onPress={() => router.push(`${group}/profile-edit`)}
         >
-          <Ionicons name="pencil-outline" size={18} color={colors.white} />
+          <Ionicons name="pencil-outline" size={sc(18)} color={colors.white} />
           <Text style={[styles.actionBtnText, styles.editBtnText]}>{t('driver.profile.edit')}</Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.white} />
+          <Ionicons name="chevron-forward" size={sc(16)} color={colors.white} />
         </Pressable>
 
         {/* Finanzas / legales — solo propietario */}
@@ -246,17 +258,17 @@ export default function Profile() {
               style={({ pressed }) => [styles.actionBtn, styles.settlementsBtn, { opacity: pressed ? 0.85 : 1 }]}
               onPress={() => router.push(`${group}/settlements`)}
             >
-              <Ionicons name="receipt-outline" size={18} color={colors.teal} />
+              <Ionicons name="receipt-outline" size={sc(18)} color={colors.teal} />
               <Text style={[styles.actionBtnText, styles.settlementsBtnText]}>{t('profile.finances')}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.teal} />
+              <Ionicons name="chevron-forward" size={sc(16)} color={colors.teal} />
             </Pressable>
             <Pressable
               style={({ pressed }) => [styles.actionBtn, styles.settlementsBtn, { opacity: pressed ? 0.85 : 1 }]}
               onPress={() => router.push(`${group}/legal`)}
             >
-              <Ionicons name="document-text-outline" size={18} color={colors.teal} />
+              <Ionicons name="document-text-outline" size={sc(18)} color={colors.teal} />
               <Text style={[styles.actionBtnText, styles.settlementsBtnText]}>{t('profile.legal')}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.teal} />
+              <Ionicons name="chevron-forward" size={sc(16)} color={colors.teal} />
             </Pressable>
           </>
         )}
@@ -281,7 +293,7 @@ export default function Profile() {
               <Text style={styles.langCurrentText}>
                 {isOwner ? t('accountType.owner.title') : t('accountType.driver.title')}
               </Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.teal} />
+              <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
             </View>
           </Pressable>
 
@@ -294,7 +306,7 @@ export default function Profile() {
             <Text style={styles.prefLabel}>{t('profile.language')}</Text>
             <View style={styles.langCurrent}>
               <Text style={styles.langCurrentText}>{currentLang.label}</Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.teal} />
+              <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
             </View>
           </Pressable>
 
@@ -309,7 +321,7 @@ export default function Profile() {
               <Text style={styles.langCurrentText}>
                 {isDark ? t('profile.theme.dark') : t('profile.theme.light')}
               </Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.teal} />
+              <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
             </View>
           </Pressable>
 
@@ -324,7 +336,7 @@ export default function Profile() {
               <Text style={styles.langCurrentText}>
                 {t(fontSize === 'small' ? 'settings.fontSize.small' : fontSize === 'medium' ? 'settings.fontSize.medium' : 'settings.fontSize.large')}
               </Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.teal} />
+              <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
             </View>
           </Pressable>
         </View>
@@ -338,7 +350,7 @@ export default function Profile() {
           style={({ pressed }) => [styles.actionBtn, styles.logoutBtn, { opacity: pressed ? 0.8 : 1 }]}
           onPress={() => setLogoutModalVisible(true)}
         >
-          <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+          <Ionicons name="log-out-outline" size={sc(20)} color="#EF4444" />
           <Text style={[styles.actionBtnText, styles.logoutBtnText]}>{t('account.logout')}</Text>
         </Pressable>
 

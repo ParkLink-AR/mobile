@@ -141,7 +141,7 @@ export default function OwnerCalendar() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 16, paddingBottom: 120, gap: 16 },
+    content: { padding: 16, paddingBottom: 80, gap: 16 },
     monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     monthLabel: { fontSize: 17, fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
     navBtn: { padding: 6 },

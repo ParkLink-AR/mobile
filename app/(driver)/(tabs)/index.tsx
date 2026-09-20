@@ -609,7 +609,7 @@ export function SearchScreen() {
     listContent: {
       padding: 16,
       gap: 12,
-      paddingBottom: 120,
+      paddingBottom: 80,
     },
     // ── Map view ────────────────────────────────────────────────────────────
     mapWrapper: {

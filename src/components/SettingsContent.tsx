@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
 import { Card } from '@/src/components/Card';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSettingsStore, Language, FontSize } from '@/src/store/useSettingsStore';
 import { t } from '@/src/i18n';
 
@@ -67,13 +67,15 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 function useModalStyles() {
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   return StyleSheet.create({
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
     sheet: { width: '85%', borderRadius: 20, paddingVertical: 32, paddingHorizontal: 24, backgroundColor: colors.surface, alignItems: 'center', gap: 8 },
-    title: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 16, textAlign: 'center' },
-    option: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12 },
+    title: { fontSize: sc(16), fontWeight: '700', color: colors.text, marginBottom: 16, textAlign: 'center' },
+    option: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: sc(14), paddingHorizontal: 16, borderRadius: 12 },
     optionActive: { backgroundColor: colors.teal + '22' },
-    optionLabel: { flex: 1, fontSize: 16, fontWeight: '600' },
+    optionLabel: { flex: 1, fontSize: sc(16), fontWeight: '600' },
     optionLabelActive: { color: colors.teal },
     optionLabelInactive: { color: colors.text },
   });
@@ -83,13 +85,15 @@ function useModalStyles() {
 
 function ValueChip({ label, onPress }: { label: string; onPress: () => void }) {
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, opacity: pressed ? 0.7 : 1 })}
     >
-      <Text style={{ fontSize: 14, fontWeight: '600', color: colors.teal }}>{label}</Text>
-      <Ionicons name="chevron-forward" size={14} color={colors.teal} />
+      <Text style={{ fontSize: sc(14), fontWeight: '600', color: colors.teal }}>{label}</Text>
+      <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
     </Pressable>
   );
 }

@@ -5,13 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useUnseenNotificationsCount } from '@/src/store/useNotificationsStore';
 import { t, useLanguage } from '@/src/i18n';
-import { useSettingsStore } from '@/src/store/useSettingsStore';
-
-const ICON_SCALE: Record<'small' | 'medium' | 'large', number> = {
-  small: 1,
-  medium: 1.15,
-  large: 1.3,
-};
+import { useScale } from '@/src/theme/typography';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -35,8 +29,7 @@ export function OwnerDockTabBar({ state, navigation }: BottomTabBarProps) {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const unseenCount = useUnseenNotificationsCount();
-  const fontSize = useSettingsStore((s) => s.fontSize);
-  const scale = ICON_SCALE[fontSize ?? 'large'];
+  const scale = Math.min(useScale(), 1.4);
   const iconSize = Math.round(28 * scale);
   const tabPaddingH = Math.round(20 * scale);
   const tabPaddingV = Math.round(8 * scale);
