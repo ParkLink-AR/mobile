@@ -274,6 +274,7 @@
   "common.yes": "Yes",
   "common.no": "No",
   "common.retry": "Retry",
+  "common.continue": "Continue",
 
   "account.settings.label": "Settings",
   "account.myAccount": "My account",
@@ -442,6 +443,8 @@
   "driver.payment.errorTitle": "Payment error",
   "driver.payment.errorCreatingPreference": "We couldn't start the payment. Please try again.",
   "driver.payment.approved": "Your booking is confirmed. You're good to go!",
+  "driver.payment.confirmed.title": "Payment confirmed!",
+  "driver.payment.confirmed.bodyWithDate": "You paid on %{date}. Your spot is already reserved.",
   "driver.payment.pending.title": "Processing payment…",
   "driver.payment.pending.body": "Waiting for Mercado Pago confirmation.",
   "driver.payment.rejected.title": "Payment rejected",

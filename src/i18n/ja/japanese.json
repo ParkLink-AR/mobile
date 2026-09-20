@@ -274,6 +274,7 @@
   "common.yes": "はい",
   "common.no": "いいえ",
   "common.retry": "再試行",
+  "common.continue": "続ける",
 
   "account.settings.label": "設定",
   "account.myAccount": "マイアカウント",
@@ -442,6 +443,8 @@
   "driver.payment.errorTitle": "支払いエラー",
   "driver.payment.errorCreatingPreference": "支払いを開始できませんでした。もう一度お試しください。",
   "driver.payment.approved": "予約が確定しました。駐車場へどうぞ！",
+  "driver.payment.confirmed.title": "支払いが確認されました！",
+  "driver.payment.confirmed.bodyWithDate": "%{date}に支払いが完了しました。駐車スペースはすでに予約されています。",
   "driver.payment.pending.title": "支払い処理中…",
   "driver.payment.pending.body": "Mercado Pagoの確認を待っています。",
   "driver.payment.rejected.title": "支払い拒否",

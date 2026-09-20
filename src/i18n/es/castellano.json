@@ -274,6 +274,7 @@
   "common.yes": "Sí",
   "common.no": "No",
   "common.retry": "Reintentar",
+  "common.continue": "Continuar",
 
   "account.settings.label": "Configuración",
   "account.myAccount": "Mi cuenta",
@@ -442,6 +443,8 @@
   "driver.payment.errorTitle": "Error al pagar",
   "driver.payment.errorCreatingPreference": "No pudimos iniciar el pago. Intentá de nuevo.",
   "driver.payment.approved": "Tu reserva fue confirmada. ¡Ya podés ir a estacionar!",
+  "driver.payment.confirmed.title": "¡Pago confirmado!",
+  "driver.payment.confirmed.bodyWithDate": "Pagaste el %{date}. Tu cochera ya está reservada.",
   "driver.payment.pending.title": "Procesando pago…",
   "driver.payment.pending.body": "Estamos esperando la confirmación de Mercado Pago.",
   "driver.payment.rejected.title": "Pago rechazado",
