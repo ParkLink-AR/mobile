@@ -1,9 +1,10 @@
 import { t, useLanguage } from '@/src/i18n';
 import { ApiError } from '@/src/api/client';
 import { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, ActivityIndicator, ScrollView, StyleSheet, Alert, Platform } from 'react-native';
 import { useLocalSearchParams, useSegments, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -199,17 +200,39 @@ export default function ConfirmBooking() {
       return;
     }
 
-    // ── Step 3: open MP checkout in an in-app browser ───────────────────────
-    // The browser closes when MP redirects to parklink://payment/pending
-    await WebBrowser.openBrowserAsync(checkoutUrl, {
-      dismissButtonStyle: 'cancel',
-      presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-    });
+    // ── Step 3: open MP checkout as an auth session ─────────────────────────
+    // openAuthSessionAsync (not openBrowserAsync) is the API built for this
+    // exact pattern -- it watches for the parklink://payment/pending redirect
+    // and closes the browser itself as soon as it fires, instead of relying
+    // on the OS to notice the deep link and dismiss it on its own. That used
+    // to race against the router.replace below: Expo Router would sometimes
+    // already be navigating from the deep link while this code also
+    // navigated, landing the user on whichever screen won the race.
+    //
+    // Web only: expo-web-browser's web implementation opens the auth session
+    // via window.open(), which browsers require to fire synchronously from
+    // the user's tap -- by this point we've already awaited two API calls
+    // (create booking, create preference), so it no longer qualifies and
+    // openAuthSessionAsync throws ERR_WEB_BROWSER_BLOCKED. openBrowserAsync
+    // doesn't have that restriction there; native has neither restriction.
+    if (Platform.OS === 'web') {
+      await WebBrowser.openBrowserAsync(checkoutUrl, {
+        dismissButtonStyle: 'cancel',
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+      });
+    } else {
+      await WebBrowser.openAuthSessionAsync(checkoutUrl, 'parklink://payment', {
+        dismissButtonStyle: 'cancel',
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+      });
+    }
 
     // ── Step 4: navigate to pending screen to poll for confirmation ─────────
     // This runs after the browser closes (either by redirect or by the user
     // pressing Cancel). pending.tsx polls payment-service until the webhook
-    // has confirmed (or rejected) the payment.
+    // has confirmed (or rejected) the payment -- it's also where the deep
+    // link itself lands now (see payment-service's /payment-return), so this
+    // is a no-op re-navigation to the same screen in that case, not a race.
     setProcessing(false);
     router.replace({
       pathname: `${group}/payment/pending`,
@@ -237,67 +260,125 @@ export default function ConfirmBooking() {
   const visibleTotal = visiblePricePerHour * reservedHours;
 
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.surface },
-    scrollContent: { padding: 16, gap: 8 },
-    sectionTitle: { marginTop: 10, marginBottom: 2 },
-    button: { marginTop: 16 },
+    screen: { flex: 1, backgroundColor: colors.background },
+    body: { padding: 16, gap: 14 },
+
+    heroCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 16,
+      gap: 4,
+    },
+    spotTitle: { fontSize: 19, fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
+    addressRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    spotAddress: { flex: 1, fontSize: 13, color: colors.textSecondary, lineHeight: 17 },
+
+    card: { gap: 12 },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    sectionLabel: {
+      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      letterSpacing: 0.8, textTransform: 'uppercase',
+    },
+    detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    detailLabel: { flex: 1, fontSize: 14, color: colors.textSecondary },
+    detailValue: { fontSize: 14, color: colors.text, fontWeight: '600' },
+    divider: { height: 1, backgroundColor: colors.border },
+    totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    totalLabel: { fontSize: 14, color: colors.text, fontWeight: '600' },
+    totalValue: { fontSize: 18, color: colors.teal, fontWeight: '700' },
+
+    button: { marginTop: 2 },
   });
 
   return (
-    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Card>
-          <Text style={typography.h2}>{spot.title}</Text>
-          <Text style={typography.caption}>{spot.address}</Text>
-        </Card>
-        <Text style={[typography.caption, styles.sectionTitle]}>{t('driver.booking.summary')}</Text>
-        <Row
-          label={t('driver.booking.date')}
-          value={bookingDate
-            ? new Date(bookingDate + 'T12:00:00').toLocaleDateString('es-AR')
-            : new Date().toLocaleDateString('es-AR')}
-        />
-        <Row
-          label={t('driver.booking.time')}
-          value={`${String(start).padStart(2, '0')}:00 ${t('driver.booking.timeTo')} ${String(end).padStart(2, '0')}:00`}
-        />
-        {spot.pricePerHourByVehicleType && effectiveVehicleType && (
-          <Row label={t('spot.vehicleType')} value={t(VEHICLE_TYPE_LABEL_KEYS[effectiveVehicleType])} />
-        )}
-        <Row label={t('driver.booking.pricePerHour')} value={`$${visiblePricePerHour}`} />
-        <Row label={t('driver.booking.hours')} value={`${reservedHours} ${t('driver.booking.hoursUnit')}`} />
-        <Row label={t('driver.booking.total')} value={`$${visibleTotal}`} bold />
-        <Text style={[typography.caption, styles.sectionTitle]}>{t('driver.booking.methodPayment')}</Text>
-        <Card>
-          <Text style={typography.body}>Mercado Pago</Text>
-        </Card>
-        <Button
-          title={
-            processing
-              ? t('driver.booking.processing')
-              : t('driver.booking.confirmPay').replace('%{total}', String(visibleTotal))
-          }
-          onPress={reserve}
-          disabled={processing}
-          style={styles.button}
-        />
+    <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.body}>
+          <View style={styles.heroCard}>
+            <Text style={styles.spotTitle}>{spot.title}</Text>
+            <View style={styles.addressRow}>
+              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+              <Text style={styles.spotAddress} numberOfLines={2}>{spot.address}</Text>
+            </View>
+          </View>
+
+          <Card>
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+                <Text style={styles.sectionLabel}>{t('driver.booking.summary')}</Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>{t('driver.booking.date')}</Text>
+                <Text style={styles.detailValue}>
+                  {bookingDate
+                    ? new Date(bookingDate + 'T12:00:00').toLocaleDateString('es-AR')
+                    : new Date().toLocaleDateString('es-AR')}
+                </Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>{t('driver.booking.time')}</Text>
+                <Text style={styles.detailValue}>
+                  {String(start).padStart(2, '0')}:00 {t('driver.booking.timeTo')} {String(end).padStart(2, '0')}:00
+                </Text>
+              </View>
+              {spot.pricePerHourByVehicleType && effectiveVehicleType && (
+                <View style={styles.detailRow}>
+                  <Ionicons name="car-outline" size={16} color={colors.textSecondary} />
+                  <Text style={styles.detailLabel}>{t('spot.vehicleType')}</Text>
+                  <Text style={styles.detailValue}>{t(VEHICLE_TYPE_LABEL_KEYS[effectiveVehicleType])}</Text>
+                </View>
+              )}
+              <View style={styles.detailRow}>
+                <Ionicons name="pricetag-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>{t('driver.booking.pricePerHour')}</Text>
+                <Text style={styles.detailValue}>${visiblePricePerHour}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Ionicons name="hourglass-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>{t('driver.booking.hours')}</Text>
+                <Text style={styles.detailValue}>{reservedHours} {t('driver.booking.hoursUnit')}</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>{t('driver.booking.total')}</Text>
+                <Text style={styles.totalValue}>${visibleTotal}</Text>
+              </View>
+            </View>
+          </Card>
+
+          <Card>
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="card-outline" size={15} color={colors.textSecondary} />
+                <Text style={styles.sectionLabel}>{t('driver.booking.methodPayment')}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Ionicons name="wallet-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailValue}>Mercado Pago</Text>
+              </View>
+            </View>
+          </Card>
+
+          <Button
+            title={
+              processing
+                ? t('driver.booking.processing')
+                : t('driver.booking.confirmPay').replace('%{total}', String(visibleTotal))
+            }
+            onPress={reserve}
+            disabled={processing}
+            style={styles.button}
+          />
+        </View>
       </ScrollView>
     </Screen>
-  );
-}
-
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  const colors = useThemeColors();
-  const typography = useTypography();
-  const styles = StyleSheet.create({
-    row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  });
-  return (
-    <View style={styles.row}>
-      <Text style={typography.body}>{label}</Text>
-      <Text style={[typography.body, bold && { fontWeight: '700', color: colors.teal }]}>
-        {value}
-      </Text>
-    </View>
   );
 }

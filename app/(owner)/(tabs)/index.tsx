@@ -76,7 +76,7 @@ export default function OwnerToday() {
     },
     sectionLine: { flex: 1, height: 1, backgroundColor: colors.border },
     emptyCard: {
-      backgroundColor: colors.surface, borderRadius: 12,
+      backgroundColor: colors.surface, borderRadius: 14,
       borderWidth: 1, borderColor: colors.border,
       padding: 24, alignItems: 'center', gap: 8,
     },

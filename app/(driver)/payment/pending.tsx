@@ -15,6 +15,21 @@ type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'unknown';
 
 interface VerifyStatusResponse {
   currentStatus: string;
+  transaction?: { approved_at?: string | null } | null;
+}
+
+function formatApprovedAt(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
 }
 
 // Poll every 2 seconds, up to 2 minutes (60 attempts).
@@ -34,6 +49,11 @@ export default function PaymentPendingScreen() {
   // Set only once the payment itself is approved -- distinguishes a spot
   // that auto-confirms from one where the owner still has to sign off.
   const [awaitingOwner, setAwaitingOwner] = useState(false);
+  const [approvedAt, setApprovedAt] = useState<string | null>(null);
+  // Payment approval shows its own confirmation step first ("pagaste el
+  // <fecha>, ya está reservado" + Continuar) before revealing what comes
+  // next -- the owner-approval notice, or (tapping Continuar) home.
+  const [acknowledged, setAcknowledged] = useState(false);
   const pollCount = useRef(0);
 
   useEffect(() => {
@@ -53,6 +73,7 @@ export default function PaymentPendingScreen() {
         if (mpStatus === 'approved') {
           clearInterval(timer);
           setStatus('approved');
+          setApprovedAt(res?.transaction?.approved_at ?? null);
           try {
             const booking = await getBookingApi(bookingId);
             setAwaitingOwner(booking.status === 'PENDING_OWNER_APPROVAL');
@@ -90,17 +111,41 @@ export default function PaymentPendingScreen() {
     card: { width: '100%', marginVertical: 12 },
   });
 
-  if (status === 'approved') {
+  if (status === 'approved' && !acknowledged) {
     return (
       <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-        <StatusIcon variant={awaitingOwner ? 'unknown' : 'success'} />
-        <Text style={typography.h1}>
-          {awaitingOwner ? t('driver.booking.pendingOwnerApproval.title') : t('driver.booking.success.title')}
-        </Text>
+        <StatusIcon variant="success" />
+        <Text style={typography.h1}>{t('driver.payment.confirmed.title')}</Text>
         <Card style={styles.card}>
           <Text style={typography.body}>
-            {awaitingOwner ? t('driver.booking.pendingOwnerApproval.body') : t('driver.payment.approved')}
+            {approvedAt
+              ? t('driver.payment.confirmed.bodyWithDate', { date: formatApprovedAt(approvedAt) })
+              : t('driver.payment.approved')}
           </Text>
+        </Card>
+        <Button
+          title={t('common.continue')}
+          onPress={() => {
+            if (awaitingOwner) {
+              setAcknowledged(true);
+            } else {
+              router.replace(`${group}/(tabs)`);
+            }
+          }}
+        />
+      </Screen>
+    );
+  }
+
+  if (status === 'approved' && acknowledged) {
+    // Only reached when awaitingOwner is true -- the else branch above
+    // (nothing left to confirm) goes straight home instead.
+    return (
+      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
+        <StatusIcon variant="unknown" />
+        <Text style={typography.h1}>{t('driver.booking.pendingOwnerApproval.title')}</Text>
+        <Card style={styles.card}>
+          <Text style={typography.body}>{t('driver.booking.pendingOwnerApproval.body')}</Text>
         </Card>
         <Button
           title={t('driver.booking.success.viewBookings')}
@@ -120,7 +165,7 @@ export default function PaymentPendingScreen() {
         </Card>
         <Button
           title={t('driver.payment.rejected.retry')}
-          onPress={() => router.replace(`${group}/(tabs)/index`)}
+          onPress={() => router.replace(`${group}/(tabs)`)}
         />
       </Screen>
     );
@@ -150,7 +195,7 @@ export default function PaymentPendingScreen() {
       <Text style={[typography.body, { textAlign: 'center' }]}>{t('driver.payment.pending.body')}</Text>
       <Button
         title={t('common.cancel')}
-        onPress={() => router.replace(`${group}/(tabs)/index`)}
+        onPress={() => router.replace(`${group}/(tabs)`)}
         style={{ marginTop: 24, backgroundColor: 'transparent', borderWidth: 1, borderColor: '#888' }}
       />
     </Screen>

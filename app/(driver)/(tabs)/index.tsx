@@ -476,6 +476,14 @@ export function SearchScreen() {
       alignItems: 'center',
       justifyContent: 'center',
     },
+    favoritesButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: colors.teal,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     statusText: {
       paddingHorizontal: 20,
       paddingTop: 8,
@@ -806,6 +814,13 @@ export function SearchScreen() {
               <Ionicons name="locate" size={20} color={colors.white} />
             )}
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.favoritesButton}
+            onPress={() => router.push('/(driver)/(tabs)/favorites')}
+            accessibilityLabel={t('tabs.driver.favorites')}
+          >
+            <Ionicons name="heart-outline" size={20} color={colors.white} />
+          </TouchableOpacity>
         </View>
 
         {showSuggestions && (
@@ -830,16 +845,6 @@ export function SearchScreen() {
           </View>
         )}
       </View>
-      {!searchAddress && (
-        <Text style={styles.statusText}>
-          {locationError
-            ? locationError
-            : location
-            ? `📍 ${t('search.location.searching')}`
-            : t('search.location.locating')}
-        </Text>
-      )}
-
       {/* ── Toolbar ────────────────────────────────────────────────── */}
       <View style={styles.toolbar}>
         <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
@@ -1026,7 +1031,7 @@ export function SearchScreen() {
                 { position: 'absolute', top: 60, left: 0, right: 0, backgroundColor: 'transparent' },
               ]}
             >
-              <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, alignItems: 'center', gap: 8 }}>
+              <View style={{ backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 16, alignItems: 'center', gap: 8 }}>
                 <Ionicons name="car-outline" size={28} color={colors.textSecondary} />
                 <Text style={styles.feedbackText}>{t('search.noResults')}</Text>
               </View>

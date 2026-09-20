@@ -266,7 +266,7 @@ export default function NewSpot() {
 
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.body}>
           {/* Photos */}
           <View style={styles.card}>

@@ -1,38 +1,19 @@
-import { t, useLanguage } from '@/src/i18n';
-import { Text, StyleSheet } from 'react-native';
-import { router, useSegments } from 'expo-router';
-import { Card } from '@/src/components/Card';
-import { Button } from '@/src/components/Button';
-import { Screen } from '@/src/components/Screen';
-import { StatusIcon } from '@/src/components/StatusIcon';
-import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useEffect } from 'react';
+import { router, useLocalSearchParams, useSegments } from 'expo-router';
 
-// Deep-link handler for parklink://payment/success
-// MP redirects here after a successful payment. We just show a confirmation
-// and send the user to their bookings list.
+// Deep-link handler for parklink://payment/success. payment-service's
+// /payment-return bridge no longer sends anyone here -- it always targets
+// payment/pending, the only screen that actually verifies the payment with
+// the backend instead of trusting Mercado Pago's redirect at face value.
+// Kept as a redirect (not deleted) in case a stale cached link still points
+// here.
 export default function PaymentSuccessScreen() {
-  useLanguage();
   const group = `/${useSegments()[0]}`;
-  const colors = useThemeColors();
-  const typography = useTypography();
+  const { bookingId } = useLocalSearchParams<{ bookingId?: string }>();
 
-  const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.surface, padding: 24, alignItems: 'center', justifyContent: 'center', gap: 16 },
-    card: { width: '100%', marginVertical: 12 },
-  });
+  useEffect(() => {
+    router.replace({ pathname: `${group}/payment/pending`, params: bookingId ? { bookingId } : {} });
+  }, [bookingId]);
 
-  return (
-    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-      <StatusIcon variant="success" />
-      <Text style={typography.h1}>{t('driver.booking.success.title')}</Text>
-      <Card style={styles.card}>
-        <Text style={typography.body}>{t('driver.payment.approved')}</Text>
-      </Card>
-      <Button
-        title={t('driver.booking.success.viewBookings')}
-        onPress={() => router.replace(`${group}/(tabs)/bookings`)}
-      />
-    </Screen>
-  );
+  return null;
 }

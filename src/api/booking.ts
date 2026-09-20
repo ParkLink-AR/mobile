@@ -84,7 +84,7 @@ export interface CreateBookingBody {
 
 /**
  * Creates a booking in PENDING_PAYMENT status, atomically reserving the slot
- * for the hold window (default 15 min). Returns the booking with its id.
+ * for the hold window (default 5 min). Returns the booking with its id.
  *
  * POST /bookings
  */
@@ -190,6 +190,17 @@ export async function approveBookingApi(bookingId: string): Promise<BookingApiRe
  */
 export async function rejectBookingApi(bookingId: string): Promise<BookingApiResponse> {
   return request(`/bookings/${bookingId}/reject`, { method: 'POST' });
+}
+
+/**
+ * Cancels a CONFIRMED or PENDING_OWNER_APPROVAL booking and refunds the
+ * driver. Only the booking's own driver can call this, and only when there
+ * is more than 1 hour until the booking's start time.
+ *
+ * POST /bookings/{id}/cancel
+ */
+export async function cancelBookingApi(bookingId: string): Promise<BookingApiResponse> {
+  return request(`/bookings/${bookingId}/cancel`, { method: 'POST' });
 }
 
 /**
