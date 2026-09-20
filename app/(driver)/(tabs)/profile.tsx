@@ -1,8 +1,8 @@
 import { t, useLanguage } from '@/src/i18n';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   Text, View, ScrollView, StyleSheet, Pressable, Image, TextInput, ActivityIndicator,
-  Modal, Animated, TouchableWithoutFeedback,
+  Modal, TouchableWithoutFeedback,
 } from 'react-native';
 import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +11,7 @@ import { VerifiedBadge } from '@/src/components/VerifiedBadge';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { useSettingsStore, Language } from '@/src/store/useSettingsStore';
+import { useSettingsStore, Language, FontSize } from '@/src/store/useSettingsStore';
 import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 import { logout as logoutRequest, deleteAccount } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
@@ -34,25 +34,20 @@ export default function Profile() {
   const setLanguage = useSettingsStore((s) => s.setLanguage);
   const mode = useSettingsStore((s) => s.mode);
   const toggleMode = useSettingsStore((s) => s.toggleMode);
+  const fontSize = useSettingsStore((s) => s.fontSize);
+  const setFontSize = useSettingsStore((s) => s.setFontSize);
   const setActiveMode = useAccountTypeStore((s) => s.setActiveMode);
   const isOwner = group === '/(owner)';
   const [langModalVisible, setLangModalVisible] = useState(false);
+  const [modeModalVisible, setModeModalVisible] = useState(false);
+  const [themeModalVisible, setThemeModalVisible] = useState(false);
+  const [fontSizeModalVisible, setFontSizeModalVisible] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
-
-  const themeAnim = useRef(new Animated.Value(mode === 'dark' ? 1 : 0)).current;
-
-  useEffect(() => {
-    Animated.timing(themeAnim, {
-      toValue: mode === 'dark' ? 1 : 0,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-  }, [mode]);
 
   if (!user) return null;
 
@@ -164,8 +159,6 @@ export default function Profile() {
     langCurrent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     langCurrentText: { fontSize: 14, fontWeight: '600', color: colors.teal },
 
-    themeValue: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    themeValueText: { fontSize: 14, fontWeight: '600' },
 
     modalOverlay: {
       flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
@@ -281,14 +274,14 @@ export default function Profile() {
               solo modo (ver el comentario en useAccountTypeStore.groupFor). */}
           <Pressable
             style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={switchMode}
+            onPress={() => setModeModalVisible(true)}
           >
             <Text style={styles.prefLabel}>{t('profile.changeMode')}</Text>
             <View style={styles.langCurrent}>
               <Text style={styles.langCurrentText}>
-                {isOwner ? t('accountType.driver.title') : t('accountType.owner.title')}
+                {isOwner ? t('accountType.owner.title') : t('accountType.driver.title')}
               </Text>
-              <Ionicons name="swap-horizontal-outline" size={14} color={colors.teal} />
+              <Ionicons name="chevron-forward" size={14} color={colors.teal} />
             </View>
           </Pressable>
 
@@ -309,19 +302,30 @@ export default function Profile() {
 
           <Pressable
             style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={toggleMode}
+            onPress={() => setThemeModalVisible(true)}
           >
             <Text style={styles.prefLabel}>{t('profile.theme')}</Text>
-            <Animated.View style={styles.themeValue}>
-              {isDark
-                ? <Ionicons name="moon" size={16} color={colors.teal} />
-                : <Ionicons name="sunny" size={16} color={colors.textSecondary} />
-              }
-              <Text style={[styles.themeValueText, { color: isDark ? colors.teal : colors.textSecondary }]}>
+            <View style={styles.langCurrent}>
+              <Text style={styles.langCurrentText}>
                 {isDark ? t('profile.theme.dark') : t('profile.theme.light')}
               </Text>
-              <Ionicons name="swap-horizontal-outline" size={14} color={colors.textSecondary} />
-            </Animated.View>
+              <Ionicons name="chevron-forward" size={14} color={colors.teal} />
+            </View>
+          </Pressable>
+
+          <View style={styles.prefDivider} />
+
+          <Pressable
+            style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => setFontSizeModalVisible(true)}
+          >
+            <Text style={styles.prefLabel}>{t('settings.fontSize')}</Text>
+            <View style={styles.langCurrent}>
+              <Text style={styles.langCurrentText}>
+                {t(fontSize === 'small' ? 'settings.fontSize.small' : fontSize === 'medium' ? 'settings.fontSize.medium' : 'settings.fontSize.large')}
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.teal} />
+            </View>
           </Pressable>
         </View>
 
@@ -481,6 +485,133 @@ export default function Profile() {
                       {active && (
                         <Ionicons name="checkmark-circle" size={20} color={colors.teal} />
                       )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Mode selection modal */}
+      <Modal
+        visible={modeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModeModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setModeModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalSheet}>
+                <Text style={styles.modalTitle}>{t('profile.changeMode')}</Text>
+                {([
+                  { key: 'driver', label: t('accountType.driver.title') },
+                  { key: 'owner',  label: t('accountType.owner.title') },
+                ] as const).map((opt) => {
+                  const active = isOwner ? opt.key === 'owner' : opt.key === 'driver';
+                  return (
+                    <Pressable
+                      key={opt.key}
+                      style={({ pressed }) => [
+                        styles.langOption,
+                        active && styles.langOptionActive,
+                        { opacity: pressed ? 0.7 : 1 },
+                      ]}
+                      onPress={() => {
+                        setModeModalVisible(false);
+                        if (!active) switchMode();
+                      }}
+                    >
+                      <Text style={[styles.langOptionLabel, active ? styles.langOptionLabelActive : styles.langOptionLabelInactive]}>
+                        {opt.label}
+                      </Text>
+                      {active && <Ionicons name="checkmark-circle" size={20} color={colors.teal} />}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Theme selection modal */}
+      <Modal
+        visible={themeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setThemeModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setThemeModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalSheet}>
+                <Text style={styles.modalTitle}>{t('profile.theme')}</Text>
+                {([{ key: 'light', label: t('profile.theme.light') }, { key: 'dark', label: t('profile.theme.dark') }] as const).map((opt) => {
+                  const active = mode === opt.key;
+                  return (
+                    <Pressable
+                      key={opt.key}
+                      style={({ pressed }) => [
+                        styles.langOption,
+                        active && styles.langOptionActive,
+                        { opacity: pressed ? 0.7 : 1 },
+                      ]}
+                      onPress={() => {
+                        if (!active) toggleMode();
+                        setThemeModalVisible(false);
+                      }}
+                    >
+                      <Text style={[styles.langOptionLabel, active ? styles.langOptionLabelActive : styles.langOptionLabelInactive]}>
+                        {opt.label}
+                      </Text>
+                      {active && <Ionicons name="checkmark-circle" size={20} color={colors.teal} />}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Font size selection modal */}
+      <Modal
+        visible={fontSizeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFontSizeModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setFontSizeModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalSheet}>
+                <Text style={styles.modalTitle}>{t('settings.fontSize')}</Text>
+                {([
+                  { key: 'small',  label: t('settings.fontSize.small') },
+                  { key: 'medium', label: t('settings.fontSize.medium') },
+                  { key: 'large',  label: t('settings.fontSize.large') },
+                ] as { key: FontSize; label: string }[]).map((opt) => {
+                  const active = fontSize === opt.key;
+                  return (
+                    <Pressable
+                      key={opt.key}
+                      style={({ pressed }) => [
+                        styles.langOption,
+                        active && styles.langOptionActive,
+                        { opacity: pressed ? 0.7 : 1 },
+                      ]}
+                      onPress={() => {
+                        setFontSize(opt.key);
+                        setFontSizeModalVisible(false);
+                      }}
+                    >
+                      <Text style={[styles.langOptionLabel, active ? styles.langOptionLabelActive : styles.langOptionLabelInactive]}>
+                        {opt.label}
+                      </Text>
+                      {active && <Ionicons name="checkmark-circle" size={20} color={colors.teal} />}
                     </Pressable>
                   );
                 })}

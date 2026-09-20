@@ -485,6 +485,14 @@ export function SearchScreen() {
       alignItems: 'center',
       justifyContent: 'center',
     },
+    favoritesButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: colors.teal,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     statusText: {
       paddingHorizontal: 20,
       paddingTop: 8,
@@ -815,6 +823,13 @@ export function SearchScreen() {
               <Ionicons name="locate" size={20} color={colors.white} />
             )}
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.favoritesButton}
+            onPress={() => router.push('/(driver)/(tabs)/favorites')}
+            accessibilityLabel={t('tabs.driver.favorites')}
+          >
+            <Ionicons name="heart-outline" size={20} color={colors.white} />
+          </TouchableOpacity>
         </View>
 
         {showSuggestions && (
@@ -839,16 +854,6 @@ export function SearchScreen() {
           </View>
         )}
       </View>
-      {!searchAddress && (
-        <Text style={styles.statusText}>
-          {locationError
-            ? locationError
-            : location
-            ? `📍 ${t('search.location.searching')}`
-            : t('search.location.locating')}
-        </Text>
-      )}
-
       {/* ── Toolbar ────────────────────────────────────────────────── */}
       <View style={styles.toolbar}>
         <TouchableOpacity style={styles.filterButton} onPress={openFilters}>

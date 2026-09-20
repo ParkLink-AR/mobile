@@ -27,8 +27,9 @@ export default function OwnerTabsLayout() {
     <Tabs
       tabBar={(props) => <OwnerDockTabBar {...props} />}
       screenOptions={{ headerShown: false }}
+      initialRouteName="calendar"
     >
-      <Tabs.Screen name="index" options={{ title: t('tabs.owner.today') }} />
+      <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen name="calendar" options={{ title: t('tabs.owner.calendar') }} />
       <Tabs.Screen name="spots" options={{ title: t('tabs.owner.spots') }} />
       <Tabs.Screen name="notifications" options={{ title: t('tabs.owner.notifications') }} />
