@@ -1,13 +1,13 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Alert, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { getBookingApi, BookingApiResponse } from '@/src/api/booking';
+import { getBookingApi, cancelBookingApi, BookingApiResponse } from '@/src/api/booking';
 import { getParkingSpotDetail } from '@/src/api/parking';
 import { Booking } from '@/src/types';
 
@@ -50,6 +50,7 @@ export default function DriverBookingDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [error, setError] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -63,6 +64,33 @@ export default function DriverBookingDetail() {
         setError(true);
       });
   }, [id]);
+
+  function handleCancel() {
+    if (!booking) return;
+    Alert.alert(
+      t('driver.booking.cancel.title'),
+      t('driver.booking.cancel.confirm'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('driver.booking.cancel.yes'),
+          style: 'destructive',
+          onPress: async () => {
+            setCancelling(true);
+            try {
+              const updated = await cancelBookingApi(booking.id);
+              setBooking((prev) => prev ? { ...prev, status: updated.status as Booking['status'] } : prev);
+            } catch (err: any) {
+              const msg = err?.detail ?? err?.message ?? t('driver.booking.detail.error');
+              Alert.alert(t('driver.booking.cancel.title'), msg);
+            } finally {
+              setCancelling(false);
+            }
+          },
+        },
+      ],
+    );
+  }
 
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
@@ -95,6 +123,19 @@ export default function DriverBookingDetail() {
     totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     totalLabel: { fontSize: 14, color: colors.text, fontWeight: '600' },
     totalValue: { fontSize: 18, color: colors.teal, fontWeight: '700' },
+
+    cancelButton: {
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: '#e53e3e',
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    cancelButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: '#e53e3e',
+    },
 
     codeCard: {
       backgroundColor: colors.surface,
@@ -217,6 +258,20 @@ export default function DriverBookingDetail() {
             </Card>
           )}
         </View>
+
+        {(booking.status === 'CONFIRMED' || booking.status === 'PENDING_OWNER_APPROVAL') && (
+          <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+            <Pressable
+              style={[styles.cancelButton, cancelling && { opacity: 0.5 }]}
+              onPress={handleCancel}
+              disabled={cancelling}
+            >
+              <Text style={styles.cancelButtonText}>
+                {cancelling ? '...' : t('driver.booking.cancel.title')}
+              </Text>
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
     </Screen>
   );

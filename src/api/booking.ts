@@ -193,6 +193,17 @@ export async function rejectBookingApi(bookingId: string): Promise<BookingApiRes
 }
 
 /**
+ * Cancels a CONFIRMED or PENDING_OWNER_APPROVAL booking and refunds the
+ * driver. Only the booking's own driver can call this, and only when there
+ * is more than 1 hour until the booking's start time.
+ *
+ * POST /bookings/{id}/cancel
+ */
+export async function cancelBookingApi(bookingId: string): Promise<BookingApiResponse> {
+  return request(`/bookings/${bookingId}/cancel`, { method: 'POST' });
+}
+
+/**
  * Verifies the 4-digit in-person code the driver read aloud to the owner. On a
  * match, transitions the booking CONFIRMED -> IN_PROGRESS. Caller must own the
  * spot; throws ApiError with a human-readable `detail` on a wrong code or once
