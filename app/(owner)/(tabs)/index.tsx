@@ -121,7 +121,7 @@ export default function OwnerToday() {
             </View>
 
             {loading && bookings.length === 0 && (
-              <ActivityIndicator color={colors.ownerAccent} style={{ marginTop: 8 }} />
+              <ActivityIndicator color={colors.teal} style={{ marginTop: 8 }} />
             )}
           </View>
         }

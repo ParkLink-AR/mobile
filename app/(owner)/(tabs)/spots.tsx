@@ -42,9 +42,9 @@ export default function OwnerSpots() {
     addBtn: {
       flexDirection: 'row', alignItems: 'center', gap: 6,
       paddingHorizontal: 12, paddingVertical: 7,
-      borderRadius: 8, borderWidth: 1.5, borderColor: colors.ownerAccent,
+      borderRadius: 8, borderWidth: 1.5, borderColor: colors.teal,
     },
-    addBtnText: { fontSize: 13, fontWeight: '600', color: colors.ownerAccent },
+    addBtnText: { fontSize: 13, fontWeight: '600', color: colors.teal },
     list: { padding: 16, paddingTop: 8, gap: 12 },
     emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 },
     emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
@@ -59,13 +59,13 @@ export default function OwnerSpots() {
           style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.75 : 1 }]}
           onPress={() => router.push(`${group}/spots/new`)}
         >
-          <Ionicons name="add" size={16} color={colors.ownerAccent} />
+          <Ionicons name="add" size={16} color={colors.teal} />
           <Text style={styles.addBtnText}>{t('profile.mySpots.add')}</Text>
         </Pressable>
       </View>
 
       {loading ? (
-        <ActivityIndicator color={colors.ownerAccent} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={colors.teal} style={{ marginTop: 40 }} />
       ) : spots.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Ionicons name="home-outline" size={48} color={colors.textSecondary} />
@@ -74,8 +74,6 @@ export default function OwnerSpots() {
             title={t('profile.mySpots.add')}
             onPress={() => router.push(`${group}/spots/new`)}
             style={styles.emptyBtn}
-            color={colors.ownerAccent}
-            textColor={colors.deepNavy}
           />
         </View>
       ) : (

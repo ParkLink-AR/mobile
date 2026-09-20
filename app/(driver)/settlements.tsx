@@ -29,7 +29,7 @@ export default function Settlements() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
-    amount: { color: colors.ownerAccent, fontWeight: '700', fontSize: 20, marginTop: 4 },
+    amount: { color: colors.teal, fontWeight: '700', fontSize: 20, marginTop: 4 },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   });

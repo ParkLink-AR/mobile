@@ -47,12 +47,12 @@ export default function SpotDetail() {
     addressIcon: { marginLeft: -2 },
     spotAddress: { flex: 1, fontSize: 13, color: colors.textSecondary, lineHeight: 17 },
     priceBadge: {
-      backgroundColor: colors.ownerAccent + '18',
+      backgroundColor: colors.teal + '18',
       borderRadius: 10,
       paddingHorizontal: 10,
       paddingVertical: 7,
     },
-    priceValue: { fontSize: 16, fontWeight: '700', color: colors.ownerAccent },
+    priceValue: { fontSize: 16, fontWeight: '700', color: colors.teal },
     divider: { height: 1, backgroundColor: colors.border },
     pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     pill: {
@@ -77,10 +77,10 @@ export default function SpotDetail() {
     availabilityBtn: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
       marginTop: 4, alignSelf: 'flex-start',
-      backgroundColor: colors.ownerAccent + '14',
+      backgroundColor: colors.teal + '14',
       borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
     },
-    availabilityLink: { color: colors.ownerAccent, fontWeight: '700', fontSize: 13 },
+    availabilityLink: { color: colors.teal, fontWeight: '700', fontSize: 13 },
 
     editBtn: { marginTop: 4 },
   });
@@ -121,7 +121,7 @@ export default function SpotDetail() {
                 <Ionicons
                   name={spot.covered ? 'car-outline' : 'sunny-outline'}
                   size={13}
-                  color={colors.ownerAccent}
+                  color={colors.teal}
                 />
                 <Text style={styles.pillText}>
                   {spot.covered ? t('spot.tag.covered') : t('spot.tag.uncovered')}
@@ -146,7 +146,7 @@ export default function SpotDetail() {
                 onPress={() => router.push(`${group}/spots/${id}/availability`)}
               >
                 <Text style={styles.availabilityLink}>{t('owner.spots.manageAvailability')}</Text>
-                <Ionicons name="chevron-forward" size={13} color={colors.ownerAccent} />
+                <Ionicons name="chevron-forward" size={13} color={colors.teal} />
               </TouchableOpacity>
             </View>
           )}
@@ -159,7 +159,7 @@ export default function SpotDetail() {
               <Ionicons name="mail-outline" size={15} color={colors.textSecondary} />
               <Text style={styles.sectionLabel}>{t('owner.spot.requests.link')}</Text>
               <View style={{ flex: 1 }} />
-              <Ionicons name="chevron-forward" size={13} color={colors.ownerAccent} />
+              <Ionicons name="chevron-forward" size={13} color={colors.teal} />
             </View>
           </TouchableOpacity>
 
@@ -177,8 +177,6 @@ export default function SpotDetail() {
             title={t('owner.spot.edit.title')}
             onPress={() => router.push(`${group}/spots/${id}/edit`)}
             style={styles.editBtn}
-            color={colors.ownerAccent}
-            textColor={colors.deepNavy}
           />
         </View>
       </ScrollView>

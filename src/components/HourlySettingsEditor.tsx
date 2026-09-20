@@ -115,7 +115,7 @@ export function HourlySettingsEditor({ value, onChange, vehicleTypes }: HourlySe
         <Switch
           value={value.hourlyEnabled}
           onValueChange={(v) => onChange({ hourlyEnabled: v })}
-          trackColor={{ true: colors.ownerAccent }}
+          trackColor={{ true: colors.teal }}
         />
       </View>
 
@@ -129,7 +129,7 @@ export function HourlySettingsEditor({ value, onChange, vehicleTypes }: HourlySe
             <Switch
               value={value.pricePerVehicleType}
               onValueChange={(v) => onChange({ pricePerVehicleType: v })}
-              trackColor={{ true: colors.ownerAccent }}
+              trackColor={{ true: colors.teal }}
             />
           </View>
 

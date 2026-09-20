@@ -31,7 +31,7 @@ export default function SettlementDetail() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 8 },
-    amount: { color: colors.ownerAccent, fontWeight: '700', fontSize: 24, marginTop: 4 },
+    amount: { color: colors.teal, fontWeight: '700', fontSize: 24, marginTop: 4 },
     sectionTitle: { marginTop: 8 },
   });
 

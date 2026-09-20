@@ -82,11 +82,9 @@ export default function Notifications() {
       flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
       paddingVertical: 9, borderRadius: 10,
     },
-    // Approving/rejecting a booking is inherently an owner action regardless
-    // of which mode tab happens to be active right now -- always ownerAccent.
-    approveBtn: { backgroundColor: colors.ownerAccent },
+    approveBtn: { backgroundColor: colors.teal },
     rejectBtn: { borderWidth: 1.5, borderColor: '#C62828' },
-    approveBtnText: { color: colors.deepNavy, fontWeight: '700' },
+    approveBtnText: { color: colors.white, fontWeight: '700' },
     rejectBtnText: { color: '#C62828', fontWeight: '700' },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
@@ -168,10 +166,10 @@ export default function Notifications() {
                   disabled={busyId === item.bookingId}
                 >
                   {busyId === item.bookingId ? (
-                    <ActivityIndicator color={colors.deepNavy} size="small" />
+                    <ActivityIndicator color={colors.white} size="small" />
                   ) : (
                     <>
-                      <Ionicons name="checkmark" size={16} color={colors.deepNavy} />
+                      <Ionicons name="checkmark" size={16} color={colors.white} />
                       <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
                     </>
                   )}

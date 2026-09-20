@@ -228,7 +228,7 @@ export default function EditSpot() {
           <Text style={{ color: colors.text, fontSize: 15, textAlign: 'center' }}>
             {t('owner.spot.edit.errorLoad')}
           </Text>
-          <Button title={t('common.retry')} onPress={load} color={colors.ownerAccent} textColor={colors.deepNavy} />
+          <Button title={t('common.retry')} onPress={load} />
         </View>
       </Screen>
     );
@@ -397,9 +397,9 @@ export default function EditSpot() {
       flex: 1, borderWidth: 1.5, borderColor: colors.border,
       borderRadius: 10, paddingVertical: 10, alignItems: 'center',
     },
-    toggleActive: { backgroundColor: colors.ownerAccent, borderColor: colors.ownerAccent },
+    toggleActive: { backgroundColor: colors.teal, borderColor: colors.teal },
     toggleText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
-    toggleTextActive: { color: colors.deepNavy, fontWeight: '700' },
+    toggleTextActive: { color: colors.surface, fontWeight: '700' },
 
     photosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     photoThumbWrapper: { position: 'relative' },
@@ -430,7 +430,7 @@ export default function EditSpot() {
     addressRow: { flexDirection: 'row', gap: 8 },
     locateButton: {
       width: 46, height: 46, borderRadius: 8,
-      backgroundColor: colors.ownerAccent, alignItems: 'center', justifyContent: 'center',
+      backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center',
     },
     locationConfirmedRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     locationConfirmed: { color: colors.success, fontSize: 12, fontWeight: '700' },
@@ -517,7 +517,7 @@ export default function EditSpot() {
               {photos.length < MAX_PHOTOS && (
                 <TouchableOpacity style={styles.addPhotoThumb} disabled={photosBusy} onPress={pickAndUploadPhotos}>
                   {photosBusy ? (
-                    <ActivityIndicator color={colors.ownerAccent} size="small" />
+                    <ActivityIndicator color={colors.teal} size="small" />
                   ) : (
                     <Ionicons name="add" size={22} color={colors.textSecondary} />
                   )}
@@ -536,7 +536,6 @@ export default function EditSpot() {
                 onSelect={selectAddress}
                 placeholder={t('owner.spot.new.addressPlaceholder')}
                 onSuggestionsVisibilityChange={setAddressSuggestionsOpen}
-                accentColor={colors.ownerAccent}
               />
               <TouchableOpacity
                 style={styles.locateButton}
@@ -545,9 +544,9 @@ export default function EditSpot() {
                 accessibilityLabel={t('owner.spot.new.useCurrentLocation')}
               >
                 {locating ? (
-                  <ActivityIndicator color={colors.deepNavy} size="small" />
+                  <ActivityIndicator color={colors.white} size="small" />
                 ) : (
-                  <Ionicons name="locate" size={20} color={colors.deepNavy} />
+                  <Ionicons name="locate" size={20} color={colors.white} />
                 )}
               </TouchableOpacity>
             </View>
@@ -640,8 +639,6 @@ export default function EditSpot() {
             onPress={save}
             disabled={saving}
             style={styles.saveBtn}
-            color={colors.ownerAccent}
-            textColor={colors.deepNavy}
           />
 
           <TouchableOpacity

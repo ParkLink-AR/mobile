@@ -74,7 +74,7 @@ export function StaySettingsEditor({ value, onChange }: StaySettingsEditorProps)
         <Switch
           value={value.stayEnabled}
           onValueChange={(v) => onChange({ stayEnabled: v })}
-          trackColor={{ true: colors.ownerAccent }}
+          trackColor={{ true: colors.teal }}
         />
       </View>
 

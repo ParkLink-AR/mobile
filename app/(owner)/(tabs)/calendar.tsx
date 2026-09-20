@@ -146,7 +146,7 @@ export default function OwnerCalendar() {
     monthLabel: { fontSize: 17, fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
     navBtn: { padding: 6 },
     todayLink: { alignSelf: 'center' },
-    todayLinkText: { fontSize: 13, fontWeight: '600', color: colors.ownerAccent },
+    todayLinkText: { fontSize: 13, fontWeight: '600', color: colors.teal },
     weekRow: { flexDirection: 'row' },
     weekDayCell: { flex: 1, alignItems: 'center', paddingBottom: 6 },
     weekDayText: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
@@ -158,12 +158,12 @@ export default function OwnerCalendar() {
     dayCircle: {
       width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
     },
-    dayCircleSelected: { backgroundColor: colors.ownerAccent },
-    dayCircleToday: { borderWidth: 1.5, borderColor: colors.ownerAccent },
+    dayCircleSelected: { backgroundColor: colors.teal },
+    dayCircleToday: { borderWidth: 1.5, borderColor: colors.teal },
     dayText: { fontSize: 14, color: colors.text },
     dayTextOutOfMonth: { color: colors.textSecondary, opacity: 0.4 },
-    dayTextSelected: { color: colors.deepNavy, fontWeight: '700' },
-    dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.ownerAccent },
+    dayTextSelected: { color: colors.white, fontWeight: '700' },
+    dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.teal },
     dotHidden: { opacity: 0 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     sectionTitle: {
@@ -255,7 +255,7 @@ export default function OwnerCalendar() {
             </View>
 
             {loading && bookings.length === 0 && (
-              <ActivityIndicator color={colors.ownerAccent} style={{ marginTop: 8 }} />
+              <ActivityIndicator color={colors.teal} style={{ marginTop: 8 }} />
             )}
           </View>
         }

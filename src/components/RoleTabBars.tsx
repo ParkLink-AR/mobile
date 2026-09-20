@@ -70,7 +70,7 @@ export function OwnerDockTabBar({ state, navigation }: BottomTabBarProps) {
       borderRadius: 24,
     },
     tabActive: {
-      backgroundColor: colors.ownerAccent + '22',
+      backgroundColor: colors.teal + '22',
     },
     iconWrapper: { position: 'relative' },
     badge: {
@@ -90,7 +90,7 @@ export function OwnerDockTabBar({ state, navigation }: BottomTabBarProps) {
           const routeIndex = state.routes.findIndex((r) => r.name === tab.name);
           const route = state.routes[routeIndex];
           const focused = state.index === routeIndex;
-          const color = focused ? colors.ownerAccent : colors.textSecondary;
+          const color = focused ? colors.teal : colors.textSecondary;
 
           return (
             <Pressable

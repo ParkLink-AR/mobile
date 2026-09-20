@@ -121,18 +121,18 @@ export default function SpotBookingRequests() {
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     driverRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
     driverRowText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.textSecondary },
-    total: { color: colors.ownerAccent, fontWeight: '700', marginTop: 4 },
+    total: { color: colors.teal, fontWeight: '700', marginTop: 4 },
     actionsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
     actionBtn: {
       flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
       paddingVertical: 9, borderRadius: 10,
     },
-    approveBtn: { backgroundColor: colors.ownerAccent },
+    approveBtn: { backgroundColor: colors.teal },
     rejectBtn: { borderWidth: 1.5, borderColor: '#C62828' },
-    approveBtnText: { color: colors.deepNavy, fontWeight: '700' },
+    approveBtnText: { color: colors.white, fontWeight: '700' },
     rejectBtnText: { color: '#C62828', fontWeight: '700' },
-    verifyBtn: { backgroundColor: colors.ownerAccent },
-    verifyBtnText: { color: colors.deepNavy, fontWeight: '700' },
+    verifyBtn: { backgroundColor: colors.teal },
+    verifyBtnText: { color: colors.white, fontWeight: '700' },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
     overlay: {
@@ -168,9 +168,9 @@ export default function SpotBookingRequests() {
     modalCancelBtnText: { color: colors.textSecondary, fontWeight: '700' },
     modalConfirmBtn: {
       flex: 1, alignItems: 'center', justifyContent: 'center',
-      paddingVertical: 10, borderRadius: 10, backgroundColor: colors.ownerAccent,
+      paddingVertical: 10, borderRadius: 10, backgroundColor: colors.teal,
     },
-    modalConfirmBtnText: { color: colors.deepNavy, fontWeight: '700' },
+    modalConfirmBtnText: { color: colors.white, fontWeight: '700' },
   });
 
   return (
@@ -228,10 +228,10 @@ export default function SpotBookingRequests() {
                     disabled={busyId === item.id}
                   >
                     {busyId === item.id ? (
-                      <ActivityIndicator color={colors.deepNavy} size="small" />
+                      <ActivityIndicator color={colors.white} size="small" />
                     ) : (
                       <>
-                        <Ionicons name="checkmark" size={16} color={colors.deepNavy} />
+                        <Ionicons name="checkmark" size={16} color={colors.white} />
                         <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
                       </>
                     )}
@@ -247,10 +247,10 @@ export default function SpotBookingRequests() {
                     disabled={busyId === item.id}
                   >
                     {busyId === item.id ? (
-                      <ActivityIndicator color={colors.deepNavy} size="small" />
+                      <ActivityIndicator color={colors.white} size="small" />
                     ) : (
                       <>
-                        <Ionicons name="keypad-outline" size={16} color={colors.deepNavy} />
+                        <Ionicons name="keypad-outline" size={16} color={colors.white} />
                         <Text style={styles.verifyBtnText}>{t('owner.spot.requests.verifyCode')}</Text>
                       </>
                     )}
@@ -287,7 +287,7 @@ export default function SpotBookingRequests() {
                 disabled={codeInput.length !== 4 || busyId === codeModalBookingId}
               >
                 {busyId === codeModalBookingId ? (
-                  <ActivityIndicator color={colors.deepNavy} size="small" />
+                  <ActivityIndicator color={colors.white} size="small" />
                 ) : (
                   <Text style={styles.modalConfirmBtnText}>{t('owner.spot.requests.verifyCodeConfirm')}</Text>
                 )}

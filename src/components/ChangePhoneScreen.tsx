@@ -19,17 +19,12 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { requestPhoneChange, confirmPhoneChange } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
 import { COUNTRIES, DEFAULT_COUNTRY, Country } from '@/src/data/countries';
-import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function ChangePhoneScreen() {
   useLanguage();
   const colors = useThemeColors();
-  // Shared by driver's and owner's "cambiar teléfono" (owner re-exports this screen).
-  const isOwnerMode = useAccountTypeStore((s) => s.activeMode) === 'owner';
-  const accent = isOwnerMode ? colors.ownerAccent : colors.teal;
-  const accentTextColor = isOwnerMode ? colors.deepNavy : colors.white;
   const typography = useTypography();
   const user = useSessionStore((s) => s.user)!;
   const setUser = useSessionStore((s) => s.setUser);
@@ -73,7 +68,7 @@ export default function ChangePhoneScreen() {
       color: colors.text,
     },
     error: { color: '#C62828', fontSize: 13, textAlign: 'center' },
-    link: { color: accent, textAlign: 'center', marginTop: 8 },
+    link: { color: colors.teal, textAlign: 'center', marginTop: 8 },
     linkDisabled: { color: colors.textSecondary },
     phoneRow: { flexDirection: 'row', gap: 8 },
     countryButton: {
@@ -163,9 +158,9 @@ export default function ChangePhoneScreen() {
           onChangeText={(v) => setCode(v.replace(/[^0-9]/g, ''))}
         />
         {loading ? (
-          <ActivityIndicator color={accent} />
+          <ActivityIndicator color={colors.teal} />
         ) : (
-          <Button title={t('changePhone.code.button')} onPress={handleConfirm} color={accent} textColor={accentTextColor} />
+          <Button title={t('changePhone.code.button')} onPress={handleConfirm} />
         )}
         <Text style={[styles.link, cooldown > 0 && styles.linkDisabled]} onPress={handleResend}>
           {cooldown > 0 ? `Reenviar código (${cooldown}s)` : 'Reenviar código'}
@@ -197,9 +192,9 @@ export default function ChangePhoneScreen() {
         />
       </View>
       {loading ? (
-        <ActivityIndicator color={accent} />
+        <ActivityIndicator color={colors.teal} />
       ) : (
-        <Button title={t('changePhone.newPhone.button')} onPress={handleSendCode} color={accent} textColor={accentTextColor} />
+        <Button title={t('changePhone.newPhone.button')} onPress={handleSendCode} />
       )}
 
       <Modal

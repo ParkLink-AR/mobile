@@ -107,8 +107,6 @@ export default function SpotAvailability() {
             onPress={saveAvailability}
             disabled={saving}
             style={styles.saveBtn}
-            color={colors.ownerAccent}
-            textColor={colors.deepNavy}
           />
         </View>
       </ScrollView>

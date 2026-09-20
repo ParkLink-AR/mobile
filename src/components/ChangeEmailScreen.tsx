@@ -9,18 +9,12 @@ import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { requestEmailChange, confirmEmailChange } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
-import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function ChangeEmailScreen() {
   useLanguage();
   const colors = useThemeColors();
-  // Shared by driver's and owner's "cambiar email" (owner re-exports this screen).
-  // ownerAccent is a light tone (needs dark text); teal is dark (needs white text).
-  const isOwnerMode = useAccountTypeStore((s) => s.activeMode) === 'owner';
-  const accent = isOwnerMode ? colors.ownerAccent : colors.teal;
-  const accentTextColor = isOwnerMode ? colors.deepNavy : colors.white;
   const typography = useTypography();
   const user = useSessionStore((s) => s.user)!;
   const setUser = useSessionStore((s) => s.setUser);
@@ -60,8 +54,8 @@ export default function ChangeEmailScreen() {
       color: colors.text,
     },
     error: { color: '#C62828', fontSize: 13, textAlign: 'center' },
-    success: { color: accent, fontSize: 15, fontWeight: '600', textAlign: 'center' },
-    link: { color: accent, textAlign: 'center', marginTop: 8 },
+    success: { color: colors.teal, fontSize: 15, fontWeight: '600', textAlign: 'center' },
+    link: { color: colors.teal, textAlign: 'center', marginTop: 8 },
     linkDisabled: { color: colors.textSecondary },
   });
 
@@ -130,9 +124,9 @@ export default function ChangeEmailScreen() {
           onChangeText={(v) => setCode(v.replace(/[^0-9]/g, ''))}
         />
         {loading ? (
-          <ActivityIndicator color={accent} />
+          <ActivityIndicator color={colors.teal} />
         ) : (
-          <Button title={t('changeEmail.code.button')} onPress={handleConfirm} color={accent} textColor={accentTextColor} />
+          <Button title={t('changeEmail.code.button')} onPress={handleConfirm} />
         )}
         <Text style={[styles.link, cooldown > 0 && styles.linkDisabled]} onPress={handleResend}>
           {cooldown > 0 ? `Reenviar código (${cooldown}s)` : 'Reenviar código'}
@@ -158,9 +152,9 @@ export default function ChangeEmailScreen() {
         onChangeText={setNewEmail}
       />
       {loading ? (
-        <ActivityIndicator color={accent} />
+        <ActivityIndicator color={colors.teal} />
       ) : (
-        <Button title={t('changeEmail.newEmail.button')} onPress={handleSendCode} color={accent} textColor={accentTextColor} />
+        <Button title={t('changeEmail.newEmail.button')} onPress={handleSendCode} />
       )}
     </Screen>
   );

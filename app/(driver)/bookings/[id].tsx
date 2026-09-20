@@ -56,7 +56,6 @@ export default function DriverBookingDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const activeMode = useAccountTypeStore((s) => s.activeMode);
   const isOwnerView = activeMode === 'owner';
-  const accent = isOwnerView ? colors.ownerAccent : colors.teal;
   const [booking, setBooking] = useState<Booking | null>(null);
   const [driverName, setDriverName] = useState<string | null>(null);
   const [error, setError] = useState(false);
@@ -124,7 +123,7 @@ export default function DriverBookingDetail() {
     titleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
     spotTitle: { flex: 1, fontSize: 19, fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
     kindRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    kindText: { fontSize: 13, fontWeight: '600', color: accent },
+    kindText: { fontSize: 13, fontWeight: '600', color: colors.teal },
 
     cardContent: { gap: 12 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -140,7 +139,7 @@ export default function DriverBookingDetail() {
     whenValue: { flex: 1, fontSize: 14, color: colors.text, fontWeight: '600' },
     totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     totalLabel: { fontSize: 14, color: colors.text, fontWeight: '600' },
-    totalValue: { fontSize: 18, color: accent, fontWeight: '700' },
+    totalValue: { fontSize: 18, color: colors.teal, fontWeight: '700' },
 
     cancelButton: {
       borderRadius: 12,
@@ -158,14 +157,14 @@ export default function DriverBookingDetail() {
     codeCard: {
       backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: accent,
+      borderColor: colors.teal,
       borderRadius: 14,
       padding: 16,
       alignItems: 'center',
       gap: 4,
     },
     codeLabel: { fontSize: 12, color: colors.textSecondary },
-    codeValue: { fontSize: 32, fontWeight: '700', color: accent, letterSpacing: 6 },
+    codeValue: { fontSize: 32, fontWeight: '700', color: colors.teal, letterSpacing: 6 },
     codeHint: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
   });
 
@@ -183,7 +182,7 @@ export default function DriverBookingDetail() {
   if (!booking) {
     return (
       <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
-        <ActivityIndicator style={{ marginTop: 40 }} color={accent} />
+        <ActivityIndicator style={{ marginTop: 40 }} color={colors.teal} />
       </Screen>
     );
   }
@@ -202,7 +201,7 @@ export default function DriverBookingDetail() {
             </View>
 
             <View style={styles.kindRow}>
-              <Ionicons name={booking.kind === 'STAY' ? 'calendar-outline' : 'time-outline'} size={14} color={accent} />
+              <Ionicons name={booking.kind === 'STAY' ? 'calendar-outline' : 'time-outline'} size={14} color={colors.teal} />
               <Text style={styles.kindText}>
                 {t(booking.kind === 'STAY' ? 'driver.booking.kind.stay' : 'driver.booking.kind.hourly')}
               </Text>

@@ -6,13 +6,10 @@ import { Card } from '@/src/components/Card';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSettingsStore, Language, FontSize } from '@/src/store/useSettingsStore';
-import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 import { t } from '@/src/i18n';
 
 export function SettingsContent() {
   const colors = useThemeColors();
-  // Shared by driver/(driver)/settings.tsx and owner's re-export of it.
-  const accent = useAccountTypeStore((s) => s.activeMode) === 'owner' ? colors.ownerAccent : colors.teal;
   const typography = useTypography();
   const [pushEnabled, setPushEnabled] = useState(true);
   const [emailEnabled, setEmailEnabled] = useState(false);
@@ -29,21 +26,21 @@ export function SettingsContent() {
       <Text style={[typography.caption, styles.sectionTitle]}>{t('settings.notifications.title')}</Text>
       <Card style={styles.card}>
         <Row label={t('settings.notifications.push')}>
-          <Switch value={pushEnabled} onValueChange={setPushEnabled} trackColor={{ true: accent }} />
+          <Switch value={pushEnabled} onValueChange={setPushEnabled} trackColor={{ true: colors.teal }} />
         </Row>
         <View style={styles.divider} />
         <Row label={t('settings.notifications.email')}>
-          <Switch value={emailEnabled} onValueChange={setEmailEnabled} trackColor={{ true: accent }} />
+          <Switch value={emailEnabled} onValueChange={setEmailEnabled} trackColor={{ true: colors.teal }} />
         </Row>
       </Card>
 
       <Text style={[typography.caption, styles.sectionTitle]}>{t('settings.preferences.title')}</Text>
       <Card style={styles.card}>
-        <LanguagePicker accent={accent} />
+        <LanguagePicker />
         <View style={styles.divider} />
-        <ThemePicker accent={accent} />
+        <ThemePicker />
         <View style={styles.divider} />
-        <FontSizePicker accent={accent} />
+        <FontSizePicker />
       </Card>
 
       <Text style={[typography.caption, styles.sectionTitle]}>{t('settings.about.title')}</Text>
@@ -68,41 +65,43 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 // ─── shared modal styles ────────────────────────────────────────────────────
 
-function useModalStyles(accent: string) {
+function useModalStyles() {
   const colors = useThemeColors();
   return StyleSheet.create({
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
     sheet: { width: '85%', borderRadius: 20, paddingVertical: 32, paddingHorizontal: 24, backgroundColor: colors.surface, alignItems: 'center', gap: 8 },
     title: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 16, textAlign: 'center' },
     option: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12 },
-    optionActive: { backgroundColor: accent + '22' },
+    optionActive: { backgroundColor: colors.teal + '22' },
     optionLabel: { flex: 1, fontSize: 16, fontWeight: '600' },
-    optionLabelActive: { color: accent },
+    optionLabelActive: { color: colors.teal },
     optionLabelInactive: { color: colors.text },
   });
 }
 
 // ─── row value chip (label + chevron) ───────────────────────────────────────
 
-function ValueChip({ label, onPress, accent }: { label: string; onPress: () => void; accent: string }) {
+function ValueChip({ label, onPress }: { label: string; onPress: () => void }) {
+  const colors = useThemeColors();
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, opacity: pressed ? 0.7 : 1 })}
     >
-      <Text style={{ fontSize: 14, fontWeight: '600', color: accent }}>{label}</Text>
-      <Ionicons name="chevron-forward" size={14} color={accent} />
+      <Text style={{ fontSize: 14, fontWeight: '600', color: colors.teal }}>{label}</Text>
+      <Ionicons name="chevron-forward" size={14} color={colors.teal} />
     </Pressable>
   );
 }
 
 // ─── Language ───────────────────────────────────────────────────────────────
 
-function LanguagePicker({ accent }: { accent: string }) {
+function LanguagePicker() {
   const language = useSettingsStore((s) => s.language);
   const setLanguage = useSettingsStore((s) => s.setLanguage);
   const [visible, setVisible] = useState(false);
-  const modal = useModalStyles(accent);
+  const modal = useModalStyles();
+  const colors = useThemeColors();
 
   const opts: { key: Language; label: string }[] = [
     { key: 'es', label: 'Español' },
@@ -114,7 +113,7 @@ function LanguagePicker({ accent }: { accent: string }) {
   return (
     <>
       <Row label={t('settings.language')}>
-        <ValueChip label={currentLabel} onPress={() => setVisible(true)} accent={accent} />
+        <ValueChip label={currentLabel} onPress={() => setVisible(true)} />
       </Row>
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
         <TouchableWithoutFeedback onPress={() => setVisible(false)}>
@@ -131,7 +130,7 @@ function LanguagePicker({ accent }: { accent: string }) {
                       onPress={() => { setLanguage(o.key); setVisible(false); }}
                     >
                       <Text style={[modal.optionLabel, active ? modal.optionLabelActive : modal.optionLabelInactive]}>{o.label}</Text>
-                      {active && <Ionicons name="checkmark-circle" size={20} color={accent} />}
+                      {active && <Ionicons name="checkmark-circle" size={20} color={colors.teal} />}
                     </Pressable>
                   );
                 })}
@@ -146,11 +145,12 @@ function LanguagePicker({ accent }: { accent: string }) {
 
 // ─── Theme ──────────────────────────────────────────────────────────────────
 
-function ThemePicker({ accent }: { accent: string }) {
+function ThemePicker() {
   const mode = useSettingsStore((s) => s.mode);
   const toggleMode = useSettingsStore((s) => s.toggleMode);
   const [visible, setVisible] = useState(false);
-  const modal = useModalStyles(accent);
+  const modal = useModalStyles();
+  const colors = useThemeColors();
 
   const opts = [
     { key: 'light' as const, label: t('profile.theme.light') },
@@ -161,7 +161,7 @@ function ThemePicker({ accent }: { accent: string }) {
   return (
     <>
       <Row label={t('settings.theme')}>
-        <ValueChip label={currentLabel} onPress={() => setVisible(true)} accent={accent} />
+        <ValueChip label={currentLabel} onPress={() => setVisible(true)} />
       </Row>
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
         <TouchableWithoutFeedback onPress={() => setVisible(false)}>
@@ -178,7 +178,7 @@ function ThemePicker({ accent }: { accent: string }) {
                       onPress={() => { if (!active) toggleMode(); setVisible(false); }}
                     >
                       <Text style={[modal.optionLabel, active ? modal.optionLabelActive : modal.optionLabelInactive]}>{o.label}</Text>
-                      {active && <Ionicons name="checkmark-circle" size={20} color={accent} />}
+                      {active && <Ionicons name="checkmark-circle" size={20} color={colors.teal} />}
                     </Pressable>
                   );
                 })}
@@ -193,11 +193,12 @@ function ThemePicker({ accent }: { accent: string }) {
 
 // ─── Font size ───────────────────────────────────────────────────────────────
 
-function FontSizePicker({ accent }: { accent: string }) {
+function FontSizePicker() {
   const fontSize = useSettingsStore((s) => s.fontSize);
   const setFontSize = useSettingsStore((s) => s.setFontSize);
   const [visible, setVisible] = useState(false);
-  const modal = useModalStyles(accent);
+  const modal = useModalStyles();
+  const colors = useThemeColors();
 
   const opts: { key: FontSize; label: string }[] = [
     { key: 'small',  label: t('settings.fontSize.small') },
@@ -209,7 +210,7 @@ function FontSizePicker({ accent }: { accent: string }) {
   return (
     <>
       <Row label={t('settings.fontSize')}>
-        <ValueChip label={currentLabel} onPress={() => setVisible(true)} accent={accent} />
+        <ValueChip label={currentLabel} onPress={() => setVisible(true)} />
       </Row>
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
         <TouchableWithoutFeedback onPress={() => setVisible(false)}>
@@ -226,7 +227,7 @@ function FontSizePicker({ accent }: { accent: string }) {
                       onPress={() => { setFontSize(o.key); setVisible(false); }}
                     >
                       <Text style={[modal.optionLabel, active ? modal.optionLabelActive : modal.optionLabelInactive]}>{o.label}</Text>
-                      {active && <Ionicons name="checkmark-circle" size={20} color={accent} />}
+                      {active && <Ionicons name="checkmark-circle" size={20} color={colors.teal} />}
                     </Pressable>
                   );
                 })}
