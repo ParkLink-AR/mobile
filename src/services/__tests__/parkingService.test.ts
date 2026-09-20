@@ -30,7 +30,6 @@ function makeApiSpot(overrides: Partial<ParkingSpotApiResponse> = {}): ParkingSp
     stayAvailableUntil: null,
     maxStayDays: null,
     covered: true,
-    instantBooking: true,
     capacity: 1,
     schedule: MON_FRI_8_22,
     photos: [],

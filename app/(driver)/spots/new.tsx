@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView, Image, Switch } from 'react-native';
+import { View, Text, TextInput, Pressable, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView, Image } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
@@ -40,7 +40,6 @@ export default function NewSpot() {
   const [addressSuggestionsOpen, setAddressSuggestionsOpen] = useState(false);
   const [covered, setCovered] = useState(true);
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
-  const [instantBooking, setInstantBooking] = useState(true);
   const [capacity, setCapacity] = useState('1');
   const [hourlySettings, setHourlySettings] = useState<HourlySettingsFormValue>(EMPTY_HOURLY_SETTINGS);
   const [staySettings, setStaySettings] = useState<StaySettingsFormValue>(EMPTY_STAY_SETTINGS);
@@ -167,7 +166,6 @@ export default function NewSpot() {
         lng: coordinates.lng,
         covered,
         vehicleTypes,
-        instantBooking,
         hourlyEnabled: hourlySettings.hourlyEnabled,
         pricePerHour:
           hourlySettings.hourlyEnabled && !hourlySettings.pricePerVehicleType
@@ -232,12 +230,6 @@ export default function NewSpot() {
     toggleActive: { backgroundColor: colors.teal, borderColor: colors.teal },
     toggleText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
     toggleTextActive: { color: colors.surface, fontWeight: '700' },
-
-    instantBookingRow: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-    },
-    instantBookingLabelBlock: { flex: 1, gap: 2 },
-    instantBookingHint: { fontSize: 12, color: colors.textSecondary },
 
     photosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     photoThumbWrapper: { position: 'relative' },
@@ -377,17 +369,6 @@ export default function NewSpot() {
           <View style={styles.card}>
             <Text style={styles.sectionLabel}>{t('owner.spot.new.vehicleTypes')}</Text>
             <VehicleTypePicker value={vehicleTypes} onChange={setVehicleTypes} />
-          </View>
-
-          {/* Instant booking */}
-          <View style={styles.card}>
-            <View style={styles.instantBookingRow}>
-              <View style={styles.instantBookingLabelBlock}>
-                <Text style={styles.sectionLabel}>{t('owner.spot.new.instantBooking')}</Text>
-                <Text style={styles.instantBookingHint}>{t('owner.spot.new.instantBookingHint')}</Text>
-              </View>
-              <Switch value={instantBooking} onValueChange={setInstantBooking} trackColor={{ true: colors.teal }} />
-            </View>
           </View>
 
           {/* Alquiler por hora */}

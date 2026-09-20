@@ -36,7 +36,6 @@ export interface ParkingSpotApiResponse {
   maxStayDays: number | null;
   covered: boolean;
   vehicleTypes: VehicleType[];
-  instantBooking: boolean;
   capacity: number;
   schedule: ScheduleEntry[];
   photos: string[];
@@ -71,8 +70,6 @@ export interface SearchParkingSpotsParams {
   // Mobile los trata como mutuamente excluyentes en su UI (elegir uno
   // deselecciona el otro), pero acá van sueltos -- el back no impone esa regla.
   hourlyOnly?: boolean;
-  // Sólo cocheras con confirmación automática (sin esperar aprobación del dueño).
-  instantBooking?: boolean;
 }
 
 // One candidate match for a free-text address query -- ambiguous street
@@ -132,7 +129,6 @@ export interface CreateParkingSpotInput extends StayFields {
   covered?: boolean;
   // Obligatorio y no vacío -- ver ParkingSpot.vehicleTypes en parking-service.
   vehicleTypes: VehicleType[];
-  instantBooking?: boolean;
   // Lugares idénticos a alquilar contra el mismo id (playa). Omitido = 1.
   capacity?: number;
   schedule?: ScheduleEntry[];
@@ -148,7 +144,6 @@ export interface UpdateParkingSpotApiInput extends StayFields {
   description?: string;
   covered?: boolean;
   vehicleTypes?: VehicleType[];
-  instantBooking?: boolean;
   capacity?: number;
   schedule?: ScheduleEntry[];
   // The three go together: send all or none.
@@ -196,7 +191,6 @@ export async function searchParkingSpots(
     ...(params.to !== undefined ? { to: params.to } : {}),
     ...(params.stayOnly !== undefined ? { stayOnly: String(params.stayOnly) } : {}),
     ...(params.hourlyOnly !== undefined ? { hourlyOnly: String(params.hourlyOnly) } : {}),
-    ...(params.instantBooking !== undefined ? { instantBooking: String(params.instantBooking) } : {}),
   });
   return request(`/parking-spots/search?${query.toString()}`);
 }

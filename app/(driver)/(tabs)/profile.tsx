@@ -403,7 +403,7 @@ export default function Profile() {
                       style={({ pressed }) => [styles.deleteConfirmBtn, { width: '100%', backgroundColor: colors.teal, opacity: pressed ? 0.85 : 1 }]}
                       onPress={handleDeleteSuccessAcknowledge}
                     >
-                      <Text style={styles.deleteConfirmBtnText}>{t('account.deleteAccount.successAck')}</Text>
+                      <Text style={[styles.deleteConfirmBtnText, { color: colors.white }]}>{t('account.deleteAccount.successAck')}</Text>
                     </Pressable>
                   </>
                 ) : (

@@ -7,20 +7,17 @@ import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
+import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 import { getBookingApi, cancelBookingApi, BookingApiResponse } from '@/src/api/booking';
 import { getParkingSpotDetail } from '@/src/api/parking';
+import { getPublicProfileApi } from '@/src/api/auth';
+import { mapBookingDateRange, formatBookingWhen } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 /** Maps the backend wire shape to the UI Booking type -- same mapping as the
  * driver's booking list (see (tabs)/bookings.tsx), plus payment_id/updated_at
  * which the list doesn't need but the detail view does. */
 function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
-  const start = new Date(b.start);
-  const end = new Date(b.end);
-  const hours = Math.max(1, Math.round((end.getTime() - start.getTime()) / 3_600_000));
-  const dateISO = b.start.slice(0, 10);
-  const startTime = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-  const endTime = end.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
   const amount = typeof b.amount === 'number' ? b.amount / 100 : 0;
 
   return {
@@ -30,10 +27,8 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
     driverId: b.user_id,
     driverName: '',
     ownerId: '',
-    date: dateISO,
-    startTime,
-    endTime,
-    hours,
+    kind: b.kind,
+    ...mapBookingDateRange(b.start, b.end),
     subtotal: amount,
     serviceCharge: 0,
     total: amount,
@@ -44,11 +39,25 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
   };
 }
 
+/** Duración legible: horas para HOURLY, días de check-in a check-out para STAY. */
+function durationLabel(booking: Booking): string {
+  if (booking.kind === 'HOURLY') {
+    return t('driver.booking.durationHours', { hours: String(booking.hours) });
+  }
+  const days = Math.max(1, Math.round(
+    (new Date(`${booking.endDate}T00:00:00`).getTime() - new Date(`${booking.date}T00:00:00`).getTime()) / 86_400_000,
+  ));
+  return t('driver.booking.durationDays', { days: String(days) });
+}
+
 export default function DriverBookingDetail() {
   useLanguage();
   const colors = useThemeColors();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const activeMode = useAccountTypeStore((s) => s.activeMode);
+  const isOwnerView = activeMode === 'owner';
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [driverName, setDriverName] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
@@ -58,12 +67,17 @@ export default function DriverBookingDetail() {
       .then(async (raw) => {
         const spot = await getParkingSpotDetail(raw.parking_spot_id).catch(() => null);
         setBooking(mapApiBooking(raw, spot?.title ?? raw.parking_spot_id));
+        if (isOwnerView) {
+          getPublicProfileApi(raw.user_id)
+            .then((profile) => setDriverName(profile.name))
+            .catch(() => {});
+        }
       })
       .catch((err) => {
         console.warn('[BookingDetail] fetch error:', err);
         setError(true);
       });
-  }, [id]);
+  }, [id, isOwnerView]);
 
   function handleCancel() {
     if (!booking) return;
@@ -108,6 +122,8 @@ export default function DriverBookingDetail() {
     },
     titleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
     spotTitle: { flex: 1, fontSize: 19, fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
+    kindRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    kindText: { fontSize: 13, fontWeight: '600', color: colors.teal },
 
     cardContent: { gap: 12 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -120,6 +136,7 @@ export default function DriverBookingDetail() {
     detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     detailLabel: { flex: 1, fontSize: 14, color: colors.textSecondary },
     detailValue: { fontSize: 14, color: colors.text, fontWeight: '600' },
+    whenValue: { flex: 1, fontSize: 14, color: colors.text, fontWeight: '600' },
     totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     totalLabel: { fontSize: 14, color: colors.text, fontWeight: '600' },
     totalValue: { fontSize: 18, color: colors.teal, fontWeight: '700' },
@@ -171,22 +188,32 @@ export default function DriverBookingDetail() {
   }
 
   const confirmedDate = booking.confirmedAt ? new Date(booking.confirmedAt) : null;
-  const dateLabel = new Date(`${booking.date}T12:00:00`).toLocaleDateString('es-AR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
 
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.body}>
-          {/* Hero: cochera + estado de la reserva */}
+          {/* Hero: cochera, estado, tipo de reserva y conductor (vista propietario) */}
           <View style={styles.heroCard}>
             <View style={styles.titleRow}>
               <Text style={styles.spotTitle}>{booking.parkingSpotTitle}</Text>
               <StatusBadge status={booking.status} />
             </View>
+
+            <View style={styles.kindRow}>
+              <Ionicons name={booking.kind === 'STAY' ? 'calendar-outline' : 'time-outline'} size={14} color={colors.teal} />
+              <Text style={styles.kindText}>
+                {t(booking.kind === 'STAY' ? 'driver.booking.kind.stay' : 'driver.booking.kind.hourly')}
+              </Text>
+            </View>
+
+            {isOwnerView && driverName && (
+              <View style={styles.detailRow}>
+                <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>{t('driver.booking.detail.driver')}</Text>
+                <Text style={styles.detailValue}>{driverName}</Text>
+              </View>
+            )}
           </View>
 
           {booking.status === 'CONFIRMED' && booking.verificationCode && (
@@ -197,7 +224,7 @@ export default function DriverBookingDetail() {
             </View>
           )}
 
-          {/* Resumen: fecha, horario y total */}
+          {/* Resumen: fecha, horario, duración y total */}
           <Card>
             <View style={styles.cardContent}>
               <View style={styles.sectionHeader}>
@@ -207,15 +234,12 @@ export default function DriverBookingDetail() {
 
               <View style={styles.detailRow}>
                 <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
-                <Text style={styles.detailLabel}>{t('driver.booking.date')}</Text>
-                <Text style={styles.detailValue}>{dateLabel}</Text>
+                <Text style={styles.whenValue}>{formatBookingWhen(booking, t('driver.booking.timeTo'))}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
-                <Text style={styles.detailLabel}>{t('driver.booking.time')}</Text>
-                <Text style={styles.detailValue}>
-                  {booking.startTime} {t('driver.booking.timeTo')} {booking.endTime}
-                </Text>
+                <Ionicons name="hourglass-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>{t('driver.booking.detail.duration')}</Text>
+                <Text style={styles.detailValue}>{durationLabel(booking)}</Text>
               </View>
 
               <View style={styles.divider} />
@@ -259,7 +283,8 @@ export default function DriverBookingDetail() {
           )}
         </View>
 
-        {(booking.status === 'CONFIRMED' || booking.status === 'PENDING_OWNER_APPROVAL') && (
+        {/* Cancelar: sólo el conductor titular puede hacerlo (el backend lo exige) */}
+        {!isOwnerView && (booking.status === 'CONFIRMED' || booking.status === 'PENDING_OWNER_APPROVAL') && (
           <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
             <Pressable
               style={[styles.cancelButton, cancelling && { opacity: 0.5 }]}

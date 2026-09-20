@@ -1,7 +1,7 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View, FlatList, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
@@ -12,6 +12,7 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { getOwnerBookings } from '@/src/services/ownerBookings';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { todayArtDateISO } from '@/src/services/dateUtils';
+import { formatBookingWhen } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 // Mismo criterio que spot/[id].tsx: 0=Lunes … 6=Domingo.
@@ -59,6 +60,7 @@ function buildMonthGrid(year: number, month: number): DayCell[] {
 
 export default function OwnerCalendar() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
@@ -266,19 +268,21 @@ export default function OwnerCalendar() {
           ) : null
         }
         renderItem={({ item }) => (
-          <Card style={styles.bookingCard}>
-            <Text style={styles.spotTitle}>{item.parkingSpotTitle}</Text>
-            <View style={styles.driverRow}>
-              <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
-            </View>
-            <View style={styles.timeRow}>
-              <Text style={typography.body}>
-                {item.startTime} {t('driver.booking.timeTo')} {item.endTime}
-              </Text>
-              <StatusBadge status={item.status} />
-            </View>
-          </Card>
+          <Pressable onPress={() => router.push(`${group}/bookings/${item.id}`)}>
+            <Card style={styles.bookingCard}>
+              <Text style={styles.spotTitle}>{item.parkingSpotTitle}</Text>
+              <View style={styles.driverRow}>
+                <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
+              </View>
+              <View style={styles.timeRow}>
+                <Text style={typography.body}>
+                  {formatBookingWhen(item, t('driver.booking.timeTo'))}
+                </Text>
+                <StatusBadge status={item.status} />
+              </View>
+            </Card>
+          </Pressable>
         )}
       />
     </Screen>

@@ -4,7 +4,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator
 import { useLocalSearchParams, router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Chip } from '@/src/components/Chip';
-import { TAG_LABEL_KEYS, FAVORITE_RED, INSTANT_BOOKING_TAG } from '@/src/components/ParkingSpotCard';
+import { TAG_LABEL_KEYS, FAVORITE_RED } from '@/src/components/ParkingSpotCard';
 import { RatingStars } from '@/src/components/RatingStars';
 import { PhotoGallery } from '@/src/components/PhotoGallery';
 import { Button } from '@/src/components/Button';
@@ -396,10 +396,6 @@ export default function SpotDetail() {
             {spot.vehicleTypes.map((vt) => (
               <Chip key={vt} label={t(VEHICLE_TYPE_LABEL_KEYS[vt])} />
             ))}
-            <Chip
-              icon={spot.instantBooking ? INSTANT_BOOKING_TAG.instant.iconName : INSTANT_BOOKING_TAG.approval.iconName}
-              label={t(spot.instantBooking ? INSTANT_BOOKING_TAG.instant.i18nKey : INSTANT_BOOKING_TAG.approval.i18nKey)}
-            />
           </View>
         </View>
 
