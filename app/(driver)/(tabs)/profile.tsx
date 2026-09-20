@@ -115,7 +115,7 @@ export default function Profile() {
     scrollContent: { padding: 16, paddingBottom: 120, gap: 16 },
 
     profileCard: {
-      backgroundColor: colors.surface, borderRadius: 16, padding: 20,
+      backgroundColor: colors.surface, borderRadius: 14, padding: 20,
       borderWidth: 1, borderColor: colors.border,
       flexDirection: 'row', alignItems: 'center', gap: 16,
     },
@@ -151,7 +151,7 @@ export default function Profile() {
     deleteAccountLinkText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
 
     prefCard: {
-      backgroundColor: colors.surface, borderRadius: 12,
+      backgroundColor: colors.surface, borderRadius: 14,
       borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
     },
     prefRow: {

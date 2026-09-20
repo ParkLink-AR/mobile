@@ -1035,7 +1035,7 @@ export function SearchScreen() {
                 { position: 'absolute', top: 60, left: 0, right: 0, backgroundColor: 'transparent' },
               ]}
             >
-              <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, alignItems: 'center', gap: 8 }}>
+              <View style={{ backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 16, alignItems: 'center', gap: 8 }}>
                 <Ionicons name="car-outline" size={28} color={colors.textSecondary} />
                 <Text style={styles.feedbackText}>{t('search.noResults')}</Text>
               </View>
