@@ -50,6 +50,27 @@ export interface ReviewListApiResponse {
   reviews: ReviewApiResponse[];
 }
 
+export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+
+export interface TicketApiResponse {
+  id: string;
+  booking_id: string;
+  created_by: string;
+  subject: string;
+  status: TicketStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TicketMessageApiResponse {
+  id: string;
+  ticket_id: string;
+  sender_id: string;
+  is_admin: boolean;
+  body: string;
+  created_at: string;
+}
+
 // ── Request bodies ────────────────────────────────────────────────────────────
 
 export interface ScheduleEntryBody {
@@ -289,4 +310,57 @@ export async function sendMessageApi(bookingId: string, body: string): Promise<M
  */
 export async function getMessagesApi(bookingId: string): Promise<MessageApiResponse[]> {
   return request(`/bookings/${bookingId}/messages`);
+}
+
+/**
+ * Opens a support ticket on a booking -- either side (the driver or the spot's owner)
+ * can call this. `body` becomes the ticket's opening message.
+ *
+ * POST /bookings/{id}/tickets
+ */
+export async function createTicketApi(bookingId: string, subject: string, body: string): Promise<TicketApiResponse> {
+  return request(`/bookings/${bookingId}/tickets`, {
+    method: 'POST',
+    body: JSON.stringify({ subject, body }),
+  });
+}
+
+/**
+ * Every ticket the caller opened on this booking, newest first.
+ *
+ * GET /bookings/{id}/tickets
+ */
+export async function getMyTicketsApi(bookingId: string): Promise<TicketApiResponse[]> {
+  return request(`/bookings/${bookingId}/tickets`);
+}
+
+/**
+ * A single ticket by id. Only its own creator can read it.
+ *
+ * GET /tickets/{id}
+ */
+export async function getTicketApi(ticketId: string): Promise<TicketApiResponse> {
+  return request(`/tickets/${ticketId}`);
+}
+
+/**
+ * Every message on a ticket's thread, oldest first -- the creator's opening message
+ * plus every reply from ParkLink staff.
+ *
+ * GET /tickets/{id}/messages
+ */
+export async function getTicketMessagesApi(ticketId: string): Promise<TicketMessageApiResponse[]> {
+  return request(`/tickets/${ticketId}/messages`);
+}
+
+/**
+ * Adds a follow-up message to the caller's own ticket.
+ *
+ * POST /tickets/{id}/messages
+ */
+export async function addTicketMessageApi(ticketId: string, body: string): Promise<TicketMessageApiResponse> {
+  return request(`/tickets/${ticketId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ body }),
+  });
 }
