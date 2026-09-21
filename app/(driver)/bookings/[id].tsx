@@ -17,7 +17,7 @@ import { Booking } from '@/src/types';
 /** Maps the backend wire shape to the UI Booking type -- same mapping as the
  * driver's booking list (see (tabs)/bookings.tsx), plus payment_id/updated_at
  * which the list doesn't need but the detail view does. */
-function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
+function mapApiBooking(b: BookingApiResponse, spotTitle: string, ownerId: string): Booking {
   const amount = typeof b.amount === 'number' ? b.amount / 100 : 0;
 
   return {
@@ -26,7 +26,7 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
     parkingSpotTitle: spotTitle,
     driverId: b.user_id,
     driverName: '',
-    ownerId: '',
+    ownerId,
     kind: b.kind,
     ...mapBookingDateRange(b.start, b.end),
     subtotal: amount,
@@ -59,6 +59,7 @@ export default function DriverBookingDetail() {
   const isOwnerView = activeMode === 'owner';
   const [booking, setBooking] = useState<Booking | null>(null);
   const [driverName, setDriverName] = useState<string | null>(null);
+  const [ownerName, setOwnerName] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
@@ -67,10 +68,14 @@ export default function DriverBookingDetail() {
     getBookingApi(id)
       .then(async (raw) => {
         const spot = await getParkingSpotDetail(raw.parking_spot_id).catch(() => null);
-        setBooking(mapApiBooking(raw, spot?.title ?? raw.parking_spot_id));
+        setBooking(mapApiBooking(raw, spot?.title ?? raw.parking_spot_id, spot?.ownerId ?? ''));
         if (isOwnerView) {
           getPublicProfileApi(raw.user_id)
             .then((profile) => setDriverName(profile.name))
+            .catch(() => {});
+        } else if (spot?.ownerId) {
+          getPublicProfileApi(spot.ownerId)
+            .then((profile) => setOwnerName(profile.name))
             .catch(() => {});
         }
       })
@@ -137,6 +142,7 @@ export default function DriverBookingDetail() {
     detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     detailLabel: { flex: 1, fontSize: 14, color: colors.textSecondary },
     detailValue: { fontSize: 14, color: colors.text, fontWeight: '600' },
+    detailValueLink: { color: colors.teal },
     whenValue: { flex: 1, fontSize: 14, color: colors.text, fontWeight: '600' },
     totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     totalLabel: { fontSize: 14, color: colors.text, fontWeight: '600' },
@@ -209,11 +215,27 @@ export default function DriverBookingDetail() {
             </View>
 
             {isOwnerView && driverName && (
-              <View style={styles.detailRow}>
+              <Pressable
+                style={styles.detailRow}
+                onPress={() => router.push(`${group}/profile/${booking.driverId}?as=driver`)}
+              >
                 <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('driver.booking.detail.driver')}</Text>
-                <Text style={styles.detailValue}>{driverName}</Text>
-              </View>
+                <Text style={[styles.detailValue, styles.detailValueLink]}>{driverName}</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.teal} />
+              </Pressable>
+            )}
+
+            {!isOwnerView && ownerName && (
+              <Pressable
+                style={styles.detailRow}
+                onPress={() => router.push(`${group}/profile/${booking.ownerId}?as=owner`)}
+              >
+                <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>{t('driver.booking.detail.owner')}</Text>
+                <Text style={[styles.detailValue, styles.detailValueLink]}>{ownerName}</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.teal} />
+              </Pressable>
             )}
           </View>
 

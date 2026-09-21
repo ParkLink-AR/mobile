@@ -96,6 +96,7 @@
   "driver.booking.detail.paidAt": "Paid on",
   "driver.booking.detail.paymentRef": "Payment reference",
   "driver.booking.detail.driver": "Driver",
+  "driver.booking.detail.owner": "Owner",
   "driver.booking.detail.duration": "Duration",
   "driver.booking.kind.hourly": "Hourly",
   "driver.booking.kind.stay": "Stay",

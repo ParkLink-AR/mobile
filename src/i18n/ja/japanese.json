@@ -96,6 +96,7 @@
   "driver.booking.detail.paidAt": "支払い日時",
   "driver.booking.detail.paymentRef": "支払い参照番号",
   "driver.booking.detail.driver": "ドライバー",
+  "driver.booking.detail.owner": "オーナー",
   "driver.booking.detail.duration": "利用期間",
   "driver.booking.kind.hourly": "時間貸し",
   "driver.booking.kind.stay": "連泊利用",
