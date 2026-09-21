@@ -119,11 +119,11 @@ export default function OwnerCalendar() {
   // medianoche UTC del día 1 a la hora local (ej. Argentina, UTC-3), que cae
   // en el día anterior y muestra el mes equivocado en el título, aunque la
   // grilla de abajo (que usa getUTCFullYear/getUTCMonth) esté bien.
-  const monthLabel = (() => {
-    const d = new Date(Date.UTC(visibleYear, visibleMonth, 1));
-    const monthName = d.toLocaleDateString('es-AR', { month: 'long', timeZone: 'UTC' });
-    return `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)} ${visibleYear}`;
-  })();
+  const monthLabel = new Date(Date.UTC(visibleYear, visibleMonth, 1)).toLocaleDateString('es-AR', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
   const selectedDayBookings = bookingsByDate[selectedDate] ?? [];
 
   function goToMonth(delta: number) {
@@ -143,9 +143,9 @@ export default function OwnerCalendar() {
   const circleSz = Math.round(32 * scale);
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    content: { paddingHorizontal: 8, paddingTop: 16, paddingBottom: 80, gap: 16 },
+    content: { padding: 16, paddingBottom: 120, gap: 16 },
     monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    monthLabel: { fontSize: Math.round(15 * scale), fontWeight: '700', color: colors.text, textTransform: 'capitalize', textAlign: 'center', flex: 1 },
+    monthLabel: { fontSize: Math.round(17 * scale), fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
     navBtn: { padding: Math.round(6 * scale) },
     todayLink: { alignSelf: 'center' },
     todayLinkText: { fontSize: Math.round(13 * scale), fontWeight: '600', color: colors.teal },
@@ -167,10 +167,10 @@ export default function OwnerCalendar() {
     dayTextSelected: { color: colors.white, fontWeight: '700' },
     dot: { width: Math.round(5 * scale), height: Math.round(5 * scale), borderRadius: Math.round(2.5 * scale), backgroundColor: colors.teal },
     dotHidden: { opacity: 0 },
-    sectionHeader: { alignItems: 'center' },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     sectionTitle: {
       fontSize: Math.round(13 * scale), fontWeight: '700', color: colors.text,
-      textTransform: 'capitalize', textAlign: 'center',
+      textTransform: 'capitalize',
     },
     sectionLine: { flex: 1, height: 1, backgroundColor: colors.border },
     emptyCard: {
@@ -186,14 +186,11 @@ export default function OwnerCalendar() {
     timeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   });
 
-  const selectedDateLabel = (() => {
-    const d = new Date(selectedDate + 'T12:00:00Z');
-    const weekday = d.toLocaleDateString('es-AR', { weekday: 'long' });
-    const day = d.toLocaleDateString('es-AR', { day: 'numeric' });
-    const monthName = d.toLocaleDateString('es-AR', { month: 'long' });
-    const label = `${weekday}, ${day} de ${monthName}`;
-    return label.charAt(0).toUpperCase() + label.slice(1);
-  })();
+  const selectedDateLabel = new Date(selectedDate + 'T12:00:00Z').toLocaleDateString('es-AR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
 
   return (
     <Screen style={styles.container} tabBarPadding>
@@ -210,7 +207,7 @@ export default function OwnerCalendar() {
               <Pressable style={styles.navBtn} onPress={() => goToMonth(-1)} hitSlop={8}>
                 <Ionicons name="chevron-back" size={Math.round(22 * scale)} color={colors.text} />
               </Pressable>
-              <Text style={styles.monthLabel} numberOfLines={1} adjustsFontSizeToFit>{monthLabel}</Text>
+              <Text style={styles.monthLabel}>{monthLabel}</Text>
               <Pressable style={styles.navBtn} onPress={() => goToMonth(1)} hitSlop={8}>
                 <Ionicons name="chevron-forward" size={Math.round(22 * scale)} color={colors.text} />
               </Pressable>
@@ -256,6 +253,7 @@ export default function OwnerCalendar() {
 
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{selectedDateLabel}</Text>
+              <View style={styles.sectionLine} />
             </View>
 
             {loading && bookings.length === 0 && (

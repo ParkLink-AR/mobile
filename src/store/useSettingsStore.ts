@@ -28,7 +28,7 @@ export const useSettingsStore = create(
       mode: 'light',
       setMode: (m) => set({ mode: m }),
       toggleMode: () => set((s) => ({ mode: s.mode === 'light' ? 'dark' : 'light' })),
-      fontSize: 'large',
+      fontSize: 'medium',
       setFontSize: (s) => set({ fontSize: s }),
     }),
     {

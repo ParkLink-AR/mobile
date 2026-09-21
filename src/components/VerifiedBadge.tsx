@@ -10,8 +10,8 @@ export function VerifiedBadge() {
   const sc = (n: number) => Math.round(n * scale);
   return (
     <View style={[styles.badge, { paddingHorizontal: sc(8), paddingVertical: sc(3), gap: sc(4), borderRadius: sc(6) }]}>
-      <Ionicons name="checkmark-circle" size={sc(16)} color={colors.success} />
-      <Text style={[styles.text, { fontSize: sc(16) }]}>{t('verifiedBadge.text')}</Text>
+      <Ionicons name="checkmark-circle" size={sc(13)} color={colors.success} />
+      <Text style={[styles.text, { fontSize: sc(12) }]}>{t('verifiedBadge.text')}</Text>
     </View>
   );
 }
@@ -21,7 +21,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#DCFCE7',
-    alignSelf: 'center',
+    alignSelf: 'flex-start',
     marginTop: 4,
   },
   text: {

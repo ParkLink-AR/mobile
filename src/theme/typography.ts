@@ -10,18 +10,18 @@ export const FONT_SCALE: Record<'small' | 'medium' | 'large', number> = {
   large: 1.89,
 };
 
-/** Returns the current numeric scale factor (e.g. 1.89 for large). */
+/** Returns the current numeric scale factor (e.g. 1 for medium/normal). */
 export function useScale(): number {
   const fontSize = useSettingsStore((s) => s.fontSize);
-  return FONT_SCALE[fontSize ?? 'large'];
+  return FONT_SCALE[fontSize ?? 'medium'];
 }
 
 export function useTypography(): Typography {
   const colors = useThemeColors();
   const scale = useScale();
   return {
-    h1: { fontSize: Math.round(24 * scale), fontWeight: '700', color: colors.text, lineHeight: Math.round(24 * scale * 1.25) },
-    h2: { fontSize: Math.round(18 * scale), fontWeight: '600', color: colors.text, lineHeight: Math.round(18 * scale * 1.3) },
+    h1: { fontSize: Math.round(22 * scale), fontWeight: '700', color: colors.text, lineHeight: Math.round(22 * scale * 1.25) },
+    h2: { fontSize: Math.round(17 * scale), fontWeight: '600', color: colors.text, lineHeight: Math.round(17 * scale * 1.3) },
     body: { fontSize: Math.round(15 * scale), fontWeight: '400', color: colors.text, lineHeight: Math.round(15 * scale * 1.5) },
     caption: { fontSize: Math.round(13 * scale), fontWeight: '400', color: colors.textSecondary, lineHeight: Math.round(13 * scale * 1.45) },
   };

@@ -7,7 +7,7 @@ import { Screen } from '@/src/components/Screen';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
 import { Button } from '@/src/components/Button';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotsForOwner } from '@/src/services/parkingService';
 import { ParkingSpot } from '@/src/types';
@@ -17,6 +17,8 @@ export default function OwnerSpots() {
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const user = useSessionStore((s) => s.user);
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,26 +38,40 @@ export default function OwnerSpots() {
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       padding: 16, paddingBottom: 8,
     },
+    addBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      paddingHorizontal: 12, paddingVertical: 7,
+      borderRadius: 8, borderWidth: 1.5, borderColor: colors.teal,
+    },
+    addBtnText: { fontSize: sc(13), fontWeight: '600', color: colors.teal },
     list: { padding: 16, paddingTop: 8, gap: 12 },
-    emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 },
-    emptyText: { fontSize: 48, fontWeight: '700', color: colors.textSecondary, textAlign: 'center', lineHeight: 56 },
-    emptyBtn: { alignSelf: 'stretch', marginTop: 8, paddingVertical: 10 },
-    emptyBtnText: { fontSize: 48, fontWeight: '700', textAlign: 'center' },
+    emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 },
+    emptyText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
+    emptyBtn: { alignSelf: 'stretch', marginTop: 8 },
+    emptyBtnText: { fontSize: sc(15) },
   });
 
   return (
     <Screen style={styles.container} tabBarPadding>
       <View style={styles.header}>
         <Text style={typography.h1}>{t('tabs.owner.spots')}</Text>
+        <Pressable
+          style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.75 : 1 }]}
+          onPress={() => router.push(`${group}/spots/new`)}
+        >
+          <Ionicons name="add" size={sc(16)} color={colors.teal} />
+          <Text style={styles.addBtnText}>{t('profile.mySpots.add')}</Text>
+        </Pressable>
       </View>
 
       {loading ? (
         <ActivityIndicator color={colors.teal} style={{ marginTop: 40 }} />
       ) : spots.length === 0 ? (
         <View style={styles.emptyWrap}>
-          <Ionicons name="home-outline" size={64} color={colors.textSecondary} />
+          <Ionicons name="home-outline" size={sc(48)} color={colors.textSecondary} />
           <Text style={styles.emptyText}>{t('profile.mySpots.empty')}</Text>
           <Button
             title={t('profile.mySpots.add')}

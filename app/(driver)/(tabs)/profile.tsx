@@ -41,7 +41,6 @@ export default function Profile() {
   const setActiveMode = useAccountTypeStore((s) => s.setActiveMode);
   const isOwner = group === '/(owner)';
   const [langModalVisible, setLangModalVisible] = useState(false);
-  const [modeModalVisible, setModeModalVisible] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [fontSizeModalVisible, setFontSizeModalVisible] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
@@ -109,21 +108,21 @@ export default function Profile() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    scrollContent: { padding: 16, paddingBottom: 80, gap: 16 },
+    scrollContent: { padding: 16, paddingBottom: 120, gap: 16 },
 
     profileCard: {
       backgroundColor: colors.surface, borderRadius: 14, padding: sc(20),
       borderWidth: 1, borderColor: colors.border,
-      flexDirection: 'column', alignItems: 'center', gap: sc(10),
+      flexDirection: 'row', alignItems: 'center', gap: sc(16),
     },
     avatar: {
-      width: sc(72), height: sc(72), borderRadius: sc(36),
+      width: sc(64), height: sc(64), borderRadius: sc(32),
       backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center',
     },
-    avatarText: { color: colors.white, fontSize: sc(26), fontWeight: '700' },
-    profileInfo: { width: '100%', alignItems: 'center', gap: sc(6) },
-    profileName: { fontSize: sc(18), fontWeight: '700', color: colors.text, textAlign: 'center' },
-    profileEmail: { fontSize: sc(14), color: colors.textSecondary, textAlign: 'center' },
+    avatarText: { color: colors.white, fontSize: sc(22), fontWeight: '700' },
+    profileInfo: { flex: 1, gap: sc(4) },
+    profileName: { fontSize: sc(18), fontWeight: '700', color: colors.text },
+    profileEmail: { fontSize: sc(13), color: colors.textSecondary },
 
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
     sectionTitle: {
@@ -215,24 +214,14 @@ export default function Profile() {
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
             {user.avatarUrl ? (
-              <Image source={{ uri: user.avatarUrl }} style={{ width: sc(72), height: sc(72), borderRadius: sc(36) }} />
+              <Image source={{ uri: user.avatarUrl }} style={{ width: sc(64), height: sc(64), borderRadius: sc(32) }} />
             ) : (
               <Text style={styles.avatarText}>{initials}</Text>
             )}
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{[user.name, user.lastName].filter(Boolean).join(' ')}</Text>
-            {(() => {
-              const atIdx = user.email.indexOf('@');
-              const local = atIdx >= 0 ? user.email.slice(0, atIdx) : user.email;
-              const domain = atIdx >= 0 ? user.email.slice(atIdx) : '';
-              return (
-                <>
-                  <Text style={styles.profileEmail}>{local}</Text>
-                  {domain ? <Text style={styles.profileEmail}>{domain}</Text> : null}
-                </>
-              );
-            })()}
+            <Text style={styles.profileEmail}>{user.email}</Text>
             <VerifiedBadge />
           </View>
         </View>
@@ -286,14 +275,14 @@ export default function Profile() {
               solo modo (ver el comentario en useAccountTypeStore.groupFor). */}
           <Pressable
             style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => setModeModalVisible(true)}
+            onPress={switchMode}
           >
             <Text style={styles.prefLabel}>{t('profile.changeMode')}</Text>
             <View style={styles.langCurrent}>
               <Text style={styles.langCurrentText}>
-                {isOwner ? t('accountType.owner.title') : t('accountType.driver.title')}
+                {isOwner ? t('accountType.driver.title') : t('accountType.owner.title')}
               </Text>
-              <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
+              <Ionicons name="swap-horizontal-outline" size={sc(14)} color={colors.teal} />
             </View>
           </Pressable>
 
@@ -497,49 +486,6 @@ export default function Profile() {
                       {active && (
                         <Ionicons name="checkmark-circle" size={20} color={colors.teal} />
                       )}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-
-      {/* Mode selection modal */}
-      <Modal
-        visible={modeModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModeModalVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setModeModalVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.modalSheet}>
-                <Text style={styles.modalTitle}>{t('profile.changeMode')}</Text>
-                {([
-                  { key: 'driver', label: t('accountType.driver.title') },
-                  { key: 'owner',  label: t('accountType.owner.title') },
-                ] as const).map((opt) => {
-                  const active = isOwner ? opt.key === 'owner' : opt.key === 'driver';
-                  return (
-                    <Pressable
-                      key={opt.key}
-                      style={({ pressed }) => [
-                        styles.langOption,
-                        active && styles.langOptionActive,
-                        { opacity: pressed ? 0.7 : 1 },
-                      ]}
-                      onPress={() => {
-                        setModeModalVisible(false);
-                        if (!active) switchMode();
-                      }}
-                    >
-                      <Text style={[styles.langOptionLabel, active ? styles.langOptionLabelActive : styles.langOptionLabelInactive]}>
-                        {opt.label}
-                      </Text>
-                      {active && <Ionicons name="checkmark-circle" size={20} color={colors.teal} />}
                     </Pressable>
                   );
                 })}

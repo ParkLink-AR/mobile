@@ -476,14 +476,6 @@ export function SearchScreen() {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    favoritesButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 12,
-      backgroundColor: colors.teal,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
     statusText: {
       paddingHorizontal: 20,
       paddingTop: 8,
@@ -609,7 +601,7 @@ export function SearchScreen() {
     listContent: {
       padding: 16,
       gap: 12,
-      paddingBottom: 80,
+      paddingBottom: 120,
     },
     // ── Map view ────────────────────────────────────────────────────────────
     mapWrapper: {
@@ -813,13 +805,6 @@ export function SearchScreen() {
             ) : (
               <Ionicons name="locate" size={20} color={colors.white} />
             )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.favoritesButton}
-            onPress={() => router.push('/(driver)/(tabs)/favorites')}
-            accessibilityLabel={t('tabs.driver.favorites')}
-          >
-            <Ionicons name="heart-outline" size={20} color={colors.white} />
           </TouchableOpacity>
         </View>
 

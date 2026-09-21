@@ -6,7 +6,7 @@ import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useNotificationsStore } from '@/src/store/useNotificationsStore';
 import { AppNotification } from '@/src/services/notificationsFeed';
@@ -28,6 +28,8 @@ export default function Notifications() {
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const user = useSessionStore((s) => s.user);
   const items = useNotificationsStore((s) => s.items);
   const loading = useNotificationsStore((s) => s.loading);
@@ -71,24 +73,24 @@ export default function Notifications() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
-    row: { flexDirection: 'column', alignItems: 'center', gap: 12 },
+    row: { flexDirection: 'row', gap: sc(10), alignItems: 'flex-start' },
     iconBadge: {
-      width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center',
+      width: sc(34), height: sc(34), borderRadius: sc(17), alignItems: 'center', justifyContent: 'center',
     },
-    textBlock: { gap: 10, alignSelf: 'stretch' },
-    itemTitle: { fontSize: 48, fontWeight: '700', color: colors.text, textAlign: 'center' },
-    itemBody: { fontSize: 40, color: colors.textSecondary, lineHeight: 52, textAlign: 'center' },
-    actionsRow: { flexDirection: 'row', gap: 8, marginTop: 20 },
+    textBlock: { flex: 1, gap: sc(2) },
+    itemTitle: { fontSize: sc(14.5), fontWeight: '700', color: colors.text },
+    itemBody: { fontSize: sc(13), color: colors.textSecondary, lineHeight: sc(18) },
+    actionsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
     actionBtn: {
-      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-      paddingVertical: 20, borderRadius: 10,
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: sc(6),
+      paddingVertical: 9, borderRadius: 10,
     },
     approveBtn: { backgroundColor: colors.teal },
     rejectBtn: { borderWidth: 1.5, borderColor: '#C62828' },
-    approveBtnText: { color: colors.white, fontWeight: '700', fontSize: 40 },
-    rejectBtnText: { color: '#C62828', fontWeight: '700', fontSize: 40 },
+    approveBtnText: { color: colors.white, fontWeight: '700', fontSize: sc(14) },
+    rejectBtnText: { color: '#C62828', fontWeight: '700', fontSize: sc(14) },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-    emptyText: { fontSize: 40, color: colors.textSecondary, textAlign: 'center', lineHeight: 52 },
+    emptyText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
   });
 
   function iconColorFor(kind: AppNotification['kind']) {
@@ -118,7 +120,7 @@ export default function Notifications() {
         onRefresh={() => user && refresh(user.id)}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="notifications-outline" size={40} color={colors.textSecondary} />
+            <Ionicons name="notifications-outline" size={sc(40)} color={colors.textSecondary} />
             <Text style={styles.emptyText}>{t('notifications.empty')}</Text>
           </View>
         }
@@ -130,7 +132,7 @@ export default function Notifications() {
               disabled={item.kind === 'driver_confirmed' || item.kind === 'driver_rejected' || item.kind === 'owner_new_booking'}
             >
               <View style={[styles.iconBadge, { backgroundColor: iconColorFor(item.kind) + '20' }]}>
-                <Ionicons name={ICONS[item.kind]} size={56} color={iconColorFor(item.kind)} />
+                <Ionicons name={ICONS[item.kind]} size={sc(18)} color={iconColorFor(item.kind)} />
               </View>
               <View style={styles.textBlock}>
                 <Text style={styles.itemTitle}>{item.spotTitle}</Text>
@@ -156,7 +158,7 @@ export default function Notifications() {
                     <ActivityIndicator color="#C62828" size="small" />
                   ) : (
                     <>
-                      <Ionicons name="close" size={44} color="#C62828" />
+                      <Ionicons name="close" size={sc(16)} color="#C62828" />
                       <Text style={styles.rejectBtnText}>{t('owner.spot.requests.reject')}</Text>
                     </>
                   )}
@@ -170,7 +172,7 @@ export default function Notifications() {
                     <ActivityIndicator color={colors.white} size="small" />
                   ) : (
                     <>
-                      <Ionicons name="checkmark" size={44} color={colors.white} />
+                      <Ionicons name="checkmark" size={sc(16)} color={colors.white} />
                       <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
                     </>
                   )}
