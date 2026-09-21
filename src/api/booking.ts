@@ -100,10 +100,6 @@ export async function createBookingApi(body: CreateBookingBody): Promise<Booking
  * The externalReference MUST be the bookingId so the webhook can confirm it.
  *
  * POST /payments/create-preference
- *
- * NOTE: payment-service doesn't exist in this workspace yet (the gateway 503s
- * on every /payments/* route) -- this call is unused for now, kept for when
- * it does. See confirm.tsx.
  */
 export interface CreatePreferenceBody {
   amount: number;
@@ -130,10 +126,18 @@ export async function createPaymentPreference(
 }
 
 /**
- * Confirms a PENDING_PAYMENT booking (payment_id is normally the Mercado Pago
- * payment id, attached by the webhook once it fires). Used directly by
- * confirm.tsx for now, with a placeholder payment_id, while payment-service
- * doesn't exist -- see confirm.tsx for why.
+ * Sentinel payment_id for a booking paid in person, in cash -- there's no
+ * real Mercado Pago payment to reference, so confirm.tsx/confirm-stay.tsx
+ * send this literal instead of a checkout flow. booking-service's refund
+ * client recognizes it and skips the (nonsensical) refund call if the
+ * booking later gets rejected, cancelled, or expires unanswered.
+ */
+export const CASH_PAYMENT_ID = 'CASH';
+
+/**
+ * Confirms a PENDING_PAYMENT booking. payment_id is either the real Mercado
+ * Pago payment id (once the checkout succeeds) or CASH_PAYMENT_ID for an
+ * in-person cash booking.
  *
  * POST /bookings/{id}/confirm
  */

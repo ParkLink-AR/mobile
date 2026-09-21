@@ -10,6 +10,7 @@ import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useNotificationsStore } from '@/src/store/useNotificationsStore';
 import { AppNotification } from '@/src/services/notificationsFeed';
+import { formatBookingWhen } from '@/src/services/bookingDates';
 import { approveBookingApi, rejectBookingApi } from '@/src/api/booking';
 import { ApiError } from '@/src/api/client';
 
@@ -134,9 +135,9 @@ export default function Notifications() {
               <View style={styles.textBlock}>
                 <Text style={styles.itemTitle}>{item.spotTitle}</Text>
                 <Text style={styles.itemBody}>
-                  {item.kind === 'owner_request' && t('notifications.ownerRequest.body', { date: item.date, start: item.startTime, end: item.endTime })}
-                  {item.kind === 'owner_new_booking' && t('notifications.ownerNewBooking.body', { date: item.date, start: item.startTime, end: item.endTime })}
-                  {item.kind === 'driver_confirmed' && t('notifications.driverConfirmed.body', { date: item.date, start: item.startTime, end: item.endTime })}
+                  {item.kind === 'owner_request' && t('notifications.ownerRequest.body', { when: formatBookingWhen(item, t('driver.booking.timeTo')) })}
+                  {item.kind === 'owner_new_booking' && t('notifications.ownerNewBooking.body', { when: formatBookingWhen(item, t('driver.booking.timeTo')) })}
+                  {item.kind === 'driver_confirmed' && t('notifications.driverConfirmed.body', { when: formatBookingWhen(item, t('driver.booking.timeTo')) })}
                   {item.kind === 'driver_rejected' && t('notifications.driverRejected.body')}
                   {item.kind === 'driver_review_prompt' && t('notifications.driverReviewPrompt.body')}
                   {item.kind === 'owner_review_prompt' && t('notifications.ownerReviewPrompt.body')}
