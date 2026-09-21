@@ -70,24 +70,24 @@ export default function Notifications() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
-    row: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+    row: { flexDirection: 'column', alignItems: 'center', gap: 12 },
     iconBadge: {
-      width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center',
+      width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center',
     },
-    textBlock: { flex: 1, gap: 2 },
-    itemTitle: { fontSize: 14.5, fontWeight: '700', color: colors.text },
-    itemBody: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
-    actionsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+    textBlock: { gap: 10, alignSelf: 'stretch' },
+    itemTitle: { fontSize: 48, fontWeight: '700', color: colors.text, textAlign: 'center' },
+    itemBody: { fontSize: 40, color: colors.textSecondary, lineHeight: 52, textAlign: 'center' },
+    actionsRow: { flexDirection: 'row', gap: 8, marginTop: 20 },
     actionBtn: {
-      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-      paddingVertical: 9, borderRadius: 10,
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      paddingVertical: 20, borderRadius: 10,
     },
     approveBtn: { backgroundColor: colors.teal },
     rejectBtn: { borderWidth: 1.5, borderColor: '#C62828' },
-    approveBtnText: { color: colors.white, fontWeight: '700' },
-    rejectBtnText: { color: '#C62828', fontWeight: '700' },
+    approveBtnText: { color: colors.white, fontWeight: '700', fontSize: 40 },
+    rejectBtnText: { color: '#C62828', fontWeight: '700', fontSize: 40 },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-    emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    emptyText: { fontSize: 40, color: colors.textSecondary, textAlign: 'center', lineHeight: 52 },
   });
 
   function iconColorFor(kind: AppNotification['kind']) {
@@ -129,7 +129,7 @@ export default function Notifications() {
               disabled={item.kind === 'driver_confirmed' || item.kind === 'driver_rejected' || item.kind === 'owner_new_booking'}
             >
               <View style={[styles.iconBadge, { backgroundColor: iconColorFor(item.kind) + '20' }]}>
-                <Ionicons name={ICONS[item.kind]} size={18} color={iconColorFor(item.kind)} />
+                <Ionicons name={ICONS[item.kind]} size={56} color={iconColorFor(item.kind)} />
               </View>
               <View style={styles.textBlock}>
                 <Text style={styles.itemTitle}>{item.spotTitle}</Text>
@@ -155,7 +155,7 @@ export default function Notifications() {
                     <ActivityIndicator color="#C62828" size="small" />
                   ) : (
                     <>
-                      <Ionicons name="close" size={16} color="#C62828" />
+                      <Ionicons name="close" size={44} color="#C62828" />
                       <Text style={styles.rejectBtnText}>{t('owner.spot.requests.reject')}</Text>
                     </>
                   )}
@@ -169,7 +169,7 @@ export default function Notifications() {
                     <ActivityIndicator color={colors.white} size="small" />
                   ) : (
                     <>
-                      <Ionicons name="checkmark" size={16} color={colors.white} />
+                      <Ionicons name="checkmark" size={44} color={colors.white} />
                       <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
                     </>
                   )}

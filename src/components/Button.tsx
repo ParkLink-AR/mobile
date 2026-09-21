@@ -1,4 +1,4 @@
-import { Pressable, Text, StyleSheet, ViewStyle } from 'react-native';
+import { Pressable, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { colors } from '@/src/theme/colors';
 
 interface ButtonProps {
@@ -6,16 +6,17 @@ interface ButtonProps {
   onPress: () => void;
   disabled?: boolean;
   style?: ViewStyle;
+  textStyle?: TextStyle;
 }
 
-export function Button({ title, onPress, disabled, style }: ButtonProps) {
+export function Button({ title, onPress, disabled, style, textStyle }: ButtonProps) {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       style={[styles.button, disabled && styles.disabled, style]}
     >
-      <Text style={styles.text}>{title}</Text>
+      <Text style={[styles.text, textStyle]}>{title}</Text>
     </Pressable>
   );
 }
