@@ -40,7 +40,7 @@ export default function TabsLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="index" options={{ title: t('tabs.driver.search') }} />
-      <Tabs.Screen name="favorites" options={{ href: null }} />
+      <Tabs.Screen name="favorites" options={{ title: t('tabs.driver.favorites') }} />
       <Tabs.Screen name="bookings" options={{ title: t('tabs.driver.bookings') }} />
       <Tabs.Screen name="notifications" options={{ title: t('tabs.driver.notifications') }} />
       <Tabs.Screen name="profile" options={{ title: t('tabs.driver.profile') }} />
