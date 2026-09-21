@@ -36,6 +36,14 @@ export interface ReviewApiResponse {
   created_at: string;
 }
 
+export interface MessageApiResponse {
+  id: string;
+  booking_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+}
+
 export interface ReviewListApiResponse {
   average_rating: number;
   count: number;
@@ -257,4 +265,28 @@ export async function getBookingReviewsApi(bookingId: string): Promise<ReviewApi
  */
 export async function getUserReviewsApi(userId: string, as: 'owner' | 'driver'): Promise<ReviewListApiResponse> {
   return request(`/users/${userId}/reviews?as=${as}`);
+}
+
+/**
+ * Sends a message on a booking's thread -- either side (the driver or the spot's
+ * owner) can call this once the booking exists. Used to coordinate access
+ * instructions, arrival, etc.
+ *
+ * POST /bookings/{id}/messages
+ */
+export async function sendMessageApi(bookingId: string, body: string): Promise<MessageApiResponse> {
+  return request(`/bookings/${bookingId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ body }),
+  });
+}
+
+/**
+ * Every message on a booking's thread, oldest first. Only the booking's driver or
+ * its spot's owner can read it.
+ *
+ * GET /bookings/{id}/messages
+ */
+export async function getMessagesApi(bookingId: string): Promise<MessageApiResponse[]> {
+  return request(`/bookings/${bookingId}/messages`);
 }
