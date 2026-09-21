@@ -1,6 +1,5 @@
-import { Booking, PaymentMethod, Settlement } from '@/src/types';
+import { Booking, Settlement } from '@/src/types';
 import { mockSettlements } from '@/src/mocks/settlements';
-import { getMockPaymentMethods } from '@/src/mocks/paymentMethods';
 import { delay } from './utils';
 import { cancelBooking, getBookingById } from './bookingService';
 
@@ -19,10 +18,6 @@ export async function getSettlementsForOwner(ownerId: string): Promise<Settlemen
 
 export async function getSettlementById(id: string): Promise<Settlement | undefined> {
   return delay(mockSettlements.find((s) => s.id === id));
-}
-
-export async function getPaymentMethods(): Promise<PaymentMethod[]> {
-  return delay(getMockPaymentMethods());
 }
 
 export { cancelBooking };

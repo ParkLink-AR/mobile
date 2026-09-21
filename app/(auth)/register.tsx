@@ -1,4 +1,4 @@
-import { t } from '@/src/i18n';
+import { t, useLanguage } from '@/src/i18n';
 import { createElement, useEffect, useState } from 'react';
 import {
   Text,
@@ -46,6 +46,7 @@ function formatDate(d: Date): string {
 }
 
 export default function Register() {
+  useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const setSession = useSessionStore((s) => s.setSession);
@@ -108,7 +109,7 @@ export default function Register() {
     setError(null);
     const normalized = email.trim().toLowerCase();
     if (!normalized) {
-      setError('Ingresá tu email.');
+      setError(t('auth.error.emailRequired'));
       return;
     }
     setLoading(true);
@@ -118,7 +119,7 @@ export default function Register() {
       setStep('email-code');
       setEmailCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err) {
-      handleApiError(err, 'No se pudo enviar el código.');
+      handleApiError(err, t('auth.error.sendCode'));
     } finally {
       setLoading(false);
     }
@@ -127,15 +128,15 @@ export default function Register() {
   async function handleConfirmEmailCode() {
     setError(null);
     if (emailCode.length !== 6) {
-      setError('Ingresá el código de 6 dígitos.');
+      setError(t('auth.error.codeLength'));
       return;
     }
     setLoading(true);
     try {
       await confirmEmailRegistration(email, emailCode);
-      flashSuccessThenGo('Email verificado correctamente', 'phone');
+      flashSuccessThenGo(t('auth.register.emailCode.success'), 'phone');
     } catch (err) {
-      handleApiError(err, 'No se pudo confirmar el código.');
+      handleApiError(err, t('auth.error.confirmCode'));
     } finally {
       setLoading(false);
     }
@@ -148,14 +149,14 @@ export default function Register() {
       await requestEmailRegistration(email);
       setEmailCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err) {
-      handleApiError(err, 'No se pudo reenviar el código.');
+      handleApiError(err, t('auth.error.resendCode'));
     }
   }
 
   async function handleSendPhoneCode() {
     setError(null);
     if (!phoneNumber.trim()) {
-      setError('Ingresá tu número.');
+      setError(t('auth.register.phone.error.required'));
       return;
     }
     if (SKIP_PHONE_VERIFICATION) {
@@ -168,7 +169,7 @@ export default function Register() {
       setStep('phone-code');
       setPhoneCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err) {
-      handleApiError(err, 'No se pudo enviar el código.');
+      handleApiError(err, t('auth.error.sendCode'));
     } finally {
       setLoading(false);
     }
@@ -177,15 +178,15 @@ export default function Register() {
   async function handleConfirmPhoneCode() {
     setError(null);
     if (phoneCode.length !== 6) {
-      setError('Ingresá el código de 6 dígitos.');
+      setError(t('auth.error.codeLength'));
       return;
     }
     setLoading(true);
     try {
       await confirmPhoneRegistration(fullPhone, phoneCode);
-      flashSuccessThenGo('Teléfono verificado correctamente', 'personal');
+      flashSuccessThenGo(t('auth.register.phoneCode.success'), 'personal');
     } catch (err) {
-      handleApiError(err, 'No se pudo confirmar el código.');
+      handleApiError(err, t('auth.error.confirmCode'));
     } finally {
       setLoading(false);
     }
@@ -198,7 +199,7 @@ export default function Register() {
       await requestPhoneRegistration(fullPhone);
       setPhoneCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err) {
-      handleApiError(err, 'No se pudo reenviar el código.');
+      handleApiError(err, t('auth.error.resendCode'));
     }
   }
 
@@ -208,7 +209,7 @@ export default function Register() {
     const trimmedLastName = lastName.trim();
     const trimmedDni = dni.trim();
     if (!trimmedFirstName || !trimmedLastName || !trimmedDni || !birthDate || !password) {
-      setError('Completá todos los campos.');
+      setError(t('auth.register.personal.error.required'));
       return;
     }
     setLoading(true);
@@ -226,7 +227,7 @@ export default function Register() {
       setSession(newUser, tokens);
       router.replace('/(auth)/account-type' as never);
     } catch (err) {
-      handleApiError(err, 'No se pudo crear la cuenta.');
+      handleApiError(err, t('auth.register.personal.error.submit'));
     } finally {
       setLoading(false);
     }
@@ -314,10 +315,10 @@ export default function Register() {
 
       {step === 'email' && (
         <>
-          <Text style={typography.h1}>¿Cuál es tu email?</Text>
+          <Text style={typography.h1}>{t('auth.register.email.title')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder={t('auth.emailPlaceholder')}
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="none"
             keyboardType="email-address"
@@ -327,15 +328,15 @@ export default function Register() {
           {loading ? (
             <ActivityIndicator color={colors.teal} />
           ) : (
-            <Button title="Enviar código" onPress={handleSendEmailCode} />
+            <Button title={t('auth.sendCodeButton')} onPress={handleSendEmailCode} />
           )}
         </>
       )}
 
       {step === 'email-code' && (
         <>
-          <Text style={typography.h1}>Confirmá tu email</Text>
-          <Text style={typography.body}>Te mandamos un código de 6 dígitos a {email}.</Text>
+          <Text style={typography.h1}>{t('auth.register.emailCode.title')}</Text>
+          <Text style={typography.body}>{t('auth.register.emailCode.helper', { email })}</Text>
           <TextInput
             style={styles.codeInput}
             placeholder="000000"
@@ -348,23 +349,23 @@ export default function Register() {
           {loading ? (
             <ActivityIndicator color={colors.teal} />
           ) : (
-            <Button title="Confirmar" onPress={handleConfirmEmailCode} />
+            <Button title={t('common.confirm')} onPress={handleConfirmEmailCode} />
           )}
           <Text
             style={[styles.link, emailCooldown > 0 && styles.linkDisabled]}
             onPress={handleResendEmailCode}
           >
-            {emailCooldown > 0 ? `Reenviar código (${emailCooldown}s)` : 'Reenviar código'}
+            {emailCooldown > 0 ? t('auth.resendCodeCooldown', { seconds: String(emailCooldown) }) : t('auth.resendCode')}
           </Text>
           <Text style={styles.link} onPress={goBack}>
-            Atrás
+            {t('common.back')}
           </Text>
         </>
       )}
 
       {step === 'phone' && (
         <>
-          <Text style={typography.h1}>¿Cuál es tu teléfono?</Text>
+          <Text style={typography.h1}>{t('auth.register.phone.title')}</Text>
           <View style={styles.phoneRow}>
             <TouchableOpacity style={styles.countryButton} onPress={() => setCountryPickerOpen(true)}>
               <Text style={styles.countryButtonText}>
@@ -373,7 +374,7 @@ export default function Register() {
             </TouchableOpacity>
             <TextInput
               style={[styles.input, styles.phoneInput]}
-              placeholder="11 2345 6789"
+              placeholder={t('auth.register.phone.placeholder')}
               placeholderTextColor={colors.textSecondary}
               keyboardType="phone-pad"
               value={phoneNumber}
@@ -384,12 +385,12 @@ export default function Register() {
             <ActivityIndicator color={colors.teal} />
           ) : (
             <Button
-              title={SKIP_PHONE_VERIFICATION ? 'Continuar' : 'Enviar código'}
+              title={SKIP_PHONE_VERIFICATION ? t('common.continue') : t('auth.sendCodeButton')}
               onPress={handleSendPhoneCode}
             />
           )}
           <Text style={styles.link} onPress={goBack}>
-            Atrás
+            {t('common.back')}
           </Text>
 
           <Modal
@@ -400,7 +401,7 @@ export default function Register() {
           >
             <View style={styles.modalOverlay}>
               <View style={styles.modalContent}>
-                <Text style={typography.h2}>Elegí tu país</Text>
+                <Text style={typography.h2}>{t('auth.register.phone.countryPicker.title')}</Text>
                 <FlatList
                   data={COUNTRIES}
                   keyExtractor={(item) => item.iso2}
@@ -426,8 +427,8 @@ export default function Register() {
 
       {step === 'phone-code' && (
         <>
-          <Text style={typography.h1}>Confirmá tu teléfono</Text>
-          <Text style={typography.body}>Te mandamos un código de 6 dígitos por SMS a {fullPhone}.</Text>
+          <Text style={typography.h1}>{t('auth.register.phoneCode.title')}</Text>
+          <Text style={typography.body}>{t('auth.register.phoneCode.helper', { phone: fullPhone })}</Text>
           <TextInput
             style={styles.codeInput}
             placeholder="000000"
@@ -440,40 +441,40 @@ export default function Register() {
           {loading ? (
             <ActivityIndicator color={colors.teal} />
           ) : (
-            <Button title="Confirmar" onPress={handleConfirmPhoneCode} />
+            <Button title={t('common.confirm')} onPress={handleConfirmPhoneCode} />
           )}
           <Text
             style={[styles.link, phoneCooldown > 0 && styles.linkDisabled]}
             onPress={handleResendPhoneCode}
           >
-            {phoneCooldown > 0 ? `Reenviar código (${phoneCooldown}s)` : 'Reenviar código'}
+            {phoneCooldown > 0 ? t('auth.resendCodeCooldown', { seconds: String(phoneCooldown) }) : t('auth.resendCode')}
           </Text>
           <Text style={styles.link} onPress={goBack}>
-            Atrás
+            {t('common.back')}
           </Text>
         </>
       )}
 
       {step === 'personal' && (
         <>
-          <Text style={typography.h1}>Tus datos</Text>
+          <Text style={typography.h1}>{t('auth.register.personal.title')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Nombre"
+            placeholder={t('auth.register.personal.firstName')}
             placeholderTextColor={colors.textSecondary}
             value={firstName}
             onChangeText={setFirstName}
           />
           <TextInput
             style={styles.input}
-            placeholder="Apellido"
+            placeholder={t('auth.register.personal.lastName')}
             placeholderTextColor={colors.textSecondary}
             value={lastName}
             onChangeText={setLastName}
           />
           <TextInput
             style={styles.input}
-            placeholder="DNI"
+            placeholder={t('auth.register.personal.dni')}
             placeholderTextColor={colors.textSecondary}
             keyboardType="number-pad"
             value={dni}
@@ -500,7 +501,7 @@ export default function Register() {
             <>
               <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
                 <Text style={styles.dateButtonText}>
-                  {birthDate ? formatDate(birthDate) : 'Fecha de nacimiento'}
+                  {birthDate ? formatDate(birthDate) : t('auth.register.personal.birthDate')}
                 </Text>
               </TouchableOpacity>
               {showDatePicker && (
@@ -526,16 +527,15 @@ export default function Register() {
             onChangeText={setPassword}
           />
           <Text style={typography.caption}>
-            Mínimo 8 caracteres, con una mayúscula, una minúscula y un número. Tenés que ser
-            mayor de 18 años.
+            {t('auth.register.personal.passwordHint')}
           </Text>
           {loading ? (
             <ActivityIndicator color={colors.teal} />
           ) : (
-            <Button title="Crear cuenta" onPress={handleFinishRegistration} />
+            <Button title={t('auth.register.button')} onPress={handleFinishRegistration} />
           )}
           <Text style={styles.link} onPress={goBack}>
-            Atrás
+            {t('common.back')}
           </Text>
         </>
       )}

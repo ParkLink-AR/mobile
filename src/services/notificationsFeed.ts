@@ -1,6 +1,7 @@
 import { getParkingSpotsForOwner } from '@/src/services/parkingService';
 import { getBookingsForSpotApi, getUserBookingsApi, getBookingReviewsApi, BookingApiResponse } from '@/src/api/booking';
 import { getParkingSpotDetail } from '@/src/api/parking';
+import { mapBookingDateRange } from '@/src/services/bookingDates';
 
 export type NotificationKind =
   | 'owner_request'
@@ -19,6 +20,7 @@ export interface AppNotification {
   parkingSpotId: string;
   spotTitle: string;
   date: string;
+  endDate: string;
   startTime: string;
   endTime: string;
   total: number;
@@ -26,17 +28,13 @@ export interface AppNotification {
 }
 
 function fmt(b: BookingApiResponse, spotTitle: string, kind: NotificationKind): AppNotification {
-  const start = new Date(b.start);
-  const end = new Date(b.end);
   return {
     id: `${b.id}-${kind}`,
     kind,
     bookingId: b.id,
     parkingSpotId: b.parking_spot_id,
     spotTitle,
-    date: b.start.slice(0, 10),
-    startTime: start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }),
-    endTime: end.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    ...mapBookingDateRange(b.start, b.end),
     total: typeof b.amount === 'number' ? b.amount / 100 : 0,
     at: b.updated_at,
   };

@@ -1,4 +1,4 @@
-import { t } from '@/src/i18n';
+import { t, useLanguage } from '@/src/i18n';
 import { useState } from 'react';
 import { Text, TextInput, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -11,6 +11,7 @@ import { login } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
 
 export default function Login() {
+  useLanguage();
   const colors = useThemeColors();
   const { email: prefilledEmail } = useLocalSearchParams<{ email?: string }>();
   const [email, setEmail] = useState(prefilledEmail ?? '');
@@ -38,7 +39,7 @@ export default function Login() {
     setError(null);
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail || !password) {
-      setError('Completá email y contraseña.');
+      setError(t('auth.login.error.required'));
       return;
     }
 
@@ -55,7 +56,7 @@ export default function Login() {
         router.push({ pathname: '/(auth)/verify-code', params: { email: normalizedEmail } });
         return;
       }
-      setError(err instanceof ApiError ? err.detail : 'No se pudo iniciar sesión.');
+      setError(err instanceof ApiError ? err.detail : t('auth.login.error.generic'));
     } finally {
       setLoading(false);
     }
@@ -71,7 +72,7 @@ export default function Login() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <TextInput
         style={styles.input}
-        placeholder="Email"
+        placeholder={t('auth.login.emailPlaceholder')}
         placeholderTextColor={colors.textSecondary}
         autoCapitalize="none"
         keyboardType="email-address"
@@ -92,10 +93,10 @@ export default function Login() {
         <Button title={t('auth.login.button')} onPress={handleLogin} />
       )}
       <Text style={styles.link} onPress={() => router.push('/(auth)/register')}>
-        ¿No tenés cuenta? Registrate
+        {t('auth.login.noAccount')}
       </Text>
       <Text style={styles.link} onPress={() => router.push('/(auth)/forgot-password')}>
-        Olvidé mi contraseña
+        {t('auth.login.forgot')}
       </Text>
     </Screen>
   );

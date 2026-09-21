@@ -15,7 +15,9 @@ import { getParkingSpotDetail } from '@/src/services/parkingService';
 import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
 import { getStayQuote, type StayQuote } from '@/src/api/parking';
 import { ParkingSpot } from '@/src/types';
-import { createBookingApi, createPaymentPreference } from '@/src/api/booking';
+import { createBookingApi, createPaymentPreference, confirmBookingApi, CASH_PAYMENT_ID } from '@/src/api/booking';
+import { PaymentMethodPicker } from '@/src/components/PaymentMethodPicker';
+import { getPaymentOptions, MERCADOPAGO_METHOD_ID, CASH_METHOD_ID } from '@/src/services/paymentOptions';
 
 /**
  * Confirmación + pago de una estadía (rango de fechas + hora de check-in) --
@@ -45,6 +47,7 @@ export default function ConfirmStayBooking() {
   const [quote, setQuote] = useState<StayQuote | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState(MERCADOPAGO_METHOD_ID);
 
   // Se re-cotiza acá (no se reutiliza la de spot/[id].tsx) porque puede haber
   // pasado tiempo entre que el conductor la vio y llegó a confirmar -- ésta
@@ -96,6 +99,25 @@ export default function ConfirmStayBooking() {
         Alert.alert(t('driver.payment.errorTitle'), msg);
       }
       setProcessing(false);
+      return;
+    }
+
+    // ── Cash: no MercadoPago involved -- confirm straight away and skip to
+    // the owner-approval wait. ─────────────────────────────────────────────
+    if (paymentMethod === CASH_METHOD_ID) {
+      try {
+        await confirmBookingApi(bookingId, CASH_PAYMENT_ID);
+      } catch (err: any) {
+        const msg = err?.detail ?? err?.message ?? t('driver.booking.errorCreating');
+        Alert.alert(t('driver.payment.errorTitle'), msg);
+        setProcessing(false);
+        return;
+      }
+      setProcessing(false);
+      router.replace({
+        pathname: `${group}/booking/cash-pending`,
+        params: { total: String(getDriverVisiblePrice(quote.amount / 100)) },
+      });
       return;
     }
 
@@ -242,10 +264,11 @@ export default function ConfirmStayBooking() {
                 <Ionicons name="card-outline" size={15} color={colors.textSecondary} />
                 <Text style={styles.sectionLabel}>{t('driver.booking.methodPayment')}</Text>
               </View>
-              <View style={styles.detailRow}>
-                <Ionicons name="wallet-outline" size={16} color={colors.textSecondary} />
-                <Text style={styles.detailValue}>Mercado Pago</Text>
-              </View>
+              <PaymentMethodPicker
+                methods={getPaymentOptions()}
+                selectedId={paymentMethod}
+                onSelect={setPaymentMethod}
+              />
             </View>
           </Card>
 
@@ -253,7 +276,9 @@ export default function ConfirmStayBooking() {
             title={
               processing
                 ? t('driver.booking.processing')
-                : t('driver.booking.confirmPay').replace('%{total}', String(visibleTotal))
+                : paymentMethod === CASH_METHOD_ID
+                  ? t('driver.booking.confirmCash').replace('%{total}', String(visibleTotal))
+                  : t('driver.booking.confirmPay').replace('%{total}', String(visibleTotal))
             }
             onPress={reserve}
             disabled={processing}
