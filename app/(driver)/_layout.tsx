@@ -24,6 +24,7 @@ export default function DriverLayout() {
       <Stack.Screen name="payment/success" options={{ title: '', headerBackVisible: false }} />
       <Stack.Screen name="payment/failure" options={{ title: '', headerBackVisible: false }} />
       <Stack.Screen name="bookings/[id]" options={{ title: t('layout.driver.bookingDetail') }} />
+      <Stack.Screen name="bookings/[id]/messages" options={{ title: t('driver.booking.messages.link') }} />
       <Stack.Screen name="review/[bookingId]" options={{ title: t('layout.driver.review') }} />
       <Stack.Screen name="profile/[userId]" options={{ title: t('layout.driver.profile') }} />
       {/* Owner / spot management */}

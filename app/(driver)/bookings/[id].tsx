@@ -2,7 +2,7 @@ import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Alert, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { Screen } from '@/src/components/Screen';
@@ -53,6 +53,7 @@ function durationLabel(booking: Booking): string {
 export default function DriverBookingDetail() {
   useLanguage();
   const colors = useThemeColors();
+  const group = `/${useSegments()[0]}`;
   const { id } = useLocalSearchParams<{ id: string }>();
   const activeMode = useAccountTypeStore((s) => s.activeMode);
   const isOwnerView = activeMode === 'owner';
@@ -215,6 +216,17 @@ export default function DriverBookingDetail() {
               </View>
             )}
           </View>
+
+          <Pressable onPress={() => router.push(`${group}/bookings/${id}/messages`)}>
+            <Card>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="chatbubble-outline" size={15} color={colors.textSecondary} />
+                <Text style={styles.sectionLabel}>{t('driver.booking.messages.link')}</Text>
+                <View style={{ flex: 1 }} />
+                <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+              </View>
+            </Card>
+          </Pressable>
 
           {booking.status === 'CONFIRMED' && booking.verificationCode && (
             <View style={styles.codeCard}>
