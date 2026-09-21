@@ -228,6 +228,17 @@ export default function DriverBookingDetail() {
             </Card>
           </Pressable>
 
+          <Pressable onPress={() => router.push(`${group}/bookings/${id}/tickets`)}>
+            <Card>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="help-buoy-outline" size={15} color={colors.textSecondary} />
+                <Text style={styles.sectionLabel}>{t('driver.booking.tickets.link')}</Text>
+                <View style={{ flex: 1 }} />
+                <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+              </View>
+            </Card>
+          </Pressable>
+
           {booking.status === 'CONFIRMED' && booking.verificationCode && (
             <View style={styles.codeCard}>
               <Text style={styles.codeLabel}>{t('driver.booking.codeLabel')}</Text>
