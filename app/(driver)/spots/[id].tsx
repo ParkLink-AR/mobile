@@ -90,7 +90,7 @@ export default function SpotDetail() {
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <PhotoGallery photos={spot.photos} height={260} fallbackUri={spot.photoUrl} />
+        <PhotoGallery photos={spot.photos} fallbackUri={spot.photoUrl} />
 
         <View style={styles.body}>
           {/* Hero: title, address, rating, price and type together */}
