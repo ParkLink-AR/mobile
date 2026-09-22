@@ -14,6 +14,11 @@ export interface BookingApiResponse {
   hold_expires_at?: string;
   amount: number;
   payment_id?: string;
+  // Set once, the moment Mercado Pago's payment was actually confirmed -- absent means
+  // the booking was never paid, regardless of its current status (e.g. EXPIRED, or
+  // CANCELLED before ever reaching PENDING_OWNER_APPROVAL). See booking-service's
+  // entity.Booking.PaidAt.
+  paid_at?: string;
   kind: BookingKind;
   // Only present when the caller IS this booking's driver -- booking-service omits
   // it for everyone else (e.g. the owner), since the whole point is a verbal,

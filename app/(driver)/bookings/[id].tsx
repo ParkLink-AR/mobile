@@ -34,7 +34,7 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string, ownerId: string
     total: amount,
     status: b.status as Booking['status'],
     paymentId: b.payment_id,
-    confirmedAt: b.updated_at,
+    paidAt: b.paid_at,
     verificationCode: b.verification_code,
   };
 }
@@ -194,7 +194,15 @@ export default function DriverBookingDetail() {
     );
   }
 
-  const confirmedDate = booking.confirmedAt ? new Date(booking.confirmedAt) : null;
+  // A booking's payment_id/paid_at are set once, the moment Mercado Pago's payment was
+  // confirmed, and never cleared afterward -- even if the owner later rejects it, it
+  // expires, or it's cancelled. So neither field alone means "this booking is currently
+  // paid" -- only true once the booking is actually confirmed and stays that way
+  // (CONFIRMED/IN_PROGRESS/COMPLETED), never for PENDING_OWNER_APPROVAL, EXPIRED, or
+  // CANCELLED, regardless of whether the money moved at some point.
+  const isPaidAndConfirmed = booking.paidAt != null &&
+    (booking.status === 'CONFIRMED' || booking.status === 'IN_PROGRESS' || booking.status === 'COMPLETED');
+  const paidDate = isPaidAndConfirmed && booking.paidAt ? new Date(booking.paidAt) : null;
 
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
@@ -298,8 +306,11 @@ export default function DriverBookingDetail() {
             </View>
           </Card>
 
-          {/* Pago: solo si ya hay algo que mostrar */}
-          {(booking.paymentId || confirmedDate) && (
+          {/* Pago: solo si el pago realmente se confirmó y la reserva sigue confirmada --
+              payment_id/paid_at quedan grabados aunque después se rechace, expire o
+              cancele, así que mostrarlos siempre haría ver como "pagado" algo que no lo
+              está (ver isPaidAndConfirmed más arriba). */}
+          {isPaidAndConfirmed && (
             <Card>
               <View style={styles.cardContent}>
                 <View style={styles.sectionHeader}>
@@ -307,12 +318,12 @@ export default function DriverBookingDetail() {
                   <Text style={styles.sectionLabel}>{t('driver.booking.detail.paymentSection')}</Text>
                 </View>
 
-                {confirmedDate && (
+                {paidDate && (
                   <View style={styles.detailRow}>
                     <Ionicons name="checkmark-circle-outline" size={16} color={colors.textSecondary} />
                     <Text style={styles.detailLabel}>{t('driver.booking.detail.paidAt')}</Text>
                     <Text style={styles.detailValue}>
-                      {confirmedDate.toLocaleDateString('es-AR')} · {confirmedDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                      {paidDate.toLocaleDateString('es-AR')} · {paidDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                     </Text>
                   </View>
                 )}

@@ -127,7 +127,11 @@ export interface Booking {
   total: number;
   status: BookingStatus;
   paymentId?: string;
-  confirmedAt?: string;
+  // Set once, the moment Mercado Pago's payment was actually confirmed -- absent means
+  // never paid, regardless of status (e.g. EXPIRED, or CANCELLED before ever reaching
+  // PENDING_OWNER_APPROVAL). Not the same as "safe to show as paid" -- see how
+  // bookings/[id].tsx gates the payment card on both this AND status.
+  paidAt?: string;
   // Only ever populated for the booking's own driver (booking-service omits it for
   // everyone else) -- the 4-digit code the driver reads aloud to the spot's owner
   // in person. Present once status is CONFIRMED; absent before or once verified
