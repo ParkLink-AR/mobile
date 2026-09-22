@@ -41,7 +41,6 @@ export default function Profile() {
   const setActiveMode = useAccountTypeStore((s) => s.setActiveMode);
   const isOwner = group === '/(owner)';
   const [langModalVisible, setLangModalVisible] = useState(false);
-  const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [fontSizeModalVisible, setFontSizeModalVisible] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -303,14 +302,15 @@ export default function Profile() {
 
           <Pressable
             style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => setThemeModalVisible(true)}
+            onPress={toggleMode}
           >
             <Text style={styles.prefLabel}>{t('profile.theme')}</Text>
             <View style={styles.langCurrent}>
+              <Ionicons name={isDark ? 'moon' : 'sunny'} size={sc(16)} color={isDark ? colors.teal : colors.textSecondary} />
               <Text style={styles.langCurrentText}>
                 {isDark ? t('profile.theme.dark') : t('profile.theme.light')}
               </Text>
-              <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
+              <Ionicons name="swap-horizontal-outline" size={sc(14)} color={colors.teal} />
             </View>
           </Pressable>
 
@@ -486,46 +486,6 @@ export default function Profile() {
                       {active && (
                         <Ionicons name="checkmark-circle" size={20} color={colors.teal} />
                       )}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-
-      {/* Theme selection modal */}
-      <Modal
-        visible={themeModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setThemeModalVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setThemeModalVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.modalSheet}>
-                <Text style={styles.modalTitle}>{t('profile.theme')}</Text>
-                {([{ key: 'light', label: t('profile.theme.light') }, { key: 'dark', label: t('profile.theme.dark') }] as const).map((opt) => {
-                  const active = mode === opt.key;
-                  return (
-                    <Pressable
-                      key={opt.key}
-                      style={({ pressed }) => [
-                        styles.langOption,
-                        active && styles.langOptionActive,
-                        { opacity: pressed ? 0.7 : 1 },
-                      ]}
-                      onPress={() => {
-                        if (!active) toggleMode();
-                        setThemeModalVisible(false);
-                      }}
-                    >
-                      <Text style={[styles.langOptionLabel, active ? styles.langOptionLabelActive : styles.langOptionLabelInactive]}>
-                        {opt.label}
-                      </Text>
-                      {active && <Ionicons name="checkmark-circle" size={20} color={colors.teal} />}
                     </Pressable>
                   );
                 })}
