@@ -1,6 +1,6 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Alert, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Alert, Pressable, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
@@ -62,6 +62,7 @@ export default function DriverBookingDetail() {
   const [ownerName, setOwnerName] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [confirmCancelVisible, setConfirmCancelVisible] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -85,31 +86,27 @@ export default function DriverBookingDetail() {
       });
   }, [id, isOwnerView]);
 
+  // Alert.alert with a buttons array is a no-op on web (react-native-web's Alert module
+  // has no UI at all) -- a real Modal (below, in the JSX) works on every platform, same
+  // pattern spots/[id]/edit.tsx and profile.tsx already use for their own confirmations.
   function handleCancel() {
     if (!booking) return;
-    Alert.alert(
-      t('driver.booking.cancel.title'),
-      t('driver.booking.cancel.confirm'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('driver.booking.cancel.yes'),
-          style: 'destructive',
-          onPress: async () => {
-            setCancelling(true);
-            try {
-              const updated = await cancelBookingApi(booking.id);
-              setBooking((prev) => prev ? { ...prev, status: updated.status as Booking['status'] } : prev);
-            } catch (err: any) {
-              const msg = err?.detail ?? err?.message ?? t('driver.booking.detail.error');
-              Alert.alert(t('driver.booking.cancel.title'), msg);
-            } finally {
-              setCancelling(false);
-            }
-          },
-        },
-      ],
-    );
+    setConfirmCancelVisible(true);
+  }
+
+  async function performCancel() {
+    if (!booking) return;
+    setConfirmCancelVisible(false);
+    setCancelling(true);
+    try {
+      const updated = await cancelBookingApi(booking.id);
+      setBooking((prev) => prev ? { ...prev, status: updated.status as Booking['status'] } : prev);
+    } catch (err: any) {
+      const msg = err?.detail ?? err?.message ?? t('driver.booking.detail.error');
+      Alert.alert(t('driver.booking.cancel.title'), msg);
+    } finally {
+      setCancelling(false);
+    }
   }
 
   const styles = StyleSheet.create({
@@ -173,6 +170,34 @@ export default function DriverBookingDetail() {
     codeLabel: { fontSize: 12, color: colors.textSecondary },
     codeValue: { fontSize: 32, fontWeight: '700', color: colors.teal, letterSpacing: 6 },
     codeHint: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
+
+    modalOverlay: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
+      justifyContent: 'center', alignItems: 'center',
+    },
+    modalSheet: {
+      width: '85%', borderRadius: 20, paddingVertical: 32, paddingHorizontal: 24,
+      backgroundColor: colors.surface, alignItems: 'center', gap: 8,
+    },
+    modalTitle: {
+      fontSize: 16, fontWeight: '700', color: colors.text,
+      marginBottom: 8, textAlign: 'center',
+    },
+    modalBody: {
+      fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 18,
+      marginBottom: 8,
+    },
+    modalActions: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 8 },
+    modalCancelBtn: {
+      flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+      borderWidth: 1.5, borderColor: colors.border,
+    },
+    modalCancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.text },
+    modalConfirmBtn: {
+      flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+      backgroundColor: '#e53e3e',
+    },
+    modalConfirmBtnText: { fontSize: 15, fontWeight: '600', color: colors.white },
   });
 
   if (error) {
@@ -369,6 +394,38 @@ export default function DriverBookingDetail() {
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        visible={confirmCancelVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmCancelVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setConfirmCancelVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalSheet}>
+                <Text style={styles.modalTitle}>{t('driver.booking.cancel.title')}</Text>
+                <Text style={styles.modalBody}>{t('driver.booking.cancel.confirm')}</Text>
+                <View style={styles.modalActions}>
+                  <Pressable
+                    style={({ pressed }) => [styles.modalCancelBtn, { opacity: pressed ? 0.7 : 1 }]}
+                    onPress={() => setConfirmCancelVisible(false)}
+                  >
+                    <Text style={styles.modalCancelBtnText}>{t('common.cancel')}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.modalConfirmBtn, { opacity: pressed ? 0.85 : 1 }]}
+                    onPress={performCancel}
+                  >
+                    <Text style={styles.modalConfirmBtnText}>{t('driver.booking.cancel.yes')}</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </Screen>
   );
 }
