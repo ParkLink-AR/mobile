@@ -1,7 +1,7 @@
 import { t, useLanguage } from '@/src/i18n';
 import { ApiError } from '@/src/api/client';
 import { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, ScrollView, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, ActivityIndicator, ScrollView, StyleSheet, Alert, Platform, Modal, Pressable, TouchableWithoutFeedback } from 'react-native';
 import { useLocalSearchParams, useSegments, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { Ionicons } from '@expo/vector-icons';
@@ -74,6 +74,9 @@ export default function ConfirmBooking() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState(MERCADOPAGO_METHOD_ID);
+  // Alert.alert with a buttons array is a no-op on web -- see bookings/[id].tsx's
+  // handleCancel for the same fix applied to the cancel-booking confirmation.
+  const [conflictModalVisible, setConflictModalVisible] = useState(false);
 
   const reservedHours = Math.max(Number(hours) || 1, 1);
   const start = startHour ? Number(startHour) : 8;
@@ -136,11 +139,7 @@ export default function ConfirmBooking() {
       const freeWindows = availability.days[0]?.free_windows ?? [];
       const slotIsFree = slotIsCoveredByFreeWindows(freeWindows, start, end, dateFrom);
       if (!slotIsFree) {
-        Alert.alert(
-          t('driver.payment.errorTitle'),
-          t('driver.booking.errorConflict'),
-          [{ text: t('driver.booking.errorConflictAction'), onPress: () => router.back() }],
-        );
+        setConflictModalVisible(true);
         setProcessing(false);
         return;
       }
@@ -171,11 +170,7 @@ export default function ConfirmBooking() {
     } catch (err: any) {
       const isConflict = err instanceof ApiError && err.status === 409;
       if (isConflict) {
-        Alert.alert(
-          t('driver.payment.errorTitle'),
-          t('driver.booking.errorConflict'),
-          [{ text: t('driver.booking.errorConflictAction'), onPress: () => router.back() }],
-        );
+        setConflictModalVisible(true);
       } else {
         const msg = err?.detail ?? err?.message ?? t('driver.booking.errorCreating');
         Alert.alert(t('driver.payment.errorTitle'), msg);
@@ -312,6 +307,28 @@ export default function ConfirmBooking() {
     totalValue: { fontSize: 18, color: colors.teal, fontWeight: '700' },
 
     button: { marginTop: 2 },
+
+    modalOverlay: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
+      justifyContent: 'center', alignItems: 'center',
+    },
+    modalSheet: {
+      width: '85%', borderRadius: 20, paddingVertical: 32, paddingHorizontal: 24,
+      backgroundColor: colors.surface, alignItems: 'center', gap: 8,
+    },
+    modalTitle: {
+      fontSize: 16, fontWeight: '700', color: colors.text,
+      marginBottom: 8, textAlign: 'center',
+    },
+    modalBody: {
+      fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 18,
+      marginBottom: 8,
+    },
+    modalConfirmBtn: {
+      width: '100%', borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+      backgroundColor: colors.teal, marginTop: 8,
+    },
+    modalConfirmBtnText: { fontSize: 15, fontWeight: '600', color: colors.white },
   });
 
   return (
@@ -404,6 +421,33 @@ export default function ConfirmBooking() {
           />
         </View>
       </ScrollView>
+
+      <Modal
+        visible={conflictModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConflictModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setConflictModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalSheet}>
+                <Text style={styles.modalTitle}>{t('driver.payment.errorTitle')}</Text>
+                <Text style={styles.modalBody}>{t('driver.booking.errorConflict')}</Text>
+                <Pressable
+                  style={({ pressed }) => [styles.modalConfirmBtn, { opacity: pressed ? 0.85 : 1 }]}
+                  onPress={() => {
+                    setConflictModalVisible(false);
+                    router.back();
+                  }}
+                >
+                  <Text style={styles.modalConfirmBtnText}>{t('driver.booking.errorConflictAction')}</Text>
+                </Pressable>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </Screen>
   );
 }
