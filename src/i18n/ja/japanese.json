@@ -182,6 +182,8 @@
   "spot.tag.stay": "連泊利用",
 
   "spot.stay.section": "連泊利用",
+  "spot.stay.checkIn": "チェックイン",
+  "spot.stay.checkOut": "チェックアウト",
   "spot.stay.startDate": "開始日",
   "spot.stay.endDate": "終了日",
   "spot.stay.startHour": "チェックイン時刻",

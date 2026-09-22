@@ -19,6 +19,15 @@ import { createBookingApi, createPaymentPreference, confirmBookingApi, CASH_PAYM
 import { PaymentMethodPicker } from '@/src/components/PaymentMethodPicker';
 import { getPaymentOptions, MERCADOPAGO_METHOD_ID, CASH_METHOD_ID } from '@/src/services/paymentOptions';
 
+/** "23/09/2026 · 14:00" -- date and time together for a single instant (check-in/out),
+ * as opposed to bookingDates.ts's helpers, which format a *range*. */
+function formatStayInstant(iso: string): string {
+  const date = new Date(iso);
+  const day = date.toLocaleDateString('es-AR');
+  const time = date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${day} · ${time}`;
+}
+
 /**
  * Confirmación + pago de una estadía (rango de fechas + hora de check-in) --
  * contraparte de booking/confirm.tsx (por hora), separada en su propia
@@ -229,19 +238,14 @@ export default function ConfirmStayBooking() {
               </View>
 
               <View style={styles.detailRow}>
-                <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
-                <Text style={styles.detailLabel}>{t('spot.stay.startDate')}</Text>
-                <Text style={styles.detailValue}>{new Date(quote.startDate + 'T12:00:00').toLocaleDateString('es-AR')}</Text>
+                <Ionicons name="log-in-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>{t('spot.stay.checkIn')}</Text>
+                <Text style={styles.detailValue}>{formatStayInstant(quote.startDateTime)}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
-                <Text style={styles.detailLabel}>{t('spot.stay.endDate')}</Text>
-                <Text style={styles.detailValue}>{new Date(quote.endDate + 'T12:00:00').toLocaleDateString('es-AR')}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
-                <Text style={styles.detailLabel}>{t('spot.stay.startHour')}</Text>
-                <Text style={styles.detailValue}>{String(stayStartHour).padStart(2, '0')}:00</Text>
+                <Ionicons name="log-out-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>{t('spot.stay.checkOut')}</Text>
+                <Text style={styles.detailValue}>{formatStayInstant(quote.endDateTime)}</Text>
               </View>
               <View style={styles.detailRow}>
                 <Ionicons name="hourglass-outline" size={16} color={colors.textSecondary} />

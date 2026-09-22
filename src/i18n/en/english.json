@@ -182,6 +182,8 @@
   "spot.tag.stay": "Stay",
 
   "spot.stay.section": "Stay",
+  "spot.stay.checkIn": "Check-in",
+  "spot.stay.checkOut": "Check-out",
   "spot.stay.startDate": "Start date",
   "spot.stay.endDate": "End date",
   "spot.stay.startHour": "Check-in time",
