@@ -137,9 +137,9 @@ export default function Notifications() {
               <View style={styles.textBlock}>
                 <Text style={styles.itemTitle}>{item.spotTitle}</Text>
                 <Text style={styles.itemBody}>
-                  {item.kind === 'owner_request' && t('notifications.ownerRequest.body', { when: formatBookingWhen(item, t('driver.booking.timeTo')) })}
-                  {item.kind === 'owner_new_booking' && t('notifications.ownerNewBooking.body', { when: formatBookingWhen(item, t('driver.booking.timeTo')) })}
-                  {item.kind === 'driver_confirmed' && t('notifications.driverConfirmed.body', { when: formatBookingWhen(item, t('driver.booking.timeTo')) })}
+                  {item.kind === 'owner_request' && t('notifications.ownerRequest.body', { when: formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut')) })}
+                  {item.kind === 'owner_new_booking' && t('notifications.ownerNewBooking.body', { when: formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut')) })}
+                  {item.kind === 'driver_confirmed' && t('notifications.driverConfirmed.body', { when: formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut')) })}
                   {item.kind === 'driver_rejected' && t('notifications.driverRejected.body')}
                   {item.kind === 'driver_review_prompt' && t('notifications.driverReviewPrompt.body')}
                   {item.kind === 'owner_review_prompt' && t('notifications.ownerReviewPrompt.body')}

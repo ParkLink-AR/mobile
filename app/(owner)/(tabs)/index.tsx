@@ -143,7 +143,7 @@ export default function OwnerToday() {
               </View>
               <View style={styles.timeRow}>
                 <Text style={typography.body}>
-                  {formatBookingWhen(item, t('driver.booking.timeTo'))}
+                  {formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}
                 </Text>
                 <StatusBadge status={item.status} />
               </View>

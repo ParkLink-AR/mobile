@@ -43,15 +43,18 @@ export function formatShortDate(dateISO: string): string {
  * `endDate` coinciden (HOURLY, o una estadía de un solo día) muestra la
  * fecha una sola vez -- "2026-09-10 · 14:00 a 16:00", igual que siempre. Si
  * difieren (estadía multi-día, check-out al mismo horario que el check-in,
- * no medianoche) muestra ambas fechas para que quede claro que son días
- * distintos -- "10/09 14:00 a 14/09 14:00" en vez del confuso "14:00 a 14:00".
+ * no medianoche) son días distintos, así que se etiquetan como check-in/
+ * check-out en vez del ambiguo "14:00 a 14:00" -- "Check-in 10/09 · 14:00 —
+ * Check-out 14/09 · 14:00".
  */
 export function formatBookingWhen(
   item: { date: string; endDate: string; startTime: string; endTime: string },
   timeToLabel: string,
+  checkInLabel: string,
+  checkOutLabel: string,
 ): string {
   if (item.date === item.endDate) {
     return `${item.date} · ${item.startTime} ${timeToLabel} ${item.endTime}`;
   }
-  return `${formatShortDate(item.date)} ${item.startTime} ${timeToLabel} ${formatShortDate(item.endDate)} ${item.endTime}`;
+  return `${checkInLabel} ${formatShortDate(item.date)} · ${item.startTime} — ${checkOutLabel} ${formatShortDate(item.endDate)} · ${item.endTime}`;
 }
