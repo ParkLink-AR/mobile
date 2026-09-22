@@ -19,6 +19,11 @@ export interface BookingApiResponse {
   // CANCELLED before ever reaching PENDING_OWNER_APPROVAL). See booking-service's
   // entity.Booking.PaidAt.
   paid_at?: string;
+  // Only set for a CANCELLED booking: 'OWNER_REJECTED', 'OWNER_EXPIRED' (owner never
+  // responded in time), or 'DRIVER_CANCELLED' (the driver cancelled it themselves).
+  // Absent for a cancelled booking that predates this field. See booking-service's
+  // entity.Booking.CancellationReason.
+  cancellation_reason?: string;
   kind: BookingKind;
   // Only present when the caller IS this booking's driver -- booking-service omits
   // it for everyone else (e.g. the owner), since the whole point is a verbal,

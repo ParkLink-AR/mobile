@@ -94,8 +94,11 @@ async function getOwnerNotifications(ownerId: string): Promise<AppNotification[]
 }
 
 /** Confirmations, rejections, and review prompts on bookings the user made as a driver.
- * A driver-initiated cancel doesn't exist yet, so every CANCELLED booking today is one
- * the owner rejected (or never answered in time) -- refunded automatically either way. */
+ * A CANCELLED booking only becomes a "rejected" notification when cancellation_reason
+ * says the *owner* did it (rejected, or never answered in time) -- not when the driver
+ * cancelled their own booking themselves, since they already know that happened. Absent
+ * cancellation_reason (a cancelled booking that predates that field) is still treated as
+ * a rejection, matching this feed's original behavior from before drivers could cancel. */
 async function getDriverNotifications(userId: string): Promise<AppNotification[]> {
   const bookings = await getUserBookingsApi(userId);
   const relevant = bookings.filter(
@@ -120,7 +123,7 @@ async function getDriverNotifications(userId: string): Promise<AppNotification[]
     const title = titleById[b.parking_spot_id] ?? b.parking_spot_id;
     if (b.status === 'CONFIRMED') {
       notifications.push(fmt(b, title, 'driver_confirmed'));
-    } else if (b.status === 'CANCELLED') {
+    } else if (b.status === 'CANCELLED' && b.cancellation_reason !== 'DRIVER_CANCELLED') {
       notifications.push(fmt(b, title, 'driver_rejected'));
     }
   }
