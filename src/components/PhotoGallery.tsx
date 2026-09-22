@@ -16,22 +16,66 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 interface PhotoGalleryProps {
   /** All photos for the spot, in order (photos[0] is the cover). */
   photos: string[];
+  /** Fallback box height used only until a photo's real aspect ratio loads (or if it
+   * fails to load) -- see aspectRatios below for what drives the height the rest of the
+   * time. */
   height: number;
   /** Used when `photos` is empty (e.g. spot.photoUrl). Falsy ('') renders an icon placeholder instead of an image. */
   fallbackUri: string;
 }
 
+// A too-tall or too-wide photo (panorama, banner crop, etc.) would otherwise make the
+// gallery box comically large or thin -- these keep it within a sane range on any screen.
+const MIN_HEIGHT_FLOOR = 220;
+const MAX_HEIGHT_RATIO = 0.62; // fraction of the window's height
+
 /**
  * Swipeable photo carousel with a "current/total" counter -- plain
  * horizontal + pagingEnabled ScrollView instead of a carousel library, no
  * extra dependency needed for something this simple.
+ *
+ * The box height tracks the *currently visible* photo's own aspect ratio (fetched once
+ * per uri via Image.getSize, clamped to a sane range) instead of a single fixed height
+ * for every photo -- a fixed, landscape-shaped box combined with resizeMode="cover" used
+ * to crop a portrait photo down to a thin horizontal strip through its middle. Swiping to
+ * a different photo re-measures and resizes the box to fit it, so every photo -- portrait
+ * or landscape -- is shown close to fully, not cropped away.
  */
 export function PhotoGallery({ photos, height, fallbackUri }: PhotoGalleryProps) {
-  const { width } = useWindowDimensions();
+  const { width, height: windowHeight } = useWindowDimensions();
   const colors = useThemeColors();
   const [index, setIndex] = useState(0);
   const uris = photos.length > 0 ? photos : fallbackUri ? [fallbackUri] : [];
+  const [aspectRatios, setAspectRatios] = useState<Record<string, number>>({});
   const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    uris.forEach((uri) => {
+      if (aspectRatios[uri] !== undefined) return;
+      Image.getSize(
+        uri,
+        (naturalWidth, naturalHeight) => {
+          if (naturalHeight > 0) {
+            setAspectRatios((prev) => ({ ...prev, [uri]: naturalWidth / naturalHeight }));
+          }
+        },
+        () => {
+          // Unreachable/broken image -- fall back to the default box height below
+          // instead of retrying forever.
+          setAspectRatios((prev) => ({ ...prev, [uri]: width / height }));
+        },
+      );
+    });
+    // Re-run when the actual photo list changes; `aspectRatios` itself is deliberately
+    // excluded -- the per-uri guard above already makes repeat runs a no-op.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uris.join('|')]);
+
+  const maxHeight = Math.round(windowHeight * MAX_HEIGHT_RATIO);
+  const currentAspect = aspectRatios[uris[index]];
+  const boxHeight = currentAspect
+    ? Math.max(MIN_HEIGHT_FLOOR, Math.min(Math.round(width / currentAspect), maxHeight))
+    : Math.max(MIN_HEIGHT_FLOOR, height);
 
   // Web only: RN's ScrollView handles touch-drag and trackpad/wheel scroll
   // out of the box, but a browser never turns a plain mouse click-drag into
@@ -93,10 +137,10 @@ export function PhotoGallery({ photos, height, fallbackUri }: PhotoGalleryProps)
     // over the bottom of this image (see spots/[id].tsx's hero card), and a
     // second rounded+shadowed edge on the photo itself right behind it just
     // doubled up into a messy seam. That card already owns the transition.
-    container: { position: 'relative' },
-    photo: { width, height },
+    container: { position: 'relative', backgroundColor: colors.background },
+    photo: { width, height: boxHeight },
     placeholder: {
-      width, height,
+      width, height: boxHeight,
       alignItems: 'center', justifyContent: 'center',
       backgroundColor: colors.background,
     },
@@ -127,7 +171,7 @@ export function PhotoGallery({ photos, height, fallbackUri }: PhotoGalleryProps)
         scrollEventThrottle={16}
       >
         {uris.map((uri, i) => (
-          <Image key={`${uri}-${i}`} source={{ uri }} style={styles.photo} />
+          <Image key={`${uri}-${i}`} source={{ uri }} style={styles.photo} resizeMode="cover" />
         ))}
       </ScrollView>
       {uris.length > 1 && (

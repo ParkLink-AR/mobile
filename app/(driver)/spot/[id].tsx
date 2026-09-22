@@ -364,7 +364,7 @@ export default function SpotDetail() {
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView style={styles.container}>
       <View style={styles.photoWrapper}>
-        <PhotoGallery photos={spot.photos} height={200} fallbackUri={spot.photoUrl} />
+        <PhotoGallery photos={spot.photos} height={260} fallbackUri={spot.photoUrl} />
         <TouchableOpacity style={styles.favoriteBtn} onPress={() => toggleFavorite(spot.id)}>
           <Ionicons
             name={isFavorite ? 'heart' : 'heart-outline'}
