@@ -344,6 +344,10 @@ export default function SpotDetail() {
 
     // Slot picker
     slotRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    // Same chips as slotRow, but for hour pickers with many options (up to 24 for a
+    // stay) -- a single horizontally-scrollable row instead of wrapping across several
+    // lines, which used to push the rest of the screen (price, book button) way down.
+    hourSlotRow: { flexDirection: 'row', gap: 8 },
     slotChip: {
       paddingVertical: 8, paddingHorizontal: 14,
       borderRadius: 20, borderWidth: 1,
@@ -517,7 +521,7 @@ export default function SpotDetail() {
                   ) : bookableStartHours.length === 0 ? (
                     <Text style={styles.noSlotsText}>{t('spot.noSlotsToday')}</Text>
                   ) : (
-                    <View style={styles.slotRow}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourSlotRow}>
                       {bookableStartHours.map((h) => {
                         const isSelected = h === effectiveStartHour;
                         return (
@@ -546,7 +550,7 @@ export default function SpotDetail() {
                           </TouchableOpacity>
                         );
                       })}
-                    </View>
+                    </ScrollView>
                   )}
                 </View>
 
@@ -556,7 +560,7 @@ export default function SpotDetail() {
                   {effectiveStartHour === null ? (
                     <Text style={styles.noSlotsText}>{t('spot.selectStartTimeFirst')}</Text>
                   ) : (
-                    <View style={styles.slotRow}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourSlotRow}>
                       {bookableEndHours.map((h) => {
                         const isSelected = h === effectiveEndHour;
                         return (
@@ -575,7 +579,7 @@ export default function SpotDetail() {
                           </TouchableOpacity>
                         );
                       })}
-                    </View>
+                    </ScrollView>
                   )}
                 </View>
 
@@ -625,7 +629,7 @@ export default function SpotDetail() {
                 />
 
                 <Text style={styles.fieldLabel}>{t('spot.stay.startHour')}</Text>
-                <View style={styles.slotRow}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourSlotRow}>
                   {STAY_HOUR_OPTIONS.map((hour) => {
                     const isSelected = hour === stayStartHour;
                     return (
@@ -641,7 +645,7 @@ export default function SpotDetail() {
                       </TouchableOpacity>
                     );
                   })}
-                </View>
+                </ScrollView>
                 <Text style={styles.stayHourHint}>{t('spot.stay.startHour.hint')}</Text>
 
                 {stayQuoteLoading ? (
