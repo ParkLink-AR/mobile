@@ -11,7 +11,7 @@ import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 import { getBookingApi, cancelBookingApi, BookingApiResponse } from '@/src/api/booking';
 import { getParkingSpotDetail } from '@/src/api/parking';
 import { getPublicProfileApi } from '@/src/api/auth';
-import { mapBookingDateRange, formatBookingWhen, formatShortDate } from '@/src/services/bookingDates';
+import { mapBookingDateRange, formatBookingWhen, formatFullDate } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 /** Maps the backend wire shape to the UI Booking type -- same mapping as the
@@ -290,12 +290,12 @@ export default function DriverBookingDetail() {
                   <View style={styles.detailRow}>
                     <Ionicons name="log-in-outline" size={16} color={colors.textSecondary} />
                     <Text style={styles.detailLabel}>{t('spot.stay.checkIn')}</Text>
-                    <Text style={styles.detailValue}>{formatShortDate(booking.date)} · {booking.startTime}</Text>
+                    <Text style={styles.detailValue}>{formatFullDate(booking.date)} · {booking.startTime}</Text>
                   </View>
                   <View style={styles.detailRow}>
                     <Ionicons name="log-out-outline" size={16} color={colors.textSecondary} />
                     <Text style={styles.detailLabel}>{t('spot.stay.checkOut')}</Text>
-                    <Text style={styles.detailValue}>{formatShortDate(booking.endDate)} · {booking.endTime}</Text>
+                    <Text style={styles.detailValue}>{formatFullDate(booking.endDate)} · {booking.endTime}</Text>
                   </View>
                 </>
               ) : (

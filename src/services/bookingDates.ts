@@ -38,6 +38,12 @@ export function formatShortDate(dateISO: string): string {
   return new Date(`${dateISO}T12:00:00`).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
 }
 
+/** "10/09/2026" -- igual que formatShortDate pero con el año, para pantallas de
+ * detalle (check-in/check-out) donde ambigüedad de año importa más que en una lista. */
+export function formatFullDate(dateISO: string): string {
+  return new Date(`${dateISO}T12:00:00`).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
 /**
  * Línea "cuándo" de una reserva para listas/detalle. Cuando `date` y
  * `endDate` coinciden (HOURLY, o una estadía de un solo día) muestra la
