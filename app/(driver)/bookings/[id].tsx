@@ -1,6 +1,6 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Alert, Pressable, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Pressable, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
@@ -63,6 +63,7 @@ export default function DriverBookingDetail() {
   const [error, setError] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [confirmCancelVisible, setConfirmCancelVisible] = useState(false);
+  const [cancelResult, setCancelResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -101,9 +102,10 @@ export default function DriverBookingDetail() {
     try {
       const updated = await cancelBookingApi(booking.id);
       setBooking((prev) => prev ? { ...prev, status: updated.status as Booking['status'] } : prev);
+      setCancelResult({ ok: true, message: t('driver.booking.cancel.successMessage') });
     } catch (err: any) {
       const msg = err?.detail ?? err?.message ?? t('driver.booking.detail.error');
-      Alert.alert(t('driver.booking.cancel.title'), msg);
+      setCancelResult({ ok: false, message: msg });
     } finally {
       setCancelling(false);
     }
@@ -198,6 +200,11 @@ export default function DriverBookingDetail() {
       backgroundColor: '#e53e3e',
     },
     modalConfirmBtnText: { fontSize: 15, fontWeight: '600', color: colors.white },
+    modalAckBtn: {
+      width: '100%', borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+      marginTop: 8,
+    },
+    modalAckBtnText: { fontSize: 15, fontWeight: '600', color: colors.white },
   });
 
   if (error) {
@@ -421,6 +428,40 @@ export default function DriverBookingDetail() {
                     <Text style={styles.modalConfirmBtnText}>{t('driver.booking.cancel.yes')}</Text>
                   </Pressable>
                 </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      <Modal
+        visible={!!cancelResult}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCancelResult(null)}
+      >
+        <TouchableWithoutFeedback onPress={() => setCancelResult(null)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalSheet}>
+                <Ionicons
+                  name={cancelResult?.ok ? 'checkmark-circle' : 'alert-circle'}
+                  size={44}
+                  color={cancelResult?.ok ? colors.teal : '#e53e3e'}
+                />
+                <Text style={styles.modalTitle}>
+                  {cancelResult?.ok ? t('driver.booking.cancel.successTitle') : t('driver.booking.cancel.errorTitle')}
+                </Text>
+                <Text style={styles.modalBody}>{cancelResult?.message}</Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.modalAckBtn,
+                    { backgroundColor: cancelResult?.ok ? colors.teal : '#e53e3e', opacity: pressed ? 0.85 : 1 },
+                  ]}
+                  onPress={() => setCancelResult(null)}
+                >
+                  <Text style={styles.modalAckBtnText}>{t('driver.booking.cancel.ack')}</Text>
+                </Pressable>
               </View>
             </TouchableWithoutFeedback>
           </View>
