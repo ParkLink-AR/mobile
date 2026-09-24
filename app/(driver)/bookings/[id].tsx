@@ -240,7 +240,10 @@ export default function DriverBookingDetail() {
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.body}>
-          {/* Hero: cochera, estado, tipo de reserva y conductor (vista propietario) */}
+          {/* Hero: todo lo que responde "qué reservé, cuándo, cuánto salió" en una
+              sola tarjeta -- antes el título y el Resumen vivían en tarjetas
+              separadas con Mensajes/Ayuda metidos en el medio, cortando la lectura
+              entre el nombre de la cochera y su propio resumen. */}
           <View style={styles.heroCard}>
             <View style={styles.titleRow}>
               <Text style={styles.spotTitle}>{booking.parkingSpotTitle}</Text>
@@ -277,29 +280,48 @@ export default function DriverBookingDetail() {
                 <Ionicons name="chevron-forward" size={14} color={colors.teal} />
               </Pressable>
             )}
+
+            <View style={styles.divider} />
+
+            <View style={styles.sectionHeader}>
+              <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+              <Text style={styles.sectionLabel}>{t('driver.booking.summary')}</Text>
+            </View>
+
+            {booking.kind === 'STAY' ? (
+              <>
+                <View style={styles.detailRow}>
+                  <Ionicons name="log-in-outline" size={16} color={colors.textSecondary} />
+                  <Text style={styles.detailLabel}>{t('spot.stay.checkIn')}</Text>
+                  <Text style={styles.detailValue}>{formatFullDate(booking.date)} · {booking.startTime}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Ionicons name="log-out-outline" size={16} color={colors.textSecondary} />
+                  <Text style={styles.detailLabel}>{t('spot.stay.checkOut')}</Text>
+                  <Text style={styles.detailValue}>{formatFullDate(booking.endDate)} · {booking.endTime}</Text>
+                </View>
+              </>
+            ) : (
+              <View style={styles.detailRow}>
+                <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.whenValue}>{formatBookingWhen(booking, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}</Text>
+              </View>
+            )}
+            <View style={styles.detailRow}>
+              <Ionicons name="hourglass-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.detailLabel}>{t('driver.booking.detail.duration')}</Text>
+              <Text style={styles.detailValue}>{durationLabel(booking)}</Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>{t('driver.booking.total')}</Text>
+              <Text style={styles.totalValue}>
+                ${booking.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </Text>
+            </View>
           </View>
-
-          <Pressable onPress={() => router.push(`${group}/bookings/${id}/messages`)}>
-            <Card>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="chatbubble-outline" size={15} color={colors.textSecondary} />
-                <Text style={styles.sectionLabel}>{t('driver.booking.messages.link')}</Text>
-                <View style={{ flex: 1 }} />
-                <Ionicons name="chevron-forward" size={13} color={colors.teal} />
-              </View>
-            </Card>
-          </Pressable>
-
-          <Pressable onPress={() => router.push(`${group}/bookings/${id}/tickets`)}>
-            <Card>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="help-buoy-outline" size={15} color={colors.textSecondary} />
-                <Text style={styles.sectionLabel}>{t('driver.booking.tickets.link')}</Text>
-                <View style={{ flex: 1 }} />
-                <Ionicons name="chevron-forward" size={13} color={colors.teal} />
-              </View>
-            </Card>
-          </Pressable>
 
           {booking.status === 'CONFIRMED' && booking.verificationCode && (
             <View style={styles.codeCard}>
@@ -309,54 +331,12 @@ export default function DriverBookingDetail() {
             </View>
           )}
 
-          {/* Resumen: fecha, horario, duración y total */}
-          <Card>
-            <View style={styles.cardContent}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
-                <Text style={styles.sectionLabel}>{t('driver.booking.summary')}</Text>
-              </View>
-
-              {booking.kind === 'STAY' ? (
-                <>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="log-in-outline" size={16} color={colors.textSecondary} />
-                    <Text style={styles.detailLabel}>{t('spot.stay.checkIn')}</Text>
-                    <Text style={styles.detailValue}>{formatFullDate(booking.date)} · {booking.startTime}</Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="log-out-outline" size={16} color={colors.textSecondary} />
-                    <Text style={styles.detailLabel}>{t('spot.stay.checkOut')}</Text>
-                    <Text style={styles.detailValue}>{formatFullDate(booking.endDate)} · {booking.endTime}</Text>
-                  </View>
-                </>
-              ) : (
-                <View style={styles.detailRow}>
-                  <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
-                  <Text style={styles.whenValue}>{formatBookingWhen(booking, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}</Text>
-                </View>
-              )}
-              <View style={styles.detailRow}>
-                <Ionicons name="hourglass-outline" size={16} color={colors.textSecondary} />
-                <Text style={styles.detailLabel}>{t('driver.booking.detail.duration')}</Text>
-                <Text style={styles.detailValue}>{durationLabel(booking)}</Text>
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>{t('driver.booking.total')}</Text>
-                <Text style={styles.totalValue}>
-                  ${booking.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Text>
-              </View>
-            </View>
-          </Card>
-
           {/* Pago: solo si el pago realmente se confirmó y la reserva sigue confirmada --
               payment_id/paid_at quedan grabados aunque después se rechace, expire o
               cancele, así que mostrarlos siempre haría ver como "pagado" algo que no lo
-              está (ver isPaidAndConfirmed más arriba). */}
+              está (ver isPaidAndConfirmed más arriba). Es el dato menos urgente de la
+              pantalla -- un comprobante, no la razón por la que alguien entra acá -- así
+              que queda después del resumen y el código, no compitiendo con ellos. */}
           {isPaidAndConfirmed && (
             <Card>
               <View style={styles.cardContent}>
@@ -384,6 +364,30 @@ export default function DriverBookingDetail() {
               </View>
             </Card>
           )}
+
+          {/* Comunicación: Mensajes y Ayuda son la misma clase de cosa -- dos formas
+              de hacer algo sobre esta reserva, no dos secciones de información -- así
+              que comparten una tarjeta con dos filas, mismo patrón que Preferencias
+              en el perfil. Va al final, después de los datos de la reserva. */}
+          <Card>
+            <View style={styles.cardContent}>
+              <Pressable style={styles.sectionHeader} onPress={() => router.push(`${group}/bookings/${id}/messages`)}>
+                <Ionicons name="chatbubble-outline" size={15} color={colors.textSecondary} />
+                <Text style={styles.sectionLabel}>{t('driver.booking.messages.link')}</Text>
+                <View style={{ flex: 1 }} />
+                <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+              </Pressable>
+
+              <View style={styles.divider} />
+
+              <Pressable style={styles.sectionHeader} onPress={() => router.push(`${group}/bookings/${id}/tickets`)}>
+                <Ionicons name="help-buoy-outline" size={15} color={colors.textSecondary} />
+                <Text style={styles.sectionLabel}>{t('driver.booking.tickets.link')}</Text>
+                <View style={{ flex: 1 }} />
+                <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+              </Pressable>
+            </View>
+          </Card>
         </View>
 
         {/* Cancelar: sólo el conductor titular puede hacerlo (el backend lo exige) */}

@@ -130,27 +130,10 @@ export default function SpotDetail() {
             </View>
           </View>
 
-          {spot.hourlyEnabled && (
-            <View style={styles.card}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
-                <Text style={styles.sectionLabel}>{t('owner.spot.edit.availability')}</Text>
-              </View>
-              {formatScheduleForDisplay(spot.schedule).map((line) => (
-                <Text key={line.dayRange} style={styles.value}>
-                  {line.dayRange}: {line.hours}
-                </Text>
-              ))}
-              <TouchableOpacity
-                style={styles.availabilityBtn}
-                onPress={() => router.push(`${group}/spots/${id}/availability`)}
-              >
-                <Text style={styles.availabilityLink}>{t('owner.spots.manageAvailability')}</Text>
-                <Ionicons name="chevron-forward" size={13} color={colors.teal} />
-              </TouchableOpacity>
-            </View>
-          )}
-
+          {/* Solicitudes de reserva es lo accionable -- cambia día a día y es lo
+              primero que un propietario quiere saber al entrar a su cochera --
+              así que va pegado al hero, antes de la configuración estática de
+              abajo (que define una vez y casi nunca vuelve a mirar). */}
           <TouchableOpacity
             style={styles.card}
             onPress={() => router.push(`${group}/spots/${id}/requests`)}
@@ -163,13 +146,43 @@ export default function SpotDetail() {
             </View>
           </TouchableOpacity>
 
-          {!!spot.description && (
+          {/* Configuración de la cochera: disponibilidad y descripción agrupadas
+              en una sola tarjeta -- son la misma categoría (datos de referencia
+              que el propietario ya definió), no dos secciones separadas. */}
+          {(spot.hourlyEnabled || !!spot.description) && (
             <View style={styles.card}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="document-text-outline" size={15} color={colors.textSecondary} />
-                <Text style={styles.sectionLabel}>{t('owner.spot.edit.description')}</Text>
-              </View>
-              <Text style={styles.value}>{spot.description}</Text>
+              {spot.hourlyEnabled && (
+                <>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+                    <Text style={styles.sectionLabel}>{t('owner.spot.edit.availability')}</Text>
+                  </View>
+                  {formatScheduleForDisplay(spot.schedule).map((line) => (
+                    <Text key={line.dayRange} style={styles.value}>
+                      {line.dayRange}: {line.hours}
+                    </Text>
+                  ))}
+                  <TouchableOpacity
+                    style={styles.availabilityBtn}
+                    onPress={() => router.push(`${group}/spots/${id}/availability`)}
+                  >
+                    <Text style={styles.availabilityLink}>{t('owner.spots.manageAvailability')}</Text>
+                    <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {spot.hourlyEnabled && !!spot.description && <View style={styles.divider} />}
+
+              {!!spot.description && (
+                <>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="document-text-outline" size={15} color={colors.textSecondary} />
+                    <Text style={styles.sectionLabel}>{t('owner.spot.edit.description')}</Text>
+                  </View>
+                  <Text style={styles.value}>{spot.description}</Text>
+                </>
+              )}
             </View>
           )}
 

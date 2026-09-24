@@ -135,11 +135,9 @@ export default function Profile() {
       borderRadius: 12, paddingVertical: sc(14), paddingHorizontal: sc(16),
     },
     editBtn: { backgroundColor: colors.teal },
-    settlementsBtn: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.teal },
     logoutBtn: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: '#EF4444' },
     actionBtnText: { flex: 1, fontSize: sc(15), fontWeight: '600' },
     editBtnText: { color: colors.white },
-    settlementsBtnText: { color: colors.teal },
     logoutBtnText: { color: '#EF4444' },
 
     deleteAccountLink: { alignSelf: 'center', marginTop: 2, padding: 8 },
@@ -154,6 +152,7 @@ export default function Profile() {
       paddingHorizontal: sc(16), paddingVertical: sc(14),
     },
     prefDivider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
+    prefRowLeft: { flexDirection: 'row', alignItems: 'center', gap: sc(10) },
     prefLabel: { fontSize: sc(14), fontWeight: '500', color: colors.text },
 
     langCurrent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -235,29 +234,41 @@ export default function Profile() {
           <Ionicons name="chevron-forward" size={sc(16)} color={colors.white} />
         </Pressable>
 
-        {/* Finanzas / legales — solo propietario */}
+        {/* Finanzas / legales — solo propietario. Mismo patrón de tarjeta con filas
+            divididas que Preferencias, más abajo -- dos botones sueltos uno arriba
+            del otro se leían como dos secciones distintas cuando en realidad son
+            la misma categoría (accesos del propietario). */}
         {isOwner && (
           <>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{t('profile.owner.section')}</Text>
               <View style={styles.sectionLine} />
             </View>
-            <Pressable
-              style={({ pressed }) => [styles.actionBtn, styles.settlementsBtn, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => router.push(`${group}/settlements`)}
-            >
-              <Ionicons name="receipt-outline" size={sc(18)} color={colors.teal} />
-              <Text style={[styles.actionBtnText, styles.settlementsBtnText]}>{t('profile.finances')}</Text>
-              <Ionicons name="chevron-forward" size={sc(16)} color={colors.teal} />
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.actionBtn, styles.settlementsBtn, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => router.push(`${group}/legal`)}
-            >
-              <Ionicons name="document-text-outline" size={sc(18)} color={colors.teal} />
-              <Text style={[styles.actionBtnText, styles.settlementsBtnText]}>{t('profile.legal')}</Text>
-              <Ionicons name="chevron-forward" size={sc(16)} color={colors.teal} />
-            </Pressable>
+            <View style={styles.prefCard}>
+              <Pressable
+                style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => router.push(`${group}/settlements`)}
+              >
+                <View style={styles.prefRowLeft}>
+                  <Ionicons name="receipt-outline" size={sc(18)} color={colors.teal} />
+                  <Text style={styles.prefLabel}>{t('profile.finances')}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={sc(16)} color={colors.textSecondary} />
+              </Pressable>
+
+              <View style={styles.prefDivider} />
+
+              <Pressable
+                style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => router.push(`${group}/legal`)}
+              >
+                <View style={styles.prefRowLeft}>
+                  <Ionicons name="document-text-outline" size={sc(18)} color={colors.teal} />
+                  <Text style={styles.prefLabel}>{t('profile.legal')}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={sc(16)} color={colors.textSecondary} />
+              </Pressable>
+            </View>
           </>
         )}
 
