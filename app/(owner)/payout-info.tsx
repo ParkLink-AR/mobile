@@ -99,7 +99,6 @@ export default function PayoutInfoScreen() {
         titular: titular.trim(),
         cuil: normalizedCuil,
       });
-      alert(t('owner.payoutInfo.saved'));
       router.back();
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : t('owner.payoutInfo.error.generic'));
