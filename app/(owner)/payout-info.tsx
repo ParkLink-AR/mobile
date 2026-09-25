@@ -1,7 +1,7 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
 import { Text, TextInput, StyleSheet, ActivityIndicator, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -28,7 +28,6 @@ export default function PayoutInfoScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -66,7 +65,6 @@ export default function PayoutInfoScreen() {
       color: colors.text,
     },
     error: { color: '#C62828', fontSize: 13 },
-    success: { color: colors.teal, fontSize: 14, fontWeight: '600', textAlign: 'center' },
   });
 
   if (loading) {
@@ -79,7 +77,6 @@ export default function PayoutInfoScreen() {
 
   async function handleSave() {
     setError(null);
-    setSaved(false);
     const normalizedCbu = onlyDigits(cbu);
     const normalizedCuil = onlyDigits(cuil);
     if (normalizedCbu.length !== 22) {
@@ -97,15 +94,13 @@ export default function PayoutInfoScreen() {
 
     setSaving(true);
     try {
-      const updated = await updatePayoutInfo(user.id, {
+      await updatePayoutInfo(user.id, {
         cbu: normalizedCbu,
         titular: titular.trim(),
         cuil: normalizedCuil,
       });
-      setCbu(updated.cbu ?? '');
-      setCuil(updated.cuil ?? '');
-      setHasPayoutInfo(updated.hasPayoutInfo);
-      setSaved(true);
+      alert(t('owner.payoutInfo.saved'));
+      router.back();
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : t('owner.payoutInfo.error.generic'));
     } finally {
@@ -126,7 +121,6 @@ export default function PayoutInfoScreen() {
       )}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {saved ? <Text style={styles.success}>{t('owner.payoutInfo.saved')}</Text> : null}
 
       <View>
         <Text style={styles.label}>{t('owner.payoutInfo.cbu')}</Text>
