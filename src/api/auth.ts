@@ -291,6 +291,46 @@ export async function deleteAccount(userId: string, password: string): Promise<v
   });
 }
 
+// -------------------------
+// Payout info (owner's CBU/titular/CUIL) -- see auth-service's
+// GET/PUT /users/{id}/payout-info. parking-service refuses to publish a NEW
+// spot for an owner who hasn't set this (existing spots are unaffected).
+// -------------------------
+
+export interface PayoutInfoApiResponse {
+  cbu: string | null;
+  payout_titular: string | null;
+  cuil: string | null;
+  has_payout_info: boolean;
+}
+
+export interface PayoutInfo {
+  cbu: string | null;
+  titular: string | null;
+  cuil: string | null;
+  hasPayoutInfo: boolean;
+}
+
+function toPayoutInfo(r: PayoutInfoApiResponse): PayoutInfo {
+  return { cbu: r.cbu, titular: r.payout_titular, cuil: r.cuil, hasPayoutInfo: r.has_payout_info };
+}
+
+export async function getPayoutInfo(userId: string): Promise<PayoutInfo> {
+  const response = await request<PayoutInfoApiResponse>(`/users/${userId}/payout-info`);
+  return toPayoutInfo(response);
+}
+
+export async function updatePayoutInfo(
+  userId: string,
+  input: { cbu: string; titular: string; cuil: string }
+): Promise<PayoutInfo> {
+  const response = await request<PayoutInfoApiResponse>(`/users/${userId}/payout-info`, {
+    method: 'PUT',
+    body: JSON.stringify({ cbu: input.cbu, payout_titular: input.titular, cuil: input.cuil }),
+  });
+  return toPayoutInfo(response);
+}
+
 export interface PublicProfileApiResponse {
   id: string;
   name: string;

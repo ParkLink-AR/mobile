@@ -20,6 +20,7 @@ import { VehicleTypePicker } from '@/src/components/VehicleTypePicker';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { createParkingSpot, uploadParkingSpotPhotos } from '@/src/services/parkingService';
+import { ApiError } from '@/src/api/client';
 import { GeocodeCandidate, ParkingSpotPhotoAsset, reverseGeocode } from '@/src/api/parking';
 import { VehicleType } from '@/src/constants/vehicleTypes';
 import { t, useLanguage } from '@/src/i18n';
@@ -193,7 +194,13 @@ export default function NewSpot() {
         await uploadParkingSpotPhotos(spot.id, photos).catch(() => {});
       }
       router.back();
-    } catch {
+    } catch (err) {
+      if (err instanceof ApiError && err.detail === 'PAYOUT_INFO_REQUIRED') {
+        alert(t('owner.spot.new.errorPayoutInfoRequired'));
+        setPublishing(false);
+        router.push('/(owner)/payout-info');
+        return;
+      }
       alert(t('owner.spot.new.errorPublish'));
       setPublishing(false);
     }

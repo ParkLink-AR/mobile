@@ -260,6 +260,19 @@ export default function Profile() {
 
               <Pressable
                 style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => router.push(`${group}/payout-info`)}
+              >
+                <View style={styles.prefRowLeft}>
+                  <Ionicons name="card-outline" size={sc(18)} color={colors.teal} />
+                  <Text style={styles.prefLabel}>{t('profile.payoutInfo')}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={sc(16)} color={colors.textSecondary} />
+              </Pressable>
+
+              <View style={styles.prefDivider} />
+
+              <Pressable
+                style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
                 onPress={() => router.push(`${group}/legal`)}
               >
                 <View style={styles.prefRowLeft}>
