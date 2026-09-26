@@ -237,6 +237,27 @@ function routeFor(data: Record<string, string> | undefined): string | null {
     case 'booking.pending_approval':
       if (!data.bookingId) return null;
       return `/(owner)/bookings/${data.bookingId}`;
+    // Sent to the driver once the owner enters their arrival code -- role-agnostic like
+    // booking.confirmed, same reasoning.
+    case 'booking.verified': {
+      if (!data.bookingId) return null;
+      const { activeMode } = useAccountTypeStore.getState();
+      return `${groupFor(activeMode)}/bookings/${data.bookingId}`;
+    }
+    // Sent to whichever side of a booking did NOT send the message -- role-agnostic,
+    // same reasoning as booking.confirmed.
+    case 'booking.message_sent': {
+      if (!data.bookingId) return null;
+      const { activeMode } = useAccountTypeStore.getState();
+      return `${groupFor(activeMode)}/bookings/${data.bookingId}/messages`;
+    }
+    // Sent to whichever user opened the ticket (driver or owner) -- role-agnostic, same
+    // reasoning as booking.confirmed.
+    case 'support.ticket_replied': {
+      if (!data.bookingId || !data.ticketId) return null;
+      const { activeMode } = useAccountTypeStore.getState();
+      return `${groupFor(activeMode)}/bookings/${data.bookingId}/tickets/${data.ticketId}`;
+    }
     // Sent to the owner once an admin confirms a batch of their payouts into
     // a paid Settlement -- intrinsically an owner action (a driver never sees
     // settlements), so always open the owner view regardless of the current

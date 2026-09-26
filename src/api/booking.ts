@@ -353,6 +353,21 @@ export async function getTicketApi(ticketId: string): Promise<TicketApiResponse>
   return request(`/tickets/${ticketId}`);
 }
 
+export interface TicketSummaryApiResponse extends TicketApiResponse {
+  last_admin_reply_id?: string | null;
+  last_admin_reply_at?: string | null;
+}
+
+/**
+ * Every ticket this user has ever opened, across every booking -- used by the in-app
+ * notification feed to surface support.ticket_replied without a per-booking poll.
+ *
+ * GET /users/{id}/tickets
+ */
+export async function getUserTicketsApi(userId: string): Promise<TicketSummaryApiResponse[]> {
+  return request(`/users/${userId}/tickets`);
+}
+
 /**
  * Every message on a ticket's thread, oldest first -- the creator's opening message
  * plus every reply from ParkLink staff.

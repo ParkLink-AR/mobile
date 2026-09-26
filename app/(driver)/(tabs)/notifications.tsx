@@ -21,6 +21,10 @@ const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
   driver_rejected: 'close-circle',
   driver_review_prompt: 'star-outline',
   owner_review_prompt: 'star-outline',
+  driver_verified: 'shield-checkmark-outline',
+  message_received: 'chatbubble-ellipses-outline',
+  ticket_replied: 'help-buoy-outline',
+  owner_settlement_paid: 'cash-outline',
 };
 
 export default function Notifications() {
@@ -94,8 +98,11 @@ export default function Notifications() {
   });
 
   function iconColorFor(kind: AppNotification['kind']) {
-    if (kind === 'driver_confirmed' || kind === 'owner_new_booking') return colors.success;
+    if (kind === 'driver_confirmed' || kind === 'owner_new_booking' || kind === 'driver_verified' || kind === 'owner_settlement_paid') {
+      return colors.success;
+    }
     if (kind === 'driver_rejected') return '#C62828';
+    if (kind === 'message_received' || kind === 'ticket_replied') return colors.teal;
     return colors.warning;
   }
 
@@ -106,6 +113,12 @@ export default function Notifications() {
       router.push(`${group}/review/${item.bookingId}?role=driver`);
     } else if (item.kind === 'owner_review_prompt') {
       router.push(`${group}/review/${item.bookingId}?role=owner`);
+    } else if (item.kind === 'message_received') {
+      router.push(`${group}/bookings/${item.bookingId}/messages`);
+    } else if (item.kind === 'ticket_replied' && item.ticketId) {
+      router.push(`${group}/bookings/${item.bookingId}/tickets/${item.ticketId}`);
+    } else if (item.kind === 'owner_settlement_paid' && item.settlementId) {
+      router.push(`${group}/settlements/${item.settlementId}`);
     }
   }
 
@@ -129,13 +142,15 @@ export default function Notifications() {
             <TouchableOpacity
               style={styles.row}
               onPress={() => handlePress(item)}
-              disabled={item.kind === 'driver_confirmed' || item.kind === 'driver_rejected' || item.kind === 'owner_new_booking'}
+              disabled={item.kind === 'driver_confirmed' || item.kind === 'driver_rejected' || item.kind === 'owner_new_booking' || item.kind === 'driver_verified'}
             >
               <View style={[styles.iconBadge, { backgroundColor: iconColorFor(item.kind) + '20' }]}>
                 <Ionicons name={ICONS[item.kind]} size={sc(18)} color={iconColorFor(item.kind)} />
               </View>
               <View style={styles.textBlock}>
-                <Text style={styles.itemTitle}>{item.spotTitle}</Text>
+                <Text style={styles.itemTitle}>
+                  {item.kind === 'owner_settlement_paid' ? t('notifications.settlementPaid.title') : item.spotTitle}
+                </Text>
                 <Text style={styles.itemBody}>
                   {item.kind === 'owner_request' && t('notifications.ownerRequest.body', { when: formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut')) })}
                   {item.kind === 'owner_new_booking' && t('notifications.ownerNewBooking.body', { when: formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut')) })}
@@ -143,6 +158,10 @@ export default function Notifications() {
                   {item.kind === 'driver_rejected' && t('notifications.driverRejected.body')}
                   {item.kind === 'driver_review_prompt' && t('notifications.driverReviewPrompt.body')}
                   {item.kind === 'owner_review_prompt' && t('notifications.ownerReviewPrompt.body')}
+                  {item.kind === 'driver_verified' && t('notifications.driverVerified.body')}
+                  {item.kind === 'message_received' && t('notifications.messageReceived.body', { spot: item.spotTitle })}
+                  {item.kind === 'ticket_replied' && t('notifications.ticketReplied.body')}
+                  {item.kind === 'owner_settlement_paid' && t('notifications.settlementPaid.body', { amount: item.total.toLocaleString('es-AR') })}
                 </Text>
               </View>
             </TouchableOpacity>
