@@ -119,6 +119,8 @@ export default function Notifications() {
       router.push(`${group}/bookings/${item.bookingId}/tickets/${item.ticketId}`);
     } else if (item.kind === 'owner_settlement_paid' && item.settlementId) {
       router.push(`${group}/settlements/${item.settlementId}`);
+    } else if (item.kind === 'owner_new_booking' || item.kind === 'driver_rejected') {
+      router.push(`${group}/bookings/${item.bookingId}`);
     }
   }
 
@@ -142,7 +144,7 @@ export default function Notifications() {
             <TouchableOpacity
               style={styles.row}
               onPress={() => handlePress(item)}
-              disabled={item.kind === 'driver_confirmed' || item.kind === 'driver_rejected' || item.kind === 'owner_new_booking' || item.kind === 'driver_verified'}
+              disabled={item.kind === 'driver_confirmed' || item.kind === 'driver_verified'}
             >
               <View style={[styles.iconBadge, { backgroundColor: iconColorFor(item.kind) + '20' }]}>
                 <Ionicons name={ICONS[item.kind]} size={sc(18)} color={iconColorFor(item.kind)} />
