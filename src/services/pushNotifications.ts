@@ -215,13 +215,19 @@ export async function unregisterPush(): Promise<void> {
   }
 }
 
-/** Maps a notification `data` payload to an in-app route, or null. */
+/**
+ * Maps a notification `data` payload to an in-app route, or null. Each case
+ * checks for the key IT needs rather than one blanket `bookingId`-required
+ * guard up front -- a settlement notification covers multiple bookings and
+ * carries no single bookingId, so a shared guard would have silently
+ * swallowed it before ever reaching the switch.
+ */
 function routeFor(data: Record<string, string> | undefined): string | null {
-  if (!data?.bookingId) return null;
-  switch (data.type) {
+  switch (data?.type) {
     // Sent to the driver when their booking is confirmed. This one is
     // role-agnostic -- open it in whichever mode the user is currently in.
     case 'booking.confirmed': {
+      if (!data.bookingId) return null;
       const { activeMode } = useAccountTypeStore.getState();
       return `${groupFor(activeMode)}/bookings/${data.bookingId}`;
     }
@@ -229,7 +235,16 @@ function routeFor(data: Record<string, string> | undefined): string | null {
     // reject. Intrinsically an owner action, so always open the owner view
     // regardless of the current mode.
     case 'booking.pending_approval':
+      if (!data.bookingId) return null;
       return `/(owner)/bookings/${data.bookingId}`;
+    // Sent to the owner once an admin confirms a batch of their payouts into
+    // a paid Settlement -- intrinsically an owner action (a driver never sees
+    // settlements), so always open the owner view regardless of the current
+    // mode. No bookingId here: a settlement covers however many bookings the
+    // admin batched, so it only ever carries settlementId.
+    case 'settlement.paid':
+      if (!data.settlementId) return null;
+      return `/(owner)/settlements/${data.settlementId}`;
     default:
       return null;
   }

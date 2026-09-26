@@ -9,6 +9,7 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getSettlementsForOwner } from '@/src/services/paymentService';
+import { formatFullDateFromISO } from '@/src/services/bookingDates';
 import { Settlement } from '@/src/types';
 
 export default function Settlements() {
@@ -21,7 +22,11 @@ export default function Settlements() {
 
   useFocusEffect(
     useCallback(() => {
-      if (user) getSettlementsForOwner(user.id).then(setSettlements);
+      if (user) {
+        getSettlementsForOwner(user.id)
+          .then(setSettlements)
+          .catch((err) => console.warn('[Settlements] fetch error:', err));
+      }
     }, [user?.id])
   );
 
@@ -50,10 +55,14 @@ export default function Settlements() {
         renderItem={({ item }) => (
           <TouchableOpacity onPress={() => router.push(`${group}/settlements/${item.id}`)}>
             <Card>
-              <Text style={typography.h2}>{item.period}</Text>
-              <Text style={styles.amount}>${item.totalAmount.toLocaleString('es-AR')}</Text>
+              <Text style={typography.h2}>{item.paidAt ? formatFullDateFromISO(item.paidAt) : t('settlements.unknownDate')}</Text>
+              <Text style={styles.amount}>
+                ${(item.netAmount / 100).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </Text>
               <Text style={typography.caption}>
-                {t('settlements.commission', { amount: item.commissionRetained.toLocaleString('es-AR') })}
+                {t('settlements.commission', {
+                  amount: (item.commissionAmount / 100).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                })}
               </Text>
             </Card>
           </TouchableOpacity>

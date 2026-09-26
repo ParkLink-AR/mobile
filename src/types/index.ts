@@ -150,13 +150,34 @@ export interface Review {
   comment: string;
 }
 
+export type SettlementStatus = 'PENDING' | 'PAID';
+
+export interface SettlementPayout {
+  id: string;
+  bookingId: string;
+  grossAmount: number; // centavos
+  commissionAmount: number; // centavos
+  netAmount: number; // centavos
+}
+
+// Un lote de pago del propietario: un admin agrupa todo su saldo pendiente
+// (uno o más payouts de bookings ya completados+pagados+24h) en una única
+// transferencia. No hay concepto de "período" -- ocurre cuando un admin lo
+// arma, no en un calendario fijo. El propietario sólo ve las PAID (ver
+// getUserSettlementsApi) -- un draft PENDING todavía no es "su plata".
 export interface Settlement {
   id: string;
   ownerId: string;
-  period: string;
-  totalAmount: number;
-  commissionRetained: number;
-  bookingIds: string[];
+  grossAmount: number; // centavos
+  commissionAmount: number; // centavos
+  netAmount: number; // centavos
+  status: SettlementStatus;
+  proofUrl: string | null;
+  paidAt: string | null;
+  paidByAdminId: string | null;
+  createdByAdminId: string;
+  createdAt: string;
+  payouts?: SettlementPayout[]; // sólo presente en el fetch de detalle
 }
 
 export type PaymentMethodType = 'card' | 'cash';

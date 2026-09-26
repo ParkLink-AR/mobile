@@ -525,6 +525,14 @@
   "settlements.empty": "Todavía no tenés liquidaciones. Cuando cobres una reserva, la vas a ver acá.",
   "settlements.commission": "Comisión retenida: $%{amount}",
   "settlements.bookingsIncluded": "RESERVAS INCLUIDAS",
+  "settlements.unknownDate": "Fecha no disponible",
+  "settlements.paidAt": "Pagado el",
+  "settlements.grossAmount": "Bruto",
+  "settlements.commissionLabel": "Comisión retenida",
+  "settlements.proofTitle": "Comprobante",
+  "settlements.noProof": "Sin comprobante adjunto",
+  "settlements.bookingsEmpty": "No hay reservas asociadas a esta liquidación.",
+  "settlements.detail.error": "No pudimos cargar el detalle de esta liquidación. Intentá de nuevo.",
 
   "mocks.reviews.comment.example": "Todo tal cual la descripción, sin sorpresas.",
 

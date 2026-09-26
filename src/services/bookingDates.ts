@@ -53,6 +53,26 @@ export function formatFullDate(dateISO: string): string {
  * check-out en vez del ambiguo "14:00 a 14:00" -- "Check-in 10/09 · 14:00 —
  * Check-out 14/09 · 14:00".
  */
+/**
+ * "10/09/2026" from a full ISO timestamp (e.g. a Settlement's `paidAt`).
+ * Unlike formatFullDate, this doesn't need the T12:00:00 noon hack -- that one
+ * exists only because its input is a bare YYYY-MM-DD with no real time of its
+ * own; a timestamp like paidAt already carries one.
+ */
+export function formatFullDateFromISO(dateTimeISO: string): string {
+  return new Date(dateTimeISO).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+/**
+ * "10/09/2026 · 14:30" -- same date format as formatFullDateFromISO, plus the
+ * time, same pattern bookings/[id].tsx already uses inline for a booking's
+ * paidAt.
+ */
+export function formatFullDateTime(dateTimeISO: string): string {
+  const time = new Date(dateTimeISO).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  return `${formatFullDateFromISO(dateTimeISO)} · ${time}`;
+}
+
 export function formatBookingWhen(
   item: { date: string; endDate: string; startTime: string; endTime: string },
   timeToLabel: string,

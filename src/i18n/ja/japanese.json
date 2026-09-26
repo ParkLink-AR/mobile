@@ -525,6 +525,14 @@
   "settlements.empty": "まだ清算がありません。予約の支払いが完了すると、ここに表示されます。",
   "settlements.commission": "手数料: $%{amount}",
   "settlements.bookingsIncluded": "含まれる予約",
+  "settlements.unknownDate": "日付不明",
+  "settlements.paidAt": "支払日",
+  "settlements.grossAmount": "総額",
+  "settlements.commissionLabel": "手数料",
+  "settlements.proofTitle": "領収書",
+  "settlements.noProof": "領収書は添付されていません",
+  "settlements.bookingsEmpty": "この清算に紐づく予約はありません。",
+  "settlements.detail.error": "この清算の詳細を読み込めませんでした。もう一度お試しください。",
 
   "mocks.reviews.comment.example": "説明どおりで、驚きはありません。",
 
