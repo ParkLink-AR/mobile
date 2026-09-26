@@ -145,7 +145,12 @@ async function getOwnerNotifications(ownerId: string): Promise<AppNotification[]
             )
           ).filter((n): n is AppNotification => n !== null);
 
-          const messages = await getMessageNotifications(bookings, ownerId, spot.title);
+          // Best-effort: a failure fetching messages must never take down requests/
+          // newBookings/reviewPrompts above, which are already-working, more important
+          // signals -- caught here instead of letting it reject this whole .then() (which
+          // would fall through to the outer .catch(() => []) and silently lose everything
+          // for this spot, not just the messages).
+          const messages = await getMessageNotifications(bookings, ownerId, spot.title).catch(() => []);
 
           return [...requests, ...newBookings, ...reviewPrompts, ...messages];
         })
@@ -211,9 +216,11 @@ async function getDriverNotifications(userId: string): Promise<AppNotification[]
       at: b.verified_at!,
     }));
 
-  const messages = await getMessageNotifications(bookings, userId, '').then((msgs) =>
-    msgs.map((m) => ({ ...m, spotTitle: titleById[m.parkingSpotId] ?? m.parkingSpotId })),
-  );
+  // Same reasoning as getOwnerNotifications: a failure here must not take down
+  // notifications/reviewPrompts/verifiedNotifications above.
+  const messages = await getMessageNotifications(bookings, userId, '')
+    .then((msgs) => msgs.map((m) => ({ ...m, spotTitle: titleById[m.parkingSpotId] ?? m.parkingSpotId })))
+    .catch(() => []);
 
   return [...notifications, ...reviewPrompts, ...verifiedNotifications, ...messages];
 }
