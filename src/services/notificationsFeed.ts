@@ -65,13 +65,27 @@ function fmt(b: BookingApiResponse, spotTitle: string, kind: NotificationKind): 
   };
 }
 
+// getNotifications() polls every 30s and re-scans every COMPLETED booking a user has ever
+// had to see if a review is still pending -- unbounded over an account's lifetime, and the
+// single biggest source of request volume (confirmed against real gateway logs, where this
+// fan-out alone was enough to trip the rate limiter during completely normal use). A review,
+// once submitted, is never revoked, so once a booking comes back with nothing pending there's
+// no reason to ever ask again -- caching that fact turns this fan-out from "every completed
+// booking, forever" into "only the still-unreviewed ones", every poll cycle.
+const noPendingReviewCache = new Set<string>();
+
 /** Whether userId still has a review left to submit on a COMPLETED booking, given the
  * target types their role is responsible for (driver: spot + owner, owner: driver). */
 async function hasPendingReview(bookingId: string, userId: string, targetTypes: string[]): Promise<boolean> {
+  const cacheKey = `${bookingId}:${userId}`;
+  if (noPendingReviewCache.has(cacheKey)) return false;
+
   try {
     const existing = await getBookingReviewsApi(bookingId);
     const reviewed = new Set(existing.filter((r) => r.reviewer_id === userId).map((r) => r.target_type));
-    return targetTypes.some((target) => !reviewed.has(target as never));
+    const pending = targetTypes.some((target) => !reviewed.has(target as never));
+    if (!pending) noPendingReviewCache.add(cacheKey);
+    return pending;
   } catch {
     return false;
   }
