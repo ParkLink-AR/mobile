@@ -244,6 +244,20 @@ export default function DriverProfileEdit() {
             </View>
           </View>
 
+          {/* Password -- same reasoning, changing it requires re-entering the
+              current one first, so it lives in its own screen. */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>{t('profile.edit.password')}</Text>
+            <View style={styles.readOnlyRow}>
+              <View style={styles.readOnlyInfo}>
+                <Text style={styles.readOnlyValue}>••••••••</Text>
+              </View>
+              <Text style={styles.changeLink} onPress={() => router.push(`${group}/change-password`)}>
+                {t('profile.edit.changePassword')}
+              </Text>
+            </View>
+          </View>
+
           {saving ? (
             <ActivityIndicator color={colors.teal} />
           ) : (
