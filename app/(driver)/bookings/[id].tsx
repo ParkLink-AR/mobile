@@ -1,6 +1,6 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Pressable, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Pressable, Modal, TouchableWithoutFeedback, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
@@ -39,6 +39,16 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string, ownerId: string
   };
 }
 
+/** Opens the phone's own map app in turn-by-turn directions mode. Google's universal
+ * "dir" URL (not the `maps://`/`geo:` custom schemes) is used on purpose: it works via a
+ * plain `Linking.openURL` on every platform with no extra native config -- `maps://`
+ * specifically needs the scheme declared in iOS's LSApplicationQueriesSchemes to even be
+ * openable, which this app doesn't do. If Google Maps is installed this deep-links
+ * straight into it; otherwise it falls back to opening in the browser. */
+function openDirections(lat: number, lng: number) {
+  Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
+}
+
 /** Duración legible: horas para HOURLY, días de check-in a check-out para STAY. */
 function durationLabel(booking: Booking): string {
   if (booking.kind === 'HOURLY') {
@@ -58,6 +68,7 @@ export default function DriverBookingDetail() {
   const activeMode = useAccountTypeStore((s) => s.activeMode);
   const isOwnerView = activeMode === 'owner';
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [spotLocation, setSpotLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [driverName, setDriverName] = useState<string | null>(null);
   const [ownerName, setOwnerName] = useState<string | null>(null);
   const [error, setError] = useState(false);
@@ -71,6 +82,7 @@ export default function DriverBookingDetail() {
       .then(async (raw) => {
         const spot = await getParkingSpotDetail(raw.parking_spot_id).catch(() => null);
         setBooking(mapApiBooking(raw, spot?.title ?? raw.parking_spot_id, spot?.ownerId ?? ''));
+        setSpotLocation(spot ? { lat: spot.lat, lng: spot.lng, address: spot.address } : null);
         if (isOwnerView) {
           getPublicProfileApi(raw.user_id)
             .then((profile) => setDriverName(profile.name))
@@ -371,6 +383,22 @@ export default function DriverBookingDetail() {
               en el perfil. Va al final, después de los datos de la reserva. */}
           <Card>
             <View style={styles.cardContent}>
+              {spotLocation && (
+                <>
+                  <Pressable
+                    style={styles.sectionHeader}
+                    onPress={() => openDirections(spotLocation.lat, spotLocation.lng)}
+                  >
+                    <Ionicons name="navigate-outline" size={15} color={colors.textSecondary} />
+                    <Text style={styles.sectionLabel}>{t('driver.booking.detail.directions')}</Text>
+                    <View style={{ flex: 1 }} />
+                    <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+                  </Pressable>
+
+                  <View style={styles.divider} />
+                </>
+              )}
+
               <Pressable style={styles.sectionHeader} onPress={() => router.push(`${group}/bookings/${id}/messages`)}>
                 <Ionicons name="chatbubble-outline" size={15} color={colors.textSecondary} />
                 <Text style={styles.sectionLabel}>{t('driver.booking.messages.link')}</Text>

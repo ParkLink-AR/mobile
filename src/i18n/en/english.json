@@ -112,6 +112,7 @@
   "driver.booking.durationHours": "%{hours} hrs",
   "driver.booking.durationDays": "%{days} days",
   "driver.booking.detail.paymentSection": "Payment",
+  "driver.booking.detail.directions": "Get directions",
   "driver.booking.messages.link": "Messages",
   "driver.booking.messages.placeholder": "Write a message...",
   "driver.booking.messages.empty": "No messages yet. Write one to coordinate arrival or ask for access instructions.",

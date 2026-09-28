@@ -112,6 +112,7 @@
   "driver.booking.durationHours": "%{hours} 時間",
   "driver.booking.durationDays": "%{days} 日間",
   "driver.booking.detail.paymentSection": "支払い",
+  "driver.booking.detail.directions": "経路を見る",
   "driver.booking.messages.link": "メッセージ",
   "driver.booking.messages.placeholder": "メッセージを入力...",
   "driver.booking.messages.empty": "まだメッセージはありません。到着時間の調整やアクセス方法の確認に使えます。",
