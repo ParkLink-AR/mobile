@@ -1,6 +1,6 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
@@ -42,10 +42,12 @@ export default function DriverBookings() {
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       if (!user) return;
+      setLoading(true);
       getUserBookingsApi(user.id)
         .then(async (list) => {
           // Deduplicate spot ids and fetch all their titles in a single batch request
@@ -57,7 +59,8 @@ export default function DriverBookings() {
           // Any id not found by the batch call (deleted spot, etc.) falls back to showing the id
           setBookings(list.map((b) => mapApiBooking(b, spotTitleMap[b.parking_spot_id] ?? b.parking_spot_id)));
         })
-        .catch((err) => console.warn('[Bookings] fetch error:', err));
+        .catch((err) => console.warn('[Bookings] fetch error:', err))
+        .finally(() => setLoading(false));
     }, [user?.id])
   );
 
@@ -81,6 +84,17 @@ export default function DriverBookings() {
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   });
+
+  if (loading) {
+    return (
+      <Screen style={styles.container}>
+        <Text style={typography.h1}>{t('driver.bookings.title')}</Text>
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator color={colors.teal} />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen style={styles.container}>

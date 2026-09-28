@@ -7,6 +7,10 @@ interface NotificationsState {
   items: AppNotification[];
   seenIds: string[];
   loading: boolean;
+  /** True once the first refresh() has resolved -- lets the screen show a full-screen
+   *  spinner instead of flashing the "no notifications" empty state before the first
+   *  fetch completes. Reset on clear() so a new session gets its own first-load spinner. */
+  hasLoadedOnce: boolean;
   refresh: (userId: string) => Promise<void>;
   markSeen: (ids: string[]) => void;
   clear: () => void;
@@ -18,6 +22,7 @@ export const useNotificationsStore = create(
       items: [],
       seenIds: [],
       loading: false,
+      hasLoadedOnce: false,
       refresh: async (userId: string) => {
         set({ loading: true });
         try {
@@ -26,7 +31,7 @@ export const useNotificationsStore = create(
         } catch (err) {
           console.warn('[Notifications] refresh error:', err);
         } finally {
-          set({ loading: false });
+          set({ loading: false, hasLoadedOnce: true });
         }
       },
       markSeen: (ids: string[]) => {
@@ -42,7 +47,7 @@ export const useNotificationsStore = create(
       // cerrar sesión. Los ids son `${bookingId}-${kind}` con bookingId un
       // UUID único global, así que conservarlos entre cuentas en el mismo
       // dispositivo no arrastra el estado de "visto" de un usuario a otro.
-      clear: () => set({ items: [] }),
+      clear: () => set({ items: [], hasLoadedOnce: false }),
     }),
     {
       name: 'notifications-storage',

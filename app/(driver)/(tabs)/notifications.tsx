@@ -37,6 +37,7 @@ export default function Notifications() {
   const user = useSessionStore((s) => s.user);
   const items = useNotificationsStore((s) => s.items);
   const loading = useNotificationsStore((s) => s.loading);
+  const hasLoadedOnce = useNotificationsStore((s) => s.hasLoadedOnce);
   const refresh = useNotificationsStore((s) => s.refresh);
   const markSeen = useNotificationsStore((s) => s.markSeen);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -122,6 +123,17 @@ export default function Notifications() {
     } else if (item.kind === 'owner_new_booking' || item.kind === 'driver_rejected') {
       router.push(`${group}/bookings/${item.bookingId}`);
     }
+  }
+
+  if (loading && !hasLoadedOnce) {
+    return (
+      <Screen style={styles.container}>
+        <Text style={typography.h1}>{t('tabs.driver.notifications')}</Text>
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator color={colors.teal} />
+        </View>
+      </Screen>
+    );
   }
 
   return (
