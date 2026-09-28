@@ -5,6 +5,7 @@ import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
@@ -144,6 +145,7 @@ export default function OwnerCalendar() {
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16, paddingBottom: 120, gap: 16 },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     monthLabel: { fontSize: Math.round(17 * scale), fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
     navBtn: { padding: Math.round(6 * scale) },
@@ -201,7 +203,10 @@ export default function OwnerCalendar() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View style={{ gap: 12, marginBottom: 4 }}>
-            <Text style={typography.h1}>{t('tabs.owner.calendar')}</Text>
+            <View style={styles.headerRow}>
+              <Text style={typography.h1}>{t('tabs.owner.calendar')}</Text>
+              <RoleBadge />
+            </View>
 
             <View style={styles.monthNav}>
               <Pressable style={styles.navBtn} onPress={() => goToMonth(-1)} hitSlop={8}>

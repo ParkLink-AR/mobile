@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
@@ -65,6 +66,7 @@ export default function DriverBookings() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     total: { color: colors.teal, fontWeight: '700', marginTop: 4 },
     codeChip: {
@@ -84,7 +86,10 @@ export default function DriverBookings() {
 
   return (
     <Screen style={styles.container}>
-      <Text style={typography.h1}>{t('driver.bookings.title')}</Text>
+      <View style={styles.headerRow}>
+        <Text style={typography.h1}>{t('driver.bookings.title')}</Text>
+        <RoleBadge />
+      </View>
       <FlatList
         data={bookings}
         keyExtractor={(item) => item.id}

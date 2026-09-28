@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
 import { Button } from '@/src/components/Button';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
@@ -41,6 +42,7 @@ export default function OwnerSpots() {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       padding: 16, paddingBottom: 8,
     },
+    titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     addBtn: {
       flexDirection: 'row', alignItems: 'center', gap: 6,
       paddingHorizontal: 12, paddingVertical: 7,
@@ -57,7 +59,10 @@ export default function OwnerSpots() {
   return (
     <Screen style={styles.container} tabBarPadding>
       <View style={styles.header}>
-        <Text style={typography.h1}>{t('tabs.owner.spots')}</Text>
+        <View style={styles.titleRow}>
+          <Text style={typography.h1}>{t('tabs.owner.spots')}</Text>
+          <RoleBadge />
+        </View>
         <Pressable
           style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.75 : 1 }]}
           onPress={() => router.push(`${group}/spots/new`)}

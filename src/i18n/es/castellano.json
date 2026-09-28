@@ -397,6 +397,11 @@
   "account.switchToOwner": "Cambiar a modo propietario",
   "account.switchToDriver": "Cambiar a modo conductor",
 
+  "roleBadge.driver": "Conductor",
+  "roleBadge.owner": "Propietario",
+  "roleBadge.driverA11y": "Estás en modo conductor",
+  "roleBadge.ownerA11y": "Estás en modo propietario",
+
   "tabs.driver.search": "Buscar",
   "tabs.driver.favorites": "Favoritos",
   "tabs.driver.bookings": "Reservas",

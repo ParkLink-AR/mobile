@@ -5,6 +5,7 @@ import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
@@ -81,6 +82,7 @@ export default function OwnerToday() {
       padding: 24, alignItems: 'center', gap: 8,
     },
     emptyText: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     bookingCard: { gap: 6 },
     driverRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
     driverRowText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
@@ -98,7 +100,10 @@ export default function OwnerToday() {
         ListHeaderComponent={
           <View style={{ gap: 16, marginBottom: 4 }}>
             <View>
-              <Text style={typography.h1}>{t('tabs.owner.today')}</Text>
+              <View style={styles.headerRow}>
+                <Text style={typography.h1}>{t('tabs.owner.today')}</Text>
+                <RoleBadge />
+              </View>
               <Text style={styles.dateLabel}>{todayLabel}</Text>
             </View>
 

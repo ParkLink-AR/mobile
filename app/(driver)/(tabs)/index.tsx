@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Chip } from '@/src/components/Chip';
 import { Button } from '@/src/components/Button';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { DatePickerField } from '@/src/components/DatePickerField';
 import { getDriverVisiblePrice } from '@/src/services/utils';
@@ -413,6 +414,13 @@ export function SearchScreen() {
       zIndex: 20,
       elevation: 20,
     },
+    roleBadgeRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      paddingHorizontal: 20,
+      paddingTop: 10,
+      backgroundColor: colors.surface,
+    },
     searchSection: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -760,6 +768,9 @@ export function SearchScreen() {
     <Screen style={styles.container}>
       {/* ── Search bar ────────────────────────────────────────────── */}
       <View style={styles.searchWrapper}>
+        <View style={styles.roleBadgeRow}>
+          <RoleBadge />
+        </View>
         <View style={styles.searchSection}>
           <View style={styles.searchInputWrapper}>
             {geocoding ? (

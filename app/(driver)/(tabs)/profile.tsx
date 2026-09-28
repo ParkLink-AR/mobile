@@ -8,6 +8,7 @@ import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
 import { VerifiedBadge } from '@/src/components/VerifiedBadge';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
@@ -108,6 +109,7 @@ export default function Profile() {
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     scrollContent: { padding: 16, paddingBottom: 120, gap: 16 },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 
     profileCard: {
       backgroundColor: colors.surface, borderRadius: 14, padding: sc(20),
@@ -206,7 +208,10 @@ export default function Profile() {
   return (
     <Screen style={styles.container} tabBarPadding>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={typography.h1}>{t('driver.profile.title')}</Text>
+        <View style={styles.headerRow}>
+          <Text style={typography.h1}>{t('driver.profile.title')}</Text>
+          <RoleBadge />
+        </View>
 
         {/* Profile card */}
         <View style={styles.profileCard}>
