@@ -36,6 +36,7 @@ export default function DriverLayout() {
       <Stack.Screen name="spots/[id]/edit" options={{ title: t('owner.spot.edit.title') }} />
       <Stack.Screen name="spots/[id]/availability" options={{ title: t('layout.owner.availability') }} />
       <Stack.Screen name="spots/[id]/requests" options={{ title: t('owner.spot.requests.title') }} />
+      <Stack.Screen name="spots/[id]/documentation" options={{ title: t('owner.spot.documentation.title') }} />
       <Stack.Screen name="settlements" options={{ title: t('layout.owner.settlements') }} />
       <Stack.Screen name="settlements/[id]" options={{ title: t('layout.owner.settlementDetail') }} />
       {/* Profile */}

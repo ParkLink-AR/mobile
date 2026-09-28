@@ -39,8 +39,13 @@ export interface ParkingSpotApiResponse {
   capacity: number;
   schedule: ScheduleEntry[];
   photos: string[];
+  // Fotos de respaldo para que un admin revise la cochera antes de
+  // aprobarla -- nunca se muestran al conductor (ver `photos` arriba).
+  verificationPhotos: string[];
+  // Motivo que cargó el admin al rechazar (null si nunca se revisó o si se aprobó).
+  reviewNotes: string | null;
   rules: string[];
-  status: 'active' | 'paused' | 'deleted';
+  status: 'pending_review' | 'active' | 'paused' | 'rejected' | 'deleted';
   createdAt: string;
   updatedAt: string;
   distanceMeters?: number;
@@ -282,6 +287,30 @@ export async function uploadParkingSpotPhotos(
     }
   }
   return requestMultipart<ParkingSpotApiResponse>(`/parking-spots/${spotId}/photos`, formData);
+}
+
+// Hasta 5 fotos de documentación por cochera (ver MAX_VERIFICATION_PHOTOS en
+// parking-service) -- comprobantes de que la cochera es legítima (escritura,
+// contrato de alquiler, expensas, fotos del lugar), no las fotos de
+// marketing que ve el conductor.
+export async function uploadParkingSpotVerificationPhotos(
+  spotId: string,
+  assets: ParkingSpotPhotoAsset[],
+): Promise<ParkingSpotApiResponse> {
+  const formData = new FormData();
+  for (const asset of assets) {
+    if (Platform.OS === 'web') {
+      const blob = await (await fetch(asset.uri)).blob();
+      formData.append('files', blob, asset.name);
+    } else {
+      formData.append('files', {
+        uri: asset.uri,
+        name: asset.name,
+        type: asset.type,
+      } as unknown as Blob);
+    }
+  }
+  return requestMultipart<ParkingSpotApiResponse>(`/parking-spots/${spotId}/verification-photos`, formData);
 }
 
 export async function deleteParkingSpotPhoto(spotId: string, url: string): Promise<ParkingSpotApiResponse> {

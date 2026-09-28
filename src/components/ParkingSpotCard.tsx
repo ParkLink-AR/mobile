@@ -14,6 +14,15 @@ export const FAVORITE_RED = '#FF385C';
 // vehículo (previsualización del mapa, resultados de búsqueda) -- una
 // cochera sin alquiler por hora (sólo estadía) no tiene nada que mostrar acá,
 // aunque en teoría tuviera un pricePerHour viejo de cuando lo tenía activado.
+// Overlay de "no disponible" comparte estilo para paused/pending_review/
+// rejected, pero el dueño necesita distinguir por qué -- paused lo eligió
+// él, pending_review/rejected son el resultado de la revisión de un admin.
+function unavailableLabel(spot: ParkingSpot): string {
+  if (spot.status === 'pending_review') return t('spot.pendingReview');
+  if (spot.status === 'rejected') return t('spot.rejected');
+  return t('spot.unavailable');
+}
+
 function priceBadgeLabel(spot: ParkingSpot): string {
   if (!spot.hourlyEnabled) return t('spot.stayOnlyBadge');
   const price = getMinPricePerHour(spot);
@@ -165,7 +174,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
           {!spot.active && (
             <View style={styles.unavailableOverlay}>
               <View style={styles.unavailableBadge}>
-                <Text style={styles.unavailableBadgeText}>{t('spot.unavailable')}</Text>
+                <Text style={styles.unavailableBadgeText}>{unavailableLabel(spot)}</Text>
               </View>
             </View>
           )}

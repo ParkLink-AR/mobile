@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, Pressable, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView, Image } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -32,6 +32,7 @@ const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export default function NewSpot() {
   const colors = useThemeColors();
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const user = useSessionStore((s) => s.user);
 
   const [address, setAddress] = useState('');
@@ -193,7 +194,10 @@ export default function NewSpot() {
         // publicación por un error acá.
         await uploadParkingSpotPhotos(spot.id, photos).catch(() => {});
       }
-      router.back();
+      // Toda cochera nueva arranca PENDING_REVIEW (ver parking-service) --
+      // replace en vez de push para que "más tarde"/volver desde la pantalla
+      // de documentación no reabra este formulario ya enviado.
+      router.replace(`${group}/spots/${spot.id}/documentation`);
     } catch (err) {
       if (err instanceof ApiError && err.detail === 'PAYOUT_INFO_REQUIRED') {
         alert(t('owner.spot.new.errorPayoutInfoRequired'));

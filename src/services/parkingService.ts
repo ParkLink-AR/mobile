@@ -53,6 +53,9 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     distanceMeters: raw.distanceMeters ?? 0,
     description: raw.description ?? '',
     active: raw.status === 'active',
+    status: raw.status,
+    verificationPhotos: raw.verificationPhotos ?? [],
+    reviewNotes: raw.reviewNotes ?? null,
   };
 }
 

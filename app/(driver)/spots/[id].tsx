@@ -83,6 +83,15 @@ export default function SpotDetail() {
     availabilityLink: { color: colors.teal, fontWeight: '700', fontSize: 13 },
 
     editBtn: { marginTop: 4 },
+
+    reviewBanner: {
+      borderRadius: 14, borderWidth: 1, padding: 14, gap: 8,
+      flexDirection: 'row', alignItems: 'center',
+    },
+    reviewBannerPending: { backgroundColor: colors.warning + '14', borderColor: colors.warning },
+    reviewBannerRejected: { backgroundColor: '#C6282814', borderColor: '#C62828' },
+    reviewBannerText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.text },
+    reviewBannerLink: { fontSize: 13, fontWeight: '700', color: colors.teal },
   });
 
   if (!spot) return null;
@@ -93,6 +102,30 @@ export default function SpotDetail() {
         <PhotoGallery photos={spot.photos} fallbackUri={spot.photoUrl} />
 
         <View style={styles.body}>
+          {/* Estado de revisión: lo primero que un dueño necesita saber es si
+              su cochera ya está publicada o todavía la está mirando un admin
+              -- va antes que todo lo demás, que es configuración estática. */}
+          {spot.status === 'pending_review' && (
+            <TouchableOpacity
+              style={[styles.reviewBanner, styles.reviewBannerPending]}
+              onPress={() => router.push(`${group}/spots/${id}/documentation`)}
+            >
+              <Ionicons name="time-outline" size={18} color={colors.warning} />
+              <Text style={styles.reviewBannerText}>{t('owner.spot.review.pendingBanner')}</Text>
+              <Text style={styles.reviewBannerLink}>{t('owner.spot.review.pendingAction')}</Text>
+            </TouchableOpacity>
+          )}
+          {spot.status === 'rejected' && (
+            <TouchableOpacity
+              style={[styles.reviewBanner, styles.reviewBannerRejected]}
+              onPress={() => router.push(`${group}/spots/${id}/documentation`)}
+            >
+              <Ionicons name="close-circle-outline" size={18} color="#C62828" />
+              <Text style={styles.reviewBannerText}>{t('owner.spot.review.rejectedBanner')}</Text>
+              <Text style={styles.reviewBannerLink}>{t('owner.spot.review.rejectedAction')}</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Hero: title, address, rating, price and type together */}
           <View style={styles.heroCard}>
             <View style={styles.titleRow}>
