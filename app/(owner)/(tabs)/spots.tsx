@@ -42,62 +42,53 @@ export default function OwnerSpots() {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       padding: 16, paddingBottom: 8,
     },
-    titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    addBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      paddingHorizontal: 12, paddingVertical: 7,
-      borderRadius: 8, borderWidth: 1.5, borderColor: colors.teal,
-    },
-    addBtnText: { fontSize: sc(13), fontWeight: '600', color: colors.teal },
+    body: { flex: 1 },
     list: { padding: 16, paddingTop: 8, gap: 12 },
     emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 },
     emptyText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
-    emptyBtn: { alignSelf: 'stretch', marginTop: 8 },
-    emptyBtnText: { fontSize: sc(15) },
+    // Franja fija arriba del tab bar -- el botón de agregar vive acá para
+    // todas las variantes (lista vacía o con cocheras), así el header de
+    // arriba queda siempre igual (título + RoleBadge) en vez de competir por
+    // espacio con este botón.
+    footer: {
+      paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
+      borderTopWidth: 1, borderTopColor: colors.border,
+    },
   });
 
   return (
     <Screen style={styles.container} tabBarPadding>
       <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text style={typography.h1}>{t('tabs.owner.spots')}</Text>
-          <RoleBadge />
-        </View>
-        <Pressable
-          style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.75 : 1 }]}
-          onPress={() => router.push(`${group}/spots/new`)}
-        >
-          <Ionicons name="add" size={sc(16)} color={colors.teal} />
-          <Text style={styles.addBtnText}>{t('profile.mySpots.add')}</Text>
-        </Pressable>
+        <Text style={typography.h1}>{t('tabs.owner.spots')}</Text>
+        <RoleBadge />
       </View>
 
-      {loading ? (
-        <ActivityIndicator color={colors.teal} style={{ marginTop: 40 }} />
-      ) : spots.length === 0 ? (
-        <View style={styles.emptyWrap}>
-          <Ionicons name="home-outline" size={sc(48)} color={colors.textSecondary} />
-          <Text style={styles.emptyText}>{t('profile.mySpots.empty')}</Text>
-          <Button
-            title={t('profile.mySpots.add')}
-            onPress={() => router.push(`${group}/spots/new`)}
-            style={styles.emptyBtn}
-            textStyle={styles.emptyBtnText}
+      <View style={styles.body}>
+        {loading ? (
+          <ActivityIndicator color={colors.teal} style={{ marginTop: 40 }} />
+        ) : spots.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Ionicons name="home-outline" size={sc(48)} color={colors.textSecondary} />
+            <Text style={styles.emptyText}>{t('profile.mySpots.empty')}</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={spots}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <Pressable onPress={() => router.push(`${group}/spots/${item.id}`)}>
+                <ParkingSpotCard spot={item} />
+              </Pressable>
+            )}
           />
-        </View>
-      ) : (
-        <FlatList
-          data={spots}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <Pressable onPress={() => router.push(`${group}/spots/${item.id}`)}>
-              <ParkingSpotCard spot={item} />
-            </Pressable>
-          )}
-        />
-      )}
+        )}
+      </View>
+
+      <View style={styles.footer}>
+        <Button title={t('profile.mySpots.add')} onPress={() => router.push(`${group}/spots/new`)} />
+      </View>
     </Screen>
   );
 }
