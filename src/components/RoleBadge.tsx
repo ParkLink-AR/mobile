@@ -9,7 +9,11 @@ export function RoleBadge() {
   const segment = useSegments()[0];
   const colors = useThemeColors();
   const isOwner = segment === '(owner)';
-  const color = isOwner ? colors.deepNavy : colors.teal;
+  // deepNavy es fijo entre temas (no como colors.text), así que en modo
+  // oscuro quedaba prácticamente invisible sobre el fondo oscuro -- colors.text
+  // ya resuelve correctamente a algo legible en ambos temas (coincide con
+  // deepNavy en claro, así que no cambia nada ahí).
+  const color = isOwner ? colors.text : colors.teal;
 
   const styles = StyleSheet.create({
     badge: {
