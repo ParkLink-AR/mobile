@@ -4,6 +4,7 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator }
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
@@ -78,6 +79,7 @@ export default function Notifications() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     row: { flexDirection: 'row', gap: sc(10), alignItems: 'flex-start' },
     iconBadge: {
       width: sc(34), height: sc(34), borderRadius: sc(17), alignItems: 'center', justifyContent: 'center',
@@ -138,7 +140,10 @@ export default function Notifications() {
 
   return (
     <Screen style={styles.container}>
-      <Text style={typography.h1}>{t('tabs.driver.notifications')}</Text>
+      <View style={styles.headerRow}>
+        <Text style={typography.h1}>{t('tabs.driver.notifications')}</Text>
+        <RoleBadge />
+      </View>
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}

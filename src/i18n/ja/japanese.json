@@ -421,6 +421,11 @@
   "account.switchToOwner": "オーナーモードに切り替え",
   "account.switchToDriver": "ドライバーモードに切り替え",
 
+  "roleBadge.driver": "ドライバー",
+  "roleBadge.owner": "オーナー",
+  "roleBadge.driverA11y": "ドライバーモードです",
+  "roleBadge.ownerA11y": "オーナーモードです",
+
   "tabs.driver.search": "検索",
   "tabs.driver.favorites": "お気に入り",
   "tabs.driver.bookings": "予約",

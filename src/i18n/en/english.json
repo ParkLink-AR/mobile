@@ -421,6 +421,11 @@
   "account.switchToOwner": "Switch to owner mode",
   "account.switchToDriver": "Switch to driver mode",
 
+  "roleBadge.driver": "Driver",
+  "roleBadge.owner": "Owner",
+  "roleBadge.driverA11y": "You're in driver mode",
+  "roleBadge.ownerA11y": "You're in owner mode",
+
   "tabs.driver.search": "Search",
   "tabs.driver.favorites": "Favorites",
   "tabs.driver.bookings": "Bookings",

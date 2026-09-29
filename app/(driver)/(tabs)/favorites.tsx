@@ -4,6 +4,7 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator }
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
@@ -37,6 +38,7 @@ export default function Favorites() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   });
@@ -44,7 +46,10 @@ export default function Favorites() {
   if (loading) {
     return (
       <Screen style={styles.container}>
-        <Text style={typography.h1}>{t('driver.favorites.title')}</Text>
+        <View style={styles.headerRow}>
+          <Text style={typography.h1}>{t('driver.favorites.title')}</Text>
+          <RoleBadge />
+        </View>
         <View style={styles.emptyContainer}>
           <ActivityIndicator color={colors.teal} />
         </View>
