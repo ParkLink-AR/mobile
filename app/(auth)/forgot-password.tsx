@@ -1,3 +1,4 @@
+import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
 import { Text, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
@@ -12,6 +13,7 @@ type Step = 'email' | 'reset';
 const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function ForgotPassword() {
+  useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
 
@@ -62,7 +64,7 @@ export default function ForgotPassword() {
     setError(null);
     const normalized = email.trim().toLowerCase();
     if (!normalized) {
-      setError('Ingresá tu email.');
+      setError(t('auth.error.emailRequired'));
       return;
     }
     setLoading(true);
@@ -72,7 +74,7 @@ export default function ForgotPassword() {
       setStep('reset');
       setCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'No se pudo enviar el código.');
+      setError(err instanceof ApiError ? err.detail : t('auth.error.sendCode'));
     } finally {
       setLoading(false);
     }
@@ -84,21 +86,21 @@ export default function ForgotPassword() {
     setInfo(null);
     try {
       await requestPasswordReset(email);
-      setInfo('Te mandamos un código nuevo.');
+      setInfo(t('auth.resendSuccess'));
       setCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'No se pudo reenviar el código.');
+      setError(err instanceof ApiError ? err.detail : t('auth.error.resendCode'));
     }
   }
 
   async function handleConfirmReset() {
     setError(null);
     if (code.length !== 6) {
-      setError('Ingresá el código de 6 dígitos.');
+      setError(t('auth.error.codeLength'));
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      setError('Las contraseñas no coinciden.');
+      setError(t('auth.forgotPassword.reset.passwordMismatch'));
       return;
     }
     setLoading(true);
@@ -106,7 +108,7 @@ export default function ForgotPassword() {
       await confirmPasswordReset(email, code, newPassword);
       router.replace({ pathname: '/(auth)/login', params: { email } });
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'No se pudo restablecer la contraseña.');
+      setError(err instanceof ApiError ? err.detail : t('auth.forgotPassword.error.submit'));
     } finally {
       setLoading(false);
     }
@@ -114,7 +116,7 @@ export default function ForgotPassword() {
 
   return (
     <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-      <Text style={typography.h1}>Recuperar contraseña</Text>
+      <Text style={typography.h1}>{t('auth.forgotPassword.title')}</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {info ? <Text style={styles.info}>{info}</Text> : null}
 
@@ -122,7 +124,7 @@ export default function ForgotPassword() {
         <>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder={t('auth.emailPlaceholder')}
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="none"
             keyboardType="email-address"
@@ -132,14 +134,13 @@ export default function ForgotPassword() {
           {loading ? (
             <ActivityIndicator color={colors.teal} />
           ) : (
-            <Button title="Enviar código" onPress={handleRequestCode} />
+            <Button title={t('auth.sendCodeButton')} onPress={handleRequestCode} />
           )}
         </>
       ) : (
         <>
           <Text style={typography.body}>
-            Te mandamos un código de 6 dígitos a {email}. Ingresalo junto con tu nueva
-            contraseña.
+            {t('auth.forgotPassword.reset.helper', { email })}
           </Text>
           <TextInput
             style={styles.codeInput}
@@ -152,7 +153,7 @@ export default function ForgotPassword() {
           />
           <TextInput
             style={styles.input}
-            placeholder="Nueva contraseña"
+            placeholder={t('auth.forgotPassword.reset.newPassword')}
             placeholderTextColor={colors.textSecondary}
             secureTextEntry
             value={newPassword}
@@ -160,7 +161,7 @@ export default function ForgotPassword() {
           />
           <TextInput
             style={styles.input}
-            placeholder="Repetí la contraseña"
+            placeholder={t('auth.forgotPassword.reset.confirmPassword')}
             placeholderTextColor={colors.textSecondary}
             secureTextEntry
             value={confirmNewPassword}
@@ -169,13 +170,13 @@ export default function ForgotPassword() {
           {loading ? (
             <ActivityIndicator color={colors.teal} />
           ) : (
-            <Button title="Restablecer contraseña" onPress={handleConfirmReset} />
+            <Button title={t('auth.forgotPassword.reset.button')} onPress={handleConfirmReset} />
           )}
           <Text
             style={[styles.link, cooldown > 0 && styles.linkDisabled]}
             onPress={handleResendCode}
           >
-            {cooldown > 0 ? `Reenviar código (${cooldown}s)` : 'Reenviar código'}
+            {cooldown > 0 ? t('auth.resendCodeCooldown', { seconds: String(cooldown) }) : t('auth.resendCode')}
           </Text>
         </>
       )}

@@ -5,6 +5,7 @@ import { ThemeMode } from '@/src/theme/types';
 import i18n from '@/src/i18n';
 
 export type Language = 'es' | 'en' | 'ja';
+export type FontSize = 'small' | 'medium' | 'large';
 
 interface SettingsState {
   language: Language;
@@ -12,6 +13,8 @@ interface SettingsState {
   mode: ThemeMode;
   setMode: (m: ThemeMode) => void;
   toggleMode: () => void;
+  fontSize: FontSize;
+  setFontSize: (s: FontSize) => void;
 }
 
 export const useSettingsStore = create(
@@ -25,6 +28,8 @@ export const useSettingsStore = create(
       mode: 'light',
       setMode: (m) => set({ mode: m }),
       toggleMode: () => set((s) => ({ mode: s.mode === 'light' ? 'dark' : 'light' })),
+      fontSize: 'medium',
+      setFontSize: (s) => set({ fontSize: s }),
     }),
     {
       name: 'settings-storage',

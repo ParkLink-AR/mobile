@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
-  View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity, ActivityIndicator, Switch, Modal, TouchableWithoutFeedback,
+  View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback,
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -59,7 +59,6 @@ export default function EditSpot() {
   const [description, setDescription] = useState('');
   const [covered, setCovered] = useState(true);
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
-  const [instantBooking, setInstantBooking] = useState(true);
   const [hourlySettings, setHourlySettings] = useState<HourlySettingsFormValue>(EMPTY_HOURLY_SETTINGS);
   const [staySettings, setStaySettings] = useState<StaySettingsFormValue>(EMPTY_STAY_SETTINGS);
   const [saving, setSaving] = useState(false);
@@ -87,7 +86,6 @@ export default function EditSpot() {
         setDescription(s.description ?? '');
         setCovered(s.covered);
         setVehicleTypes(s.vehicleTypes);
-        setInstantBooking(s.instantBooking);
         setPhotos(s.photos);
         setHourlySettings({
           hourlyEnabled: s.hourlyEnabled,
@@ -286,7 +284,6 @@ export default function EditSpot() {
         description: description.trim(),
         covered,
         vehicleTypes,
-        instantBooking,
         capacity: Math.max(1, Math.trunc(Number(capacity)) || 1),
         schedule: hourlySettings.hourlyEnabled ? dayGroupsToEntries(hourlySettings.schedule) : [],
         address: address.trim(),
@@ -404,12 +401,6 @@ export default function EditSpot() {
     toggleText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
     toggleTextActive: { color: colors.surface, fontWeight: '700' },
 
-    instantBookingRow: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-    },
-    instantBookingLabelBlock: { flex: 1, gap: 2 },
-    instantBookingHint: { fontSize: 12, color: colors.textSecondary },
-
     photosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     photoThumbWrapper: { position: 'relative' },
     photoThumb: { width: 72, height: 72, borderRadius: 8 },
@@ -486,7 +477,7 @@ export default function EditSpot() {
 
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.body}>
           {/* Spot info (read-only) */}
           <View style={styles.infoCard}>
@@ -611,17 +602,6 @@ export default function EditSpot() {
           <View style={styles.card}>
             <Text style={styles.sectionLabel}>{t('owner.spot.new.vehicleTypes')}</Text>
             <VehicleTypePicker value={vehicleTypes} onChange={setVehicleTypes} />
-          </View>
-
-          {/* Instant booking */}
-          <View style={styles.card}>
-            <View style={styles.instantBookingRow}>
-              <View style={styles.instantBookingLabelBlock}>
-                <Text style={styles.sectionLabel}>{t('owner.spot.new.instantBooking')}</Text>
-                <Text style={styles.instantBookingHint}>{t('owner.spot.new.instantBookingHint')}</Text>
-              </View>
-              <Switch value={instantBooking} onValueChange={setInstantBooking} trackColor={{ true: colors.teal }} />
-            </View>
           </View>
 
           {/* Alquiler por hora */}

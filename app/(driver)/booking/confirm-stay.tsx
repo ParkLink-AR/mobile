@@ -1,9 +1,10 @@
 import { t, useLanguage } from '@/src/i18n';
 import { ApiError } from '@/src/api/client';
 import { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, ActivityIndicator, ScrollView, StyleSheet, Alert, Platform, Modal, Pressable, TouchableWithoutFeedback } from 'react-native';
 import { useLocalSearchParams, useSegments, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -14,7 +15,18 @@ import { getParkingSpotDetail } from '@/src/services/parkingService';
 import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
 import { getStayQuote, type StayQuote } from '@/src/api/parking';
 import { ParkingSpot } from '@/src/types';
-import { createBookingApi, createPaymentPreference } from '@/src/api/booking';
+import { createBookingApi, createPaymentPreference, confirmBookingApi, CASH_PAYMENT_ID } from '@/src/api/booking';
+import { PaymentMethodPicker } from '@/src/components/PaymentMethodPicker';
+import { getPaymentOptions, MERCADOPAGO_METHOD_ID, CASH_METHOD_ID } from '@/src/services/paymentOptions';
+
+/** "23/09/2026 · 14:00" -- date and time together for a single instant (check-in/out),
+ * as opposed to bookingDates.ts's helpers, which format a *range*. */
+function formatStayInstant(iso: string): string {
+  const date = new Date(iso);
+  const day = date.toLocaleDateString('es-AR');
+  const time = date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${day} · ${time}`;
+}
 
 /**
  * Confirmación + pago de una estadía (rango de fechas + hora de check-in) --
@@ -44,6 +56,10 @@ export default function ConfirmStayBooking() {
   const [quote, setQuote] = useState<StayQuote | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState(MERCADOPAGO_METHOD_ID);
+  // Alert.alert with a buttons array is a no-op on web -- see bookings/[id].tsx's
+  // handleCancel for the same fix applied to the cancel-booking confirmation.
+  const [conflictModalVisible, setConflictModalVisible] = useState(false);
 
   // Se re-cotiza acá (no se reutiliza la de spot/[id].tsx) porque puede haber
   // pasado tiempo entre que el conductor la vio y llegó a confirmar -- ésta
@@ -85,16 +101,31 @@ export default function ConfirmStayBooking() {
     } catch (err: any) {
       const isConflict = err instanceof ApiError && err.status === 409;
       if (isConflict) {
-        Alert.alert(
-          t('driver.payment.errorTitle'),
-          t('driver.booking.errorConflict'),
-          [{ text: t('driver.booking.errorConflictAction'), onPress: () => router.back() }],
-        );
+        setConflictModalVisible(true);
       } else {
         const msg = err?.detail ?? err?.message ?? t('driver.booking.errorCreating');
         Alert.alert(t('driver.payment.errorTitle'), msg);
       }
       setProcessing(false);
+      return;
+    }
+
+    // ── Cash: no MercadoPago involved -- confirm straight away and skip to
+    // the owner-approval wait. ─────────────────────────────────────────────
+    if (paymentMethod === CASH_METHOD_ID) {
+      try {
+        await confirmBookingApi(bookingId, CASH_PAYMENT_ID);
+      } catch (err: any) {
+        const msg = err?.detail ?? err?.message ?? t('driver.booking.errorCreating');
+        Alert.alert(t('driver.payment.errorTitle'), msg);
+        setProcessing(false);
+        return;
+      }
+      setProcessing(false);
+      router.replace({
+        pathname: `${group}/booking/cash-pending`,
+        params: { total: String(getDriverVisiblePrice(quote.amount / 100)) },
+      });
       return;
     }
 
@@ -119,10 +150,19 @@ export default function ConfirmStayBooking() {
       return;
     }
 
-    await WebBrowser.openBrowserAsync(checkoutUrl, {
-      dismissButtonStyle: 'cancel',
-      presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-    });
+    // openAuthSessionAsync on native, openBrowserAsync on web: see the
+    // comment in booking/confirm.tsx's equivalent step for why.
+    if (Platform.OS === 'web') {
+      await WebBrowser.openBrowserAsync(checkoutUrl, {
+        dismissButtonStyle: 'cancel',
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+      });
+    } else {
+      await WebBrowser.openAuthSessionAsync(checkoutUrl, 'parklink://payment', {
+        dismissButtonStyle: 'cancel',
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+      });
+    }
 
     setProcessing(false);
     router.replace({
@@ -145,56 +185,159 @@ export default function ConfirmStayBooking() {
   const visibleTotal = getDriverVisiblePrice(quote.amount / 100);
 
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.surface },
-    scrollContent: { padding: 16, gap: 8 },
-    sectionTitle: { marginTop: 10, marginBottom: 2 },
-    button: { marginTop: 16 },
+    screen: { flex: 1, backgroundColor: colors.background },
+    body: { padding: 16, gap: 14 },
+
+    heroCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 16,
+      gap: 4,
+    },
+    spotTitle: { fontSize: 19, fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
+    addressRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    spotAddress: { flex: 1, fontSize: 13, color: colors.textSecondary, lineHeight: 17 },
+
+    card: { gap: 12 },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    sectionLabel: {
+      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      letterSpacing: 0.8, textTransform: 'uppercase',
+    },
+    detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    detailLabel: { flex: 1, fontSize: 14, color: colors.textSecondary },
+    detailValue: { fontSize: 14, color: colors.text, fontWeight: '600' },
+    divider: { height: 1, backgroundColor: colors.border },
+    totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    totalLabel: { fontSize: 14, color: colors.text, fontWeight: '600' },
+    totalValue: { fontSize: 18, color: colors.teal, fontWeight: '700' },
+
+    button: { marginTop: 2 },
+
+    modalOverlay: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
+      justifyContent: 'center', alignItems: 'center',
+    },
+    modalSheet: {
+      width: '85%', borderRadius: 20, paddingVertical: 32, paddingHorizontal: 24,
+      backgroundColor: colors.surface, alignItems: 'center', gap: 8,
+    },
+    modalTitle: {
+      fontSize: 16, fontWeight: '700', color: colors.text,
+      marginBottom: 8, textAlign: 'center',
+    },
+    modalBody: {
+      fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 18,
+      marginBottom: 8,
+    },
+    modalConfirmBtn: {
+      width: '100%', borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+      backgroundColor: colors.teal, marginTop: 8,
+    },
+    modalConfirmBtnText: { fontSize: 15, fontWeight: '600', color: colors.white },
   });
 
   return (
-    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Card>
-          <Text style={typography.h2}>{spot.title}</Text>
-          <Text style={typography.caption}>{spot.address}</Text>
-        </Card>
-        <Text style={[typography.caption, styles.sectionTitle]}>{t('driver.booking.summary')}</Text>
-        <Row label={t('spot.stay.startDate')} value={new Date(quote.startDate + 'T12:00:00').toLocaleDateString('es-AR')} />
-        <Row label={t('spot.stay.endDate')} value={new Date(quote.endDate + 'T12:00:00').toLocaleDateString('es-AR')} />
-        <Row label={t('spot.stay.startHour')} value={`${String(stayStartHour).padStart(2, '0')}:00`} />
-        <Row label={t('spot.stay.duration')} value={formatStayBreakdown(quote.breakdown)} />
-        <Row label={t('driver.booking.total')} value={`$${visibleTotal}`} bold />
-        <Text style={[typography.caption, styles.sectionTitle]}>{t('driver.booking.methodPayment')}</Text>
-        <Card>
-          <Text style={typography.body}>Mercado Pago</Text>
-        </Card>
-        <Button
-          title={
-            processing
-              ? t('driver.booking.processing')
-              : t('driver.booking.confirmPay').replace('%{total}', String(visibleTotal))
-          }
-          onPress={reserve}
-          disabled={processing}
-          style={styles.button}
-        />
+    <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.body}>
+          <View style={styles.heroCard}>
+            <Text style={styles.spotTitle}>{spot.title}</Text>
+            <View style={styles.addressRow}>
+              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+              <Text style={styles.spotAddress} numberOfLines={2}>{spot.address}</Text>
+            </View>
+          </View>
+
+          <Card>
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+                <Text style={styles.sectionLabel}>{t('driver.booking.summary')}</Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Ionicons name="log-in-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>{t('spot.stay.checkIn')}</Text>
+                <Text style={styles.detailValue}>{formatStayInstant(quote.startDateTime)}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Ionicons name="log-out-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>{t('spot.stay.checkOut')}</Text>
+                <Text style={styles.detailValue}>{formatStayInstant(quote.endDateTime)}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Ionicons name="hourglass-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>{t('spot.stay.duration')}</Text>
+                <Text style={styles.detailValue}>{formatStayBreakdown(quote.breakdown)}</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>{t('driver.booking.total')}</Text>
+                <Text style={styles.totalValue}>${visibleTotal}</Text>
+              </View>
+            </View>
+          </Card>
+
+          <Card>
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="card-outline" size={15} color={colors.textSecondary} />
+                <Text style={styles.sectionLabel}>{t('driver.booking.methodPayment')}</Text>
+              </View>
+              <PaymentMethodPicker
+                methods={getPaymentOptions()}
+                selectedId={paymentMethod}
+                onSelect={setPaymentMethod}
+              />
+            </View>
+          </Card>
+
+          <Button
+            title={
+              processing
+                ? t('driver.booking.processing')
+                : paymentMethod === CASH_METHOD_ID
+                  ? t('driver.booking.confirmCash').replace('%{total}', String(visibleTotal))
+                  : t('driver.booking.confirmPay').replace('%{total}', String(visibleTotal))
+            }
+            onPress={reserve}
+            disabled={processing}
+            style={styles.button}
+          />
+        </View>
       </ScrollView>
-    </Screen>
-  );
-}
 
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  const colors = useThemeColors();
-  const typography = useTypography();
-  const styles = StyleSheet.create({
-    row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  });
-  return (
-    <View style={styles.row}>
-      <Text style={typography.body}>{label}</Text>
-      <Text style={[typography.body, bold && { fontWeight: '700', color: colors.teal }]}>
-        {value}
-      </Text>
-    </View>
+      <Modal
+        visible={conflictModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConflictModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setConflictModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalSheet}>
+                <Text style={styles.modalTitle}>{t('driver.payment.errorTitle')}</Text>
+                <Text style={styles.modalBody}>{t('driver.booking.errorConflict')}</Text>
+                <Pressable
+                  style={({ pressed }) => [styles.modalConfirmBtn, { opacity: pressed ? 0.85 : 1 }]}
+                  onPress={() => {
+                    setConflictModalVisible(false);
+                    router.back();
+                  }}
+                >
+                  <Text style={styles.modalConfirmBtnText}>{t('driver.booking.errorConflictAction')}</Text>
+                </Pressable>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    </Screen>
   );
 }

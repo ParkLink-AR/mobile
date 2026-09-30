@@ -35,14 +35,6 @@ export const TAG_LABEL_KEYS: Record<string, string> = Object.fromEntries(
   Object.entries(TAG_KEY_MAP).map(([k, v]) => [k, v.i18nKey])
 );
 
-// Whether the spot confirms a paid booking automatically (spot.instantBooking)
-// or leaves it pending for the owner to approve -- exported so spot/[id].tsx
-// can render the exact same icon+label there, not just here on the card.
-export const INSTANT_BOOKING_TAG = {
-  instant: { i18nKey: 'spot.tag.instantBooking', iconName: 'flash-outline' },
-  approval: { i18nKey: 'spot.tag.requiresApproval', iconName: 'time-outline' },
-} as const;
-
 interface ParkingSpotCardProps {
   spot: ParkingSpot;
   isFavorite?: boolean;
@@ -204,19 +196,10 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
 
         {compact && (
           // Preview del mapa: sólo lo más importante para decidir si vale la
-          // pena abrir el detalle -- si confirma sola o el dueño tiene que
-          // aprobarla, y para qué vehículo es apta -- sin descripción ni el
-          // resto de los tags, que no entran cómodos en este layout angosto.
+          // pena abrir el detalle -- para qué vehículo es apta -- sin
+          // descripción ni el resto de los tags, que no entran cómodos en
+          // este layout angosto.
           <View style={styles.tagRow}>
-            {(() => {
-              const entry = spot.instantBooking ? INSTANT_BOOKING_TAG.instant : INSTANT_BOOKING_TAG.approval;
-              return (
-                <View style={styles.tag}>
-                  <Ionicons name={entry.iconName} size={12} color={colors.teal} />
-                  <Text style={styles.tagText}>{t(entry.i18nKey)}</Text>
-                </View>
-              );
-            })()}
             {spot.vehicleTypes.length > 0 && (
               <View style={styles.tag}>
                 <Ionicons name="car-outline" size={12} color={colors.teal} />
@@ -261,15 +244,6 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
                   <Text style={styles.tagText}>{t('spot.tag.stay')}</Text>
                 </View>
               )}
-              {(() => {
-                const entry = spot.instantBooking ? INSTANT_BOOKING_TAG.instant : INSTANT_BOOKING_TAG.approval;
-                return (
-                  <View style={styles.tag}>
-                    <Ionicons name={entry.iconName} size={12} color={colors.teal} />
-                    <Text style={styles.tagText}>{t(entry.i18nKey)}</Text>
-                  </View>
-                );
-              })()}
             </View>
 
             <View style={styles.divider} />

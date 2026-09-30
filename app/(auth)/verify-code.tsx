@@ -1,3 +1,4 @@
+import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
 import { Text, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -11,6 +12,7 @@ import { ApiError } from '@/src/api/client';
 const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function VerifyCode() {
+  useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const { email } = useLocalSearchParams<{ email: string }>();
@@ -50,7 +52,7 @@ export default function VerifyCode() {
     setError(null);
     setInfo(null);
     if (code.length !== 6) {
-      setError('Ingresá el código de 6 dígitos que te mandamos por mail.');
+      setError(t('auth.error.codeLength'));
       return;
     }
 
@@ -59,7 +61,7 @@ export default function VerifyCode() {
       await confirmEmailCode(email, code);
       router.replace({ pathname: '/(auth)/login', params: { email } });
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'No se pudo confirmar el código.');
+      setError(err instanceof ApiError ? err.detail : t('auth.error.confirmCode'));
     } finally {
       setLoading(false);
     }
@@ -72,10 +74,10 @@ export default function VerifyCode() {
     setResending(true);
     try {
       await resendVerificationCode(email);
-      setInfo('Te mandamos un código nuevo.');
+      setInfo(t('auth.resendSuccess'));
       setCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'No se pudo reenviar el código.');
+      setError(err instanceof ApiError ? err.detail : t('auth.error.resendCode'));
     } finally {
       setResending(false);
     }
@@ -83,9 +85,9 @@ export default function VerifyCode() {
 
   return (
     <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-      <Text style={typography.h1}>Confirmá tu email</Text>
+      <Text style={typography.h1}>{t('auth.verifyCode.title')}</Text>
       <Text style={typography.body}>
-        Te mandamos un código de 6 dígitos a {email}. Ingresalo acá para activar tu cuenta.
+        {t('auth.verifyCode.helper', { email })}
       </Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {info ? <Text style={styles.info}>{info}</Text> : null}
@@ -101,13 +103,13 @@ export default function VerifyCode() {
       {loading ? (
         <ActivityIndicator color={colors.teal} />
       ) : (
-        <Button title="Confirmar" onPress={handleConfirm} />
+        <Button title={t('common.confirm')} onPress={handleConfirm} />
       )}
       <Text
         style={[styles.link, (cooldown > 0 || resending) && styles.linkDisabled]}
         onPress={handleResend}
       >
-        {cooldown > 0 ? `Reenviar código (${cooldown}s)` : 'Reenviar código'}
+        {cooldown > 0 ? t('auth.resendCodeCooldown', { seconds: String(cooldown) }) : t('auth.resendCode')}
       </Text>
     </Screen>
   );

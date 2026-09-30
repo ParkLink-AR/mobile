@@ -1,17 +1,18 @@
 import { t, useLanguage } from '@/src/i18n';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   Text, View, ScrollView, StyleSheet, Pressable, Image, TextInput, ActivityIndicator,
-  Modal, Animated, TouchableWithoutFeedback,
+  Modal, TouchableWithoutFeedback,
 } from 'react-native';
 import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
 import { VerifiedBadge } from '@/src/components/VerifiedBadge';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { useSettingsStore, Language } from '@/src/store/useSettingsStore';
+import { useSettingsStore, Language, FontSize } from '@/src/store/useSettingsStore';
 import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 import { logout as logoutRequest, deleteAccount } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
@@ -27,6 +28,8 @@ export default function Profile() {
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const user = useSessionStore((s) => s.user);
   const refreshToken = useSessionStore((s) => s.refreshToken);
   const clearSession = useSessionStore((s) => s.clearSession);
@@ -34,25 +37,18 @@ export default function Profile() {
   const setLanguage = useSettingsStore((s) => s.setLanguage);
   const mode = useSettingsStore((s) => s.mode);
   const toggleMode = useSettingsStore((s) => s.toggleMode);
+  const fontSize = useSettingsStore((s) => s.fontSize);
+  const setFontSize = useSettingsStore((s) => s.setFontSize);
   const setActiveMode = useAccountTypeStore((s) => s.setActiveMode);
   const isOwner = group === '/(owner)';
   const [langModalVisible, setLangModalVisible] = useState(false);
+  const [fontSizeModalVisible, setFontSizeModalVisible] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
-
-  const themeAnim = useRef(new Animated.Value(mode === 'dark' ? 1 : 0)).current;
-
-  useEffect(() => {
-    Animated.timing(themeAnim, {
-      toValue: mode === 'dark' ? 1 : 0,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-  }, [mode]);
 
   if (!user) return null;
 
@@ -113,59 +109,57 @@ export default function Profile() {
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     scrollContent: { padding: 16, paddingBottom: 120, gap: 16 },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 
     profileCard: {
-      backgroundColor: colors.surface, borderRadius: 16, padding: 20,
+      backgroundColor: colors.surface, borderRadius: 14, padding: sc(20),
       borderWidth: 1, borderColor: colors.border,
-      flexDirection: 'row', alignItems: 'center', gap: 16,
+      flexDirection: 'row', alignItems: 'center', gap: sc(16),
     },
     avatar: {
-      width: 64, height: 64, borderRadius: 32,
+      width: sc(64), height: sc(64), borderRadius: sc(32),
       backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center',
     },
-    avatarText: { color: colors.white, fontSize: 22, fontWeight: '700' },
-    profileInfo: { flex: 1, gap: 4 },
-    profileName: { fontSize: 18, fontWeight: '700', color: colors.text },
-    profileEmail: { fontSize: 13, color: colors.textSecondary },
+    avatarText: { color: colors.white, fontSize: sc(22), fontWeight: '700' },
+    profileInfo: { flex: 1, gap: sc(4) },
+    profileName: { fontSize: sc(18), fontWeight: '700', color: colors.text },
+    profileEmail: { fontSize: sc(13), color: colors.textSecondary },
 
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
     sectionTitle: {
-      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase',
     },
     sectionLine: { flex: 1, height: 1, backgroundColor: colors.border },
 
     actionBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 10,
-      borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16,
+      flexDirection: 'row', alignItems: 'center', gap: sc(10),
+      borderRadius: 12, paddingVertical: sc(14), paddingHorizontal: sc(16),
     },
     editBtn: { backgroundColor: colors.teal },
-    settlementsBtn: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.teal },
     logoutBtn: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: '#EF4444' },
-    actionBtnText: { flex: 1, fontSize: 15, fontWeight: '600' },
+    actionBtnText: { flex: 1, fontSize: sc(15), fontWeight: '600' },
     editBtnText: { color: colors.white },
-    settlementsBtnText: { color: colors.teal },
     logoutBtnText: { color: '#EF4444' },
 
     deleteAccountLink: { alignSelf: 'center', marginTop: 2, padding: 8 },
-    deleteAccountLinkText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+    deleteAccountLinkText: { fontSize: sc(13), fontWeight: '600', color: colors.textSecondary },
 
     prefCard: {
-      backgroundColor: colors.surface, borderRadius: 12,
+      backgroundColor: colors.surface, borderRadius: 14,
       borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
     },
     prefRow: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      paddingHorizontal: 16, paddingVertical: 14,
+      paddingHorizontal: sc(16), paddingVertical: sc(14),
     },
     prefDivider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
-    prefLabel: { fontSize: 14, fontWeight: '500', color: colors.text },
+    prefRowLeft: { flexDirection: 'row', alignItems: 'center', gap: sc(10) },
+    prefLabel: { fontSize: sc(14), fontWeight: '500', color: colors.text },
 
     langCurrent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    langCurrentText: { fontSize: 14, fontWeight: '600', color: colors.teal },
+    langCurrentText: { fontSize: sc(14), fontWeight: '600', color: colors.teal },
 
-    themeValue: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    themeValueText: { fontSize: 14, fontWeight: '600' },
 
     modalOverlay: {
       flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
@@ -176,51 +170,54 @@ export default function Profile() {
       backgroundColor: colors.surface, alignItems: 'center', gap: 8,
     },
     modalTitle: {
-      fontSize: 16, fontWeight: '700', color: colors.text,
+      fontSize: sc(16), fontWeight: '700', color: colors.text,
       marginBottom: 16, textAlign: 'center',
     },
     langOption: {
       width: '100%', flexDirection: 'row', alignItems: 'center', gap: 14,
-      paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12,
+      paddingVertical: sc(14), paddingHorizontal: 16, borderRadius: 12,
     },
     langOptionActive: { backgroundColor: colors.teal + '22' },
-    langOptionLabel: { flex: 1, fontSize: 16, fontWeight: '600' },
+    langOptionLabel: { flex: 1, fontSize: sc(16), fontWeight: '600' },
     langOptionLabelActive: { color: colors.teal },
     langOptionLabelInactive: { color: colors.text },
 
     deleteWarning: {
-      fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 18,
+      fontSize: sc(13), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(18),
       marginBottom: 16,
     },
     deleteInput: {
       width: '100%', borderWidth: 1, borderColor: colors.border, borderRadius: 10,
-      padding: 12, fontSize: 15, color: colors.text, marginBottom: 4,
+      padding: sc(12), fontSize: sc(15), color: colors.text, marginBottom: 4,
     },
-    deleteErrorText: { color: '#EF4444', fontSize: 13, marginBottom: 8, textAlign: 'center' },
+    deleteErrorText: { color: '#EF4444', fontSize: sc(13), marginBottom: 8, textAlign: 'center' },
     deleteActions: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 8 },
     deleteCancelBtn: {
-      flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+      flex: 1, borderRadius: 10, paddingVertical: sc(12), alignItems: 'center',
       borderWidth: 1.5, borderColor: colors.border,
     },
-    deleteCancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.text },
+    deleteCancelBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.text },
     deleteConfirmBtn: {
-      flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+      flex: 1, borderRadius: 10, paddingVertical: sc(12), alignItems: 'center',
       backgroundColor: '#EF4444',
     },
     deleteConfirmBtnDisabled: { opacity: 0.6 },
-    deleteConfirmBtnText: { fontSize: 15, fontWeight: '600', color: colors.white },
+    deleteConfirmBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.white },
   });
 
   return (
     <Screen style={styles.container} tabBarPadding>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={typography.h1}>{t('driver.profile.title')}</Text>
+        <View style={styles.headerRow}>
+          <Text style={typography.h1}>{t('driver.profile.title')}</Text>
+          <RoleBadge />
+        </View>
 
         {/* Profile card */}
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
             {user.avatarUrl ? (
-              <Image source={{ uri: user.avatarUrl }} style={{ width: 64, height: 64, borderRadius: 32 }} />
+              <Image source={{ uri: user.avatarUrl }} style={{ width: sc(64), height: sc(64), borderRadius: sc(32) }} />
             ) : (
               <Text style={styles.avatarText}>{initials}</Text>
             )}
@@ -237,34 +234,59 @@ export default function Profile() {
           style={({ pressed }) => [styles.actionBtn, styles.editBtn, { opacity: pressed ? 0.85 : 1 }]}
           onPress={() => router.push(`${group}/profile-edit`)}
         >
-          <Ionicons name="pencil-outline" size={18} color={colors.white} />
+          <Ionicons name="pencil-outline" size={sc(18)} color={colors.white} />
           <Text style={[styles.actionBtnText, styles.editBtnText]}>{t('driver.profile.edit')}</Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.white} />
+          <Ionicons name="chevron-forward" size={sc(16)} color={colors.white} />
         </Pressable>
 
-        {/* Finanzas / legales — solo propietario */}
+        {/* Finanzas / legales — solo propietario. Mismo patrón de tarjeta con filas
+            divididas que Preferencias, más abajo -- dos botones sueltos uno arriba
+            del otro se leían como dos secciones distintas cuando en realidad son
+            la misma categoría (accesos del propietario). */}
         {isOwner && (
           <>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{t('profile.owner.section')}</Text>
               <View style={styles.sectionLine} />
             </View>
-            <Pressable
-              style={({ pressed }) => [styles.actionBtn, styles.settlementsBtn, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => router.push(`${group}/settlements`)}
-            >
-              <Ionicons name="receipt-outline" size={18} color={colors.teal} />
-              <Text style={[styles.actionBtnText, styles.settlementsBtnText]}>{t('profile.finances')}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.teal} />
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.actionBtn, styles.settlementsBtn, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => router.push(`${group}/legal`)}
-            >
-              <Ionicons name="document-text-outline" size={18} color={colors.teal} />
-              <Text style={[styles.actionBtnText, styles.settlementsBtnText]}>{t('profile.legal')}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.teal} />
-            </Pressable>
+            <View style={styles.prefCard}>
+              <Pressable
+                style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => router.push(`${group}/settlements`)}
+              >
+                <View style={styles.prefRowLeft}>
+                  <Ionicons name="receipt-outline" size={sc(18)} color={colors.teal} />
+                  <Text style={styles.prefLabel}>{t('profile.finances')}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={sc(16)} color={colors.textSecondary} />
+              </Pressable>
+
+              <View style={styles.prefDivider} />
+
+              <Pressable
+                style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => router.push(`${group}/payout-info`)}
+              >
+                <View style={styles.prefRowLeft}>
+                  <Ionicons name="card-outline" size={sc(18)} color={colors.teal} />
+                  <Text style={styles.prefLabel}>{t('profile.payoutInfo')}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={sc(16)} color={colors.textSecondary} />
+              </Pressable>
+
+              <View style={styles.prefDivider} />
+
+              <Pressable
+                style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => router.push(`${group}/legal`)}
+              >
+                <View style={styles.prefRowLeft}>
+                  <Ionicons name="document-text-outline" size={sc(18)} color={colors.teal} />
+                  <Text style={styles.prefLabel}>{t('profile.legal')}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={sc(16)} color={colors.textSecondary} />
+              </Pressable>
+            </View>
           </>
         )}
 
@@ -288,7 +310,7 @@ export default function Profile() {
               <Text style={styles.langCurrentText}>
                 {isOwner ? t('accountType.driver.title') : t('accountType.owner.title')}
               </Text>
-              <Ionicons name="swap-horizontal-outline" size={14} color={colors.teal} />
+              <Ionicons name="swap-horizontal-outline" size={sc(14)} color={colors.teal} />
             </View>
           </Pressable>
 
@@ -301,7 +323,7 @@ export default function Profile() {
             <Text style={styles.prefLabel}>{t('profile.language')}</Text>
             <View style={styles.langCurrent}>
               <Text style={styles.langCurrentText}>{currentLang.label}</Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.teal} />
+              <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
             </View>
           </Pressable>
 
@@ -312,16 +334,28 @@ export default function Profile() {
             onPress={toggleMode}
           >
             <Text style={styles.prefLabel}>{t('profile.theme')}</Text>
-            <Animated.View style={styles.themeValue}>
-              {isDark
-                ? <Ionicons name="moon" size={16} color={colors.teal} />
-                : <Ionicons name="sunny" size={16} color={colors.textSecondary} />
-              }
-              <Text style={[styles.themeValueText, { color: isDark ? colors.teal : colors.textSecondary }]}>
+            <View style={styles.langCurrent}>
+              <Ionicons name={isDark ? 'moon' : 'sunny'} size={sc(16)} color={isDark ? colors.teal : colors.textSecondary} />
+              <Text style={styles.langCurrentText}>
                 {isDark ? t('profile.theme.dark') : t('profile.theme.light')}
               </Text>
-              <Ionicons name="swap-horizontal-outline" size={14} color={colors.textSecondary} />
-            </Animated.View>
+              <Ionicons name="swap-horizontal-outline" size={sc(14)} color={colors.teal} />
+            </View>
+          </Pressable>
+
+          <View style={styles.prefDivider} />
+
+          <Pressable
+            style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => setFontSizeModalVisible(true)}
+          >
+            <Text style={styles.prefLabel}>{t('settings.fontSize')}</Text>
+            <View style={styles.langCurrent}>
+              <Text style={styles.langCurrentText}>
+                {t(fontSize === 'small' ? 'settings.fontSize.small' : fontSize === 'medium' ? 'settings.fontSize.medium' : 'settings.fontSize.large')}
+              </Text>
+              <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
+            </View>
           </Pressable>
         </View>
 
@@ -334,7 +368,7 @@ export default function Profile() {
           style={({ pressed }) => [styles.actionBtn, styles.logoutBtn, { opacity: pressed ? 0.8 : 1 }]}
           onPress={() => setLogoutModalVisible(true)}
         >
-          <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+          <Ionicons name="log-out-outline" size={sc(20)} color="#EF4444" />
           <Text style={[styles.actionBtnText, styles.logoutBtnText]}>{t('account.logout')}</Text>
         </Pressable>
 
@@ -399,7 +433,7 @@ export default function Profile() {
                       style={({ pressed }) => [styles.deleteConfirmBtn, { width: '100%', backgroundColor: colors.teal, opacity: pressed ? 0.85 : 1 }]}
                       onPress={handleDeleteSuccessAcknowledge}
                     >
-                      <Text style={styles.deleteConfirmBtnText}>{t('account.deleteAccount.successAck')}</Text>
+                      <Text style={[styles.deleteConfirmBtnText, { color: colors.white }]}>{t('account.deleteAccount.successAck')}</Text>
                     </Pressable>
                   </>
                 ) : (
@@ -481,6 +515,50 @@ export default function Profile() {
                       {active && (
                         <Ionicons name="checkmark-circle" size={20} color={colors.teal} />
                       )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Font size selection modal */}
+      <Modal
+        visible={fontSizeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFontSizeModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setFontSizeModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalSheet}>
+                <Text style={styles.modalTitle}>{t('settings.fontSize')}</Text>
+                {([
+                  { key: 'small',  label: t('settings.fontSize.small') },
+                  { key: 'medium', label: t('settings.fontSize.medium') },
+                  { key: 'large',  label: t('settings.fontSize.large') },
+                ] as { key: FontSize; label: string }[]).map((opt) => {
+                  const active = fontSize === opt.key;
+                  return (
+                    <Pressable
+                      key={opt.key}
+                      style={({ pressed }) => [
+                        styles.langOption,
+                        active && styles.langOptionActive,
+                        { opacity: pressed ? 0.7 : 1 },
+                      ]}
+                      onPress={() => {
+                        setFontSize(opt.key);
+                        setFontSizeModalVisible(false);
+                      }}
+                    >
+                      <Text style={[styles.langOptionLabel, active ? styles.langOptionLabelActive : styles.langOptionLabelInactive]}>
+                        {opt.label}
+                      </Text>
+                      {active && <Ionicons name="checkmark-circle" size={20} color={colors.teal} />}
                     </Pressable>
                   );
                 })}

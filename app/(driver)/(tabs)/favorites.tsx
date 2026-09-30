@@ -1,9 +1,10 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
@@ -20,13 +21,16 @@ export default function Favorites() {
   const favoriteIds = useFavoritesStore((s) => s.ids);
   const toggleFavorite = useFavoritesStore((s) => s.toggle);
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       if (!user) return;
+      setLoading(true);
       getFavoriteSpots()
         .then(setSpots)
-        .catch((err) => console.warn('[Favorites] fetch error:', err));
+        .catch((err) => console.warn('[Favorites] fetch error:', err))
+        .finally(() => setLoading(false));
     }, [user?.id, favoriteIds])
   );
 
@@ -34,9 +38,24 @@ export default function Favorites() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   });
+
+  if (loading) {
+    return (
+      <Screen style={styles.container}>
+        <View style={styles.headerRow}>
+          <Text style={typography.h1}>{t('driver.favorites.title')}</Text>
+          <RoleBadge />
+        </View>
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator color={colors.teal} />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen style={styles.container}>

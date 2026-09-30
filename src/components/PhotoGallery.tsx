@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Image,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Platform,
@@ -8,6 +7,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Image,
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +16,6 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 interface PhotoGalleryProps {
   /** All photos for the spot, in order (photos[0] is the cover). */
   photos: string[];
-  height: number;
   /** Used when `photos` is empty (e.g. spot.photoUrl). Falsy ('') renders an icon placeholder instead of an image. */
   fallbackUri: string;
 }
@@ -25,13 +24,20 @@ interface PhotoGalleryProps {
  * Swipeable photo carousel with a "current/total" counter -- plain
  * horizontal + pagingEnabled ScrollView instead of a carousel library, no
  * extra dependency needed for something this simple.
+ *
+ * The box is always a fixed square (width x width), same as Mercado Libre's product
+ * photo area -- it never resizes per photo. Each photo uses resizeMode="contain" inside
+ * it, so a portrait photo is letterboxed left/right and a landscape one top/bottom, but
+ * the whole photo is always visible -- never cropped down to a strip the way a fixed
+ * *landscape* box + resizeMode="cover" used to crop tall photos.
  */
-export function PhotoGallery({ photos, height, fallbackUri }: PhotoGalleryProps) {
+export function PhotoGallery({ photos, fallbackUri }: PhotoGalleryProps) {
   const { width } = useWindowDimensions();
   const colors = useThemeColors();
   const [index, setIndex] = useState(0);
   const uris = photos.length > 0 ? photos : fallbackUri ? [fallbackUri] : [];
   const scrollRef = useRef<ScrollView>(null);
+  const boxSize = width;
 
   // Web only: RN's ScrollView handles touch-drag and trackpad/wheel scroll
   // out of the box, but a browser never turns a plain mouse click-drag into
@@ -93,10 +99,10 @@ export function PhotoGallery({ photos, height, fallbackUri }: PhotoGalleryProps)
     // over the bottom of this image (see spots/[id].tsx's hero card), and a
     // second rounded+shadowed edge on the photo itself right behind it just
     // doubled up into a messy seam. That card already owns the transition.
-    container: { position: 'relative' },
-    photo: { width, height },
+    container: { position: 'relative', backgroundColor: colors.background },
+    photo: { width: boxSize, height: boxSize },
     placeholder: {
-      width, height,
+      width: boxSize, height: boxSize,
       alignItems: 'center', justifyContent: 'center',
       backgroundColor: colors.background,
     },
@@ -127,7 +133,7 @@ export function PhotoGallery({ photos, height, fallbackUri }: PhotoGalleryProps)
         scrollEventThrottle={16}
       >
         {uris.map((uri, i) => (
-          <Image key={`${uri}-${i}`} source={{ uri }} style={styles.photo} />
+          <Image key={`${uri}-${i}`} source={{ uri }} style={styles.photo} resizeMode="contain" />
         ))}
       </ScrollView>
       {uris.length > 1 && (

@@ -1,17 +1,19 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View, FlatList, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getOwnerBookings } from '@/src/services/ownerBookings';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { todayArtDateISO } from '@/src/services/dateUtils';
+import { formatBookingWhen } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 // Mismo criterio que spot/[id].tsx: 0=Lunes … 6=Domingo.
@@ -59,8 +61,10 @@ function buildMonthGrid(year: number, month: number): DayCell[] {
 
 export default function OwnerCalendar() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
+  const scale = useScale();
   const user = useSessionStore((s) => s.user);
   const today = todayArtDateISO();
   const [todayYearStr, todayMonthStr] = today.split('-');
@@ -137,48 +141,50 @@ export default function OwnerCalendar() {
 
   if (!user) return null;
 
+  const circleSz = Math.round(32 * scale);
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16, paddingBottom: 120, gap: 16 },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    monthLabel: { fontSize: 17, fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
-    navBtn: { padding: 6 },
+    monthLabel: { fontSize: Math.round(17 * scale), fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
+    navBtn: { padding: Math.round(6 * scale) },
     todayLink: { alignSelf: 'center' },
-    todayLinkText: { fontSize: 13, fontWeight: '600', color: colors.teal },
+    todayLinkText: { fontSize: Math.round(13 * scale), fontWeight: '600', color: colors.teal },
     weekRow: { flexDirection: 'row' },
-    weekDayCell: { flex: 1, alignItems: 'center', paddingBottom: 6 },
-    weekDayText: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
+    weekDayCell: { flex: 1, alignItems: 'center', paddingBottom: Math.round(6 * scale) },
+    weekDayText: { fontSize: Math.round(11 * scale), fontWeight: '700', color: colors.textSecondary },
     grid: { gap: 2 },
     weekRowGrid: { flexDirection: 'row' },
     dayCell: {
-      flex: 1, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', gap: 3,
+      flex: 1, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', gap: Math.round(3 * scale),
     },
     dayCircle: {
-      width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+      width: circleSz, height: circleSz, borderRadius: circleSz / 2, alignItems: 'center', justifyContent: 'center',
     },
     dayCircleSelected: { backgroundColor: colors.teal },
     dayCircleToday: { borderWidth: 1.5, borderColor: colors.teal },
-    dayText: { fontSize: 14, color: colors.text },
+    dayText: { fontSize: Math.round(14 * scale), color: colors.text },
     dayTextOutOfMonth: { color: colors.textSecondary, opacity: 0.4 },
     dayTextSelected: { color: colors.white, fontWeight: '700' },
-    dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.teal },
+    dot: { width: Math.round(5 * scale), height: Math.round(5 * scale), borderRadius: Math.round(2.5 * scale), backgroundColor: colors.teal },
     dotHidden: { opacity: 0 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     sectionTitle: {
-      fontSize: 13, fontWeight: '700', color: colors.text,
+      fontSize: Math.round(13 * scale), fontWeight: '700', color: colors.text,
       textTransform: 'capitalize',
     },
     sectionLine: { flex: 1, height: 1, backgroundColor: colors.border },
     emptyCard: {
-      backgroundColor: colors.surface, borderRadius: 12,
+      backgroundColor: colors.surface, borderRadius: 14,
       borderWidth: 1, borderColor: colors.border,
       padding: 24, alignItems: 'center', gap: 8,
     },
-    emptyText: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
+    emptyText: { fontSize: Math.round(14 * scale), color: colors.textSecondary, textAlign: 'center' },
     bookingCard: { gap: 6 },
     driverRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    driverRowText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
-    spotTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+    driverRowText: { fontSize: Math.round(13 * scale), fontWeight: '600', color: colors.textSecondary },
+    spotTitle: { fontSize: Math.round(15 * scale), fontWeight: '700', color: colors.text },
     timeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   });
 
@@ -197,15 +203,18 @@ export default function OwnerCalendar() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View style={{ gap: 12, marginBottom: 4 }}>
-            <Text style={typography.h1}>{t('tabs.owner.calendar')}</Text>
+            <View style={styles.headerRow}>
+              <Text style={typography.h1}>{t('tabs.owner.calendar')}</Text>
+              <RoleBadge />
+            </View>
 
             <View style={styles.monthNav}>
               <Pressable style={styles.navBtn} onPress={() => goToMonth(-1)} hitSlop={8}>
-                <Ionicons name="chevron-back" size={22} color={colors.text} />
+                <Ionicons name="chevron-back" size={Math.round(22 * scale)} color={colors.text} />
               </Pressable>
               <Text style={styles.monthLabel}>{monthLabel}</Text>
               <Pressable style={styles.navBtn} onPress={() => goToMonth(1)} hitSlop={8}>
-                <Ionicons name="chevron-forward" size={22} color={colors.text} />
+                <Ionicons name="chevron-forward" size={Math.round(22 * scale)} color={colors.text} />
               </Pressable>
             </View>
 
@@ -260,25 +269,27 @@ export default function OwnerCalendar() {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyCard}>
-              <Ionicons name="calendar-outline" size={32} color={colors.textSecondary} />
+              <Ionicons name="calendar-outline" size={Math.round(32 * scale)} color={colors.textSecondary} />
               <Text style={styles.emptyText}>{t('owner.calendar.emptyDay')}</Text>
             </View>
           ) : null
         }
         renderItem={({ item }) => (
-          <Card style={styles.bookingCard}>
-            <Text style={styles.spotTitle}>{item.parkingSpotTitle}</Text>
-            <View style={styles.driverRow}>
-              <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
-            </View>
-            <View style={styles.timeRow}>
-              <Text style={typography.body}>
-                {item.startTime} {t('driver.booking.timeTo')} {item.endTime}
-              </Text>
-              <StatusBadge status={item.status} />
-            </View>
-          </Card>
+          <Pressable onPress={() => router.push(`${group}/bookings/${item.id}`)}>
+            <Card style={styles.bookingCard}>
+              <Text style={styles.spotTitle}>{item.parkingSpotTitle}</Text>
+              <View style={styles.driverRow}>
+                <Ionicons name="person-circle-outline" size={Math.round(16 * scale)} color={colors.textSecondary} />
+                <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
+              </View>
+              <View style={styles.timeRow}>
+                <Text style={typography.body}>
+                  {formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}
+                </Text>
+                <StatusBadge status={item.status} />
+              </View>
+            </Card>
+          </Pressable>
         )}
       />
     </Screen>

@@ -20,6 +20,10 @@ export default function OwnerLayout() {
       <Stack.Screen name="spots/[id]/requests" options={{ title: t('owner.spot.requests.title') }} />
       {/* Bookings */}
       <Stack.Screen name="bookings/[id]" options={{ title: t('layout.driver.bookingDetail') }} />
+      <Stack.Screen name="bookings/[id]/messages" options={{ title: t('driver.booking.messages.link') }} />
+      <Stack.Screen name="bookings/[id]/tickets/index" options={{ title: t('driver.booking.tickets.link') }} />
+      <Stack.Screen name="bookings/[id]/tickets/new" options={{ title: t('driver.booking.tickets.new') }} />
+      <Stack.Screen name="bookings/[id]/tickets/[ticketId]" options={{ title: t('driver.booking.tickets.link') }} />
       {/* Settlements */}
       <Stack.Screen name="settlements" options={{ title: t('layout.owner.settlements') }} />
       <Stack.Screen name="settlements/[id]" options={{ title: t('layout.owner.settlementDetail') }} />
@@ -32,6 +36,7 @@ export default function OwnerLayout() {
       <Stack.Screen name="change-phone" options={{ title: t('changePhone.title') }} />
       <Stack.Screen name="settings" options={{ title: t('owner.settings.title') }} />
       <Stack.Screen name="legal" options={{ title: t('legal.title') }} />
+      <Stack.Screen name="payout-info" options={{ title: t('owner.payoutInfo.title') }} />
     </Stack>
   );
 }

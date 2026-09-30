@@ -14,7 +14,22 @@ export interface BookingApiResponse {
   hold_expires_at?: string;
   amount: number;
   payment_id?: string;
+  // Set once, the moment Mercado Pago's payment was actually confirmed -- absent means
+  // the booking was never paid, regardless of its current status (e.g. EXPIRED, or
+  // CANCELLED before ever reaching PENDING_OWNER_APPROVAL). See booking-service's
+  // entity.Booking.PaidAt.
+  paid_at?: string;
+  // Only set for a CANCELLED booking: 'OWNER_REJECTED', 'OWNER_EXPIRED' (owner never
+  // responded in time), or 'DRIVER_CANCELLED' (the driver cancelled it themselves).
+  // Absent for a cancelled booking that predates this field. See booking-service's
+  // entity.Booking.CancellationReason.
+  cancellation_reason?: string;
   kind: BookingKind;
+  // Only present when the caller IS this booking's driver -- booking-service omits
+  // it for everyone else (e.g. the owner), since the whole point is a verbal,
+  // in-person exchange. See VerifyBookingCodeUseCase/bookingResponseFromEntity.
+  verification_code?: string;
+  verified_at?: string;
   updated_at: string;
 }
 
@@ -31,10 +46,39 @@ export interface ReviewApiResponse {
   created_at: string;
 }
 
+export interface MessageApiResponse {
+  id: string;
+  booking_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+}
+
 export interface ReviewListApiResponse {
   average_rating: number;
   count: number;
   reviews: ReviewApiResponse[];
+}
+
+export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+
+export interface TicketApiResponse {
+  id: string;
+  booking_id: string;
+  created_by: string;
+  subject: string;
+  status: TicketStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TicketMessageApiResponse {
+  id: string;
+  ticket_id: string;
+  sender_id: string;
+  is_admin: boolean;
+  body: string;
+  created_at: string;
 }
 
 // ── Request bodies ────────────────────────────────────────────────────────────
@@ -79,7 +123,7 @@ export interface CreateBookingBody {
 
 /**
  * Creates a booking in PENDING_PAYMENT status, atomically reserving the slot
- * for the hold window (default 15 min). Returns the booking with its id.
+ * for the hold window (default 5 min). Returns the booking with its id.
  *
  * POST /bookings
  */
@@ -95,10 +139,6 @@ export async function createBookingApi(body: CreateBookingBody): Promise<Booking
  * The externalReference MUST be the bookingId so the webhook can confirm it.
  *
  * POST /payments/create-preference
- *
- * NOTE: payment-service doesn't exist in this workspace yet (the gateway 503s
- * on every /payments/* route) -- this call is unused for now, kept for when
- * it does. See confirm.tsx.
  */
 export interface CreatePreferenceBody {
   amount: number;
@@ -125,10 +165,18 @@ export async function createPaymentPreference(
 }
 
 /**
- * Confirms a PENDING_PAYMENT booking (payment_id is normally the Mercado Pago
- * payment id, attached by the webhook once it fires). Used directly by
- * confirm.tsx for now, with a placeholder payment_id, while payment-service
- * doesn't exist -- see confirm.tsx for why.
+ * Sentinel payment_id for a booking paid in person, in cash -- there's no
+ * real Mercado Pago payment to reference, so confirm.tsx/confirm-stay.tsx
+ * send this literal instead of a checkout flow. booking-service's refund
+ * client recognizes it and skips the (nonsensical) refund call if the
+ * booking later gets rejected, cancelled, or expires unanswered.
+ */
+export const CASH_PAYMENT_ID = 'CASH';
+
+/**
+ * Confirms a PENDING_PAYMENT booking. payment_id is either the real Mercado
+ * Pago payment id (once the checkout succeeds) or CASH_PAYMENT_ID for an
+ * in-person cash booking.
  *
  * POST /bookings/{id}/confirm
  */
@@ -188,6 +236,32 @@ export async function rejectBookingApi(bookingId: string): Promise<BookingApiRes
 }
 
 /**
+ * Cancels a CONFIRMED or PENDING_OWNER_APPROVAL booking and refunds the
+ * driver. Only the booking's own driver can call this, and only when there
+ * is more than 1 hour until the booking's start time.
+ *
+ * POST /bookings/{id}/cancel
+ */
+export async function cancelBookingApi(bookingId: string): Promise<BookingApiResponse> {
+  return request(`/bookings/${bookingId}/cancel`, { method: 'POST' });
+}
+
+/**
+ * Verifies the 4-digit in-person code the driver read aloud to the owner. On a
+ * match, transitions the booking CONFIRMED -> IN_PROGRESS. Caller must own the
+ * spot; throws ApiError with a human-readable `detail` on a wrong code or once
+ * too many wrong codes have been entered.
+ *
+ * POST /bookings/{id}/verify-code
+ */
+export async function verifyBookingCodeApi(bookingId: string, code: string): Promise<BookingApiResponse> {
+  return request(`/bookings/${bookingId}/verify-code`, {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
+/**
  * Rates the spot, its owner, or the driver on a COMPLETED booking. The driver can
  * submit 'spot'/'owner', the spot's owner can submit 'driver'.
  *
@@ -222,4 +296,96 @@ export async function getBookingReviewsApi(bookingId: string): Promise<ReviewApi
  */
 export async function getUserReviewsApi(userId: string, as: 'owner' | 'driver'): Promise<ReviewListApiResponse> {
   return request(`/users/${userId}/reviews?as=${as}`);
+}
+
+/**
+ * Sends a message on a booking's thread -- either side (the driver or the spot's
+ * owner) can call this once the booking exists. Used to coordinate access
+ * instructions, arrival, etc.
+ *
+ * POST /bookings/{id}/messages
+ */
+export async function sendMessageApi(bookingId: string, body: string): Promise<MessageApiResponse> {
+  return request(`/bookings/${bookingId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ body }),
+  });
+}
+
+/**
+ * Every message on a booking's thread, oldest first. Only the booking's driver or
+ * its spot's owner can read it.
+ *
+ * GET /bookings/{id}/messages
+ */
+export async function getMessagesApi(bookingId: string): Promise<MessageApiResponse[]> {
+  return request(`/bookings/${bookingId}/messages`);
+}
+
+/**
+ * Opens a support ticket on a booking -- either side (the driver or the spot's owner)
+ * can call this. `body` becomes the ticket's opening message.
+ *
+ * POST /bookings/{id}/tickets
+ */
+export async function createTicketApi(bookingId: string, subject: string, body: string): Promise<TicketApiResponse> {
+  return request(`/bookings/${bookingId}/tickets`, {
+    method: 'POST',
+    body: JSON.stringify({ subject, body }),
+  });
+}
+
+/**
+ * Every ticket the caller opened on this booking, newest first.
+ *
+ * GET /bookings/{id}/tickets
+ */
+export async function getMyTicketsApi(bookingId: string): Promise<TicketApiResponse[]> {
+  return request(`/bookings/${bookingId}/tickets`);
+}
+
+/**
+ * A single ticket by id. Only its own creator can read it.
+ *
+ * GET /tickets/{id}
+ */
+export async function getTicketApi(ticketId: string): Promise<TicketApiResponse> {
+  return request(`/tickets/${ticketId}`);
+}
+
+export interface TicketSummaryApiResponse extends TicketApiResponse {
+  last_admin_reply_id?: string | null;
+  last_admin_reply_at?: string | null;
+}
+
+/**
+ * Every ticket this user has ever opened, across every booking -- used by the in-app
+ * notification feed to surface support.ticket_replied without a per-booking poll.
+ *
+ * GET /users/{id}/tickets
+ */
+export async function getUserTicketsApi(userId: string): Promise<TicketSummaryApiResponse[]> {
+  return request(`/users/${userId}/tickets`);
+}
+
+/**
+ * Every message on a ticket's thread, oldest first -- the creator's opening message
+ * plus every reply from ParkLink staff.
+ *
+ * GET /tickets/{id}/messages
+ */
+export async function getTicketMessagesApi(ticketId: string): Promise<TicketMessageApiResponse[]> {
+  return request(`/tickets/${ticketId}/messages`);
+}
+
+/**
+ * Adds a follow-up message to the caller's own ticket.
+ *
+ * POST /tickets/{id}/messages
+ */
+export async function addTicketMessageApi(ticketId: string, body: string): Promise<TicketMessageApiResponse> {
+  return request(`/tickets/${ticketId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ body }),
+  });
 }

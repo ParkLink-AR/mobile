@@ -91,7 +91,6 @@ export interface ParkingSpot {
   description: string;
   descriptionKey?: string;
   active: boolean;
-  instantBooking: boolean;
 }
 
 export type BookingStatus =
@@ -100,7 +99,12 @@ export type BookingStatus =
   | 'COMPLETED'
   | 'CANCELLED'
   | 'EXPIRED'
-  | 'PENDING_OWNER_APPROVAL';
+  | 'PENDING_OWNER_APPROVAL'
+  // Reached from CONFIRMED once the owner enters the driver's in-person
+  // verification code correctly. Converges into COMPLETED the same way CONFIRMED
+  // does once the booking's time window ends -- see booking-service's
+  // ExpireCompletedBookings.
+  | 'IN_PROGRESS';
 
 export interface Booking {
   id: string;
@@ -109,7 +113,12 @@ export interface Booking {
   driverId: string;
   driverName: string;
   ownerId: string;
+  kind: 'HOURLY' | 'STAY';
   date: string;
+  // Fecha de checkout, ART (YYYY-MM-DD) -- igual a `date` para HOURLY; en
+  // STAY cae en un día posterior (el checkout es a la misma hora que el
+  // check-in, ver stays.service.ts en parking-service, no medianoche).
+  endDate: string;
   startTime: string;
   endTime: string;
   hours: number;
@@ -118,7 +127,17 @@ export interface Booking {
   total: number;
   status: BookingStatus;
   paymentId?: string;
-  confirmedAt?: string;
+  // Set once, the moment Mercado Pago's payment was actually confirmed -- absent means
+  // never paid, regardless of status (e.g. EXPIRED, or CANCELLED before ever reaching
+  // PENDING_OWNER_APPROVAL). Not the same as "safe to show as paid" -- see how
+  // bookings/[id].tsx gates the payment card on both this AND status.
+  paidAt?: string;
+  // Only ever populated for the booking's own driver (booking-service omits it for
+  // everyone else) -- the 4-digit code the driver reads aloud to the spot's owner
+  // in person. Present once status is CONFIRMED; absent before or once verified
+  // (server clears attempts tracking but keeps the code, we just stop needing it).
+  verificationCode?: string;
+  verifiedAt?: string;
 }
 
 export interface Review {
@@ -131,13 +150,34 @@ export interface Review {
   comment: string;
 }
 
+export type SettlementStatus = 'PENDING' | 'PAID';
+
+export interface SettlementPayout {
+  id: string;
+  bookingId: string;
+  grossAmount: number; // centavos
+  commissionAmount: number; // centavos
+  netAmount: number; // centavos
+}
+
+// Un lote de pago del propietario: un admin agrupa todo su saldo pendiente
+// (uno o más payouts de bookings ya completados+pagados+24h) en una única
+// transferencia. No hay concepto de "período" -- ocurre cuando un admin lo
+// arma, no en un calendario fijo. El propietario sólo ve las PAID (ver
+// getUserSettlementsApi) -- un draft PENDING todavía no es "su plata".
 export interface Settlement {
   id: string;
   ownerId: string;
-  period: string;
-  totalAmount: number;
-  commissionRetained: number;
-  bookingIds: string[];
+  grossAmount: number; // centavos
+  commissionAmount: number; // centavos
+  netAmount: number; // centavos
+  status: SettlementStatus;
+  proofUrl: string | null;
+  paidAt: string | null;
+  paidByAdminId: string | null;
+  createdByAdminId: string;
+  createdAt: string;
+  payouts?: SettlementPayout[]; // sólo presente en el fetch de detalle
 }
 
 export type PaymentMethodType = 'card' | 'cash';

@@ -1,10 +1,11 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
-import { Text, View, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { Text, View, FlatList, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
+import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
@@ -12,10 +13,12 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { getOwnerBookings } from '@/src/services/ownerBookings';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { todayArtDateISO } from '@/src/services/dateUtils';
+import { formatBookingWhen } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 export default function OwnerToday() {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
@@ -74,11 +77,12 @@ export default function OwnerToday() {
     },
     sectionLine: { flex: 1, height: 1, backgroundColor: colors.border },
     emptyCard: {
-      backgroundColor: colors.surface, borderRadius: 12,
+      backgroundColor: colors.surface, borderRadius: 14,
       borderWidth: 1, borderColor: colors.border,
       padding: 24, alignItems: 'center', gap: 8,
     },
     emptyText: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     bookingCard: { gap: 6 },
     driverRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
     driverRowText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
@@ -96,7 +100,10 @@ export default function OwnerToday() {
         ListHeaderComponent={
           <View style={{ gap: 16, marginBottom: 4 }}>
             <View>
-              <Text style={typography.h1}>{t('tabs.owner.today')}</Text>
+              <View style={styles.headerRow}>
+                <Text style={typography.h1}>{t('tabs.owner.today')}</Text>
+                <RoleBadge />
+              </View>
               <Text style={styles.dateLabel}>{todayLabel}</Text>
             </View>
 
@@ -132,19 +139,21 @@ export default function OwnerToday() {
           ) : null
         }
         renderItem={({ item }) => (
-          <Card style={styles.bookingCard}>
-            <Text style={styles.spotTitle}>{item.parkingSpotTitle}</Text>
-            <View style={styles.driverRow}>
-              <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
-            </View>
-            <View style={styles.timeRow}>
-              <Text style={typography.body}>
-                {item.startTime} {t('driver.booking.timeTo')} {item.endTime}
-              </Text>
-              <StatusBadge status={item.status} />
-            </View>
-          </Card>
+          <Pressable onPress={() => router.push(`${group}/bookings/${item.id}`)}>
+            <Card style={styles.bookingCard}>
+              <Text style={styles.spotTitle}>{item.parkingSpotTitle}</Text>
+              <View style={styles.driverRow}>
+                <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
+              </View>
+              <View style={styles.timeRow}>
+                <Text style={typography.body}>
+                  {formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}
+                </Text>
+                <StatusBadge status={item.status} />
+              </View>
+            </Card>
+          </Pressable>
         )}
       />
     </Screen>

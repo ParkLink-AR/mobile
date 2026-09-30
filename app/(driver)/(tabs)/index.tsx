@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Chip } from '@/src/components/Chip';
 import { Button } from '@/src/components/Button';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { DatePickerField } from '@/src/components/DatePickerField';
 import { getDriverVisiblePrice } from '@/src/services/utils';
@@ -105,7 +106,6 @@ export function SearchScreen() {
   const [coveredOnly, setCoveredOnly] = useState(false);
   const [stayOnly, setStayOnly] = useState(false);
   const [hourlyOnlyFilter, setHourlyOnlyFilter] = useState(false);
-  const [instantBookingOnly, setInstantBookingOnly] = useState(false);
   // Km en texto libre (no un preset) -- se convierte a metros recién al aplicar.
   const [distanceKmInput, setDistanceKmInput] = useState('');
   const [scheduleFilterOn, setScheduleFilterOn] = useState(false);
@@ -320,7 +320,6 @@ export function SearchScreen() {
     setCoveredOnly(filters.covered ?? false);
     setStayOnly(filters.stayOnly ?? false);
     setHourlyOnlyFilter(filters.hourlyOnly ?? false);
-    setInstantBookingOnly(filters.instantBooking ?? false);
     setDistanceKmInput(filters.maxDistanceMeters !== undefined ? String(filters.maxDistanceMeters / 1000) : '');
     setScheduleFilterOn(filters.fromHour !== undefined);
     setDateInput(filters.date ?? '');
@@ -337,7 +336,6 @@ export function SearchScreen() {
       covered: coveredOnly || undefined,
       stayOnly: stayOnly || undefined,
       hourlyOnly: hourlyOnlyFilter || undefined,
-      instantBooking: instantBookingOnly || undefined,
       maxDistanceMeters: distanceKmInput.trim() && km > 0 ? Math.round(km * 1000) : undefined,
       date: scheduleFilterOn ? (dateInput || undefined) : undefined,
       fromHour: scheduleFilterOn ? fromHourInput : undefined,
@@ -387,12 +385,6 @@ export function SearchScreen() {
       onRemove: () => setFilters((f) => ({ ...f, hourlyOnly: undefined })),
     });
   }
-  if (filters.instantBooking) {
-    activeChips.push({
-      label: t('search.filters.instantBookingOnly'),
-      onRemove: () => setFilters((f) => ({ ...f, instantBooking: undefined })),
-    });
-  }
   if (filters.maxDistanceMeters !== undefined) {
     const km = filters.maxDistanceMeters / 1000;
     activeChips.push({
@@ -421,6 +413,13 @@ export function SearchScreen() {
       position: 'relative',
       zIndex: 20,
       elevation: 20,
+    },
+    roleBadgeRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      paddingHorizontal: 20,
+      paddingTop: 10,
+      backgroundColor: colors.surface,
     },
     searchSection: {
       flexDirection: 'row',
@@ -769,6 +768,9 @@ export function SearchScreen() {
     <Screen style={styles.container}>
       {/* ── Search bar ────────────────────────────────────────────── */}
       <View style={styles.searchWrapper}>
+        <View style={styles.roleBadgeRow}>
+          <RoleBadge />
+        </View>
         <View style={styles.searchSection}>
           <View style={styles.searchInputWrapper}>
             {geocoding ? (
@@ -839,16 +841,6 @@ export function SearchScreen() {
           </View>
         )}
       </View>
-      {!searchAddress && (
-        <Text style={styles.statusText}>
-          {locationError
-            ? locationError
-            : location
-            ? `📍 ${t('search.location.searching')}`
-            : t('search.location.locating')}
-        </Text>
-      )}
-
       {/* ── Toolbar ────────────────────────────────────────────────── */}
       <View style={styles.toolbar}>
         <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
@@ -1035,7 +1027,7 @@ export function SearchScreen() {
                 { position: 'absolute', top: 60, left: 0, right: 0, backgroundColor: 'transparent' },
               ]}
             >
-              <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, alignItems: 'center', gap: 8 }}>
+              <View style={{ backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 16, alignItems: 'center', gap: 8 }}>
                 <Ionicons name="car-outline" size={28} color={colors.textSecondary} />
                 <Text style={styles.feedbackText}>{t('search.noResults')}</Text>
               </View>
@@ -1147,15 +1139,6 @@ export function SearchScreen() {
                   label={t('search.filters.stayOnly')}
                   selected={stayOnly}
                   onPress={toggleStayOnly}
-                />
-              </View>
-
-              <Text style={styles.sectionLabel}>{t('search.filters.confirmation')}</Text>
-              <View style={styles.chipsWrap}>
-                <Chip
-                  label={t('search.filters.instantBookingOnly')}
-                  selected={instantBookingOnly}
-                  onPress={() => setInstantBookingOnly((v) => !v)}
                 />
               </View>
 

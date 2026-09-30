@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { updateUserProfile, uploadAvatar, AvatarAsset } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
@@ -32,6 +32,8 @@ export default function DriverProfileEdit() {
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const user = useSessionStore((s) => s.user)!;
   const setUser = useSessionStore((s) => s.setUser);
   const [name, setName] = useState(user.name);
@@ -104,42 +106,42 @@ export default function DriverProfileEdit() {
     outer: { flex: 1, backgroundColor: colors.surface },
     scroll: { padding: 24, gap: 20, paddingBottom: 40 },
 
-    avatarSection: { alignItems: 'center', gap: 10 },
+    avatarSection: { alignItems: 'center', gap: sc(10) },
     avatarWrapper: {
-      width: 96, height: 96, borderRadius: 48,
+      width: sc(96), height: sc(96), borderRadius: sc(48),
       backgroundColor: colors.teal,
       alignItems: 'center', justifyContent: 'center',
       overflow: 'hidden',
     },
-    avatarImage: { width: 96, height: 96, borderRadius: 48 },
-    avatarText: { color: colors.white, fontSize: 32, fontWeight: '700' },
+    avatarImage: { width: sc(96), height: sc(96), borderRadius: sc(48) },
+    avatarText: { color: colors.white, fontSize: sc(32), fontWeight: '700' },
     changePhotoBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
+      flexDirection: 'row', alignItems: 'center', gap: sc(6),
+      paddingHorizontal: sc(14), paddingVertical: sc(7), borderRadius: 20,
       borderWidth: 1.5, borderColor: colors.teal,
     },
-    changePhotoBtnText: { fontSize: 13, fontWeight: '600', color: colors.teal },
+    changePhotoBtnText: { fontSize: sc(13), fontWeight: '600', color: colors.teal },
 
-    fieldGroup: { gap: 4 },
-    label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', color: colors.textSecondary },
+    fieldGroup: { gap: sc(4) },
+    label: { fontSize: sc(11), fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', color: colors.textSecondary },
     input: {
       borderWidth: 1, borderColor: colors.border, borderRadius: 10,
-      padding: 13, fontSize: 15, color: colors.text, backgroundColor: colors.background,
+      padding: sc(13), fontSize: sc(15), color: colors.text, backgroundColor: colors.background,
     },
     row: { flexDirection: 'row', gap: 12 },
     rowItem: { flex: 1 },
-    error: { color: '#C62828', fontSize: 13 },
+    error: { color: '#C62828', fontSize: sc(13) },
 
     readOnlyRow: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       borderWidth: 1, borderColor: colors.border, borderRadius: 10,
-      padding: 13, backgroundColor: colors.background, gap: 10,
+      padding: sc(13), backgroundColor: colors.background, gap: 10,
     },
-    readOnlyInfo: { flex: 1, gap: 2 },
-    readOnlyValue: { fontSize: 15, color: colors.text },
-    verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-    verifiedText: { fontSize: 11, fontWeight: '700', color: colors.success },
-    changeLink: { fontSize: 13, fontWeight: '600', color: colors.teal },
+    readOnlyInfo: { flex: 1, gap: sc(2) },
+    readOnlyValue: { fontSize: sc(15), color: colors.text },
+    verifiedRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: sc(6) },
+    readOnlyValueInline: { fontSize: sc(15), color: colors.text, flexShrink: 1 },
+    changeLink: { fontSize: sc(13), fontWeight: '600', color: colors.teal },
   });
 
   return (
@@ -172,7 +174,7 @@ export default function DriverProfileEdit() {
               )}
             </Pressable>
             <Pressable style={styles.changePhotoBtn} onPress={pickImage}>
-              <Ionicons name="camera-outline" size={15} color={colors.teal} />
+              <Ionicons name="camera-outline" size={sc(15)} color={colors.teal} />
               <Text style={styles.changePhotoBtnText}>
                 {avatarUri ? t('profile.edit.changePhoto') : t('profile.edit.addPhoto')}
               </Text>
@@ -208,13 +210,15 @@ export default function DriverProfileEdit() {
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>{t('profile.edit.email')}</Text>
             <View style={styles.readOnlyRow}>
-              <View style={styles.readOnlyInfo}>
-                <Text style={styles.readOnlyValue}>{user.email}</Text>
+              <View style={styles.verifiedRow}>
+                <Text style={styles.readOnlyValueInline} numberOfLines={1}>{user.email}</Text>
                 {user.emailVerified && (
-                  <View style={styles.verifiedRow}>
-                    <Ionicons name="checkmark-circle" size={13} color={colors.success} />
-                    <Text style={styles.verifiedText}>{t('profile.edit.verified')}</Text>
-                  </View>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={sc(16)}
+                    color={colors.success}
+                    accessibilityLabel={t('profile.edit.verified')}
+                  />
                 )}
               </View>
               <Text style={styles.changeLink} onPress={() => router.push(`${group}/change-email`)}>
@@ -227,17 +231,33 @@ export default function DriverProfileEdit() {
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>{t('profile.edit.phone')}</Text>
             <View style={styles.readOnlyRow}>
-              <View style={styles.readOnlyInfo}>
-                <Text style={styles.readOnlyValue}>{user.phone || '—'}</Text>
+              <View style={styles.verifiedRow}>
+                <Text style={styles.readOnlyValueInline} numberOfLines={1}>{user.phone || '—'}</Text>
                 {user.phoneVerified && (
-                  <View style={styles.verifiedRow}>
-                    <Ionicons name="checkmark-circle" size={13} color={colors.success} />
-                    <Text style={styles.verifiedText}>{t('profile.edit.verified')}</Text>
-                  </View>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={sc(16)}
+                    color={colors.success}
+                    accessibilityLabel={t('profile.edit.verified')}
+                  />
                 )}
               </View>
               <Text style={styles.changeLink} onPress={() => router.push(`${group}/change-phone`)}>
                 {t('profile.edit.changePhone')}
+              </Text>
+            </View>
+          </View>
+
+          {/* Password -- same reasoning, changing it requires re-entering the
+              current one first, so it lives in its own screen. */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>{t('profile.edit.password')}</Text>
+            <View style={styles.readOnlyRow}>
+              <View style={styles.readOnlyInfo}>
+                <Text style={styles.readOnlyValue}>••••••••</Text>
+              </View>
+              <Text style={styles.changeLink} onPress={() => router.push(`${group}/change-password`)}>
+                {t('profile.edit.changePassword')}
               </Text>
             </View>
           </View>
