@@ -60,7 +60,7 @@ export default function Settlements() {
               <View style={styles.headerRow}>
                 <Text style={typography.h2}>
                   {item.status === 'PENDING'
-                    ? t('settlements.status.pending')
+                    ? formatFullDateFromISO(item.createdAt)
                     : item.paidAt
                       ? formatFullDateFromISO(item.paidAt)
                       : t('settlements.unknownDate')}

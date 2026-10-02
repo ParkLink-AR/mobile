@@ -71,6 +71,7 @@ export default function SettlementDetail() {
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     errorText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
     amount: { color: colors.teal, fontWeight: '700', fontSize: 24, marginTop: 4 },
+    preparingNote: { marginTop: 4 },
     divider: { height: 1, backgroundColor: colors.border, marginVertical: 10 },
     row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
     rowLabel: { fontSize: 14, color: colors.textSecondary },
@@ -115,8 +116,11 @@ export default function SettlementDetail() {
         <Text style={typography.caption}>
           {settlement.status === 'PAID'
             ? `${t('settlements.paidAt')} ${settlement.paidAt ? formatFullDateTime(settlement.paidAt) : '—'}`
-            : t('settlements.preparingNote')}
+            : `${t('settlements.preparedAt')} ${formatFullDateTime(settlement.createdAt)}`}
         </Text>
+        {settlement.status === 'PENDING' && (
+          <Text style={[typography.caption, styles.preparingNote]}>{t('settlements.preparingNote')}</Text>
+        )}
         <View style={styles.divider} />
         <View style={styles.row}>
           <Text style={styles.rowLabel}>{t('settlements.grossAmount')}</Text>

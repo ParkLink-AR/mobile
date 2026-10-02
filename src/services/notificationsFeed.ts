@@ -239,26 +239,31 @@ async function getDriverNotifications(userId: string): Promise<AppNotification[]
   return [...notifications, ...reviewPrompts, ...verifiedNotifications, ...messages];
 }
 
-/** `settlement.paid` -- every settlement ParkLink has confirmed paying this owner. There's
+/** `settlement.paid` -- every settlement ParkLink has confirmed paying this owner. Filtered
+ * to PAID only: getSettlementsForOwner also returns a still-PENDING draft (so the owner can
+ * see "being prepared" on the settlements screen itself), but it must NOT show up here as a
+ * "your payment was deposited" notification before the admin actually confirms it. There's
  * no concept of "recent" here (a Settlement's status never reverts once PAID), but that's
  * fine: useNotificationsStore's seenIds already makes an old, already-opened one stop
  * counting toward the unread badge without it ever disappearing from the list. */
 async function getSettlementNotifications(ownerId: string): Promise<AppNotification[]> {
   const settlements = await getSettlementsForOwner(ownerId);
-  return settlements.map((s) => ({
-    id: `${s.id}-owner_settlement_paid`,
-    kind: 'owner_settlement_paid' as const,
-    bookingId: '',
-    parkingSpotId: '',
-    spotTitle: '',
-    date: '',
-    endDate: '',
-    startTime: '',
-    endTime: '',
-    total: s.netAmount / 100,
-    at: s.paidAt ?? s.createdAt,
-    settlementId: s.id,
-  }));
+  return settlements
+    .filter((s) => s.status === 'PAID')
+    .map((s) => ({
+      id: `${s.id}-owner_settlement_paid`,
+      kind: 'owner_settlement_paid' as const,
+      bookingId: '',
+      parkingSpotId: '',
+      spotTitle: '',
+      date: '',
+      endDate: '',
+      startTime: '',
+      endTime: '',
+      total: s.netAmount / 100,
+      at: s.paidAt ?? s.createdAt,
+      settlementId: s.id,
+    }));
 }
 
 /** `support.ticket_replied` -- every ticket this user opened (as driver or owner, on any

@@ -566,6 +566,7 @@
   "settlements.bookingsEmpty": "No bookings linked to this settlement.",
   "settlements.detail.error": "We couldn't load this settlement's details. Please try again.",
   "settlements.status.pending": "Being prepared",
+  "settlements.preparedAt": "Being prepared since",
   "settlements.status.paid": "Settled",
   "settlements.preparingNote": "An admin is preparing your settlement. We'll let you know once the payment is complete.",
   "settlements.proofPending": "The proof will be available once the payment is confirmed.",

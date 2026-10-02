@@ -566,6 +566,7 @@
   "settlements.bookingsEmpty": "No hay reservas asociadas a esta liquidación.",
   "settlements.detail.error": "No pudimos cargar el detalle de esta liquidación. Intentá de nuevo.",
   "settlements.status.pending": "En preparación",
+  "settlements.preparedAt": "En preparación desde el",
   "settlements.status.paid": "Liquidado",
   "settlements.preparingNote": "Un administrador está preparando tu liquidación. Te vamos a avisar cuando se complete el pago.",
   "settlements.proofPending": "El comprobante va a estar disponible cuando se confirme el pago.",
