@@ -65,7 +65,7 @@ export default function SettlementDetail() {
 
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
+    container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 16, gap: 12 },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     errorText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
     amount: { color: colors.teal, fontWeight: '700', fontSize: 24, marginTop: 4 },
@@ -137,7 +137,7 @@ export default function SettlementDetail() {
       <FlatList
         data={payoutRows}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ gap: 8, flexGrow: 1 }}
+        contentContainerStyle={payoutRows.length === 0 ? { gap: 8, flexGrow: 1 } : { gap: 8 }}
         ListEmptyComponent={<Text style={styles.noProofText}>{t('settlements.bookingsEmpty')}</Text>}
         renderItem={({ item }) => (
           <Card>

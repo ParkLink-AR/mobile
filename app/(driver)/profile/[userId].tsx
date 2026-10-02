@@ -55,7 +55,7 @@ export default function PublicProfile() {
   }, [userId, as]);
 
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
+    container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 16, gap: 12 },
     headerCard: { alignItems: 'center', gap: 8, paddingVertical: 24 },
     avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.border },
     avatarPlaceholder: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
@@ -100,7 +100,7 @@ export default function PublicProfile() {
       <FlatList
         data={reviews}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ gap: 10, flexGrow: 1 }}
+        contentContainerStyle={reviews.length === 0 ? { gap: 10, flexGrow: 1 } : { gap: 10 }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="star-outline" size={40} color={colors.textSecondary} />

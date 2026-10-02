@@ -61,7 +61,7 @@ export default function OwnerToday() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 16, paddingBottom: 120, gap: 16 },
+    content: { paddingHorizontal: 16, paddingTop: 8, gap: 16 },
     dateLabel: { fontSize: 13, color: colors.textSecondary, textTransform: 'capitalize' },
     statsRow: { flexDirection: 'row', gap: 12 },
     statCard: {
@@ -91,7 +91,7 @@ export default function OwnerToday() {
   });
 
   return (
-    <Screen style={styles.container} tabBarPadding>
+    <Screen style={styles.container}>
       <FlatList
         data={bookings}
         keyExtractor={(item) => item.id}

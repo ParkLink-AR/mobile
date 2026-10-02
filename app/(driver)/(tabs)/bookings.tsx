@@ -68,7 +68,7 @@ export default function DriverBookings() {
   if (!user) return null;
 
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
+    container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 8, gap: 8 },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     total: { color: colors.teal, fontWeight: '700', marginTop: 4 },
@@ -107,7 +107,7 @@ export default function DriverBookings() {
       <FlatList
         data={bookings}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ gap: 10, flexGrow: 1 }}
+        contentContainerStyle={bookings.length === 0 ? { gap: 10, flexGrow: 1 } : { gap: 10 }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={40} color={colors.textSecondary} />

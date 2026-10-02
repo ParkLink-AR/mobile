@@ -58,7 +58,7 @@ export default function SpotReviews() {
   if (!spot) return null;
 
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
+    container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 16, gap: 12 },
     subtitle: { marginBottom: 4 },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     stars: { color: colors.warning, fontSize: 13 },
@@ -75,7 +75,7 @@ export default function SpotReviews() {
       <FlatList
         data={reviews}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ gap: 10, flexGrow: 1 }}
+        contentContainerStyle={reviews.length === 0 ? { gap: 10, flexGrow: 1 } : { gap: 10 }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="star-outline" size={40} color={colors.textSecondary} />

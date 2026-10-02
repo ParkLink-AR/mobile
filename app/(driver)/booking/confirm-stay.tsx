@@ -13,6 +13,7 @@ import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail } from '@/src/services/parkingService';
 import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
+import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { getStayQuote, type StayQuote } from '@/src/api/parking';
 import { ParkingSpot } from '@/src/types';
 import { createBookingApi, createPaymentPreference, confirmBookingApi, CASH_PAYMENT_ID } from '@/src/api/booking';
@@ -44,6 +45,7 @@ export default function ConfirmStayBooking() {
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
+  const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   const { spotId, startDate, endDate, startHour } = useLocalSearchParams<{
     spotId: string;
     startDate: string; // YYYY-MM-DD
@@ -83,6 +85,7 @@ export default function ConfirmStayBooking() {
     setProcessing(true);
 
     let bookingId: string;
+    let chargedTotal: number;
     try {
       const created = await createBookingApi({
         user_id: user.id,
@@ -98,6 +101,9 @@ export default function ConfirmStayBooking() {
         parking_spot: { id: spotId, schedule: [], capacity: spot.capacity },
       });
       bookingId = created.id;
+      // Server-authoritative total (owner's price + the platform commission added on
+      // top), in pesos -- see the same fix in booking/confirm.tsx.
+      chargedTotal = created.amount / 100;
     } catch (err: any) {
       const isConflict = err instanceof ApiError && err.status === 409;
       if (isConflict) {
@@ -124,16 +130,15 @@ export default function ConfirmStayBooking() {
       setProcessing(false);
       router.replace({
         pathname: `${group}/booking/cash-pending`,
-        params: { total: String(getDriverVisiblePrice(quote.amount / 100)) },
+        params: { total: String(chargedTotal) },
       });
       return;
     }
 
     let checkoutUrl: string;
     try {
-      const visibleTotal = getDriverVisiblePrice(quote.amount / 100);
       const preference = await createPaymentPreference({
-        amount: visibleTotal,
+        amount: chargedTotal,
         title: `Cochera ${spot.title}`,
         description: t('spot.stay.paymentDescription', {
           start: new Date(quote.startDate + 'T12:00:00').toLocaleDateString('es-AR'),
@@ -182,7 +187,7 @@ export default function ConfirmStayBooking() {
 
   if (!user || !spot || !quote) return <ActivityIndicator style={{ marginTop: 40 }} />;
 
-  const visibleTotal = getDriverVisiblePrice(quote.amount / 100);
+  const visibleTotal = getDriverVisiblePrice(quote.amount / 100, commissionRatePercent);
 
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },

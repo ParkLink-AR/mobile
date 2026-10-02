@@ -3,6 +3,7 @@ import { Card } from '@/src/components/Card';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { getMinPricePerHour } from '@/src/services/parkingService';
 import { useThemeColors } from '@/src/theme/useThemeColors';
+import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { ParkingSpot } from '@/src/types';
 import { VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { t, useLanguage } from '@/src/i18n';
@@ -14,11 +15,11 @@ export const FAVORITE_RED = '#FF385C';
 // vehículo (previsualización del mapa, resultados de búsqueda) -- una
 // cochera sin alquiler por hora (sólo estadía) no tiene nada que mostrar acá,
 // aunque en teoría tuviera un pricePerHour viejo de cuando lo tenía activado.
-function priceBadgeLabel(spot: ParkingSpot): string {
+function priceBadgeLabel(spot: ParkingSpot, commissionRatePercent: number): string {
   if (!spot.hourlyEnabled) return t('spot.stayOnlyBadge');
   const price = getMinPricePerHour(spot);
   if (price === null) return t('spot.stayOnlyBadge');
-  const formatted = `$${getDriverVisiblePrice(price)}${t('spot.pricePerHour.short')}`;
+  const formatted = `$${getDriverVisiblePrice(price, commissionRatePercent)}${t('spot.pricePerHour.short')}`;
   return spot.pricePerHourByVehicleType ? t('spot.pricePerHour.from', { price: formatted }) : formatted;
 }
 
@@ -46,6 +47,7 @@ interface ParkingSpotCardProps {
 
 export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }: ParkingSpotCardProps) {
   const colors = useThemeColors();
+  const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   useLanguage();
   const styles = StyleSheet.create({
     card: { padding: 0, overflow: 'hidden' },
@@ -186,7 +188,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
             {spot.title}
           </Text>
           <View style={styles.priceBadge}>
-            <Text style={styles.priceText}>{priceBadgeLabel(spot)}</Text>
+            <Text style={styles.priceText}>{priceBadgeLabel(spot, commissionRatePercent)}</Text>
           </View>
         </View>
 

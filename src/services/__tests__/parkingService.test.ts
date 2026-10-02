@@ -50,7 +50,7 @@ describe('parkingService', () => {
   it('maps backend spots to the mobile ParkingSpot shape', async () => {
     jest.mocked(parkingApi.searchParkingSpots).mockResolvedValue([makeApiSpot()]);
 
-    const spots = await searchParkingSpots({ lat: -34.6, lng: -58.45 });
+    const spots = await searchParkingSpots({ lat: -34.6, lng: -58.45 }, 5);
 
     expect(spots).toHaveLength(1);
     expect(spots[0]).toMatchObject({
@@ -70,7 +70,7 @@ describe('parkingService', () => {
     const now = new Date();
     const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    await searchParkingSpots({ lat: -34.6, lng: -58.45, fromHour: 8, toHour: 9 });
+    await searchParkingSpots({ lat: -34.6, lng: -58.45, fromHour: 8, toHour: 9 }, 5);
 
     expect(parkingApi.searchParkingSpots).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -83,7 +83,7 @@ describe('parkingService', () => {
   it('omits from/to when no schedule filter is set', async () => {
     jest.mocked(parkingApi.searchParkingSpots).mockResolvedValue([]);
 
-    await searchParkingSpots({ lat: -34.6, lng: -58.45 });
+    await searchParkingSpots({ lat: -34.6, lng: -58.45 }, 5);
 
     const calledWith = jest.mocked(parkingApi.searchParkingSpots).mock.calls[0][0];
     expect(calledWith.from).toBeUndefined();
@@ -96,10 +96,10 @@ describe('parkingService', () => {
       makeApiSpot({ id: 'pricey', pricePerHour: 5000 }),
     ]);
 
-    const spots = await searchParkingSpots({ lat: -34.6, lng: -58.45, minPrice: 1000 });
+    const spots = await searchParkingSpots({ lat: -34.6, lng: -58.45, minPrice: 1000 }, 5);
 
     expect(spots.map((s) => s.id)).toEqual(['pricey']);
-    expect(spots.every((s) => s.pricePerHour !== null && getDriverVisiblePrice(s.pricePerHour) >= 1000)).toBe(true);
+    expect(spots.every((s) => s.pricePerHour !== null && getDriverVisiblePrice(s.pricePerHour, 5) >= 1000)).toBe(true);
   });
 
   it('returns a spot by id', async () => {

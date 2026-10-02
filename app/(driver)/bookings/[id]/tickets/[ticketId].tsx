@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
@@ -34,6 +35,7 @@ function formatMessageTime(iso: string): string {
 export default function TicketThread() {
   useLanguage();
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const { ticketId } = useLocalSearchParams<{ ticketId: string }>();
   const userId = useSessionStore((s) => s.user?.id);
   const [ticket, setTicket] = useState<TicketApiResponse | null>(null);
@@ -154,7 +156,7 @@ export default function TicketThread() {
   }
 
   return (
-    <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
+    <Screen style={styles.screen} edges={['left', 'right']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -223,6 +225,9 @@ export default function TicketThread() {
             )}
           </Pressable>
         </View>
+        {/* El inset de abajo (home indicator) usa el fondo gris de la pantalla --
+            esto lo pinta blanco para que combine con la barra de mensaje. */}
+        <View style={{ height: insets.bottom, backgroundColor: colors.surface }} />
       </KeyboardAvoidingView>
     </Screen>
   );

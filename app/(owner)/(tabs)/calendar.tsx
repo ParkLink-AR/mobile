@@ -144,7 +144,7 @@ export default function OwnerCalendar() {
   const circleSz = Math.round(32 * scale);
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 16, paddingBottom: 120, gap: 16 },
+    content: { paddingHorizontal: 16, paddingTop: 8, gap: 16 },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     monthLabel: { fontSize: Math.round(17 * scale), fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
@@ -195,7 +195,7 @@ export default function OwnerCalendar() {
   });
 
   return (
-    <Screen style={styles.container} tabBarPadding>
+    <Screen style={styles.container}>
       <FlatList
         data={selectedDayBookings}
         keyExtractor={(item) => item.id}

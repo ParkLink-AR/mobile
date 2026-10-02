@@ -3,6 +3,7 @@ import { Stack, router } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { useSessionStore } from '@/src/store/useSessionStore';
+import { useCommissionStore } from '@/src/store/useCommissionStore';
 import {
   ensureNotificationChannel,
   getLaunchNotificationRoute,
@@ -21,6 +22,14 @@ WebBrowser.maybeCompleteAuthSession();
 export default function RootLayout() {
   const userId = useSessionStore((s) => s.user?.id ?? null);
   const prevUserId = useRef<string | null>(null);
+  const fetchCommissionRate = useCommissionStore((s) => s.fetchRate);
+
+  // The platform commission rate for price-breakdown displays (create-spot preview,
+  // spot details) -- fetched once per session, since it rarely changes and every screen
+  // that needs it reads the same cached value from useCommissionStore.
+  useEffect(() => {
+    if (userId) fetchCommissionRate();
+  }, [userId, fetchCommissionRate]);
 
   // Register the device's FCM token when a user is signed in; drop it on
   // logout. registerForPush() is a no-op outside a Firebase-enabled build.

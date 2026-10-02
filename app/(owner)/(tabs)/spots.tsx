@@ -57,7 +57,7 @@ export default function OwnerSpots() {
   });
 
   return (
-    <Screen style={styles.container} tabBarPadding>
+    <Screen style={styles.container}>
       <View style={styles.header}>
         <Text style={typography.h1}>{t('tabs.owner.spots')}</Text>
         <RoleBadge />

@@ -108,7 +108,7 @@ export default function Profile() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    scrollContent: { padding: 16, paddingBottom: 120, gap: 16 },
+    scrollContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, gap: 16 },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 
     profileCard: {
@@ -206,7 +206,7 @@ export default function Profile() {
   });
 
   return (
-    <Screen style={styles.container} tabBarPadding>
+    <Screen style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
           <Text style={typography.h1}>{t('driver.profile.title')}</Text>

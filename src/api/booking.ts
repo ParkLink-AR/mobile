@@ -389,3 +389,17 @@ export async function addTicketMessageApi(ticketId: string, body: string): Promi
     body: JSON.stringify({ body }),
   });
 }
+
+/**
+ * The platform's current commission rate -- what gets added on top of a spot owner's own
+ * price for the driver to pay (the owner always receives their own price in full; see
+ * useCommissionStore). Same read as the admin panel's settings screen, at a non-admin path.
+ *
+ * GET /settings/commission
+ */
+export async function getCommissionRateApi(): Promise<{ commissionRateBp: number; commissionRatePercent: number }> {
+  const response = await request<{ commission_rate_bp: number; commission_rate_percent: number }>(
+    '/settings/commission',
+  );
+  return { commissionRateBp: response.commission_rate_bp, commissionRatePercent: response.commission_rate_percent };
+}

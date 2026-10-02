@@ -2,6 +2,8 @@ import { View, Text, TextInput, Switch, StyleSheet } from 'react-native';
 import { AvailabilityPicker, DayScheduleGroup } from '@/src/components/AvailabilityPicker';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { VehicleType, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
+import { useCommissionStore } from '@/src/store/useCommissionStore';
+import { getDriverVisiblePrice } from '@/src/services/utils';
 import { t } from '@/src/i18n';
 
 // pricePerHour en string (controlado por TextInput) -- mismo criterio que
@@ -81,6 +83,7 @@ interface HourlySettingsEditorProps {
  */
 export function HourlySettingsEditor({ value, onChange, vehicleTypes }: HourlySettingsEditorProps) {
   const colors = useThemeColors();
+  const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
 
   const styles = StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
@@ -94,6 +97,7 @@ export function HourlySettingsEditor({ value, onChange, vehicleTypes }: HourlySe
     fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 4 },
     vehiclePriceRow: { gap: 10 },
     warning: { fontSize: 12, color: colors.warning },
+    priceBreakdown: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },
   });
 
   function setVehiclePrice(vehicleType: VehicleType, text: string) {
@@ -102,6 +106,20 @@ export function HourlySettingsEditor({ value, onChange, vehicleTypes }: HourlySe
         ...value.pricePerHourByVehicleType,
         [vehicleType]: text.replace(/[^0-9.]/g, ''),
       },
+    });
+  }
+
+  // Live preview while the owner types a price: what they'll receive in full, and what
+  // the driver ends up paying once the platform commission is added on top. Returns null
+  // for an empty/invalid input instead of showing a breakdown of "$0".
+  function priceBreakdown(raw: string): string | null {
+    const ownerPrice = Number(raw);
+    if (!raw.trim() || isNaN(ownerPrice) || ownerPrice <= 0) return null;
+    const driverPrice = getDriverVisiblePrice(ownerPrice, commissionRatePercent);
+    return t('owner.spot.hourly.priceBreakdown', {
+      ownerPrice: String(Math.round(ownerPrice)),
+      driverPrice: String(driverPrice),
+      commissionPercent: String(commissionRatePercent),
     });
   }
 
@@ -138,19 +156,23 @@ export function HourlySettingsEditor({ value, onChange, vehicleTypes }: HourlySe
               <Text style={styles.warning}>{t('owner.spot.hourly.selectVehicleTypesFirst')}</Text>
             ) : (
               <View style={styles.vehiclePriceRow}>
-                {vehicleTypes.map((vehicleType) => (
-                  <View key={vehicleType}>
-                    <Text style={styles.fieldLabel}>{t(VEHICLE_TYPE_LABEL_KEYS[vehicleType])}</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={value.pricePerHourByVehicleType[vehicleType] ?? ''}
-                      onChangeText={(text) => setVehiclePrice(vehicleType, text)}
-                      keyboardType="numeric"
-                      placeholder="$1.200"
-                      placeholderTextColor={colors.textSecondary}
-                    />
-                  </View>
-                ))}
+                {vehicleTypes.map((vehicleType) => {
+                  const breakdown = priceBreakdown(value.pricePerHourByVehicleType[vehicleType] ?? '');
+                  return (
+                    <View key={vehicleType}>
+                      <Text style={styles.fieldLabel}>{t(VEHICLE_TYPE_LABEL_KEYS[vehicleType])}</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={value.pricePerHourByVehicleType[vehicleType] ?? ''}
+                        onChangeText={(text) => setVehiclePrice(vehicleType, text)}
+                        keyboardType="numeric"
+                        placeholder="$1.200"
+                        placeholderTextColor={colors.textSecondary}
+                      />
+                      {breakdown && <Text style={styles.priceBreakdown}>{breakdown}</Text>}
+                    </View>
+                  );
+                })}
               </View>
             )
           ) : (
@@ -164,6 +186,9 @@ export function HourlySettingsEditor({ value, onChange, vehicleTypes }: HourlySe
                 placeholder="$1.200"
                 placeholderTextColor={colors.textSecondary}
               />
+              {priceBreakdown(value.pricePerHour) && (
+                <Text style={styles.priceBreakdown}>{priceBreakdown(value.pricePerHour)}</Text>
+              )}
             </View>
           )}
 

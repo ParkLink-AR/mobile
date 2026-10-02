@@ -5,13 +5,14 @@ interface ScreenProps {
   children: React.ReactNode;
   style?: ViewStyle;
   edges?: Edge[];
-  /** Screens under the floating dock tab bar: also respects the bottom safe area. */
-  tabBarPadding?: boolean;
 }
 
-export function Screen({ children, style, edges, tabBarPadding }: ScreenProps) {
-  const resolvedEdges: Edge[] =
-    edges ?? (tabBarPadding ? ['top', 'left', 'right', 'bottom'] : ['top', 'left', 'right']);
+// Tab screens never need a 'bottom' edge here: the tab bar (DockTabBar/
+// OwnerDockTabBar) is a real docked react-navigation tab bar, not a floating
+// overlay, so the navigator already reserves space above it and handles its
+// own bottom safe-area inset internally.
+export function Screen({ children, style, edges }: ScreenProps) {
+  const resolvedEdges: Edge[] = edges ?? ['top', 'left', 'right'];
   return (
     <SafeAreaView style={[{ flex: 1 }, style]} edges={resolvedEdges}>
       {children}

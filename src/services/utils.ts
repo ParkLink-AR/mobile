@@ -5,10 +5,15 @@ export function delay<T>(value: T, ms = 400): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
 }
 
-const SERVICE_FEE_RATE = 0.05;
-
-export function getDriverVisiblePrice(basePricePerHour: number): number {
-  return Math.round(basePricePerHour * (1 + SERVICE_FEE_RATE));
+/**
+ * What the driver actually pays for a given owner-set price: the owner's own price plus
+ * the platform's current commission added on top (the owner always receives their price
+ * in full -- see useCommissionStore and booking-service's Service.addCommission, which
+ * computes this exact same total server-side at the moment a booking is actually created).
+ * ratePercent is a plain percentage (5 means 5%), not basis points.
+ */
+export function getDriverVisiblePrice(ownerPrice: number, ratePercent: number): number {
+  return Math.round(ownerPrice * (1 + ratePercent / 100));
 }
 
 function pluralKey(base: string, count: number): string {

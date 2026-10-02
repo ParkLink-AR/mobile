@@ -8,11 +8,13 @@ import { PhotoGallery } from '@/src/components/PhotoGallery';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
 import { getDriverVisiblePrice } from '@/src/services/utils';
+import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 
 export default function SpotDetail() {
   const colors = useThemeColors();
+  const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -53,6 +55,7 @@ export default function SpotDetail() {
       paddingVertical: 7,
     },
     priceValue: { fontSize: 16, fontWeight: '700', color: colors.teal },
+    priceBreakdown: { fontSize: 12, color: colors.textSecondary },
     divider: { height: 1, backgroundColor: colors.border },
     pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     pill: {
@@ -105,10 +108,19 @@ export default function SpotDetail() {
               </View>
               {spot.hourlyEnabled && spot.pricePerHour !== null && (
                 <View style={styles.priceBadge}>
-                  <Text style={styles.priceValue}>${getDriverVisiblePrice(spot.pricePerHour)}{t('spot.pricePerHour.short')}</Text>
+                  <Text style={styles.priceValue}>${getDriverVisiblePrice(spot.pricePerHour, commissionRatePercent)}{t('spot.pricePerHour.short')}</Text>
                 </View>
               )}
             </View>
+
+            {spot.hourlyEnabled && spot.pricePerHour !== null && (
+              <Text style={styles.priceBreakdown}>
+                {t('owner.spot.priceBreakdown', {
+                  ownerPrice: String(Math.round(spot.pricePerHour)),
+                  commissionPercent: String(commissionRatePercent),
+                })}
+              </Text>
+            )}
 
             <View style={styles.divider} />
 

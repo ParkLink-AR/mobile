@@ -15,6 +15,7 @@ import {
   stayAvailabilityFetcher,
 } from '@/src/components/AvailabilityDatePickerField';
 import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
+import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
@@ -108,6 +109,7 @@ const STAY_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => hour);
 export default function SpotDetail() {
   const colors = useThemeColors();
   const typography = useTypography();
+  const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -275,7 +277,7 @@ export default function SpotDetail() {
     ? selectedVehicleType
     : spot.vehicleTypes[0] ?? null;
   const rawPricePerHour = effectiveVehicleType !== null ? getSpotPricePerHour(spot, effectiveVehicleType) : spot.pricePerHour;
-  const visiblePricePerHour = rawPricePerHour !== null ? getDriverVisiblePrice(rawPricePerHour) : null;
+  const visiblePricePerHour = rawPricePerHour !== null ? getDriverVisiblePrice(rawPricePerHour, commissionRatePercent) : null;
   const total = (visiblePricePerHour ?? 0) * durationHours;
   const canBook = effectiveStartHour !== null && effectiveEndHour !== null;
 
@@ -419,7 +421,7 @@ export default function SpotDetail() {
                 value={
                   spot.pricePerHourByVehicleType
                     ? t('spot.pricePerHour.variesByVehicle', {
-                        price: String(getDriverVisiblePrice(getMinPricePerHour(spot)!)),
+                        price: String(getDriverVisiblePrice(getMinPricePerHour(spot)!, commissionRatePercent)),
                       })
                     : t('spot.pricePerHour.withUnit', { price: String(visiblePricePerHour) })
                 }
@@ -656,7 +658,7 @@ export default function SpotDetail() {
                   <>
                     <Text style={styles.stayBreakdownText}>{formatStayBreakdown(stayQuote.breakdown)}</Text>
                     <Text style={styles.total}>
-                      {t('spot.stay.total', { total: String(Math.round(getDriverVisiblePrice(stayQuote.amount / 100))) })}
+                      {t('spot.stay.total', { total: String(Math.round(getDriverVisiblePrice(stayQuote.amount / 100, commissionRatePercent))) })}
                     </Text>
                   </>
                 ) : null}

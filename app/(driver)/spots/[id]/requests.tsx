@@ -117,7 +117,7 @@ export default function SpotBookingRequests() {
   }
 
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
+    container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 16, gap: 12 },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     driverRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
     driverRowText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.textSecondary },
@@ -179,7 +179,7 @@ export default function SpotBookingRequests() {
       <FlatList
         data={bookings}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ gap: 10, flexGrow: 1 }}
+        contentContainerStyle={bookings.length === 0 ? { gap: 10, flexGrow: 1 } : { gap: 10 }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={40} color={colors.textSecondary} />

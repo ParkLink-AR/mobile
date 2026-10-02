@@ -56,7 +56,8 @@ export default function BookingTickets() {
     screen: { flex: 1, backgroundColor: colors.background },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     errorText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
-    list: { padding: 16, gap: 10, flexGrow: 1 },
+    list: { paddingHorizontal: 16, paddingTop: 16, gap: 10 },
+    listEmpty: { flexGrow: 1 },
     row: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     subject: { fontSize: 15, fontWeight: '600', color: colors.text, flex: 1 },
     date: { fontSize: 12.5, color: colors.textSecondary, marginTop: 4 },
@@ -89,7 +90,7 @@ export default function BookingTickets() {
         <FlatList
           data={tickets}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, tickets.length === 0 && styles.listEmpty]}
           ListEmptyComponent={
             <View style={styles.centered}>
               <Ionicons name="help-buoy-outline" size={40} color={colors.textSecondary} />

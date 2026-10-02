@@ -11,21 +11,20 @@ import {
   ActivityIndicator,
   Platform,
   Pressable,
-  Animated,
-  PanResponder,
 } from 'react-native';
 import MapView, { Marker, Region, PROVIDER_DEFAULT } from 'react-native-maps';
 import ClusteredMapView from 'react-native-map-clustering';
 import * as Location from 'expo-location';
 import { router, useSegments } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Chip } from '@/src/components/Chip';
 import { Button } from '@/src/components/Button';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
-import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { DatePickerField } from '@/src/components/DatePickerField';
 import { getDriverVisiblePrice } from '@/src/services/utils';
+import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
@@ -42,13 +41,13 @@ import { MAP_STYLE } from '@/src/theme/mapStyle';
 // (aunque también tenga estadía -- ver el pedido del usuario de priorizar
 // el precio por hora), si no por día (estadía). Mismo criterio de "precio
 // mínimo" que ParkingSpotCard.priceBadgeLabel cuando varía por vehículo.
-function mapPinPrice(spot: ParkingSpot): string {
+function mapPinPrice(spot: ParkingSpot, commissionRatePercent: number): string {
   if (spot.hourlyEnabled) {
     const price = getMinPricePerHour(spot);
-    if (price !== null) return `$${getDriverVisiblePrice(price)}`;
+    if (price !== null) return `$${getDriverVisiblePrice(price, commissionRatePercent)}`;
   }
   if (spot.stayEnabled && spot.pricePerDay !== null) {
-    return `$${getDriverVisiblePrice(spot.pricePerDay)}${t('spot.pricePerDay.short')}`;
+    return `$${getDriverVisiblePrice(spot.pricePerDay, commissionRatePercent)}${t('spot.pricePerDay.short')}`;
   }
   return t('spot.stayOnlyBadge');
 }
@@ -63,7 +62,9 @@ const DEFAULT_REGION: Region = {
 
 export function SearchScreen() {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const group = `/${useSegments()[0]}`;
+  const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   useLanguage();
   const user = useSessionStore((s) => s.user);
   const favoriteIds = useFavoritesStore((s) => s.ids);
@@ -131,32 +132,6 @@ export function SearchScreen() {
     });
   }
 
-  // ── Swipe-to-dismiss del modal de filtros ───────────────────────────────
-  // Sólo el header (agarradera + título, fuera del ScrollView) escucha el
-  // gesto -- así no compite con el scroll del ScrollView de adentro salvo
-  // cuando ese scroll ya está en el tope: recién ahí arrastrar hacia abajo
-  // mueve la hoja en vez de intentar (inútilmente) scrollear más arriba.
-  const filterScrollOffset = useRef(0);
-  const filterSheetY = useRef(new Animated.Value(0)).current;
-  const filterPanResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) =>
-        filterScrollOffset.current <= 0 && gesture.dy > 4 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
-      onPanResponderMove: (_, gesture) => {
-        if (gesture.dy > 0) filterSheetY.setValue(gesture.dy);
-      },
-      onPanResponderRelease: (_, gesture) => {
-        if (gesture.dy > 100 || gesture.vy > 0.8) {
-          Animated.timing(filterSheetY, { toValue: 800, duration: 180, useNativeDriver: true }).start(() => {
-            setModalVisible(false);
-            filterSheetY.setValue(0);
-          });
-        } else {
-          Animated.spring(filterSheetY, { toValue: 0, useNativeDriver: true, bounciness: 6 }).start();
-        }
-      },
-    })
-  ).current;
 
   // fillAddress is true only when the user actually taps the locate button --
   // the automatic GPS fix on first mount (see the permission effect below)
@@ -299,7 +274,7 @@ export function SearchScreen() {
     setSpotsError(null);
      
     setLoadingSpots(true);
-    searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng })
+    searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng }, commissionRatePercent)
       .then((results) => {
         // Never show the driver their own listings here -- if they search
         // from home, their own garage is always "nearby" and can't be
@@ -413,13 +388,6 @@ export function SearchScreen() {
       position: 'relative',
       zIndex: 20,
       elevation: 20,
-    },
-    roleBadgeRow: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      paddingHorizontal: 20,
-      paddingTop: 10,
-      backgroundColor: colors.surface,
     },
     searchSection: {
       flexDirection: 'row',
@@ -607,9 +575,9 @@ export function SearchScreen() {
     },
     // ── List content ────────────────────────────────────────────────────────
     listContent: {
-      padding: 16,
+      paddingHorizontal: 16,
+      paddingTop: 16,
       gap: 12,
-      paddingBottom: 120,
     },
     // ── Map view ────────────────────────────────────────────────────────────
     mapWrapper: {
@@ -677,7 +645,7 @@ export function SearchScreen() {
     // ── Filter modal ─────────────────────────────────────────────────────────
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(4, 35, 71, 0.45)',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
       justifyContent: 'flex-end',
     },
     modalContent: {
@@ -765,12 +733,14 @@ export function SearchScreen() {
   });
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right']}>
+      {/* El inset de la barra de estado usa el fondo gris de la pantalla
+          (necesario más abajo para que las tarjetas de la lista resalten) --
+          esta franja lo pinta blanco para que combine con la barra de
+          búsqueda, en vez de dejar un gris visible justo arriba. */}
+      <View style={{ height: insets.top, backgroundColor: colors.surface }} />
       {/* ── Search bar ────────────────────────────────────────────── */}
       <View style={styles.searchWrapper}>
-        <View style={styles.roleBadgeRow}>
-          <RoleBadge />
-        </View>
         <View style={styles.searchSection}>
           <View style={styles.searchInputWrapper}>
             {geocoding ? (
@@ -921,7 +891,7 @@ export function SearchScreen() {
               onPress={() => {
                 setSpotsError(null);
                 setLoadingSpots(true);
-                searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng })
+                searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng }, commissionRatePercent)
                   .then((results) => {
                     const filtered = results.filter((spot) => spot.ownerId !== user?.id);
                     setSpots(filtered);
@@ -998,7 +968,7 @@ export function SearchScreen() {
                   tracksViewChanges={false}
                 >
                   <View style={[styles.pin, isSelected && styles.pinSelected]}>
-                    <Text style={styles.pinText}>{mapPinPrice(spot)}</Text>
+                    <Text style={styles.pinText}>{mapPinPrice(spot, commissionRatePercent)}</Text>
                   </View>
                 </Marker>
               );
@@ -1088,17 +1058,10 @@ export function SearchScreen() {
       >
         <View style={styles.modalOverlay}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setModalVisible(false)} />
-          <Animated.View
-            style={[styles.modalContent, { transform: [{ translateY: filterSheetY }] }]}
-            {...filterPanResponder.panHandlers}
-          >
+          <View style={styles.modalContent}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>{t('search.filters.title')}</Text>
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              onScroll={(e) => { filterScrollOffset.current = e.nativeEvent.contentOffset.y; }}
-              scrollEventThrottle={16}
-            >
+            <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={styles.sectionLabel}>{t('search.filters.pricePerHour')}</Text>
               <View style={styles.row}>
                 <TextInput
@@ -1221,7 +1184,7 @@ export function SearchScreen() {
                 {t('search.filters.clear')}
               </Text>
             </ScrollView>
-          </Animated.View>
+          </View>
         </View>
       </Modal>
     </Screen>

@@ -13,6 +13,7 @@ import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail, getSpotPricePerHour, toISOToday } from '@/src/services/parkingService';
 import { getDriverVisiblePrice } from '@/src/services/utils';
+import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { getAvailability } from '@/src/api/parking';
 import { ParkingSpot } from '@/src/types';
 import { VehicleType, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
@@ -61,6 +62,7 @@ export default function ConfirmBooking() {
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const typography = useTypography();
+  const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   const { spotId, hours, startHour, endHour, bookingDate, vehicleType } = useLocalSearchParams<{
     spotId: string;
     hours: string;
@@ -150,6 +152,7 @@ export default function ConfirmBooking() {
 
     // ── Step 1: create the booking ──────────────────────────────────────────
     let bookingId: string;
+    let chargedTotal: number;
     try {
       const startISO = toISO(bookingDate, start);
       const endISO = toISO(bookingDate, end);
@@ -163,10 +166,15 @@ export default function ConfirmBooking() {
         user_id: user.id,
         start: startISO,
         end: endISO,
-        amount: Math.round(pricePerHour * reservedHours * 100), // centavos
+        amount: Math.round(pricePerHour * reservedHours * 100), // centavos -- booking-service recomputes this itself and ignores whatever's sent here
         parking_spot: { id: spotId, schedule, capacity: spot.capacity },
       });
       bookingId = created.id;
+      // Server-authoritative total (owner's price + the platform commission added on
+      // top), in pesos -- the one number both the cash flow and the MercadoPago
+      // preference below use, instead of each computing its own estimate (which used to
+      // drift apart: MP charged a marked-up total while the booking recorded the raw one).
+      chargedTotal = created.amount / 100;
     } catch (err: any) {
       const isConflict = err instanceof ApiError && err.status === 409;
       if (isConflict) {
@@ -193,7 +201,7 @@ export default function ConfirmBooking() {
       setProcessing(false);
       router.replace({
         pathname: `${group}/booking/cash-pending`,
-        params: { total: String(getDriverVisiblePrice(pricePerHour) * reservedHours) },
+        params: { total: String(chargedTotal) },
       });
       return;
     }
@@ -201,9 +209,8 @@ export default function ConfirmBooking() {
     // ── Step 2: create MercadoPago preference ───────────────────────────────
     let checkoutUrl: string;
     try {
-      const visibleTotal = getDriverVisiblePrice(pricePerHour) * reservedHours;
       const preference = await createPaymentPreference({
-        amount: visibleTotal,
+        amount: chargedTotal,
         title: `Cochera ${spot.title}`,
         description: `Reserva ${bookingDate ?? 'hoy'} ${String(start).padStart(2, '0')}:00–${String(end).padStart(2, '0')}:00`,
         payerEmail: user.email,
@@ -273,7 +280,7 @@ export default function ConfirmBooking() {
   // flujo de reserva por hora, así que esto no debería pasar en la práctica.
   if (pricePerHour === null) return <ActivityIndicator style={{ marginTop: 40 }} />;
 
-  const visiblePricePerHour = getDriverVisiblePrice(pricePerHour);
+  const visiblePricePerHour = getDriverVisiblePrice(pricePerHour, commissionRatePercent);
   const visibleTotal = visiblePricePerHour * reservedHours;
 
   const styles = StyleSheet.create({

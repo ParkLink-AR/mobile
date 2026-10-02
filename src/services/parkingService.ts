@@ -170,7 +170,8 @@ export function toISOToday(hour: number): string {
 }
 
 export async function searchParkingSpots(
-  filters: SearchParkingSpotsFilters & { lat: number; lng: number }
+  filters: SearchParkingSpotsFilters & { lat: number; lng: number },
+  commissionRatePercent: number
 ): Promise<ParkingSpot[]> {
   const dateISO = filters.date ?? todayArtDateISO();
   const results = await apiSearchParkingSpots({
@@ -192,7 +193,7 @@ export async function searchParkingSpots(
   // baja, mismo criterio que el maxPrice de parking-service.
   return spots.filter((s) => {
     const price = getMinPricePerHour(s);
-    return price !== null && getDriverVisiblePrice(price) >= filters.minPrice!;
+    return price !== null && getDriverVisiblePrice(price, commissionRatePercent) >= filters.minPrice!;
   });
 }
 
