@@ -163,8 +163,9 @@ export interface SettlementPayout {
 // Un lote de pago del propietario: un admin agrupa todo su saldo pendiente
 // (uno o más payouts de bookings ya completados+pagados+24h) en una única
 // transferencia. No hay concepto de "período" -- ocurre cuando un admin lo
-// arma, no en un calendario fijo. El propietario sólo ve las PAID (ver
-// getUserSettlementsApi) -- un draft PENDING todavía no es "su plata".
+// arma, no en un calendario fijo. El propietario ve tanto un draft PENDING
+// ("en preparación", recién armado por un admin) como uno ya PAID
+// ("liquidado") -- ver getUserSettlementsApi.
 export interface Settlement {
   id: string;
   ownerId: string;

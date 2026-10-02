@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Screen } from '@/src/components/Screen';
+import { SettlementStatusBadge } from '@/src/components/SettlementStatusBadge';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { getSettlementById } from '@/src/services/paymentService';
@@ -67,6 +68,7 @@ export default function SettlementDetail() {
     screen: { flex: 1, backgroundColor: colors.background },
     container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 16, gap: 12 },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     errorText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
     amount: { color: colors.teal, fontWeight: '700', fontSize: 24, marginTop: 4 },
     divider: { height: 1, backgroundColor: colors.border, marginVertical: 10 },
@@ -106,9 +108,14 @@ export default function SettlementDetail() {
   return (
     <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <Card>
-        <Text style={styles.amount}>{money(settlement.netAmount)}</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.amount}>{money(settlement.netAmount)}</Text>
+          <SettlementStatusBadge status={settlement.status} />
+        </View>
         <Text style={typography.caption}>
-          {t('settlements.paidAt')} {settlement.paidAt ? formatFullDateTime(settlement.paidAt) : '—'}
+          {settlement.status === 'PAID'
+            ? `${t('settlements.paidAt')} ${settlement.paidAt ? formatFullDateTime(settlement.paidAt) : '—'}`
+            : t('settlements.preparingNote')}
         </Text>
         <View style={styles.divider} />
         <View style={styles.row}>
@@ -129,7 +136,9 @@ export default function SettlementDetail() {
         {settlement.proofUrl ? (
           <Image source={{ uri: settlement.proofUrl }} style={styles.proofImage} resizeMode="contain" />
         ) : (
-          <Text style={styles.noProofText}>{t('settlements.noProof')}</Text>
+          <Text style={styles.noProofText}>
+            {settlement.status === 'PENDING' ? t('settlements.proofPending') : t('settlements.noProof')}
+          </Text>
         )}
       </Card>
 

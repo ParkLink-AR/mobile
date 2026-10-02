@@ -12,7 +12,7 @@ export async function payBooking(bookingId: string): Promise<Booking> {
   return delay(booking, 800);
 }
 
-/** The owner's own settlement history (PAID only), newest first. */
+/** The owner's own settlement history (PENDING drafts and PAID), newest first. */
 export async function getSettlementsForOwner(ownerId: string): Promise<Settlement[]> {
   const response = await getUserSettlementsApi(ownerId);
   return response.map(toSettlement);
@@ -20,8 +20,8 @@ export async function getSettlementsForOwner(ownerId: string): Promise<Settlemen
 
 /**
  * A single settlement with its payouts populated. Throws ApiError (403/404)
- * if it doesn't belong to the caller or isn't confirmed yet -- same as any
- * other real API call in this app, callers should catch it.
+ * if it doesn't belong to the caller -- same as any other real API call in
+ * this app, callers should catch it.
  */
 export async function getSettlementById(id: string): Promise<Settlement> {
   const response = await getSettlementApi(id);
