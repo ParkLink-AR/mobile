@@ -16,22 +16,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
-import { VehiclePlate } from '@/src/components/VehiclePlate';
+import { VehiclePlate, isValidArgentinePlate } from '@/src/components/VehiclePlate';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getVehicles, createVehicle, deleteVehicle } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
-import { Vehicle, VehicleCountry } from '@/src/types';
-
-const COUNTRIES: { code: VehicleCountry; label: string }[] = [
-  { code: 'AR', label: 'Argentina' },
-  { code: 'BR', label: 'Brasil' },
-  { code: 'UY', label: 'Uruguay' },
-  { code: 'PY', label: 'Paraguay' },
-  { code: 'CL', label: 'Chile' },
-  { code: 'BO', label: 'Bolivia' },
-];
+import { Vehicle } from '@/src/types';
 
 export default function VehiclesScreen() {
   useLanguage();
@@ -46,8 +37,6 @@ export default function VehiclesScreen() {
   const [plate, setPlate] = useState('');
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
-  const [country, setCountry] = useState<VehicleCountry>('AR');
-  const [countryPickerVisible, setCountryPickerVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,7 +57,6 @@ export default function VehiclesScreen() {
     setPlate('');
     setBrand('');
     setModel('');
-    setCountry('AR');
     setError(null);
     setFormVisible(true);
   }
@@ -78,6 +66,13 @@ export default function VehiclesScreen() {
       setError(t('vehicles.error.required'));
       return;
     }
+    // Argentina only issues two domain formats (ABC123 pre-2016, AB123CD since) -- same
+    // check auth-service enforces server-side (see schemas.VehicleCreate), surfaced here
+    // too so the driver doesn't wait for a round-trip to find out.
+    if (!isValidArgentinePlate(plate)) {
+      setError(t('vehicles.error.invalidArPlate'));
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -85,7 +80,7 @@ export default function VehiclesScreen() {
         plate: plate.trim(),
         brand: brand.trim(),
         model: model.trim(),
-        country,
+        country: 'AR',
       });
       setVehicles((prev) => [...prev, created]);
       setFormVisible(false);
@@ -124,14 +119,7 @@ export default function VehiclesScreen() {
     modalTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
     label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 },
     input: { borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: 15, color: colors.text },
-    countrySelector: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12,
-    },
-    countrySelectorText: { fontSize: 15, color: colors.text },
     error: { color: '#C62828', fontSize: 13 },
-    countryOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
-    countryOptionText: { fontSize: 15, color: colors.text },
     modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
     cancelBtn: { flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border },
     cancelBtnText: { color: colors.textSecondary, fontWeight: '600' },
@@ -162,7 +150,7 @@ export default function VehiclesScreen() {
           renderItem={({ item }) => (
             <Card>
               <View style={styles.vehicleRow}>
-                <VehiclePlate plate={item.plate} country={item.country} size="small" />
+                <VehiclePlate plate={item.plate} size="small" />
                 <View style={styles.vehicleInfo}>
                   <Text style={styles.vehicleBrandModel}>{item.brand} {item.model}</Text>
                 </View>
@@ -222,16 +210,6 @@ export default function VehiclesScreen() {
                   />
                 </View>
 
-                <View>
-                  <Text style={styles.label}>{t('vehicles.country')}</Text>
-                  <Pressable style={styles.countrySelector} onPress={() => setCountryPickerVisible(true)}>
-                    <Text style={styles.countrySelectorText}>
-                      {COUNTRIES.find((c) => c.code === country)?.label}
-                    </Text>
-                    <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-                  </Pressable>
-                </View>
-
                 <View style={styles.modalActions}>
                   <Pressable style={styles.cancelBtn} onPress={() => setFormVisible(false)}>
                     <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
@@ -244,32 +222,6 @@ export default function VehiclesScreen() {
                     )}
                   </View>
                 </View>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-
-      {/* Country picker */}
-      <Modal visible={countryPickerVisible} transparent animationType="fade" onRequestClose={() => setCountryPickerVisible(false)}>
-        <TouchableWithoutFeedback onPress={() => setCountryPickerVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.modalSheet}>
-                <Text style={styles.modalTitle}>{t('vehicles.country')}</Text>
-                {COUNTRIES.map((c) => (
-                  <Pressable
-                    key={c.code}
-                    style={styles.countryOption}
-                    onPress={() => {
-                      setCountry(c.code);
-                      setCountryPickerVisible(false);
-                    }}
-                  >
-                    <Text style={styles.countryOptionText}>{c.label}</Text>
-                    {c.code === country && <Ionicons name="checkmark" size={18} color={colors.teal} />}
-                  </Pressable>
-                ))}
               </View>
             </TouchableWithoutFeedback>
           </View>

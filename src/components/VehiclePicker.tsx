@@ -61,7 +61,7 @@ export function VehiclePicker({ vehicles, selected, onSelect, vehiclesScreenPath
     <>
       {selected ? (
         <View style={styles.selectedRow}>
-          <VehiclePlate plate={selected.plate} country={selected.country} size="small" />
+          <VehiclePlate plate={selected.plate} size="small" />
           <View style={styles.selectedInfo}>
             <Text style={styles.selectedBrandModel}>{selected.brand} {selected.model}</Text>
             <Text style={styles.changeLink} onPress={() => setVisible(true)}>
@@ -100,7 +100,7 @@ export function VehiclePicker({ vehicles, selected, onSelect, vehiclesScreenPath
                       setVisible(false);
                     }}
                   >
-                    <VehiclePlate plate={vehicle.plate} country={vehicle.country} size="small" />
+                    <VehiclePlate plate={vehicle.plate} size="small" />
                     <View style={styles.optionInfo}>
                       <Text style={styles.optionBrandModel}>{vehicle.brand} {vehicle.model}</Text>
                     </View>

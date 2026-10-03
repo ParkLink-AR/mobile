@@ -204,7 +204,7 @@ export default function SpotBookingRequests() {
               </TouchableOpacity>
               {item.vehicle && (
                 <View style={styles.vehicleRow}>
-                  <VehiclePlate plate={item.vehicle.plate} country={item.vehicle.country} size="small" />
+                  <VehiclePlate plate={item.vehicle.plate} size="small" />
                   <Text style={styles.vehicleText}>{item.vehicle.brand} {item.vehicle.model}</Text>
                 </View>
               )}

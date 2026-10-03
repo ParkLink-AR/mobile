@@ -298,7 +298,7 @@ export default function DriverBookingDetail() {
 
             {booking.vehicle && (
               <View style={styles.vehicleDetailRow}>
-                <VehiclePlate plate={booking.vehicle.plate} country={booking.vehicle.country} size="small" />
+                <VehiclePlate plate={booking.vehicle.plate} size="small" />
                 <View>
                   <Text style={styles.detailLabel}>{t('driver.booking.detail.vehicle')}</Text>
                   <Text style={styles.detailValue}>{booking.vehicle.brand} {booking.vehicle.model}</Text>
