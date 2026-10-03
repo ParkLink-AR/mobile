@@ -138,6 +138,27 @@ export interface Booking {
   // (server clears attempts tracking but keeps the code, we just stop needing it).
   verificationCode?: string;
   verifiedAt?: string;
+  // The vehicle the driver picked (optionally) from their own saved list when booking --
+  // a snapshot taken at creation time, not a live reference (see VehiclePlate.tsx for how
+  // it's rendered). No `id`, unlike Vehicle below: it's a copy, not a pointer to a row that
+  // might since have been edited or deleted. Absent if the driver didn't pick one.
+  vehicle?: VehicleSnapshot;
+}
+
+// ISO 3166-1 alpha-2 -- drives which country name/flag VehiclePlate.tsx renders on the
+// plate graphic. Kept to the handful of countries the picker actually offers (see
+// VEHICLE_COUNTRIES in auth-service's schemas.py), not every country in the world.
+export type VehicleCountry = 'AR' | 'BR' | 'UY' | 'PY' | 'CL' | 'BO';
+
+export interface VehicleSnapshot {
+  plate: string;
+  brand: string;
+  model: string;
+  country: VehicleCountry;
+}
+
+export interface Vehicle extends VehicleSnapshot {
+  id: string;
 }
 
 export interface Review {

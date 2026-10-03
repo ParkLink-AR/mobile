@@ -239,6 +239,26 @@ export default function Profile() {
           <Ionicons name="chevron-forward" size={sc(16)} color={colors.white} />
         </Pressable>
 
+        {/* Mis vehículos -- cualquier cuenta puede reservar como conductor en
+            cualquier momento (ver el comentario de profile.changeMode más abajo),
+            así que esto vive fuera del bloque isOwner. */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{t('profile.vehicles.section')}</Text>
+          <View style={styles.sectionLine} />
+        </View>
+        <View style={styles.prefCard}>
+          <Pressable
+            style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => router.push(`${group}/vehicles`)}
+          >
+            <View style={styles.prefRowLeft}>
+              <Ionicons name="car-outline" size={sc(18)} color={colors.teal} />
+              <Text style={styles.prefLabel}>{t('profile.vehicles')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={sc(16)} color={colors.textSecondary} />
+          </Pressable>
+        </View>
+
         {/* Finanzas / legales — solo propietario. Mismo patrón de tarjeta con filas
             divididas que Preferencias, más abajo -- dos botones sueltos uno arriba
             del otro se leían como dos secciones distintas cuando en realidad son

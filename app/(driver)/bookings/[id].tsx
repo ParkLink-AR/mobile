@@ -5,13 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
+import { VehiclePlate } from '@/src/components/VehiclePlate';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 import { getBookingApi, cancelBookingApi, BookingApiResponse } from '@/src/api/booking';
 import { getParkingSpotDetail } from '@/src/api/parking';
 import { getPublicProfileApi } from '@/src/api/auth';
-import { mapBookingDateRange, formatBookingWhen, formatFullDate } from '@/src/services/bookingDates';
+import { mapBookingDateRange, formatBookingWhen, formatFullDate, toVehicleSnapshot } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 /** Maps the backend wire shape to the UI Booking type -- same mapping as the
@@ -36,6 +37,7 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string, ownerId: string
     paymentId: b.payment_id,
     paidAt: b.paid_at,
     verificationCode: b.verification_code,
+    vehicle: toVehicleSnapshot(b.vehicle),
   };
 }
 
@@ -153,6 +155,7 @@ export default function DriverBookingDetail() {
     detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     detailLabel: { flex: 1, fontSize: 14, color: colors.textSecondary },
     detailValue: { fontSize: 14, color: colors.text, fontWeight: '600' },
+    vehicleDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     detailValueLink: { color: colors.teal },
     whenValue: { flex: 1, fontSize: 14, color: colors.text, fontWeight: '600' },
     totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -291,6 +294,16 @@ export default function DriverBookingDetail() {
                 <Text style={[styles.detailValue, styles.detailValueLink]}>{ownerName}</Text>
                 <Ionicons name="chevron-forward" size={14} color={colors.teal} />
               </Pressable>
+            )}
+
+            {booking.vehicle && (
+              <View style={styles.vehicleDetailRow}>
+                <VehiclePlate plate={booking.vehicle.plate} country={booking.vehicle.country} size="small" />
+                <View>
+                  <Text style={styles.detailLabel}>{t('driver.booking.detail.vehicle')}</Text>
+                  <Text style={styles.detailValue}>{booking.vehicle.brand} {booking.vehicle.model}</Text>
+                </View>
+              </View>
             )}
 
             <View style={styles.divider} />

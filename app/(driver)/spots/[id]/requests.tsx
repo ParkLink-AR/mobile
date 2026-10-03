@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
+import { VehiclePlate } from '@/src/components/VehiclePlate';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
@@ -17,7 +18,7 @@ import {
 } from '@/src/api/booking';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
-import { mapBookingDateRange, formatBookingWhen } from '@/src/services/bookingDates';
+import { mapBookingDateRange, formatBookingWhen, toVehicleSnapshot } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 function mapApiBooking(b: BookingApiResponse): Booking {
@@ -36,6 +37,7 @@ function mapApiBooking(b: BookingApiResponse): Booking {
     serviceCharge: 0,
     total: amount,
     status: b.status as Booking['status'],
+    vehicle: toVehicleSnapshot(b.vehicle),
   };
 }
 
@@ -121,6 +123,8 @@ export default function SpotBookingRequests() {
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     driverRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
     driverRowText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+    vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+    vehicleText: { fontSize: 13, color: colors.textSecondary },
     total: { color: colors.teal, fontWeight: '700', marginTop: 4 },
     actionsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
     actionBtn: {
@@ -198,6 +202,12 @@ export default function SpotBookingRequests() {
                 <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
                 {!!driverNames[item.driverId] && <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} />}
               </TouchableOpacity>
+              {item.vehicle && (
+                <View style={styles.vehicleRow}>
+                  <VehiclePlate plate={item.vehicle.plate} country={item.vehicle.country} size="small" />
+                  <Text style={styles.vehicleText}>{item.vehicle.brand} {item.vehicle.model}</Text>
+                </View>
+              )}
               <View style={styles.row}>
                 <Text style={typography.body}>
                   {formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}

@@ -15,9 +15,11 @@ import { getParkingSpotDetail } from '@/src/services/parkingService';
 import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
 import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { getStayQuote, type StayQuote } from '@/src/api/parking';
-import { ParkingSpot } from '@/src/types';
+import { ParkingSpot, Vehicle } from '@/src/types';
 import { createBookingApi, createPaymentPreference, confirmBookingApi, CASH_PAYMENT_ID } from '@/src/api/booking';
+import { getVehicles } from '@/src/api/auth';
 import { PaymentMethodPicker } from '@/src/components/PaymentMethodPicker';
+import { VehiclePicker } from '@/src/components/VehiclePicker';
 import { getPaymentOptions, MERCADOPAGO_METHOD_ID, CASH_METHOD_ID } from '@/src/services/paymentOptions';
 
 /** "23/09/2026 · 14:00" -- date and time together for a single instant (check-in/out),
@@ -59,6 +61,8 @@ export default function ConfirmStayBooking() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState(MERCADOPAGO_METHOD_ID);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   // Alert.alert with a buttons array is a no-op on web -- see bookings/[id].tsx's
   // handleCancel for the same fix applied to the cancel-booking confirmation.
   const [conflictModalVisible, setConflictModalVisible] = useState(false);
@@ -75,6 +79,11 @@ export default function ConfirmStayBooking() {
       .then(setQuote)
       .catch((err) => setLoadError(err instanceof ApiError ? err.detail : t('spot.stay.quoteError')));
   }, [spotId, startDate, endDate, stayStartHour]);
+
+  // Entirely optional -- see the same effect in booking/confirm.tsx.
+  useEffect(() => {
+    if (user) getVehicles(user.id).then(setVehicles).catch(() => {});
+  }, [user?.id]);
 
   // Mismo flujo que booking/confirm.tsx (POST /bookings -> POST
   // /payments/create-preference -> WebBrowser -> pending.tsx), sin el
@@ -99,6 +108,9 @@ export default function ConfirmStayBooking() {
         kind: 'STAY',
         stay_end_date: quote.endDate,
         parking_spot: { id: spotId, schedule: [], capacity: spot.capacity },
+        vehicle: selectedVehicle
+          ? { plate: selectedVehicle.plate, brand: selectedVehicle.brand, model: selectedVehicle.model, country: selectedVehicle.country }
+          : undefined,
       });
       bookingId = created.id;
       // Server-authoritative total (owner's price + the platform commission added on
@@ -285,6 +297,21 @@ export default function ConfirmStayBooking() {
                 <Text style={styles.totalLabel}>{t('driver.booking.total')}</Text>
                 <Text style={styles.totalValue}>${visibleTotal}</Text>
               </View>
+            </View>
+          </Card>
+
+          <Card>
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="car-sport-outline" size={15} color={colors.textSecondary} />
+                <Text style={styles.sectionLabel}>{t('driver.booking.vehicle.sectionTitle')}</Text>
+              </View>
+              <VehiclePicker
+                vehicles={vehicles}
+                selected={selectedVehicle}
+                onSelect={setSelectedVehicle}
+                vehiclesScreenPath={`${group}/vehicles`}
+              />
             </View>
           </Card>
 

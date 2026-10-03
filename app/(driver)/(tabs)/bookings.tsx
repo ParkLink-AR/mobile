@@ -12,7 +12,7 @@ import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getUserBookingsApi, BookingApiResponse } from '@/src/api/booking';
 import { getParkingSpotsByIds } from '@/src/api/parking';
-import { mapBookingDateRange, formatBookingWhen } from '@/src/services/bookingDates';
+import { mapBookingDateRange, formatBookingWhen, toVehicleSnapshot } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 /** Maps the backend wire shape to the UI Booking type. */
@@ -33,6 +33,7 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
     total: amount,
     status: b.status as Booking['status'],
     verificationCode: b.verification_code,
+    vehicle: toVehicleSnapshot(b.vehicle),
   };
 }
 

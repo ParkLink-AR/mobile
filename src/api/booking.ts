@@ -31,6 +31,16 @@ export interface BookingApiResponse {
   verification_code?: string;
   verified_at?: string;
   updated_at: string;
+  // The vehicle the driver picked (optionally) from their own saved list when booking --
+  // absent if they didn't pick one. See booking-service's vehicleResponseFromEntity.
+  vehicle?: BookingVehicleApiResponse;
+}
+
+export interface BookingVehicleApiResponse {
+  plate: string;
+  brand: string;
+  model: string;
+  country: string;
 }
 
 export type ReviewTargetType = 'spot' | 'owner' | 'driver';
@@ -117,6 +127,9 @@ export interface CreateBookingBody {
     // Omitted/0 is treated as 1.
     capacity?: number;
   };
+  // Entirely optional -- the driver may not have picked (or saved) a vehicle. Omit the
+  // whole object rather than sending partial fields.
+  vehicle?: BookingVehicleApiResponse;
 }
 
 // ── API calls ─────────────────────────────────────────────────────────────────

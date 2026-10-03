@@ -1,4 +1,5 @@
 import { artDateFromISO } from './dateUtils';
+import { VehicleSnapshot } from '@/src/types';
 
 // Rango de fecha/hora de una reserva, derivado de sus timestamps `start`/`end`
 // crudos -- misma lógica para las 4 pantallas que mapean BookingApiResponse a
@@ -31,6 +32,16 @@ export function mapBookingDateRange(start: string, end: string): BookingDateRang
     endTime,
     hours,
   };
+}
+
+/** Same shared-mapping reasoning as mapBookingDateRange above, for
+ * BookingApiResponse.vehicle -- auth-service only ever hands out a country from its own
+ * fixed allowlist, so the cast is safe (never arbitrary user input). */
+export function toVehicleSnapshot(
+  v?: { plate: string; brand: string; model: string; country: string }
+): VehicleSnapshot | undefined {
+  if (!v) return undefined;
+  return { plate: v.plate, brand: v.brand, model: v.model, country: v.country as VehicleSnapshot['country'] };
 }
 
 /** "10/09" -- mismo formato corto usado en el resto de la app para fechas. */

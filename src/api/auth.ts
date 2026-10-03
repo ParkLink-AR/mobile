@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { AccountType, AuthTokens, AuthUser } from '@/src/types';
+import { AccountType, AuthTokens, AuthUser, Vehicle } from '@/src/types';
 import { request, requestMultipart } from './client';
 
 interface RegisterInput {
@@ -347,6 +347,47 @@ export async function updatePayoutInfo(
     body: JSON.stringify({ cbu: input.cbu, payout_titular: input.titular, cuil: input.cuil }),
   });
   return toPayoutInfo(response);
+}
+
+// -------------------------
+// Vehicles (a driver's own saved cars -- entirely optional, picked when booking a spot so
+// the owner knows which plate to expect). See auth-service's
+// GET/POST /users/{id}/vehicles and DELETE /users/{id}/vehicles/{vehicleId}.
+// -------------------------
+
+export interface VehicleApiResponse {
+  id: string;
+  plate: string;
+  brand: string;
+  model: string;
+  country: string;
+  created_at: string;
+}
+
+function toVehicle(r: VehicleApiResponse): Vehicle {
+  // auth-service only ever accepts a country from its own fixed allowlist (see
+  // schemas.VEHICLE_COUNTRIES), so this cast is safe -- it's never arbitrary user input.
+  return { id: r.id, plate: r.plate, brand: r.brand, model: r.model, country: r.country as Vehicle['country'] };
+}
+
+export async function getVehicles(userId: string): Promise<Vehicle[]> {
+  const response = await request<VehicleApiResponse[]>(`/users/${userId}/vehicles`);
+  return response.map(toVehicle);
+}
+
+export async function createVehicle(
+  userId: string,
+  input: { plate: string; brand: string; model: string; country: string }
+): Promise<Vehicle> {
+  const response = await request<VehicleApiResponse>(`/users/${userId}/vehicles`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return toVehicle(response);
+}
+
+export async function deleteVehicle(userId: string, vehicleId: string): Promise<void> {
+  await request(`/users/${userId}/vehicles/${vehicleId}`, { method: 'DELETE' });
 }
 
 export interface PublicProfileApiResponse {
