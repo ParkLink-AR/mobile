@@ -570,6 +570,7 @@
   "settlements.status.paid": "Settled",
   "settlements.preparingNote": "An admin is preparing your settlement. We'll let you know once the payment is complete.",
   "settlements.proofPending": "The proof will be available once the payment is confirmed.",
+  "settlements.viewProof": "View proof",
 
   "mocks.reviews.comment.example": "Everything as described, no surprises.",
 

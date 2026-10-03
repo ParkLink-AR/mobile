@@ -1,9 +1,11 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
-import { Text, View, Image, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import { Text, View, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { Card } from '@/src/components/Card';
+import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { SettlementStatusBadge } from '@/src/components/SettlementStatusBadge';
 import { useThemeColors } from '@/src/theme/useThemeColors';
@@ -82,7 +84,7 @@ export default function SettlementDetail() {
       fontSize: 11, fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase',
     },
-    proofImage: { width: '100%', height: 220, borderRadius: 10, backgroundColor: colors.background },
+    viewProofBtn: { alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 16 },
     noProofText: { fontSize: 13, color: colors.textSecondary },
     bookingWhen: { fontSize: 14, color: colors.text, fontWeight: '600' },
   });
@@ -138,7 +140,11 @@ export default function SettlementDetail() {
           <Text style={styles.sectionLabel}>{t('settlements.proofTitle')}</Text>
         </View>
         {settlement.proofUrl ? (
-          <Image source={{ uri: settlement.proofUrl }} style={styles.proofImage} resizeMode="contain" />
+          <Button
+            title={t('settlements.viewProof')}
+            onPress={() => WebBrowser.openBrowserAsync(settlement.proofUrl!)}
+            style={styles.viewProofBtn}
+          />
         ) : (
           <Text style={styles.noProofText}>
             {settlement.status === 'PENDING' ? t('settlements.proofPending') : t('settlements.noProof')}

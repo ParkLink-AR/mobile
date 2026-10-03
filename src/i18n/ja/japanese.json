@@ -570,6 +570,7 @@
   "settlements.status.paid": "清算済み",
   "settlements.preparingNote": "管理者が清算を準備しています。支払いが完了したらお知らせします。",
   "settlements.proofPending": "領収書は支払いが確認された時点で表示されます。",
+  "settlements.viewProof": "領収書を見る",
 
   "mocks.reviews.comment.example": "説明どおりで、驚きはありません。",
 

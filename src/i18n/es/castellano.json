@@ -570,6 +570,7 @@
   "settlements.status.paid": "Liquidado",
   "settlements.preparingNote": "Un administrador está preparando tu liquidación. Te vamos a avisar cuando se complete el pago.",
   "settlements.proofPending": "El comprobante va a estar disponible cuando se confirme el pago.",
+  "settlements.viewProof": "Ver comprobante",
 
   "mocks.reviews.comment.example": "Todo tal cual la descripción, sin sorpresas.",
 
