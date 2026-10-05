@@ -44,6 +44,20 @@ const LEGACY_CAP_HEIGHT_PER_EM = 0.688;
 // 24..86 -- its center is where the capitals' center goes.
 const LEGACY_BAND_CENTER_X = 118 / 237;
 const LEGACY_BAND_CENTER_Y = 55.5 / 104;
+const LEGACY_BAND_HEIGHT = 62 / 104;
+// Pre-2016 motorcycle plate (237x216): built from the legacy car plate's own pieces -- its
+// edge, bolt slots, black band (rounded corners untouched), and its shield and "ARGENTINA"
+// copied pixel for pixel -- at the real plate's nearly square proportion (~1.09:1) and
+// layout measured on a photo of one: slots on the top row, "ARGENTINA" under them, white
+// margins of ~4% on the sides, ~23% on top and ~10% below. Its black band spans rows
+// 51..192. The domain goes on two lines -- digits on top, letters below -- each line's
+// capitals ~40% of the band's height, centered at 26% and 75% of it, as on the real plate.
+const LEGACY_BIKE_PLATE_BG = require('../../assets/plates/ar-legacy-bike-plate.png');
+const LEGACY_BIKE_IMAGE_HEIGHT = 216;
+const LEGACY_BIKE_BAND_TOP = 51 / 216;
+const LEGACY_BIKE_BAND_HEIGHT = 142 / 216;
+const LEGACY_BIKE_CAP_FILL = 0.4;
+const LEGACY_BIKE_LINE_CENTERS = [0.26, 0.75];
 // An en space rather than two spaces: the web collapses consecutive spaces into one.
 const LEGACY_GROUP_GAP = '\u2002';
 
@@ -101,8 +115,9 @@ interface VehiclePlateProps {
  *   - a Mercosur motorcycle domain (A123BCD) gets the motorcycle plate, on two lines (see
  *     MercosurBikePlate);
  *   - a Mercosur car domain (AB123CD) gets datacar.com.ar's modern plate;
- *   - a pre-2016 domain (car ABC123 or motorcycle 123ABC) gets datacar's legacy plate, at
- *     the same position/size datacar's own CSS places the text.
+ *   - a pre-2016 car domain (ABC123) gets the legacy plate (see LegacyPlateText);
+ *   - a pre-2016 motorcycle domain (123ABC) gets the legacy motorcycle plate, on two lines
+ *     (see LegacyBikePlate).
  * See isValidArgentinePlate for the four patterns Argentina actually issues.
  */
 export function VehiclePlate({ plate, size = 'large' }: VehiclePlateProps) {
@@ -113,6 +128,9 @@ export function VehiclePlate({ plate, size = 'large' }: VehiclePlateProps) {
   const clean = cleanPlate(plate);
   if (MOTO_MERCOSUR_FORMAT.test(clean)) {
     return <MercosurBikePlate clean={clean} size={size} fontLoaded={fontLoaded} />;
+  }
+  if (MOTO_OLD_FORMAT.test(clean)) {
+    return <LegacyBikePlate clean={clean} size={size} fontLoaded={fontLoaded} />;
   }
   const large = size === 'large';
   // Every plate is laid out in the modern plate's footprint (slotWidth), so whatever sits
@@ -165,7 +183,9 @@ export function VehiclePlate({ plate, size = 'large' }: VehiclePlateProps) {
           <LegacyPlateText
             text={formatPlate(plate).replace(GROUP_GAP, LEGACY_GROUP_GAP)}
             plateWidth={plateWidth}
-            plateHeight={height}
+            centerY={height * LEGACY_BAND_CENTER_Y}
+            capHeight={height * LEGACY_BAND_HEIGHT * LEGACY_CAP_FILL}
+            letterSpacing={Math.round(height * 0.03)}
             fontLoaded={fontLoaded}
           />
         ) : (
@@ -243,25 +263,27 @@ function MercosurBikePlate({
   );
 }
 
-/** The pre-2016 plate's white lettering, with its capitals centered in the black band.
- * Platforms lay out a text line's box differently (and Saira's box is much taller than its
- * capitals), so the line is first placed from the font's own metrics and then corrected
- * with where the platform actually drew the baseline and capitals (onTextLayout). */
+/** One line of a pre-2016 plate's white lettering, its capitals (capHeight tall) centered
+ * on centerY. Platforms lay out a text line's box differently (and Saira's box is much
+ * taller than its capitals), so the line is first placed from the font's own metrics and
+ * then corrected with where the platform actually drew the baseline and capitals
+ * (onTextLayout). */
 function LegacyPlateText({
   text,
   plateWidth,
-  plateHeight,
+  centerY,
+  capHeight,
+  letterSpacing,
   fontLoaded,
 }: {
   text: string;
   plateWidth: number;
-  plateHeight: number;
+  centerY: number;
+  capHeight: number;
+  letterSpacing: number;
   fontLoaded: boolean;
 }) {
-  const bandHeight = (62 / PLATE_IMAGE_HEIGHT) * plateHeight;
-  const fontSize = Math.round((bandHeight * LEGACY_CAP_FILL) / LEGACY_CAP_HEIGHT_PER_EM);
-  const letterSpacing = Math.round(plateHeight * 0.03);
-  const bandCenterY = plateHeight * LEGACY_BAND_CENTER_Y;
+  const fontSize = Math.round(capHeight / LEGACY_CAP_HEIGHT_PER_EM);
   // Distance from the top of the text's own box to the middle of its capitals -- from the
   // font file until the platform reports its real layout.
   const [capCenterOffset, setCapCenterOffset] = useState(
@@ -278,7 +300,7 @@ function LegacyPlateText({
   const styles = StyleSheet.create({
     text: {
       position: 'absolute',
-      top: bandCenterY - capCenterOffset,
+      top: centerY - capCenterOffset,
       // Centered on the band's own center (not the image's), and letterSpacing is also
       // added after the last character, so the text is shifted right by half of it.
       left: plateWidth * LEGACY_BAND_CENTER_X * 2 - plateWidth + letterSpacing,
@@ -296,5 +318,49 @@ function LegacyPlateText({
     <Text style={styles.text} numberOfLines={1} onTextLayout={onTextLayout}>
       {text}
     </Text>
+  );
+}
+
+/** A pre-2016 motorcycle domain (123ABC) the way the real plate prints it: on the legacy
+ * plate's design, digits on top and letters below. Sized and slotted like the Mercosur
+ * motorcycle plate, so lists line up the same for every plate. */
+function LegacyBikePlate({
+  clean,
+  size,
+  fontLoaded,
+}: {
+  clean: string;
+  size: 'large' | 'small';
+  fontLoaded: boolean;
+}) {
+  const carWidth = size === 'large' ? 220 : 140;
+  const carHeight = Math.round(carWidth * (PLATE_IMAGE_HEIGHT / PLATE_IMAGE_WIDTH));
+  const height = Math.round(carHeight * 1.35);
+  const width = Math.round(height * (LEGACY_PLATE_IMAGE_WIDTH / LEGACY_BIKE_IMAGE_HEIGHT));
+  const bandTop = height * LEGACY_BIKE_BAND_TOP;
+  const bandHeight = height * LEGACY_BIKE_BAND_HEIGHT;
+  const letterSpacing = Math.round(height * 0.02);
+
+  const styles = StyleSheet.create({
+    slot: { width: carWidth, alignItems: 'center' },
+    container: { width, height },
+  });
+
+  return (
+    <View style={styles.slot}>
+      <ImageBackground source={LEGACY_BIKE_PLATE_BG} style={styles.container} resizeMode="stretch">
+        {[clean.slice(0, 3), clean.slice(3)].map((line, index) => (
+          <LegacyPlateText
+            key={line + index}
+            text={line}
+            plateWidth={width}
+            centerY={bandTop + bandHeight * LEGACY_BIKE_LINE_CENTERS[index]}
+            capHeight={bandHeight * LEGACY_BIKE_CAP_FILL}
+            letterSpacing={letterSpacing}
+            fontLoaded={fontLoaded}
+          />
+        ))}
+      </ImageBackground>
+    </View>
   );
 }
