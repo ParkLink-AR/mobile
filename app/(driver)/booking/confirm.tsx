@@ -160,7 +160,6 @@ export default function ConfirmBooking() {
 
     // ── Step 1: create the booking ──────────────────────────────────────────
     let bookingId: string;
-    let chargedTotal: number;
     try {
       const startISO = toISO(bookingDate, start);
       const endISO = toISO(bookingDate, end);
@@ -171,7 +170,6 @@ export default function ConfirmBooking() {
       }));
 
       const created = await createBookingApi({
-        user_id: user.id,
         start: startISO,
         end: endISO,
         amount: Math.round(pricePerHour * reservedHours * 100), // centavos -- booking-service recomputes this itself and ignores whatever's sent here
@@ -181,10 +179,8 @@ export default function ConfirmBooking() {
           : undefined,
       });
       bookingId = created.id;
-      // Server-authoritative total (owner's price + the platform commission added on
-      // top), in pesos -- the one number the MercadoPago preference below uses, instead of each computing its own estimate (which used to
-      // drift apart: MP charged a marked-up total while the booking recorded the raw one).
-      chargedTotal = created.amount / 100;
+      // No amount travels to the checkout: payment-service charges the booking's own
+      // server-side price (owner's price + platform commission), looked up by bookingId.
     } catch (err: any) {
       const isConflict = err instanceof ApiError && err.status === 409;
       if (isConflict) {
@@ -201,7 +197,6 @@ export default function ConfirmBooking() {
     let checkoutUrl: string;
     try {
       const preference = await createPaymentPreference({
-        amount: chargedTotal,
         title: `Cochera ${spot.title}`,
         description: `Reserva ${bookingDate ?? 'hoy'} ${String(start).padStart(2, '0')}:00–${String(end).padStart(2, '0')}:00`,
         payerEmail: user.email,

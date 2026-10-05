@@ -11,7 +11,12 @@ import { useTypography } from '@/src/theme/typography';
 import { request } from '@/src/api/client';
 import { getBookingApi } from '@/src/api/booking';
 
-type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'unknown';
+// 'refunded': Mercado Pago approved the payment, but the booking couldn't take it (its
+// 5-minute hold ran out first) -- payment-service refunds it automatically.
+type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'refunded' | 'unknown';
+
+// Statuses a booking can only reach once its payment was actually accepted.
+const PAID_BOOKING_STATUSES = new Set(['PENDING_OWNER_APPROVAL', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED']);
 
 interface VerifyStatusResponse {
   currentStatus: string;
@@ -71,16 +76,24 @@ export default function PaymentPendingScreen() {
         });
         const mpStatus = res?.currentStatus;
         if (mpStatus === 'approved') {
-          clearInterval(timer);
-          setStatus('approved');
-          setApprovedAt(res?.transaction?.approved_at ?? null);
-          try {
-            const booking = await getBookingApi(bookingId);
+          // An approved payment only means the booking is reserved if the booking
+          // actually accepted it -- verify-status has already tried to confirm it by now.
+          const booking = await getBookingApi(bookingId);
+          if (PAID_BOOKING_STATUSES.has(booking.status)) {
+            clearInterval(timer);
             setAwaitingOwner(booking.status === 'PENDING_OWNER_APPROVAL');
-          } catch {
-            // Booking fetch failing doesn't change the payment outcome --
-            // worst case the driver sees the generic "confirmada" message.
+            setApprovedAt(res?.transaction?.approved_at ?? null);
+            setStatus('approved');
+            return;
           }
+          if (booking.status !== 'PENDING_PAYMENT') {
+            // EXPIRED (the hold ran out before the payment landed) -- refunded.
+            clearInterval(timer);
+            setStatus('refunded');
+            return;
+          }
+          // Still PENDING_PAYMENT: the confirmation hit a transient error and the next
+          // verify-status retries it -- keep polling (MAX_POLLS still bounds this).
         } else if (mpStatus === 'rejected' || mpStatus === 'cancelled' || mpStatus === 'refunded') {
           clearInterval(timer);
           setStatus('rejected');
@@ -162,6 +175,22 @@ export default function PaymentPendingScreen() {
         <Text style={typography.h1}>{t('driver.payment.rejected.title')}</Text>
         <Card style={styles.card}>
           <Text style={typography.body}>{t('driver.payment.rejected.body')}</Text>
+        </Card>
+        <Button
+          title={t('driver.payment.rejected.retry')}
+          onPress={() => router.replace(`${group}/(tabs)`)}
+        />
+      </Screen>
+    );
+  }
+
+  if (status === 'refunded') {
+    return (
+      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
+        <StatusIcon variant="error" />
+        <Text style={typography.h1}>{t('driver.payment.expired.title')}</Text>
+        <Card style={styles.card}>
+          <Text style={typography.body}>{t('driver.payment.expired.body')}</Text>
         </Card>
         <Button
           title={t('driver.payment.rejected.retry')}

@@ -223,49 +223,36 @@ export async function unregisterPush(): Promise<void> {
  * swallowed it before ever reaching the switch.
  */
 function routeFor(data: Record<string, string> | undefined): string | null {
+  // Always within the current mode's route group -- a screen pushed into the other group's
+  // stack opens on its own, with no back button. Which side to show travels as `view`.
+  const group = groupFor(useAccountTypeStore.getState().activeMode);
   switch (data?.type) {
-    // Sent to the driver when their booking is confirmed. This one is
-    // role-agnostic -- open it in whichever mode the user is currently in.
-    case 'booking.confirmed': {
+    // Sent to the driver when their booking is confirmed.
+    case 'booking.confirmed':
       if (!data.bookingId) return null;
-      const { activeMode } = useAccountTypeStore.getState();
-      return `${groupFor(activeMode)}/bookings/${data.bookingId}`;
-    }
-    // Sent to the owner when a paid booking is waiting for them to accept/
-    // reject. Intrinsically an owner action, so always open the owner view
-    // regardless of the current mode.
+      return `${group}/bookings/${data.bookingId}?view=driver`;
+    // Sent to the owner when a paid booking is waiting for them to accept/reject.
     case 'booking.pending_approval':
       if (!data.bookingId) return null;
-      return `/(owner)/bookings/${data.bookingId}`;
-    // Sent to the driver once the owner enters their arrival code -- role-agnostic like
-    // booking.confirmed, same reasoning.
-    case 'booking.verified': {
+      return `${group}/bookings/${data.bookingId}?view=owner`;
+    // Sent to the driver once the owner enters their arrival code.
+    case 'booking.verified':
       if (!data.bookingId) return null;
-      const { activeMode } = useAccountTypeStore.getState();
-      return `${groupFor(activeMode)}/bookings/${data.bookingId}`;
-    }
-    // Sent to whichever side of a booking did NOT send the message -- role-agnostic,
-    // same reasoning as booking.confirmed.
-    case 'booking.message_sent': {
+      return `${group}/bookings/${data.bookingId}?view=driver`;
+    // Sent to whichever side of a booking did NOT send the message -- the thread itself
+    // is the same for both sides.
+    case 'booking.message_sent':
       if (!data.bookingId) return null;
-      const { activeMode } = useAccountTypeStore.getState();
-      return `${groupFor(activeMode)}/bookings/${data.bookingId}/messages`;
-    }
-    // Sent to whichever user opened the ticket (driver or owner) -- role-agnostic, same
-    // reasoning as booking.confirmed.
-    case 'support.ticket_replied': {
+      return `${group}/bookings/${data.bookingId}/messages`;
+    // Sent to whichever user opened the ticket (driver or owner).
+    case 'support.ticket_replied':
       if (!data.bookingId || !data.ticketId) return null;
-      const { activeMode } = useAccountTypeStore.getState();
-      return `${groupFor(activeMode)}/bookings/${data.bookingId}/tickets/${data.ticketId}`;
-    }
-    // Sent to the owner once an admin confirms a batch of their payouts into
-    // a paid Settlement -- intrinsically an owner action (a driver never sees
-    // settlements), so always open the owner view regardless of the current
-    // mode. No bookingId here: a settlement covers however many bookings the
-    // admin batched, so it only ever carries settlementId.
+      return `${group}/bookings/${data.bookingId}/tickets/${data.ticketId}`;
+    // Sent to the owner once an admin confirms a batch of their payouts into a paid
+    // Settlement. No bookingId: a settlement covers however many bookings were batched.
     case 'settlement.paid':
       if (!data.settlementId) return null;
-      return `/(owner)/settlements/${data.settlementId}`;
+      return `${group}/settlements/${data.settlementId}`;
     default:
       return null;
   }

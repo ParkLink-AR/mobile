@@ -380,6 +380,15 @@ export default function SpotDetail() {
         </TouchableOpacity>
       </View>
       <View style={styles.body}>
+        {/* The owner can browse their own spot from the driver side, but never rent it
+            (booking-service rejects it too) -- the booking options below are replaced
+            by an edit button. */}
+        {isOwner && (
+          <View style={styles.ownerBanner}>
+            <Ionicons name="home-outline" size={18} color={colors.teal} />
+            <Text style={styles.ownerBannerText}>{t('spot.ownedByYou')}</Text>
+          </View>
+        )}
         <View style={styles.infoCard}>
           <Text style={typography.h1}>{spot.title}</Text>
           <TouchableOpacity onPress={() => router.push(`${group}/spot/${spot.id}/reviews`)}>
@@ -432,10 +441,6 @@ export default function SpotDetail() {
 
         {isOwner ? (
           <>
-            <View style={styles.ownerBanner}>
-              <Ionicons name="home-outline" size={18} color={colors.teal} />
-              <Text style={styles.ownerBannerText}>{t('spot.ownedByYou')}</Text>
-            </View>
             <TouchableOpacity
               style={styles.editBtn}
               onPress={() => router.push(`${group}/spots/${spot.id}/edit`)}

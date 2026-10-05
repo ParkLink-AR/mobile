@@ -1,10 +1,6 @@
 import { t } from '@/src/i18n';
 import { StayBreakdown } from '@/src/api/parking';
 
-export function delay<T>(value: T, ms = 400): Promise<T> {
-  return new Promise((resolve) => setTimeout(() => resolve(value), ms));
-}
-
 /**
  * What the driver actually pays for a given owner-set price: the owner's own price plus
  * the platform's current commission added on top (the owner always receives their price

@@ -2,12 +2,10 @@ import { t, useLanguage } from '@/src/i18n';
 import { Text, View, ScrollView, StyleSheet } from 'react-native';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
 
 export default function Legal() {
   useLanguage();
   const colors = useThemeColors();
-  const typography = useTypography();
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },

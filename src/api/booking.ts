@@ -12,7 +12,10 @@ export interface BookingApiResponse {
   end: string;
   status: string;
   hold_expires_at?: string;
-  amount: number;
+  amount: number; // centavos -- what the driver was charged (owner's price + commission)
+  // centavos -- what the spot's owner earns (their own price). Only sent to the owner;
+  // absent for a booking that predates it, whose `amount` was the owner's price itself.
+  owner_amount?: number;
   payment_id?: string;
   // Set once, the moment Mercado Pago's payment was actually confirmed -- absent means
   // the booking was never paid, regardless of its current status (e.g. EXPIRED, or
@@ -99,8 +102,9 @@ export interface ScheduleEntryBody {
   end_hour: number;
 }
 
+// The driver is always the authenticated caller -- booking-service takes it from the
+// session (X-User-Id), never from the body.
 export interface CreateBookingBody {
-  user_id: string;
   // RFC3339. For kind "STAY", `start` is the driver's chosen check-in
   // instant (date + hour) -- booking-service re-derives the authoritative
   // start/end/amount itself from a parking-service quote (see below), but
@@ -148,16 +152,15 @@ export async function createBookingApi(body: CreateBookingBody): Promise<Booking
 }
 
 /**
- * Creates a Mercado Pago checkout preference.
- * The externalReference MUST be the bookingId so the webhook can confirm it.
+ * Creates a Mercado Pago checkout preference for the caller's own booking.
+ * The externalReference MUST be the bookingId: payment-service looks the
+ * booking up by it and always charges the booking's own server-side price.
  *
  * POST /payments/create-preference
  */
 export interface CreatePreferenceBody {
-  amount: number;
   title: string;
   description?: string;
-  currency?: string;
   payerEmail?: string;
   externalReference: string; // bookingId
 }
@@ -392,4 +395,23 @@ export async function getCommissionRateApi(): Promise<{ commissionRateBp: number
     '/settings/commission',
   );
   return { commissionRateBp: response.commission_rate_bp, commissionRatePercent: response.commission_rate_percent };
+}
+
+export interface RefundStatusResponse {
+  /** 'refunded': the money went back. 'in_progress': it's being processed (or retried).
+   * 'delayed': every automatic retry failed -- ParkLink staff has to step in.
+   * 'none': no Mercado Pago payment on record for this booking. */
+  status: 'refunded' | 'in_progress' | 'delayed' | 'none';
+  amount?: number; // pesos
+  refundedAt?: string | null;
+}
+
+/**
+ * Where the refund of a cancelled, already-paid booking stands -- only for the booking's
+ * own driver.
+ *
+ * GET /payments/refund-status/{bookingId}
+ */
+export async function getRefundStatusApi(bookingId: string): Promise<RefundStatusResponse> {
+  return request(`/payments/refund-status/${bookingId}`);
 }

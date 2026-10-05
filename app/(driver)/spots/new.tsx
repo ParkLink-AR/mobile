@@ -188,10 +188,14 @@ export default function NewSpot() {
         stayAvailableUntil: staySettings.stayEnabled ? (staySettings.stayAvailableUntil.trim() || undefined) : undefined,
       });
       if (photos.length > 0) {
-        // La cochera ya existe -- si esto falla, el dueño todavía puede
-        // agregar fotos después desde la edición, así que no bloqueamos la
-        // publicación por un error acá.
-        await uploadParkingSpotPhotos(spot.id, photos).catch(() => {});
+        // La cochera ya existe -- si esto falla no bloqueamos la publicación,
+        // pero sí avisamos: el dueño puede agregar las fotos después desde la
+        // edición, y no tiene que creer que se subieron.
+        try {
+          await uploadParkingSpotPhotos(spot.id, photos);
+        } catch {
+          alert(t('owner.spot.new.photosUploadFailed'));
+        }
       }
       router.back();
     } catch (err) {

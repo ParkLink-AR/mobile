@@ -276,12 +276,10 @@ export function SearchScreen() {
     setLoadingSpots(true);
     searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng }, commissionRatePercent)
       .then((results) => {
-        // Never show the driver their own listings here -- if they search
-        // from home, their own garage is always "nearby" and can't be
-        // booked by themselves anyway.
-        const filtered = results.filter((spot) => spot.ownerId !== user?.id);
-        setSpots(filtered);
-        setSelectedSpotId(filtered[0]?.id ?? null);
+        // The user's own spots stay in the results -- opening one shows "Esta es tu
+        // cochera" instead of the booking options (see spot/[id].tsx).
+        setSpots(results);
+        setSelectedSpotId(results[0]?.id ?? null);
       })
       .catch((err) => {
         setSpotsError(err instanceof ApiError ? err.detail : t('search.location.error'));
@@ -331,6 +329,9 @@ export function SearchScreen() {
 
   const activeChips: { label: string; onRemove: () => void }[] = [];
   if (searchAddress) {
+    // locateMe only runs when the chip is tapped (an event handler), never during render --
+    // the refs rule can't tell a stored callback apart from a call.
+    // eslint-disable-next-line react-hooks/refs
     activeChips.push({
       label: t('search.nearBy', { address: searchAddress }),
       onRemove: () => locateMe(),
@@ -416,6 +417,20 @@ export function SearchScreen() {
       shadowRadius: 12,
       elevation: 12,
     },
+    locationErrorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginHorizontal: 16,
+      marginTop: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    locationErrorText: { flex: 1, fontSize: 13, color: colors.textSecondary },
     candidateEmpty: {
       paddingVertical: 16,
       fontSize: 13,
@@ -811,6 +826,15 @@ export function SearchScreen() {
           </View>
         )}
       </View>
+      {locationError && (
+        <View style={styles.locationErrorBanner}>
+          <Ionicons name="navigate-circle-outline" size={18} color={colors.textSecondary} />
+          <Text style={styles.locationErrorText}>{locationError}</Text>
+          <TouchableOpacity onPress={() => setLocationError(null)} hitSlop={8} accessibilityLabel={t('common.close')}>
+            <Ionicons name="close" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+      )}
       {/* ── Toolbar ────────────────────────────────────────────────── */}
       <View style={styles.toolbar}>
         <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
@@ -893,9 +917,8 @@ export function SearchScreen() {
                 setLoadingSpots(true);
                 searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng }, commissionRatePercent)
                   .then((results) => {
-                    const filtered = results.filter((spot) => spot.ownerId !== user?.id);
-                    setSpots(filtered);
-                    setSelectedSpotId(filtered[0]?.id ?? null);
+                    setSpots(results);
+                    setSelectedSpotId(results[0]?.id ?? null);
                   })
                   .catch((err) => setSpotsError(err instanceof ApiError ? err.detail : t('search.location.error')))
                   .finally(() => setLoadingSpots(false));

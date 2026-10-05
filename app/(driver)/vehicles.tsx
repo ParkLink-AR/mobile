@@ -39,15 +39,18 @@ export default function VehiclesScreen() {
   const [model, setModel] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A failed load must not look like "no tenés vehículos" -- see the error state below.
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
+    setLoadFailed(false);
     getVehicles(user.id)
       .then(setVehicles)
-      .catch(() => {})
+      .catch(() => setLoadFailed(true))
       .finally(() => setLoading(false));
   }, [user.id]);
 
@@ -136,6 +139,12 @@ export default function VehiclesScreen() {
 
       {loading ? (
         <ActivityIndicator color={colors.teal} />
+      ) : loadFailed ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="cloud-offline-outline" size={40} color={colors.textSecondary} />
+          <Text style={styles.emptyText}>{t('common.loadError')}</Text>
+          <Button title={t('common.retry')} onPress={load} />
+        </View>
       ) : (
         <FlatList
           data={vehicles}

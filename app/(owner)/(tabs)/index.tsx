@@ -52,7 +52,8 @@ export default function OwnerToday() {
 
   if (!user) return null;
 
-  const totalToday = bookings.reduce((sum, b) => sum + b.total, 0);
+  // What the owner earns, not what drivers paid (that includes ParkLink's commission).
+  const totalToday = bookings.reduce((sum, b) => sum + (b.ownerEarnings ?? b.total), 0);
   const todayLabel = new Date().toLocaleDateString('es-AR', {
     weekday: 'long',
     day: 'numeric',

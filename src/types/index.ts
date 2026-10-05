@@ -122,7 +122,13 @@ export interface Booking {
   startTime: string;
   endTime: string;
   hours: number;
+  // Timestamps ISO crudos del inicio/fin (ver BookingDateRange en bookingDates.ts).
+  startAt?: string;
+  endAt?: string;
   subtotal: number;
+  // What the spot's owner earns from this booking, in pesos -- only known on the owner's
+  // side. `total` is always what the driver was charged.
+  ownerEarnings?: number;
   serviceCharge: number;
   total: number;
   status: BookingStatus;
@@ -132,6 +138,9 @@ export interface Booking {
   // PENDING_OWNER_APPROVAL). Not the same as "safe to show as paid" -- see how
   // bookings/[id].tsx gates the payment card on both this AND status.
   paidAt?: string;
+  // Why a CANCELLED booking got there: 'DRIVER_CANCELLED', 'OWNER_REJECTED' or
+  // 'OWNER_EXPIRED' (the owner never answered in time).
+  cancellationReason?: string;
   // Only ever populated for the booking's own driver (booking-service omits it for
   // everyone else) -- the 4-digit code the driver reads aloud to the spot's owner
   // in person. Present once status is CONFIRMED; absent before or once verified

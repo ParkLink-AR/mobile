@@ -92,10 +92,8 @@ export default function ConfirmStayBooking() {
     setProcessing(true);
 
     let bookingId: string;
-    let chargedTotal: number;
     try {
       const created = await createBookingApi({
-        user_id: user.id,
         // Instantes reales que ya calculó y validó parking-service (mismo
         // check-in/check-out que se le mostró al conductor acá) -- no un
         // placeholder, aunque booking-service los re-deriva igual desde su
@@ -111,9 +109,8 @@ export default function ConfirmStayBooking() {
           : undefined,
       });
       bookingId = created.id;
-      // Server-authoritative total (owner's price + the platform commission added on
-      // top), in pesos -- see the same fix in booking/confirm.tsx.
-      chargedTotal = created.amount / 100;
+      // No amount travels to the checkout: payment-service charges the booking's own
+      // server-side price (owner's price + platform commission), looked up by bookingId.
     } catch (err: any) {
       const isConflict = err instanceof ApiError && err.status === 409;
       if (isConflict) {
@@ -129,7 +126,6 @@ export default function ConfirmStayBooking() {
     let checkoutUrl: string;
     try {
       const preference = await createPaymentPreference({
-        amount: chargedTotal,
         title: `Cochera ${spot.title}`,
         description: t('spot.stay.paymentDescription', {
           start: new Date(quote.startDate + 'T12:00:00').toLocaleDateString('es-AR'),

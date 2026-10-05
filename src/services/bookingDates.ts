@@ -16,6 +16,10 @@ export interface BookingDateRange {
   startTime: string;
   endTime: string;
   hours: number;
+  // Los timestamps crudos, para lo que necesita comparar contra "ahora" (p. ej. la
+  // ventana en la que el propietario puede verificar el código de llegada).
+  startAt: string;
+  endAt: string;
 }
 
 export function mapBookingDateRange(start: string, end: string): BookingDateRange {
@@ -31,6 +35,8 @@ export function mapBookingDateRange(start: string, end: string): BookingDateRang
     startTime,
     endTime,
     hours,
+    startAt: start,
+    endAt: end,
   };
 }
 
@@ -94,4 +100,12 @@ export function formatBookingWhen(
     return `${item.date} · ${item.startTime} ${timeToLabel} ${item.endTime}`;
   }
   return `${checkInLabel} ${formatShortDate(item.date)} · ${item.startTime} — ${checkOutLabel} ${formatShortDate(item.endDate)} · ${item.endTime}`;
+}
+
+/** What the owner earns from a booking, in pesos: owner_amount when the API sent it, else
+ * `amount` -- a booking from before owner_amount existed stored the owner's own price
+ * there. Only meaningful for responses sent to the owner. */
+export function ownerEarningsFrom(b: { amount?: number; owner_amount?: number }): number {
+  const centavos = typeof b.owner_amount === 'number' ? b.owner_amount : typeof b.amount === 'number' ? b.amount : 0;
+  return centavos / 100;
 }
