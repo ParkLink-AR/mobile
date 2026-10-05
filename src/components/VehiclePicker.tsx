@@ -17,8 +17,8 @@ interface VehiclePickerProps {
 }
 
 /** The booking confirm screen's "Seleccionar vehículo" entry point -- entirely optional
- * (see the Card wrapping this in confirm.tsx/confirm-stay.tsx), so unlike
- * PaymentMethodPicker there's no always-selected default: `selected` starts null and a
+ * (see the Card wrapping this in confirm.tsx/confirm-stay.tsx), so there's no
+ * always-selected default: `selected` starts null and a
  * "Ninguno" option lets the driver clear a prior pick. Each option renders the real plate
  * graphic (VehiclePlate), not just text, per how this was asked for. */
 export function VehiclePicker({ vehicles, selected, onSelect, vehiclesScreenPath }: VehiclePickerProps) {

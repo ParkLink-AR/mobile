@@ -19,7 +19,6 @@ export default function DriverLayout() {
       <Stack.Screen name="booking/confirm" options={{ title: t('driver.booking.confirm.title') }} />
       <Stack.Screen name="booking/confirm-stay" options={{ title: t('driver.booking.confirm.title') }} />
       <Stack.Screen name="booking/success" options={{ title: '', headerBackVisible: false }} />
-      <Stack.Screen name="booking/cash-pending" options={{ title: '', headerBackVisible: false }} />
       <Stack.Screen name="payment/pending" options={{ title: t('driver.payment.pending.title'), headerBackVisible: false }} />
       <Stack.Screen name="payment/success" options={{ title: '', headerBackVisible: false }} />
       <Stack.Screen name="payment/failure" options={{ title: '', headerBackVisible: false }} />

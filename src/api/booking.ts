@@ -178,29 +178,6 @@ export async function createPaymentPreference(
 }
 
 /**
- * Sentinel payment_id for a booking paid in person, in cash -- there's no
- * real Mercado Pago payment to reference, so confirm.tsx/confirm-stay.tsx
- * send this literal instead of a checkout flow. booking-service's refund
- * client recognizes it and skips the (nonsensical) refund call if the
- * booking later gets rejected, cancelled, or expires unanswered.
- */
-export const CASH_PAYMENT_ID = 'CASH';
-
-/**
- * Confirms a PENDING_PAYMENT booking. payment_id is either the real Mercado
- * Pago payment id (once the checkout succeeds) or CASH_PAYMENT_ID for an
- * in-person cash booking.
- *
- * POST /bookings/{id}/confirm
- */
-export async function confirmBookingApi(bookingId: string, paymentId: string): Promise<BookingApiResponse> {
-  return request(`/bookings/${bookingId}/confirm`, {
-    method: 'POST',
-    body: JSON.stringify({ payment_id: paymentId }),
-  });
-}
-
-/**
  * Returns the booking history for a user.
  *
  * GET /users/{userId}/bookings/history

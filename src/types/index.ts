@@ -202,12 +202,3 @@ export interface Settlement {
   payouts?: SettlementPayout[]; // sólo presente en el fetch de detalle
 }
 
-export type PaymentMethodType = 'card' | 'cash';
-
-export interface PaymentMethod {
-  id: string;
-  type: PaymentMethodType;
-  brand?: 'Visa' | 'Mastercard';
-  last4?: string;
-  label: string;
-}
