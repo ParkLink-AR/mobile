@@ -239,7 +239,7 @@ function MercosurBikePlate({
       width: '100%',
       textAlign: 'center',
       color: '#444',
-      fontSize: Math.round((textHeight / 2) * 1.05),
+      fontSize: Math.round((textHeight / 2) * 1.15),
       lineHeight: Math.round(textHeight / 2),
       letterSpacing: 0.5,
       fontFamily: fontLoaded ? PLATE_FONT : undefined,
