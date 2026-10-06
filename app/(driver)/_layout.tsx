@@ -19,7 +19,6 @@ export default function DriverLayout() {
       <Stack.Screen name="booking/confirm" options={{ title: t('driver.booking.confirm.title') }} />
       <Stack.Screen name="booking/confirm-stay" options={{ title: t('driver.booking.confirm.title') }} />
       <Stack.Screen name="booking/success" options={{ title: '', headerBackVisible: false }} />
-      <Stack.Screen name="booking/cash-pending" options={{ title: '', headerBackVisible: false }} />
       <Stack.Screen name="payment/pending" options={{ title: t('driver.payment.pending.title'), headerBackVisible: false }} />
       <Stack.Screen name="payment/success" options={{ title: '', headerBackVisible: false }} />
       <Stack.Screen name="payment/failure" options={{ title: '', headerBackVisible: false }} />
@@ -39,6 +38,7 @@ export default function DriverLayout() {
       <Stack.Screen name="spots/[id]/documentation" options={{ title: t('owner.spot.documentation.title') }} />
       <Stack.Screen name="settlements" options={{ title: t('layout.owner.settlements') }} />
       <Stack.Screen name="settlements/[id]" options={{ title: t('layout.owner.settlementDetail') }} />
+      <Stack.Screen name="vehicles" options={{ title: t('vehicles.title') }} />
       {/* Profile */}
       <Stack.Screen name="profile-edit" options={{ title: t('driver.profile.edit') }} />
       <Stack.Screen name="change-email" options={{ title: t('changeEmail.title') }} />

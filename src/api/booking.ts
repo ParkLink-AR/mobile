@@ -12,7 +12,10 @@ export interface BookingApiResponse {
   end: string;
   status: string;
   hold_expires_at?: string;
-  amount: number;
+  amount: number; // centavos -- what the driver was charged (owner's price + commission)
+  // centavos -- what the spot's owner earns (their own price). Only sent to the owner;
+  // absent for a booking that predates it, whose `amount` was the owner's price itself.
+  owner_amount?: number;
   payment_id?: string;
   // Set once, the moment Mercado Pago's payment was actually confirmed -- absent means
   // the booking was never paid, regardless of its current status (e.g. EXPIRED, or
@@ -31,6 +34,16 @@ export interface BookingApiResponse {
   verification_code?: string;
   verified_at?: string;
   updated_at: string;
+  // The vehicle the driver picked (optionally) from their own saved list when booking --
+  // absent if they didn't pick one. See booking-service's vehicleResponseFromEntity.
+  vehicle?: BookingVehicleApiResponse;
+}
+
+export interface BookingVehicleApiResponse {
+  plate: string;
+  brand: string;
+  model: string;
+  country: string;
 }
 
 export type ReviewTargetType = 'spot' | 'owner' | 'driver';
@@ -89,8 +102,9 @@ export interface ScheduleEntryBody {
   end_hour: number;
 }
 
+// The driver is always the authenticated caller -- booking-service takes it from the
+// session (X-User-Id), never from the body.
 export interface CreateBookingBody {
-  user_id: string;
   // RFC3339. For kind "STAY", `start` is the driver's chosen check-in
   // instant (date + hour) -- booking-service re-derives the authoritative
   // start/end/amount itself from a parking-service quote (see below), but
@@ -117,6 +131,9 @@ export interface CreateBookingBody {
     // Omitted/0 is treated as 1.
     capacity?: number;
   };
+  // Entirely optional -- the driver may not have picked (or saved) a vehicle. Omit the
+  // whole object rather than sending partial fields.
+  vehicle?: BookingVehicleApiResponse;
 }
 
 // ── API calls ─────────────────────────────────────────────────────────────────
@@ -135,16 +152,15 @@ export async function createBookingApi(body: CreateBookingBody): Promise<Booking
 }
 
 /**
- * Creates a Mercado Pago checkout preference.
- * The externalReference MUST be the bookingId so the webhook can confirm it.
+ * Creates a Mercado Pago checkout preference for the caller's own booking.
+ * The externalReference MUST be the bookingId: payment-service looks the
+ * booking up by it and always charges the booking's own server-side price.
  *
  * POST /payments/create-preference
  */
 export interface CreatePreferenceBody {
-  amount: number;
   title: string;
   description?: string;
-  currency?: string;
   payerEmail?: string;
   externalReference: string; // bookingId
 }
@@ -161,29 +177,6 @@ export async function createPaymentPreference(
   return request('/payments/create-preference', {
     method: 'POST',
     body: JSON.stringify(body),
-  });
-}
-
-/**
- * Sentinel payment_id for a booking paid in person, in cash -- there's no
- * real Mercado Pago payment to reference, so confirm.tsx/confirm-stay.tsx
- * send this literal instead of a checkout flow. booking-service's refund
- * client recognizes it and skips the (nonsensical) refund call if the
- * booking later gets rejected, cancelled, or expires unanswered.
- */
-export const CASH_PAYMENT_ID = 'CASH';
-
-/**
- * Confirms a PENDING_PAYMENT booking. payment_id is either the real Mercado
- * Pago payment id (once the checkout succeeds) or CASH_PAYMENT_ID for an
- * in-person cash booking.
- *
- * POST /bookings/{id}/confirm
- */
-export async function confirmBookingApi(bookingId: string, paymentId: string): Promise<BookingApiResponse> {
-  return request(`/bookings/${bookingId}/confirm`, {
-    method: 'POST',
-    body: JSON.stringify({ payment_id: paymentId }),
   });
 }
 
@@ -388,4 +381,37 @@ export async function addTicketMessageApi(ticketId: string, body: string): Promi
     method: 'POST',
     body: JSON.stringify({ body }),
   });
+}
+
+/**
+ * The platform's current commission rate -- what gets added on top of a spot owner's own
+ * price for the driver to pay (the owner always receives their own price in full; see
+ * useCommissionStore). Same read as the admin panel's settings screen, at a non-admin path.
+ *
+ * GET /settings/commission
+ */
+export async function getCommissionRateApi(): Promise<{ commissionRateBp: number; commissionRatePercent: number }> {
+  const response = await request<{ commission_rate_bp: number; commission_rate_percent: number }>(
+    '/settings/commission',
+  );
+  return { commissionRateBp: response.commission_rate_bp, commissionRatePercent: response.commission_rate_percent };
+}
+
+export interface RefundStatusResponse {
+  /** 'refunded': the money went back. 'in_progress': it's being processed (or retried).
+   * 'delayed': every automatic retry failed -- ParkLink staff has to step in.
+   * 'none': no Mercado Pago payment on record for this booking. */
+  status: 'refunded' | 'in_progress' | 'delayed' | 'none';
+  amount?: number; // pesos
+  refundedAt?: string | null;
+}
+
+/**
+ * Where the refund of a cancelled, already-paid booking stands -- only for the booking's
+ * own driver.
+ *
+ * GET /payments/refund-status/{bookingId}
+ */
+export async function getRefundStatusApi(bookingId: string): Promise<RefundStatusResponse> {
+  return request(`/payments/refund-status/${bookingId}`);
 }

@@ -9,16 +9,18 @@ import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail, getSpotPricePerHour, toISOToday } from '@/src/services/parkingService';
 import { getDriverVisiblePrice } from '@/src/services/utils';
+import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { getAvailability } from '@/src/api/parking';
-import { ParkingSpot } from '@/src/types';
+import { ParkingSpot, Vehicle } from '@/src/types';
 import { VehicleType, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
-import { createBookingApi, createPaymentPreference, confirmBookingApi, CASH_PAYMENT_ID, type ScheduleEntryBody } from '@/src/api/booking';
-import { PaymentMethodPicker } from '@/src/components/PaymentMethodPicker';
-import { getPaymentOptions, MERCADOPAGO_METHOD_ID, CASH_METHOD_ID } from '@/src/services/paymentOptions';
+import { createBookingApi, createPaymentPreference, type ScheduleEntryBody } from '@/src/api/booking';
+import { getVehicles } from '@/src/api/auth';
+import { PaymentMethodDisplay } from '@/src/components/PaymentMethodDisplay';
+import { VehiclePicker } from '@/src/components/VehiclePicker';
 
 // ── Helpers for availability pre-check ───────────────────────────────────────
 
@@ -60,7 +62,10 @@ export default function ConfirmBooking() {
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
+  const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   const { spotId, hours, startHour, endHour, bookingDate, vehicleType } = useLocalSearchParams<{
     spotId: string;
     hours: string;
@@ -73,7 +78,8 @@ export default function ConfirmBooking() {
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState(MERCADOPAGO_METHOD_ID);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   // Alert.alert with a buttons array is a no-op on web -- see bookings/[id].tsx's
   // handleCancel for the same fix applied to the cancel-booking confirmation.
   const [conflictModalVisible, setConflictModalVisible] = useState(false);
@@ -106,6 +112,12 @@ export default function ConfirmBooking() {
       }
     });
   }, [spotId]);
+
+  // Entirely optional -- an empty list just means the "Seleccionar vehículo" picker
+  // shows its empty state (see VehiclePicker's "vehicles.pickerEmpty").
+  useEffect(() => {
+    if (user) getVehicles(user.id).then(setVehicles).catch(() => {});
+  }, [user?.id]);
 
   // Full booking + MercadoPago payment flow:
   //   0. GET /availability        → pre-check: confirm slot is still free
@@ -160,13 +172,17 @@ export default function ConfirmBooking() {
       }));
 
       const created = await createBookingApi({
-        user_id: user.id,
         start: startISO,
         end: endISO,
-        amount: Math.round(pricePerHour * reservedHours * 100), // centavos
+        amount: Math.round(pricePerHour * reservedHours * 100), // centavos -- booking-service recomputes this itself and ignores whatever's sent here
         parking_spot: { id: spotId, schedule, capacity: spot.capacity },
+        vehicle: selectedVehicle
+          ? { plate: selectedVehicle.plate, brand: selectedVehicle.brand, model: selectedVehicle.model, country: selectedVehicle.country }
+          : undefined,
       });
       bookingId = created.id;
+      // No amount travels to the checkout: payment-service charges the booking's own
+      // server-side price (owner's price + platform commission), looked up by bookingId.
     } catch (err: any) {
       const isConflict = err instanceof ApiError && err.status === 409;
       if (isConflict) {
@@ -179,31 +195,10 @@ export default function ConfirmBooking() {
       return;
     }
 
-    // ── Cash: no MercadoPago involved -- confirm straight away and skip to
-    // the owner-approval wait. ─────────────────────────────────────────────
-    if (paymentMethod === CASH_METHOD_ID) {
-      try {
-        await confirmBookingApi(bookingId, CASH_PAYMENT_ID);
-      } catch (err: any) {
-        const msg = err?.detail ?? err?.message ?? t('driver.booking.errorCreating');
-        Alert.alert(t('driver.payment.errorTitle'), msg);
-        setProcessing(false);
-        return;
-      }
-      setProcessing(false);
-      router.replace({
-        pathname: `${group}/booking/cash-pending`,
-        params: { total: String(getDriverVisiblePrice(pricePerHour) * reservedHours) },
-      });
-      return;
-    }
-
     // ── Step 2: create MercadoPago preference ───────────────────────────────
     let checkoutUrl: string;
     try {
-      const visibleTotal = getDriverVisiblePrice(pricePerHour) * reservedHours;
       const preference = await createPaymentPreference({
-        amount: visibleTotal,
         title: `Cochera ${spot.title}`,
         description: `Reserva ${bookingDate ?? 'hoy'} ${String(start).padStart(2, '0')}:00–${String(end).padStart(2, '0')}:00`,
         payerEmail: user.email,
@@ -273,7 +268,7 @@ export default function ConfirmBooking() {
   // flujo de reserva por hora, así que esto no debería pasar en la práctica.
   if (pricePerHour === null) return <ActivityIndicator style={{ marginTop: 40 }} />;
 
-  const visiblePricePerHour = getDriverVisiblePrice(pricePerHour);
+  const visiblePricePerHour = getDriverVisiblePrice(pricePerHour, commissionRatePercent);
   const visibleTotal = visiblePricePerHour * reservedHours;
 
   const styles = StyleSheet.create({
@@ -288,23 +283,23 @@ export default function ConfirmBooking() {
       padding: 16,
       gap: 4,
     },
-    spotTitle: { fontSize: 19, fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
+    spotTitle: { fontSize: sc(19), fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
     addressRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    spotAddress: { flex: 1, fontSize: 13, color: colors.textSecondary, lineHeight: 17 },
+    spotAddress: { flex: 1, fontSize: sc(13), color: colors.textSecondary, lineHeight: sc(17) },
 
     card: { gap: 12 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     sectionLabel: {
-      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase',
     },
     detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    detailLabel: { flex: 1, fontSize: 14, color: colors.textSecondary },
-    detailValue: { fontSize: 14, color: colors.text, fontWeight: '600' },
+    detailLabel: { flex: 1, fontSize: sc(14), color: colors.textSecondary },
+    detailValue: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
     divider: { height: 1, backgroundColor: colors.border },
     totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    totalLabel: { fontSize: 14, color: colors.text, fontWeight: '600' },
-    totalValue: { fontSize: 18, color: colors.teal, fontWeight: '700' },
+    totalLabel: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
+    totalValue: { fontSize: sc(18), color: colors.teal, fontWeight: '700' },
 
     button: { marginTop: 2 },
 
@@ -317,18 +312,18 @@ export default function ConfirmBooking() {
       backgroundColor: colors.surface, alignItems: 'center', gap: 8,
     },
     modalTitle: {
-      fontSize: 16, fontWeight: '700', color: colors.text,
+      fontSize: sc(16), fontWeight: '700', color: colors.text,
       marginBottom: 8, textAlign: 'center',
     },
     modalBody: {
-      fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 18,
+      fontSize: sc(13), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(18),
       marginBottom: 8,
     },
     modalConfirmBtn: {
       width: '100%', borderRadius: 10, paddingVertical: 12, alignItems: 'center',
       backgroundColor: colors.teal, marginTop: 8,
     },
-    modalConfirmBtnText: { fontSize: 15, fontWeight: '600', color: colors.white },
+    modalConfirmBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.white },
   });
 
   return (
@@ -338,7 +333,7 @@ export default function ConfirmBooking() {
           <View style={styles.heroCard}>
             <Text style={styles.spotTitle}>{spot.title}</Text>
             <View style={styles.addressRow}>
-              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+              <Ionicons name="location-outline" size={sc(14)} color={colors.textSecondary} />
               <Text style={styles.spotAddress} numberOfLines={2}>{spot.address}</Text>
             </View>
           </View>
@@ -346,12 +341,12 @@ export default function ConfirmBooking() {
           <Card>
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+                <Ionicons name="calendar-outline" size={sc(15)} color={colors.textSecondary} />
                 <Text style={styles.sectionLabel}>{t('driver.booking.summary')}</Text>
               </View>
 
               <View style={styles.detailRow}>
-                <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="calendar-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('driver.booking.date')}</Text>
                 <Text style={styles.detailValue}>
                   {bookingDate
@@ -360,7 +355,7 @@ export default function ConfirmBooking() {
                 </Text>
               </View>
               <View style={styles.detailRow}>
-                <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="time-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('driver.booking.time')}</Text>
                 <Text style={styles.detailValue}>
                   {String(start).padStart(2, '0')}:00 {t('driver.booking.timeTo')} {String(end).padStart(2, '0')}:00
@@ -368,18 +363,18 @@ export default function ConfirmBooking() {
               </View>
               {spot.pricePerHourByVehicleType && effectiveVehicleType && (
                 <View style={styles.detailRow}>
-                  <Ionicons name="car-outline" size={16} color={colors.textSecondary} />
+                  <Ionicons name="car-outline" size={sc(16)} color={colors.textSecondary} />
                   <Text style={styles.detailLabel}>{t('spot.vehicleType')}</Text>
                   <Text style={styles.detailValue}>{t(VEHICLE_TYPE_LABEL_KEYS[effectiveVehicleType])}</Text>
                 </View>
               )}
               <View style={styles.detailRow}>
-                <Ionicons name="pricetag-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="pricetag-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('driver.booking.pricePerHour')}</Text>
                 <Text style={styles.detailValue}>${visiblePricePerHour}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Ionicons name="hourglass-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="hourglass-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('driver.booking.hours')}</Text>
                 <Text style={styles.detailValue}>{reservedHours} {t('driver.booking.hoursUnit')}</Text>
               </View>
@@ -396,14 +391,25 @@ export default function ConfirmBooking() {
           <Card>
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="card-outline" size={15} color={colors.textSecondary} />
+                <Ionicons name="car-sport-outline" size={sc(15)} color={colors.textSecondary} />
+                <Text style={styles.sectionLabel}>{t('driver.booking.vehicle.sectionTitle')}</Text>
+              </View>
+              <VehiclePicker
+                vehicles={vehicles}
+                selected={selectedVehicle}
+                onSelect={setSelectedVehicle}
+                vehiclesScreenPath={`${group}/vehicles`}
+              />
+            </View>
+          </Card>
+
+          <Card>
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="card-outline" size={sc(15)} color={colors.textSecondary} />
                 <Text style={styles.sectionLabel}>{t('driver.booking.methodPayment')}</Text>
               </View>
-              <PaymentMethodPicker
-                methods={getPaymentOptions()}
-                selectedId={paymentMethod}
-                onSelect={setPaymentMethod}
-              />
+              <PaymentMethodDisplay />
             </View>
           </Card>
 
@@ -411,9 +417,7 @@ export default function ConfirmBooking() {
             title={
               processing
                 ? t('driver.booking.processing')
-                : paymentMethod === CASH_METHOD_ID
-                  ? t('driver.booking.confirmCash').replace('%{total}', String(visibleTotal))
-                  : t('driver.booking.confirmPay').replace('%{total}', String(visibleTotal))
+                : t('driver.booking.confirmPay').replace('%{total}', String(visibleTotal))
             }
             onPress={reserve}
             disabled={processing}

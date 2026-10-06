@@ -8,6 +8,7 @@ import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
 import { VerifiedBadge } from '@/src/components/VerifiedBadge';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
@@ -107,7 +108,8 @@ export default function Profile() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    scrollContent: { padding: 16, paddingBottom: 120, gap: 16 },
+    scrollContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, gap: 16 },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 
     profileCard: {
       backgroundColor: colors.surface, borderRadius: 14, padding: sc(20),
@@ -204,9 +206,12 @@ export default function Profile() {
   });
 
   return (
-    <Screen style={styles.container} tabBarPadding>
+    <Screen style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={typography.h1}>{t('driver.profile.title')}</Text>
+        <View style={styles.headerRow}>
+          <Text style={typography.h1}>{t('driver.profile.title')}</Text>
+          <RoleBadge />
+        </View>
 
         {/* Profile card */}
         <View style={styles.profileCard}>
@@ -233,6 +238,26 @@ export default function Profile() {
           <Text style={[styles.actionBtnText, styles.editBtnText]}>{t('driver.profile.edit')}</Text>
           <Ionicons name="chevron-forward" size={sc(16)} color={colors.white} />
         </Pressable>
+
+        {/* Mis vehículos -- cualquier cuenta puede reservar como conductor en
+            cualquier momento (ver el comentario de profile.changeMode más abajo),
+            así que esto vive fuera del bloque isOwner. */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{t('profile.vehicles.section')}</Text>
+          <View style={styles.sectionLine} />
+        </View>
+        <View style={styles.prefCard}>
+          <Pressable
+            style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => router.push(`${group}/vehicles`)}
+          >
+            <View style={styles.prefRowLeft}>
+              <Ionicons name="car-outline" size={sc(18)} color={colors.teal} />
+              <Text style={styles.prefLabel}>{t('profile.vehicles')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={sc(16)} color={colors.textSecondary} />
+          </Pressable>
+        </View>
 
         {/* Finanzas / legales — solo propietario. Mismo patrón de tarjeta con filas
             divididas que Preferencias, más abajo -- dos botones sueltos uno arriba

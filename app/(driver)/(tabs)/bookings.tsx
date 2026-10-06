@@ -1,17 +1,18 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
+import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getUserBookingsApi, BookingApiResponse } from '@/src/api/booking';
 import { getParkingSpotsByIds } from '@/src/api/parking';
-import { mapBookingDateRange, formatBookingWhen } from '@/src/services/bookingDates';
+import { mapBookingDateRange, formatBookingWhen, toVehicleSnapshot } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 /** Maps the backend wire shape to the UI Booking type. */
@@ -32,6 +33,7 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
     total: amount,
     status: b.status as Booking['status'],
     verificationCode: b.verification_code,
+    vehicle: toVehicleSnapshot(b.vehicle),
   };
 }
 
@@ -39,13 +41,17 @@ export default function DriverBookings() {
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       if (!user) return;
+      setLoading(true);
       getUserBookingsApi(user.id)
         .then(async (list) => {
           // Deduplicate spot ids and fetch all their titles in a single batch request
@@ -57,15 +63,17 @@ export default function DriverBookings() {
           // Any id not found by the batch call (deleted spot, etc.) falls back to showing the id
           setBookings(list.map((b) => mapApiBooking(b, spotTitleMap[b.parking_spot_id] ?? b.parking_spot_id)));
         })
-        .catch((err) => console.warn('[Bookings] fetch error:', err));
+        .catch((err) => console.warn('[Bookings] fetch error:', err))
+        .finally(() => setLoading(false));
     }, [user?.id])
   );
 
   if (!user) return null;
 
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
-    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 8, gap: 8 },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
     total: { color: colors.teal, fontWeight: '700', marginTop: 4 },
     codeChip: {
       alignSelf: 'flex-start',
@@ -77,21 +85,35 @@ export default function DriverBookings() {
       borderWidth: 1,
       borderColor: colors.teal,
     },
-    codeChipText: { color: colors.teal, fontWeight: '700', fontSize: 12 },
+    codeChipText: { color: colors.teal, fontWeight: '700', fontSize: sc(12) },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-    emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    emptyText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
   });
+
+  if (loading) {
+    return (
+      <Screen style={styles.container}>
+        <Text style={typography.h1}>{t('driver.bookings.title')}</Text>
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator color={colors.teal} />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen style={styles.container}>
-      <Text style={typography.h1}>{t('driver.bookings.title')}</Text>
+      <View style={styles.headerRow}>
+        <Text style={typography.h1}>{t('driver.bookings.title')}</Text>
+        <RoleBadge />
+      </View>
       <FlatList
         data={bookings}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ gap: 10, flexGrow: 1 }}
+        contentContainerStyle={bookings.length === 0 ? { gap: 10, flexGrow: 1 } : { gap: 10 }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="calendar-outline" size={40} color={colors.textSecondary} />
+            <Ionicons name="calendar-outline" size={sc(40)} color={colors.textSecondary} />
             <Text style={styles.emptyText}>{t('driver.bookings.empty')}</Text>
           </View>
         }
@@ -99,7 +121,7 @@ export default function DriverBookings() {
           <TouchableOpacity onPress={() => router.push(`${group}/bookings/${item.id}`)}>
             <Card>
               <View style={styles.row}>
-                <Text style={typography.h2}>{item.parkingSpotTitle}</Text>
+                <Text style={[typography.h2, { flex: 1 }]}>{item.parkingSpotTitle}</Text>
                 <StatusBadge status={item.status} />
               </View>
               <Text style={typography.caption}>

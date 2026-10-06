@@ -11,13 +11,12 @@ import {
   ActivityIndicator,
   Platform,
   Pressable,
-  Animated,
-  PanResponder,
 } from 'react-native';
 import MapView, { Marker, Region, PROVIDER_DEFAULT } from 'react-native-maps';
 import ClusteredMapView from 'react-native-map-clustering';
 import * as Location from 'expo-location';
 import { router, useSegments } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Chip } from '@/src/components/Chip';
 import { Button } from '@/src/components/Button';
@@ -25,6 +24,7 @@ import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
 import { Screen } from '@/src/components/Screen';
 import { DatePickerField } from '@/src/components/DatePickerField';
 import { getDriverVisiblePrice } from '@/src/services/utils';
+import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
@@ -36,18 +36,19 @@ import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 import { useLocationPermission } from '@/src/hooks/useLocationPermission';
 import { MAP_STYLE } from '@/src/theme/mapStyle';
+import { useScale } from '@/src/theme/typography';
 
 // Precio a mostrar en el pin del mapa: por hora si la cochera lo ofrece
 // (aunque también tenga estadía -- ver el pedido del usuario de priorizar
 // el precio por hora), si no por día (estadía). Mismo criterio de "precio
 // mínimo" que ParkingSpotCard.priceBadgeLabel cuando varía por vehículo.
-function mapPinPrice(spot: ParkingSpot): string {
+function mapPinPrice(spot: ParkingSpot, commissionRatePercent: number): string {
   if (spot.hourlyEnabled) {
     const price = getMinPricePerHour(spot);
-    if (price !== null) return `$${getDriverVisiblePrice(price)}`;
+    if (price !== null) return `$${getDriverVisiblePrice(price, commissionRatePercent)}`;
   }
   if (spot.stayEnabled && spot.pricePerDay !== null) {
-    return `$${getDriverVisiblePrice(spot.pricePerDay)}${t('spot.pricePerDay.short')}`;
+    return `$${getDriverVisiblePrice(spot.pricePerDay, commissionRatePercent)}${t('spot.pricePerDay.short')}`;
   }
   return t('spot.stayOnlyBadge');
 }
@@ -62,7 +63,11 @@ const DEFAULT_REGION: Region = {
 
 export function SearchScreen() {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const group = `/${useSegments()[0]}`;
+  const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   useLanguage();
   const user = useSessionStore((s) => s.user);
   const favoriteIds = useFavoritesStore((s) => s.ids);
@@ -130,32 +135,6 @@ export function SearchScreen() {
     });
   }
 
-  // ── Swipe-to-dismiss del modal de filtros ───────────────────────────────
-  // Sólo el header (agarradera + título, fuera del ScrollView) escucha el
-  // gesto -- así no compite con el scroll del ScrollView de adentro salvo
-  // cuando ese scroll ya está en el tope: recién ahí arrastrar hacia abajo
-  // mueve la hoja en vez de intentar (inútilmente) scrollear más arriba.
-  const filterScrollOffset = useRef(0);
-  const filterSheetY = useRef(new Animated.Value(0)).current;
-  const filterPanResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) =>
-        filterScrollOffset.current <= 0 && gesture.dy > 4 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
-      onPanResponderMove: (_, gesture) => {
-        if (gesture.dy > 0) filterSheetY.setValue(gesture.dy);
-      },
-      onPanResponderRelease: (_, gesture) => {
-        if (gesture.dy > 100 || gesture.vy > 0.8) {
-          Animated.timing(filterSheetY, { toValue: 800, duration: 180, useNativeDriver: true }).start(() => {
-            setModalVisible(false);
-            filterSheetY.setValue(0);
-          });
-        } else {
-          Animated.spring(filterSheetY, { toValue: 0, useNativeDriver: true, bounciness: 6 }).start();
-        }
-      },
-    })
-  ).current;
 
   // fillAddress is true only when the user actually taps the locate button --
   // the automatic GPS fix on first mount (see the permission effect below)
@@ -298,14 +277,12 @@ export function SearchScreen() {
     setSpotsError(null);
      
     setLoadingSpots(true);
-    searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng })
+    searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng }, commissionRatePercent)
       .then((results) => {
-        // Never show the driver their own listings here -- if they search
-        // from home, their own garage is always "nearby" and can't be
-        // booked by themselves anyway.
-        const filtered = results.filter((spot) => spot.ownerId !== user?.id);
-        setSpots(filtered);
-        setSelectedSpotId(filtered[0]?.id ?? null);
+        // The user's own spots stay in the results -- opening one shows "Esta es tu
+        // cochera" instead of the booking options (see spot/[id].tsx).
+        setSpots(results);
+        setSelectedSpotId(results[0]?.id ?? null);
       })
       .catch((err) => {
         setSpotsError(err instanceof ApiError ? err.detail : t('search.location.error'));
@@ -355,6 +332,9 @@ export function SearchScreen() {
 
   const activeChips: { label: string; onRemove: () => void }[] = [];
   if (searchAddress) {
+    // locateMe only runs when the chip is tapped (an event handler), never during render --
+    // the refs rule can't tell a stored callback apart from a call.
+    // eslint-disable-next-line react-hooks/refs
     activeChips.push({
       label: t('search.nearBy', { address: searchAddress }),
       onRemove: () => locateMe(),
@@ -440,9 +420,23 @@ export function SearchScreen() {
       shadowRadius: 12,
       elevation: 12,
     },
+    locationErrorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginHorizontal: 16,
+      marginTop: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    locationErrorText: { flex: 1, fontSize: 13, color: colors.textSecondary },
     candidateEmpty: {
       paddingVertical: 16,
-      fontSize: 13,
+      fontSize: sc(13),
       color: colors.textSecondary,
       textAlign: 'center',
     },
@@ -462,7 +456,7 @@ export function SearchScreen() {
     searchInput: {
       flex: 1,
       minWidth: 0,
-      fontSize: 14,
+      fontSize: sc(14),
       color: colors.text,
       height: '100%',
     },
@@ -480,7 +474,7 @@ export function SearchScreen() {
       paddingHorizontal: 20,
       paddingTop: 8,
       color: colors.textSecondary,
-      fontSize: 13,
+      fontSize: sc(13),
       backgroundColor: colors.surface,
     },
     error: {
@@ -488,7 +482,7 @@ export function SearchScreen() {
       paddingTop: 4,
       paddingBottom: 8,
       color: '#C62828',
-      fontSize: 13,
+      fontSize: sc(13),
       backgroundColor: colors.surface,
     },
     // ── Toolbar (filters + view toggle) ─────────────────────────────────────
@@ -514,7 +508,7 @@ export function SearchScreen() {
       backgroundColor: hasActiveFilters ? colors.teal + '12' : colors.surface,
     },
     filterButtonText: {
-      fontSize: 13,
+      fontSize: sc(13),
       fontWeight: '600',
       color: hasActiveFilters ? colors.teal : colors.textSecondary,
     },
@@ -527,7 +521,7 @@ export function SearchScreen() {
       justifyContent: 'center',
     },
     filterBadgeText: {
-      fontSize: 10,
+      fontSize: sc(10),
       fontWeight: '700',
       color: colors.white,
     },
@@ -552,7 +546,7 @@ export function SearchScreen() {
       backgroundColor: colors.teal,
     },
     segmentText: {
-      fontSize: 13,
+      fontSize: sc(13),
       fontWeight: '600',
       color: colors.textSecondary,
     },
@@ -579,10 +573,10 @@ export function SearchScreen() {
       gap: 12,
     },
     feedbackText: {
-      fontSize: 15,
+      fontSize: sc(15),
       color: colors.textSecondary,
       textAlign: 'center',
-      lineHeight: 22,
+      lineHeight: sc(22),
     },
     retryButton: {
       marginTop: 4,
@@ -593,15 +587,15 @@ export function SearchScreen() {
       borderColor: colors.teal,
     },
     retryButtonText: {
-      fontSize: 13,
+      fontSize: sc(13),
       fontWeight: '600',
       color: colors.teal,
     },
     // ── List content ────────────────────────────────────────────────────────
     listContent: {
-      padding: 16,
+      paddingHorizontal: 16,
+      paddingTop: 16,
       gap: 12,
-      paddingBottom: 120,
     },
     // ── Map view ────────────────────────────────────────────────────────────
     mapWrapper: {
@@ -632,7 +626,7 @@ export function SearchScreen() {
       backgroundColor: colors.teal,
       transform: [{ scale: 1.15 }],
     },
-    pinText: { color: colors.white, fontSize: 12, fontWeight: '700' },
+    pinText: { color: colors.white, fontSize: sc(12), fontWeight: '700' },
     // "My location" FAB -- top-right, clear of the selected-spot card that
     // can pop up over the bottom of the map (avoids guessing that card's
     // height to avoid overlapping it).
@@ -669,7 +663,7 @@ export function SearchScreen() {
     // ── Filter modal ─────────────────────────────────────────────────────────
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(4, 35, 71, 0.45)',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
       justifyContent: 'flex-end',
     },
     modalContent: {
@@ -689,14 +683,14 @@ export function SearchScreen() {
       marginBottom: 16,
     },
     modalTitle: {
-      fontSize: 18,
+      fontSize: sc(18),
       fontWeight: '700',
       color: colors.text,
       letterSpacing: -0.3,
       marginBottom: 4,
     },
     sectionLabel: {
-      fontSize: 12,
+      fontSize: sc(12),
       fontWeight: '600',
       color: colors.textSecondary,
       letterSpacing: 0.6,
@@ -716,14 +710,14 @@ export function SearchScreen() {
       borderColor: colors.border,
       borderRadius: 10,
       padding: 12,
-      fontSize: 15,
+      fontSize: sc(15),
       color: colors.text,
       backgroundColor: colors.background,
     },
     dateRow: { marginTop: 4 },
     scheduleRow: { flexDirection: 'row', gap: 12, marginTop: 10 },
     hourBlock: { flex: 1, gap: 4 },
-    hourLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '500' },
+    hourLabel: { fontSize: sc(11), color: colors.textSecondary, fontWeight: '500' },
     hourControl: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       borderWidth: 1, borderColor: colors.border, borderRadius: 8,
@@ -733,13 +727,13 @@ export function SearchScreen() {
       width: 26, height: 26, borderRadius: 13,
       backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
     },
-    hourValue: { fontSize: 14, fontWeight: '700', color: colors.text, minWidth: 44, textAlign: 'center' },
+    hourValue: { fontSize: sc(14), fontWeight: '700', color: colors.text, minWidth: 44, textAlign: 'center' },
     applyButton: { marginTop: 20, marginBottom: 6 },
     clearLink: {
       textAlign: 'center',
       marginTop: 10,
       marginBottom: 4,
-      fontSize: 14,
+      fontSize: sc(14),
       color: colors.textSecondary,
       fontWeight: '500',
     },
@@ -753,11 +747,16 @@ export function SearchScreen() {
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    candidateMain: { flex: 1, minWidth: 0, fontSize: 14, color: colors.text, lineHeight: 19 },
+    candidateMain: { flex: 1, minWidth: 0, fontSize: sc(14), color: colors.text, lineHeight: sc(19) },
   });
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} edges={['left', 'right']}>
+      {/* El inset de la barra de estado usa el fondo gris de la pantalla
+          (necesario más abajo para que las tarjetas de la lista resalten) --
+          esta franja lo pinta blanco para que combine con la barra de
+          búsqueda, en vez de dejar un gris visible justo arriba. */}
+      <View style={{ height: insets.top, backgroundColor: colors.surface }} />
       {/* ── Search bar ────────────────────────────────────────────── */}
       <View style={styles.searchWrapper}>
         <View style={styles.searchSection}>
@@ -765,7 +764,7 @@ export function SearchScreen() {
             {geocoding ? (
               <ActivityIndicator color={colors.textSecondary} size="small" />
             ) : (
-              <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
+              <Ionicons name="search-outline" size={sc(16)} color={colors.textSecondary} />
             )}
             <TextInput
               style={styles.searchInput}
@@ -790,7 +789,7 @@ export function SearchScreen() {
                 }}
                 accessibilityLabel={t('search.clearAddress')}
               >
-                <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                <Ionicons name="close-circle" size={sc(18)} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
           </View>
@@ -803,7 +802,7 @@ export function SearchScreen() {
             {locating ? (
               <ActivityIndicator color={colors.white} size="small" />
             ) : (
-              <Ionicons name="locate" size={20} color={colors.white} />
+              <Ionicons name="locate" size={sc(20)} color={colors.white} />
             )}
           </TouchableOpacity>
         </View>
@@ -817,7 +816,7 @@ export function SearchScreen() {
                 keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => (
                   <TouchableOpacity style={styles.candidateRow} onPress={() => selectCandidate(item)}>
-                    <Ionicons name="location-outline" size={18} color={colors.teal} />
+                    <Ionicons name="location-outline" size={sc(18)} color={colors.teal} />
                     <Text style={styles.candidateMain} numberOfLines={2}>
                       {item.displayName}
                     </Text>
@@ -830,12 +829,21 @@ export function SearchScreen() {
           </View>
         )}
       </View>
+      {locationError && (
+        <View style={styles.locationErrorBanner}>
+          <Ionicons name="navigate-circle-outline" size={18} color={colors.textSecondary} />
+          <Text style={styles.locationErrorText}>{locationError}</Text>
+          <TouchableOpacity onPress={() => setLocationError(null)} hitSlop={8} accessibilityLabel={t('common.close')}>
+            <Ionicons name="close" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+      )}
       {/* ── Toolbar ────────────────────────────────────────────────── */}
       <View style={styles.toolbar}>
         <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
           <Ionicons
             name="options-outline"
-            size={15}
+            size={sc(15)}
             color={hasActiveFilters ? colors.teal : colors.textSecondary}
           />
           <Text style={styles.filterButtonText}>{t('search.filters')}</Text>
@@ -855,7 +863,7 @@ export function SearchScreen() {
           >
             <Ionicons
               name="list-outline"
-              size={14}
+              size={sc(14)}
               color={viewMode === 'list' ? colors.white : colors.textSecondary}
             />
             <Text style={[styles.segmentText, viewMode === 'list' && styles.segmentTextActive]}>
@@ -875,7 +883,7 @@ export function SearchScreen() {
             >
               <Ionicons
                 name="map-outline"
-                size={14}
+                size={sc(14)}
                 color={viewMode === 'map' ? colors.white : colors.textSecondary}
               />
               <Text style={[styles.segmentText, viewMode === 'map' && styles.segmentTextActive]}>
@@ -903,18 +911,17 @@ export function SearchScreen() {
           </View>
         ) : spotsError ? (
           <View style={styles.centeredFeedback}>
-            <Ionicons name="cloud-offline-outline" size={40} color={colors.textSecondary} />
+            <Ionicons name="cloud-offline-outline" size={sc(40)} color={colors.textSecondary} />
             <Text style={styles.feedbackText}>{spotsError}</Text>
             <TouchableOpacity
               style={styles.retryButton}
               onPress={() => {
                 setSpotsError(null);
                 setLoadingSpots(true);
-                searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng })
+                searchParkingSpots({ ...filters, lat: searchCoords.lat, lng: searchCoords.lng }, commissionRatePercent)
                   .then((results) => {
-                    const filtered = results.filter((spot) => spot.ownerId !== user?.id);
-                    setSpots(filtered);
-                    setSelectedSpotId(filtered[0]?.id ?? null);
+                    setSpots(results);
+                    setSelectedSpotId(results[0]?.id ?? null);
                   })
                   .catch((err) => setSpotsError(err instanceof ApiError ? err.detail : t('search.location.error')))
                   .finally(() => setLoadingSpots(false));
@@ -925,7 +932,7 @@ export function SearchScreen() {
           </View>
         ) : spots.length === 0 ? (
           <View style={styles.centeredFeedback}>
-            <Ionicons name="car-outline" size={40} color={colors.textSecondary} />
+            <Ionicons name="car-outline" size={sc(40)} color={colors.textSecondary} />
             <Text style={styles.feedbackText}>{t('search.noResults')}</Text>
           </View>
         ) : (
@@ -987,7 +994,7 @@ export function SearchScreen() {
                   tracksViewChanges={false}
                 >
                   <View style={[styles.pin, isSelected && styles.pinSelected]}>
-                    <Text style={styles.pinText}>{mapPinPrice(spot)}</Text>
+                    <Text style={styles.pinText}>{mapPinPrice(spot, commissionRatePercent)}</Text>
                   </View>
                 </Marker>
               );
@@ -1017,7 +1024,7 @@ export function SearchScreen() {
               ]}
             >
               <View style={{ backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 16, alignItems: 'center', gap: 8 }}>
-                <Ionicons name="car-outline" size={28} color={colors.textSecondary} />
+                <Ionicons name="car-outline" size={sc(28)} color={colors.textSecondary} />
                 <Text style={styles.feedbackText}>{t('search.noResults')}</Text>
               </View>
             </View>
@@ -1045,7 +1052,7 @@ export function SearchScreen() {
             {locating ? (
               <ActivityIndicator size="small" color={colors.teal} />
             ) : (
-              <Ionicons name="locate" size={20} color={colors.teal} />
+              <Ionicons name="locate" size={sc(20)} color={colors.teal} />
             )}
           </TouchableOpacity>
 
@@ -1077,17 +1084,10 @@ export function SearchScreen() {
       >
         <View style={styles.modalOverlay}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setModalVisible(false)} />
-          <Animated.View
-            style={[styles.modalContent, { transform: [{ translateY: filterSheetY }] }]}
-            {...filterPanResponder.panHandlers}
-          >
+          <View style={styles.modalContent}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>{t('search.filters.title')}</Text>
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              onScroll={(e) => { filterScrollOffset.current = e.nativeEvent.contentOffset.y; }}
-              scrollEventThrottle={16}
-            >
+            <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={styles.sectionLabel}>{t('search.filters.pricePerHour')}</Text>
               <View style={styles.row}>
                 <TextInput
@@ -1168,14 +1168,14 @@ export function SearchScreen() {
                           style={styles.hourBtn}
                           onPress={() => setFromHourInput((h) => Math.max(0, Math.min(h - 1, toHourInput - 1)))}
                         >
-                          <Ionicons name="remove" size={14} color={colors.text} />
+                          <Ionicons name="remove" size={sc(14)} color={colors.text} />
                         </TouchableOpacity>
                         <Text style={styles.hourValue}>{String(fromHourInput).padStart(2, '0')}:00</Text>
                         <TouchableOpacity
                           style={styles.hourBtn}
                           onPress={() => setFromHourInput((h) => Math.min(toHourInput - 1, h + 1))}
                         >
-                          <Ionicons name="add" size={14} color={colors.text} />
+                          <Ionicons name="add" size={sc(14)} color={colors.text} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -1186,14 +1186,14 @@ export function SearchScreen() {
                           style={styles.hourBtn}
                           onPress={() => setToHourInput((h) => Math.max(fromHourInput + 1, h - 1))}
                         >
-                          <Ionicons name="remove" size={14} color={colors.text} />
+                          <Ionicons name="remove" size={sc(14)} color={colors.text} />
                         </TouchableOpacity>
                         <Text style={styles.hourValue}>{String(toHourInput).padStart(2, '0')}:00</Text>
                         <TouchableOpacity
                           style={styles.hourBtn}
                           onPress={() => setToHourInput((h) => Math.min(23, Math.max(h + 1, fromHourInput + 1)))}
                         >
-                          <Ionicons name="add" size={14} color={colors.text} />
+                          <Ionicons name="add" size={sc(14)} color={colors.text} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -1210,7 +1210,7 @@ export function SearchScreen() {
                 {t('search.filters.clear')}
               </Text>
             </ScrollView>
-          </Animated.View>
+          </View>
         </View>
       </Modal>
     </Screen>

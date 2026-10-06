@@ -18,7 +18,7 @@ import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { StatusIcon } from '@/src/components/StatusIcon';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import {
   requestEmailRegistration,
   confirmEmailRegistration,
@@ -48,6 +48,8 @@ function formatDate(d: Date): string {
 export default function Register() {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
   const setSession = useSessionStore((s) => s.setSession);
 
@@ -241,7 +243,7 @@ export default function Register() {
       borderColor: colors.border,
       borderRadius: 8,
       padding: 12,
-      fontSize: 15,
+      fontSize: sc(15),
       color: colors.text,
     },
     codeInput: {
@@ -249,12 +251,12 @@ export default function Register() {
       borderColor: colors.border,
       borderRadius: 8,
       padding: 12,
-      fontSize: 24,
+      fontSize: sc(24),
       letterSpacing: 8,
       textAlign: 'center',
       color: colors.text,
     },
-    error: { color: '#C62828', fontSize: 13 },
+    error: { color: '#C62828', fontSize: sc(13) },
     link: { color: colors.teal, textAlign: 'center', marginTop: 4 },
     linkDisabled: { color: colors.textSecondary },
     phoneRow: { flexDirection: 'row', gap: 8 },
@@ -266,7 +268,7 @@ export default function Register() {
       justifyContent: 'center',
       minWidth: 100,
     },
-    countryButtonText: { fontSize: 15, color: colors.text },
+    countryButtonText: { fontSize: sc(15), color: colors.text },
     phoneInput: { flex: 1 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(4, 35, 71, 0.4)', justifyContent: 'flex-end' },
     modalContent: {
@@ -277,11 +279,11 @@ export default function Register() {
       padding: 16,
     },
     countryRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
-    countryRowFlag: { fontSize: 22 },
-    countryRowName: { flex: 1, fontSize: 15, color: colors.text },
-    countryRowDial: { fontSize: 14, color: colors.textSecondary },
+    countryRowFlag: { fontSize: sc(22) },
+    countryRowName: { flex: 1, fontSize: sc(15), color: colors.text },
+    countryRowDial: { fontSize: sc(14), color: colors.textSecondary },
     successWrap: { alignItems: 'center', gap: 12, paddingVertical: 40 },
-    successText: { fontSize: 16, fontWeight: '600', color: colors.text },
+    successText: { fontSize: sc(16), fontWeight: '600', color: colors.text },
     successButton: { alignSelf: 'stretch', marginTop: 12 },
     successCenteredText: { textAlign: 'center' },
     dateButton: {
@@ -290,7 +292,7 @@ export default function Register() {
       borderRadius: 8,
       padding: 12,
     },
-    dateButtonText: { fontSize: 15, color: birthDate ? colors.text : colors.textSecondary },
+    dateButtonText: { fontSize: sc(15), color: birthDate ? colors.text : colors.textSecondary },
   });
 
   if (successMessage) {
@@ -492,7 +494,7 @@ export default function Register() {
                 setBirthDate(e.target.value ? new Date(`${e.target.value}T00:00:00`) : null),
               style: {
                 ...styles.dateButton,
-                fontSize: 15,
+                fontSize: sc(15),
                 color: colors.text,
                 fontFamily: 'inherit',
               },

@@ -1,6 +1,6 @@
-import { Platform } from 'react-native';
-import { AccountType, AuthTokens, AuthUser } from '@/src/types';
+import { AccountType, AuthTokens, AuthUser, Vehicle } from '@/src/types';
 import { request, requestMultipart } from './client';
+import { appendLocalFile } from './formDataFile';
 
 interface RegisterInput {
   firstName: string;
@@ -231,22 +231,7 @@ export interface AvatarAsset {
 
 export async function uploadAvatar(userId: string, asset: AvatarAsset): Promise<AuthUser> {
   const formData = new FormData();
-  if (Platform.OS === 'web') {
-    // react-native-web's FormData is the browser's real implementation, which
-    // has no idea what to do with RN's {uri, name, type} object -- it just
-    // stringifies it (into the literal text "[object Object]"), so the
-    // actual file bytes have to be fetched into a real Blob first.
-    const blob = await (await fetch(asset.uri)).blob();
-    formData.append('file', blob, asset.name);
-  } else {
-    // On native, this {uri, name, type} shape is exactly what RN's bridge
-    // expects and turns into a proper multipart file part.
-    formData.append('file', {
-      uri: asset.uri,
-      name: asset.name,
-      type: asset.type,
-    } as unknown as Blob);
-  }
+  await appendLocalFile(formData, 'file', asset);
   const userResponse = await requestMultipart<UserOutResponse>(`/users/${userId}/avatar`, formData);
   return toAuthUser(userResponse);
 }
@@ -279,6 +264,24 @@ export async function confirmPhoneChange(userId: string, code: string): Promise<
     body: JSON.stringify({ code }),
   });
   return toAuthUser(userResponse);
+}
+
+export async function verifyCurrentPassword(userId: string, currentPassword: string): Promise<void> {
+  await request(`/users/${userId}/password/verify`, {
+    method: 'POST',
+    body: JSON.stringify({ current_password: currentPassword }),
+  });
+}
+
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  await request(`/users/${userId}/password`, {
+    method: 'PUT',
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
 }
 
 // Permanent: hard-deletes the user row plus every parking spot they own
@@ -329,6 +332,47 @@ export async function updatePayoutInfo(
     body: JSON.stringify({ cbu: input.cbu, payout_titular: input.titular, cuil: input.cuil }),
   });
   return toPayoutInfo(response);
+}
+
+// -------------------------
+// Vehicles (a driver's own saved cars -- entirely optional, picked when booking a spot so
+// the owner knows which plate to expect). See auth-service's
+// GET/POST /users/{id}/vehicles and DELETE /users/{id}/vehicles/{vehicleId}.
+// -------------------------
+
+export interface VehicleApiResponse {
+  id: string;
+  plate: string;
+  brand: string;
+  model: string;
+  country: string;
+  created_at: string;
+}
+
+function toVehicle(r: VehicleApiResponse): Vehicle {
+  // auth-service only ever accepts a country from its own fixed allowlist (see
+  // schemas.VEHICLE_COUNTRIES), so this cast is safe -- it's never arbitrary user input.
+  return { id: r.id, plate: r.plate, brand: r.brand, model: r.model, country: r.country as Vehicle['country'] };
+}
+
+export async function getVehicles(userId: string): Promise<Vehicle[]> {
+  const response = await request<VehicleApiResponse[]>(`/users/${userId}/vehicles`);
+  return response.map(toVehicle);
+}
+
+export async function createVehicle(
+  userId: string,
+  input: { plate: string; brand: string; model: string; country: string }
+): Promise<Vehicle> {
+  const response = await request<VehicleApiResponse>(`/users/${userId}/vehicles`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return toVehicle(response);
+}
+
+export async function deleteVehicle(userId: string, vehicleId: string): Promise<void> {
+  await request(`/users/${userId}/vehicles/${vehicleId}`, { method: 'DELETE' });
 }
 
 export interface PublicProfileApiResponse {

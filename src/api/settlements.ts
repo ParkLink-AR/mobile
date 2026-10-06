@@ -57,10 +57,10 @@ export function toSettlement(s: SettlementApiResponse): Settlement {
 }
 
 /**
- * The owner's own settlement history -- PAID ones only (a still-in-progress
- * admin draft is intentionally invisible here, it isn't "their money" until
- * confirmed). Newest first. Doesn't include each settlement's payouts -- see
- * getSettlementApi for the detail fetch.
+ * The owner's own settlement history -- both a still-in-progress PENDING
+ * draft (an admin has grouped the owner's pending payouts, hasn't confirmed
+ * the transfer yet) and a confirmed PAID one. Newest first. Doesn't include
+ * each settlement's payouts -- see getSettlementApi for the detail fetch.
  *
  * GET /users/{userId}/settlements
  */
@@ -71,8 +71,8 @@ export async function getUserSettlementsApi(userId: string): Promise<SettlementA
 /**
  * A single settlement, with its payouts populated. Self-service -- any
  * logged-in user's token works, but booking-service enforces you can only
- * fetch your own: a 403 (not yours) or 404 (doesn't exist / not yet
- * confirmed) can happen, same as any other ApiError case.
+ * fetch your own: a 403 (not yours) or 404 (doesn't exist) can happen, same
+ * as any other ApiError case.
  *
  * GET /settlements/{id}
  */

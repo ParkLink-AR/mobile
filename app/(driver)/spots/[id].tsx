@@ -8,11 +8,16 @@ import { PhotoGallery } from '@/src/components/PhotoGallery';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { getParkingSpotDetail, formatScheduleForDisplay } from '@/src/services/parkingService';
 import { getDriverVisiblePrice } from '@/src/services/utils';
+import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
+import { useScale } from '@/src/theme/typography';
 
 export default function SpotDetail() {
   const colors = useThemeColors();
+  const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -40,19 +45,20 @@ export default function SpotDetail() {
     },
     titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
     titleBlock: { flex: 1, gap: 4 },
-    spotTitle: { fontSize: 19, fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
+    spotTitle: { fontSize: sc(19), fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
     addressRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     // location-outline's pin glyph is inset within its box, leaving it visibly
     // indented vs the flush-left title above -- nudge it back to line up.
     addressIcon: { marginLeft: -2 },
-    spotAddress: { flex: 1, fontSize: 13, color: colors.textSecondary, lineHeight: 17 },
+    spotAddress: { flex: 1, fontSize: sc(13), color: colors.textSecondary, lineHeight: sc(17) },
     priceBadge: {
       backgroundColor: colors.teal + '18',
       borderRadius: 10,
       paddingHorizontal: 10,
       paddingVertical: 7,
     },
-    priceValue: { fontSize: 16, fontWeight: '700', color: colors.teal },
+    priceValue: { fontSize: sc(16), fontWeight: '700', color: colors.teal },
+    priceBreakdown: { fontSize: sc(12), color: colors.textSecondary },
     divider: { height: 1, backgroundColor: colors.border },
     pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     pill: {
@@ -60,7 +66,7 @@ export default function SpotDetail() {
       backgroundColor: colors.background,
       borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
     },
-    pillText: { fontSize: 12.5, fontWeight: '600', color: colors.text },
+    pillText: { fontSize: sc(12.5), fontWeight: '600', color: colors.text },
 
     card: {
       backgroundColor: colors.surface,
@@ -69,10 +75,10 @@ export default function SpotDetail() {
     },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     sectionLabel: {
-      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase',
     },
-    value: { fontSize: 14.5, color: colors.text, lineHeight: 20 },
+    value: { fontSize: sc(14.5), color: colors.text, lineHeight: sc(20) },
 
     availabilityBtn: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -80,7 +86,7 @@ export default function SpotDetail() {
       backgroundColor: colors.teal + '14',
       borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
     },
-    availabilityLink: { color: colors.teal, fontWeight: '700', fontSize: 13 },
+    availabilityLink: { color: colors.teal, fontWeight: '700', fontSize: sc(13) },
 
     editBtn: { marginTop: 4 },
 
@@ -90,8 +96,8 @@ export default function SpotDetail() {
     },
     reviewBannerPending: { backgroundColor: colors.warning + '14', borderColor: colors.warning },
     reviewBannerRejected: { backgroundColor: '#C6282814', borderColor: '#C62828' },
-    reviewBannerText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.text },
-    reviewBannerLink: { fontSize: 13, fontWeight: '700', color: colors.teal },
+    reviewBannerText: { flex: 1, fontSize: sc(13), fontWeight: '600', color: colors.text },
+    reviewBannerLink: { fontSize: sc(13), fontWeight: '700', color: colors.teal },
   });
 
   if (!spot) return null;
@@ -110,7 +116,7 @@ export default function SpotDetail() {
               style={[styles.reviewBanner, styles.reviewBannerPending]}
               onPress={() => router.push(`${group}/spots/${id}/documentation`)}
             >
-              <Ionicons name="time-outline" size={18} color={colors.warning} />
+              <Ionicons name="time-outline" size={sc(18)} color={colors.warning} />
               <Text style={styles.reviewBannerText}>{t('owner.spot.review.pendingBanner')}</Text>
               <Text style={styles.reviewBannerLink}>{t('owner.spot.review.pendingAction')}</Text>
             </TouchableOpacity>
@@ -120,7 +126,7 @@ export default function SpotDetail() {
               style={[styles.reviewBanner, styles.reviewBannerRejected]}
               onPress={() => router.push(`${group}/spots/${id}/documentation`)}
             >
-              <Ionicons name="close-circle-outline" size={18} color="#C62828" />
+              <Ionicons name="close-circle-outline" size={sc(18)} color="#C62828" />
               <Text style={styles.reviewBannerText}>{t('owner.spot.review.rejectedBanner')}</Text>
               <Text style={styles.reviewBannerLink}>{t('owner.spot.review.rejectedAction')}</Text>
             </TouchableOpacity>
@@ -132,28 +138,37 @@ export default function SpotDetail() {
               <View style={styles.titleBlock}>
                 <Text style={styles.spotTitle}>{spot.title}</Text>
                 <View style={styles.addressRow}>
-                  <Ionicons name="location-outline" size={14} color={colors.textSecondary} style={styles.addressIcon} />
+                  <Ionicons name="location-outline" size={sc(14)} color={colors.textSecondary} style={styles.addressIcon} />
                   <Text style={styles.spotAddress} numberOfLines={2}>{spot.address}</Text>
                 </View>
               </View>
               {spot.hourlyEnabled && spot.pricePerHour !== null && (
                 <View style={styles.priceBadge}>
-                  <Text style={styles.priceValue}>${getDriverVisiblePrice(spot.pricePerHour)}{t('spot.pricePerHour.short')}</Text>
+                  <Text style={styles.priceValue}>${getDriverVisiblePrice(spot.pricePerHour, commissionRatePercent)}{t('spot.pricePerHour.short')}</Text>
                 </View>
               )}
             </View>
+
+            {spot.hourlyEnabled && spot.pricePerHour !== null && (
+              <Text style={styles.priceBreakdown}>
+                {t('owner.spot.priceBreakdown', {
+                  ownerPrice: String(Math.round(spot.pricePerHour)),
+                  commissionPercent: String(commissionRatePercent),
+                })}
+              </Text>
+            )}
 
             <View style={styles.divider} />
 
             <View style={styles.pillRow}>
               <View style={styles.pill}>
-                <Ionicons name="star" size={13} color="#F59E0B" />
+                <Ionicons name="star" size={sc(13)} color="#F59E0B" />
                 <Text style={styles.pillText}>{spot.rating.toFixed(1)} ({spot.reviewCount})</Text>
               </View>
               <View style={styles.pill}>
                 <Ionicons
                   name={spot.covered ? 'car-outline' : 'sunny-outline'}
-                  size={13}
+                  size={sc(13)}
                   color={colors.teal}
                 />
                 <Text style={styles.pillText}>
@@ -172,10 +187,10 @@ export default function SpotDetail() {
             onPress={() => router.push(`${group}/spots/${id}/requests`)}
           >
             <View style={styles.sectionHeader}>
-              <Ionicons name="mail-outline" size={15} color={colors.textSecondary} />
+              <Ionicons name="mail-outline" size={sc(15)} color={colors.textSecondary} />
               <Text style={styles.sectionLabel}>{t('owner.spot.requests.link')}</Text>
               <View style={{ flex: 1 }} />
-              <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+              <Ionicons name="chevron-forward" size={sc(13)} color={colors.teal} />
             </View>
           </TouchableOpacity>
 
@@ -187,7 +202,7 @@ export default function SpotDetail() {
               {spot.hourlyEnabled && (
                 <>
                   <View style={styles.sectionHeader}>
-                    <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+                    <Ionicons name="calendar-outline" size={sc(15)} color={colors.textSecondary} />
                     <Text style={styles.sectionLabel}>{t('owner.spot.edit.availability')}</Text>
                   </View>
                   {formatScheduleForDisplay(spot.schedule).map((line) => (
@@ -200,7 +215,7 @@ export default function SpotDetail() {
                     onPress={() => router.push(`${group}/spots/${id}/availability`)}
                   >
                     <Text style={styles.availabilityLink}>{t('owner.spots.manageAvailability')}</Text>
-                    <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+                    <Ionicons name="chevron-forward" size={sc(13)} color={colors.teal} />
                   </TouchableOpacity>
                 </>
               )}
@@ -210,7 +225,7 @@ export default function SpotDetail() {
               {!!spot.description && (
                 <>
                   <View style={styles.sectionHeader}>
-                    <Ionicons name="document-text-outline" size={15} color={colors.textSecondary} />
+                    <Ionicons name="document-text-outline" size={sc(15)} color={colors.textSecondary} />
                     <Text style={styles.sectionLabel}>{t('owner.spot.edit.description')}</Text>
                   </View>
                   <Text style={styles.value}>{spot.description}</Text>

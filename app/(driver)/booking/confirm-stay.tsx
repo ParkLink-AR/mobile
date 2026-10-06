@@ -9,15 +9,17 @@ import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail } from '@/src/services/parkingService';
 import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
+import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { getStayQuote, type StayQuote } from '@/src/api/parking';
-import { ParkingSpot } from '@/src/types';
-import { createBookingApi, createPaymentPreference, confirmBookingApi, CASH_PAYMENT_ID } from '@/src/api/booking';
-import { PaymentMethodPicker } from '@/src/components/PaymentMethodPicker';
-import { getPaymentOptions, MERCADOPAGO_METHOD_ID, CASH_METHOD_ID } from '@/src/services/paymentOptions';
+import { ParkingSpot, Vehicle } from '@/src/types';
+import { createBookingApi, createPaymentPreference } from '@/src/api/booking';
+import { getVehicles } from '@/src/api/auth';
+import { PaymentMethodDisplay } from '@/src/components/PaymentMethodDisplay';
+import { VehiclePicker } from '@/src/components/VehiclePicker';
 
 /** "23/09/2026 · 14:00" -- date and time together for a single instant (check-in/out),
  * as opposed to bookingDates.ts's helpers, which format a *range*. */
@@ -43,7 +45,10 @@ export default function ConfirmStayBooking() {
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
+  const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   const { spotId, startDate, endDate, startHour } = useLocalSearchParams<{
     spotId: string;
     startDate: string; // YYYY-MM-DD
@@ -56,7 +61,8 @@ export default function ConfirmStayBooking() {
   const [quote, setQuote] = useState<StayQuote | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState(MERCADOPAGO_METHOD_ID);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   // Alert.alert with a buttons array is a no-op on web -- see bookings/[id].tsx's
   // handleCancel for the same fix applied to the cancel-booking confirmation.
   const [conflictModalVisible, setConflictModalVisible] = useState(false);
@@ -74,6 +80,11 @@ export default function ConfirmStayBooking() {
       .catch((err) => setLoadError(err instanceof ApiError ? err.detail : t('spot.stay.quoteError')));
   }, [spotId, startDate, endDate, stayStartHour]);
 
+  // Entirely optional -- see the same effect in booking/confirm.tsx.
+  useEffect(() => {
+    if (user) getVehicles(user.id).then(setVehicles).catch(() => {});
+  }, [user?.id]);
+
   // Mismo flujo que booking/confirm.tsx (POST /bookings -> POST
   // /payments/create-preference -> WebBrowser -> pending.tsx), sin el
   // pre-check de disponibilidad por hora (no aplica acá) y con kind/
@@ -85,7 +96,6 @@ export default function ConfirmStayBooking() {
     let bookingId: string;
     try {
       const created = await createBookingApi({
-        user_id: user.id,
         // Instantes reales que ya calculó y validó parking-service (mismo
         // check-in/check-out que se le mostró al conductor acá) -- no un
         // placeholder, aunque booking-service los re-deriva igual desde su
@@ -96,8 +106,13 @@ export default function ConfirmStayBooking() {
         kind: 'STAY',
         stay_end_date: quote.endDate,
         parking_spot: { id: spotId, schedule: [], capacity: spot.capacity },
+        vehicle: selectedVehicle
+          ? { plate: selectedVehicle.plate, brand: selectedVehicle.brand, model: selectedVehicle.model, country: selectedVehicle.country }
+          : undefined,
       });
       bookingId = created.id;
+      // No amount travels to the checkout: payment-service charges the booking's own
+      // server-side price (owner's price + platform commission), looked up by bookingId.
     } catch (err: any) {
       const isConflict = err instanceof ApiError && err.status === 409;
       if (isConflict) {
@@ -110,30 +125,9 @@ export default function ConfirmStayBooking() {
       return;
     }
 
-    // ── Cash: no MercadoPago involved -- confirm straight away and skip to
-    // the owner-approval wait. ─────────────────────────────────────────────
-    if (paymentMethod === CASH_METHOD_ID) {
-      try {
-        await confirmBookingApi(bookingId, CASH_PAYMENT_ID);
-      } catch (err: any) {
-        const msg = err?.detail ?? err?.message ?? t('driver.booking.errorCreating');
-        Alert.alert(t('driver.payment.errorTitle'), msg);
-        setProcessing(false);
-        return;
-      }
-      setProcessing(false);
-      router.replace({
-        pathname: `${group}/booking/cash-pending`,
-        params: { total: String(getDriverVisiblePrice(quote.amount / 100)) },
-      });
-      return;
-    }
-
     let checkoutUrl: string;
     try {
-      const visibleTotal = getDriverVisiblePrice(quote.amount / 100);
       const preference = await createPaymentPreference({
-        amount: visibleTotal,
         title: `Cochera ${spot.title}`,
         description: t('spot.stay.paymentDescription', {
           start: new Date(quote.startDate + 'T12:00:00').toLocaleDateString('es-AR'),
@@ -182,7 +176,7 @@ export default function ConfirmStayBooking() {
 
   if (!user || !spot || !quote) return <ActivityIndicator style={{ marginTop: 40 }} />;
 
-  const visibleTotal = getDriverVisiblePrice(quote.amount / 100);
+  const visibleTotal = getDriverVisiblePrice(quote.amount / 100, commissionRatePercent);
 
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
@@ -196,23 +190,23 @@ export default function ConfirmStayBooking() {
       padding: 16,
       gap: 4,
     },
-    spotTitle: { fontSize: 19, fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
+    spotTitle: { fontSize: sc(19), fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
     addressRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    spotAddress: { flex: 1, fontSize: 13, color: colors.textSecondary, lineHeight: 17 },
+    spotAddress: { flex: 1, fontSize: sc(13), color: colors.textSecondary, lineHeight: sc(17) },
 
     card: { gap: 12 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     sectionLabel: {
-      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase',
     },
     detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    detailLabel: { flex: 1, fontSize: 14, color: colors.textSecondary },
-    detailValue: { fontSize: 14, color: colors.text, fontWeight: '600' },
+    detailLabel: { flex: 1, fontSize: sc(14), color: colors.textSecondary },
+    detailValue: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
     divider: { height: 1, backgroundColor: colors.border },
     totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    totalLabel: { fontSize: 14, color: colors.text, fontWeight: '600' },
-    totalValue: { fontSize: 18, color: colors.teal, fontWeight: '700' },
+    totalLabel: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
+    totalValue: { fontSize: sc(18), color: colors.teal, fontWeight: '700' },
 
     button: { marginTop: 2 },
 
@@ -225,18 +219,18 @@ export default function ConfirmStayBooking() {
       backgroundColor: colors.surface, alignItems: 'center', gap: 8,
     },
     modalTitle: {
-      fontSize: 16, fontWeight: '700', color: colors.text,
+      fontSize: sc(16), fontWeight: '700', color: colors.text,
       marginBottom: 8, textAlign: 'center',
     },
     modalBody: {
-      fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 18,
+      fontSize: sc(13), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(18),
       marginBottom: 8,
     },
     modalConfirmBtn: {
       width: '100%', borderRadius: 10, paddingVertical: 12, alignItems: 'center',
       backgroundColor: colors.teal, marginTop: 8,
     },
-    modalConfirmBtnText: { fontSize: 15, fontWeight: '600', color: colors.white },
+    modalConfirmBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.white },
   });
 
   return (
@@ -246,7 +240,7 @@ export default function ConfirmStayBooking() {
           <View style={styles.heroCard}>
             <Text style={styles.spotTitle}>{spot.title}</Text>
             <View style={styles.addressRow}>
-              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+              <Ionicons name="location-outline" size={sc(14)} color={colors.textSecondary} />
               <Text style={styles.spotAddress} numberOfLines={2}>{spot.address}</Text>
             </View>
           </View>
@@ -254,22 +248,22 @@ export default function ConfirmStayBooking() {
           <Card>
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+                <Ionicons name="calendar-outline" size={sc(15)} color={colors.textSecondary} />
                 <Text style={styles.sectionLabel}>{t('driver.booking.summary')}</Text>
               </View>
 
               <View style={styles.detailRow}>
-                <Ionicons name="log-in-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="log-in-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('spot.stay.checkIn')}</Text>
                 <Text style={styles.detailValue}>{formatStayInstant(quote.startDateTime)}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Ionicons name="log-out-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="log-out-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('spot.stay.checkOut')}</Text>
                 <Text style={styles.detailValue}>{formatStayInstant(quote.endDateTime)}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Ionicons name="hourglass-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="hourglass-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('spot.stay.duration')}</Text>
                 <Text style={styles.detailValue}>{formatStayBreakdown(quote.breakdown)}</Text>
               </View>
@@ -286,14 +280,25 @@ export default function ConfirmStayBooking() {
           <Card>
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="card-outline" size={15} color={colors.textSecondary} />
+                <Ionicons name="car-sport-outline" size={sc(15)} color={colors.textSecondary} />
+                <Text style={styles.sectionLabel}>{t('driver.booking.vehicle.sectionTitle')}</Text>
+              </View>
+              <VehiclePicker
+                vehicles={vehicles}
+                selected={selectedVehicle}
+                onSelect={setSelectedVehicle}
+                vehiclesScreenPath={`${group}/vehicles`}
+              />
+            </View>
+          </Card>
+
+          <Card>
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="card-outline" size={sc(15)} color={colors.textSecondary} />
                 <Text style={styles.sectionLabel}>{t('driver.booking.methodPayment')}</Text>
               </View>
-              <PaymentMethodPicker
-                methods={getPaymentOptions()}
-                selectedId={paymentMethod}
-                onSelect={setPaymentMethod}
-              />
+              <PaymentMethodDisplay />
             </View>
           </Card>
 
@@ -301,9 +306,7 @@ export default function ConfirmStayBooking() {
             title={
               processing
                 ? t('driver.booking.processing')
-                : paymentMethod === CASH_METHOD_ID
-                  ? t('driver.booking.confirmCash').replace('%{total}', String(visibleTotal))
-                  : t('driver.booking.confirmPay').replace('%{total}', String(visibleTotal))
+                : t('driver.booking.confirmPay').replace('%{total}', String(visibleTotal))
             }
             onPress={reserve}
             disabled={processing}

@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { requestPasswordReset, confirmPasswordReset } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
 
@@ -15,6 +15,8 @@ const RESEND_COOLDOWN_SECONDS = 60;
 export default function ForgotPassword() {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
 
   const [step, setStep] = useState<Step>('email');
@@ -41,7 +43,7 @@ export default function ForgotPassword() {
       borderColor: colors.border,
       borderRadius: 8,
       padding: 12,
-      fontSize: 15,
+      fontSize: sc(15),
       color: colors.text,
     },
     codeInput: {
@@ -49,13 +51,13 @@ export default function ForgotPassword() {
       borderColor: colors.border,
       borderRadius: 8,
       padding: 12,
-      fontSize: 24,
+      fontSize: sc(24),
       letterSpacing: 8,
       textAlign: 'center',
       color: colors.text,
     },
-    error: { color: '#C62828', fontSize: 13 },
-    info: { color: colors.teal, fontSize: 13 },
+    error: { color: '#C62828', fontSize: sc(13) },
+    info: { color: colors.teal, fontSize: sc(13) },
     link: { color: colors.teal, textAlign: 'center', marginTop: 4 },
     linkDisabled: { color: colors.textSecondary },
   });

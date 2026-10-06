@@ -139,8 +139,8 @@ export default function DriverProfileEdit() {
     },
     readOnlyInfo: { flex: 1, gap: sc(2) },
     readOnlyValue: { fontSize: sc(15), color: colors.text },
-    verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: sc(4), marginTop: 2 },
-    verifiedText: { fontSize: sc(11), fontWeight: '700', color: colors.success },
+    verifiedRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: sc(6) },
+    readOnlyValueInline: { fontSize: sc(15), color: colors.text, flexShrink: 1 },
     changeLink: { fontSize: sc(13), fontWeight: '600', color: colors.teal },
   });
 
@@ -210,13 +210,15 @@ export default function DriverProfileEdit() {
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>{t('profile.edit.email')}</Text>
             <View style={styles.readOnlyRow}>
-              <View style={styles.readOnlyInfo}>
-                <Text style={styles.readOnlyValue}>{user.email}</Text>
+              <View style={styles.verifiedRow}>
+                <Text style={styles.readOnlyValueInline} numberOfLines={1}>{user.email}</Text>
                 {user.emailVerified && (
-                  <View style={styles.verifiedRow}>
-                    <Ionicons name="checkmark-circle" size={sc(13)} color={colors.success} />
-                    <Text style={styles.verifiedText}>{t('profile.edit.verified')}</Text>
-                  </View>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={sc(16)}
+                    color={colors.success}
+                    accessibilityLabel={t('profile.edit.verified')}
+                  />
                 )}
               </View>
               <Text style={styles.changeLink} onPress={() => router.push(`${group}/change-email`)}>
@@ -229,17 +231,33 @@ export default function DriverProfileEdit() {
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>{t('profile.edit.phone')}</Text>
             <View style={styles.readOnlyRow}>
-              <View style={styles.readOnlyInfo}>
-                <Text style={styles.readOnlyValue}>{user.phone || '—'}</Text>
+              <View style={styles.verifiedRow}>
+                <Text style={styles.readOnlyValueInline} numberOfLines={1}>{user.phone || '—'}</Text>
                 {user.phoneVerified && (
-                  <View style={styles.verifiedRow}>
-                    <Ionicons name="checkmark-circle" size={sc(13)} color={colors.success} />
-                    <Text style={styles.verifiedText}>{t('profile.edit.verified')}</Text>
-                  </View>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={sc(16)}
+                    color={colors.success}
+                    accessibilityLabel={t('profile.edit.verified')}
+                  />
                 )}
               </View>
               <Text style={styles.changeLink} onPress={() => router.push(`${group}/change-phone`)}>
                 {t('profile.edit.changePhone')}
+              </Text>
+            </View>
+          </View>
+
+          {/* Password -- same reasoning, changing it requires re-entering the
+              current one first, so it lives in its own screen. */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>{t('profile.edit.password')}</Text>
+            <View style={styles.readOnlyRow}>
+              <View style={styles.readOnlyInfo}>
+                <Text style={styles.readOnlyValue}>••••••••</Text>
+              </View>
+              <Text style={styles.changeLink} onPress={() => router.push(`${group}/change-password`)}>
+                {t('profile.edit.changePassword')}
               </Text>
             </View>
           </View>

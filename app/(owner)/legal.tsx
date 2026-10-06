@@ -2,19 +2,20 @@ import { t, useLanguage } from '@/src/i18n';
 import { Text, View, ScrollView, StyleSheet } from 'react-native';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useScale } from '@/src/theme/typography';
 
 export default function Legal() {
   useLanguage();
   const colors = useThemeColors();
-  const typography = useTypography();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     content: { padding: 20, gap: 24, paddingBottom: 60 },
     section: { gap: 8 },
-    sectionTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
-    body: { fontSize: 14, color: colors.textSecondary, lineHeight: 21 },
+    sectionTitle: { fontSize: sc(17), fontWeight: '700', color: colors.text },
+    body: { fontSize: sc(14), color: colors.textSecondary, lineHeight: sc(21) },
   });
 
   return (

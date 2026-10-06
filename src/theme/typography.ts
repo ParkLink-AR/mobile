@@ -7,7 +7,7 @@ export type Typography = Record<'h1' | 'h2' | 'body' | 'caption', TextStyle>;
 export const FONT_SCALE: Record<'small' | 'medium' | 'large', number> = {
   small: 0.78,
   medium: 1,
-  large: 1.89,
+  large: 1.5,
 };
 
 /** Returns the current numeric scale factor (e.g. 1 for medium/normal). */

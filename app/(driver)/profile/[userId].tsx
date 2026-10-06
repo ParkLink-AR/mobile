@@ -5,7 +5,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { t, useLanguage } from '@/src/i18n';
 import { getPublicProfileApi, PublicProfileApiResponse } from '@/src/api/auth';
 import { getUserReviewsApi } from '@/src/api/booking';
@@ -20,6 +20,8 @@ interface ProfileReviewItem {
 export default function PublicProfile() {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
   const { userId, as } = useLocalSearchParams<{ userId: string; as: 'owner' | 'driver' }>();
   const [profile, setProfile] = useState<PublicProfileApiResponse | null>(null);
@@ -55,22 +57,22 @@ export default function PublicProfile() {
   }, [userId, as]);
 
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
+    container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 16, gap: 12 },
     headerCard: { alignItems: 'center', gap: 8, paddingVertical: 24 },
     avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.border },
     avatarPlaceholder: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-    name: { fontSize: 18, fontWeight: '700', color: colors.text },
-    memberSince: { fontSize: 13, color: colors.textSecondary },
+    name: { fontSize: sc(18), fontWeight: '700', color: colors.text },
+    memberSince: { fontSize: sc(13), color: colors.textSecondary },
     ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-    ratingText: { fontSize: 14, fontWeight: '600', color: colors.text },
+    ratingText: { fontSize: sc(14), fontWeight: '600', color: colors.text },
     sectionLabel: {
-      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 4,
     },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    stars: { color: colors.warning, fontSize: 13 },
+    stars: { color: colors.warning, fontSize: sc(13) },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-    emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    emptyText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
   });
 
   if (!profile) return null;
@@ -84,13 +86,13 @@ export default function PublicProfile() {
           <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person" size={36} color={colors.textSecondary} />
+            <Ionicons name="person" size={sc(36)} color={colors.textSecondary} />
           </View>
         )}
         <Text style={styles.name}>{profile.name}</Text>
         <Text style={styles.memberSince}>{t('profile.public.memberSince', { date: memberSince })}</Text>
         <View style={styles.ratingRow}>
-          <Ionicons name="star" size={15} color={colors.warning} />
+          <Ionicons name="star" size={sc(15)} color={colors.warning} />
           <Text style={styles.ratingText}>{average.toFixed(1)}</Text>
           <Text style={styles.memberSince}>· {t('spot.reviews.count', { count })}</Text>
         </View>
@@ -100,10 +102,10 @@ export default function PublicProfile() {
       <FlatList
         data={reviews}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ gap: 10, flexGrow: 1 }}
+        contentContainerStyle={reviews.length === 0 ? { gap: 10, flexGrow: 1 } : { gap: 10 }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="star-outline" size={40} color={colors.textSecondary} />
+            <Ionicons name="star-outline" size={sc(40)} color={colors.textSecondary} />
             <Text style={styles.emptyText}>{t('spot.reviews.empty')}</Text>
           </View>
         }

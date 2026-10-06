@@ -6,10 +6,13 @@ import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { createTicketApi } from '@/src/api/booking';
 import { ApiError } from '@/src/api/client';
+import { useScale } from '@/src/theme/typography';
 
 export default function NewTicket() {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const group = `/${useSegments()[0]}`;
   const { id } = useLocalSearchParams<{ id: string }>();
   const [subject, setSubject] = useState('');
@@ -35,19 +38,19 @@ export default function NewTicket() {
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16, gap: 16 },
-    label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+    label: { fontSize: sc(13), fontWeight: '600', color: colors.textSecondary },
     input: {
       borderWidth: 1, borderColor: colors.border, borderRadius: 12,
-      paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: colors.text,
+      paddingHorizontal: 14, paddingVertical: 12, fontSize: sc(15), color: colors.text,
       backgroundColor: colors.surface,
     },
     bodyInput: { minHeight: 120, textAlignVertical: 'top' },
-    errorText: { fontSize: 13.5, color: '#C62828' },
+    errorText: { fontSize: sc(13.5), color: '#C62828' },
     submitBtn: {
       backgroundColor: colors.teal, borderRadius: 12, paddingVertical: 14, alignItems: 'center',
     },
     submitBtnDisabled: { opacity: 0.5 },
-    submitBtnText: { color: colors.white, fontSize: 15, fontWeight: '700' },
+    submitBtnText: { color: colors.white, fontSize: sc(15), fontWeight: '700' },
   });
 
   return (

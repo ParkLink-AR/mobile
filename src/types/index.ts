@@ -127,7 +127,13 @@ export interface Booking {
   startTime: string;
   endTime: string;
   hours: number;
+  // Timestamps ISO crudos del inicio/fin (ver BookingDateRange en bookingDates.ts).
+  startAt?: string;
+  endAt?: string;
   subtotal: number;
+  // What the spot's owner earns from this booking, in pesos -- only known on the owner's
+  // side. `total` is always what the driver was charged.
+  ownerEarnings?: number;
   serviceCharge: number;
   total: number;
   status: BookingStatus;
@@ -137,12 +143,36 @@ export interface Booking {
   // PENDING_OWNER_APPROVAL). Not the same as "safe to show as paid" -- see how
   // bookings/[id].tsx gates the payment card on both this AND status.
   paidAt?: string;
+  // Why a CANCELLED booking got there: 'DRIVER_CANCELLED', 'OWNER_REJECTED' or
+  // 'OWNER_EXPIRED' (the owner never answered in time).
+  cancellationReason?: string;
   // Only ever populated for the booking's own driver (booking-service omits it for
   // everyone else) -- the 4-digit code the driver reads aloud to the spot's owner
   // in person. Present once status is CONFIRMED; absent before or once verified
   // (server clears attempts tracking but keeps the code, we just stop needing it).
   verificationCode?: string;
   verifiedAt?: string;
+  // The vehicle the driver picked (optionally) from their own saved list when booking --
+  // a snapshot taken at creation time, not a live reference (see VehiclePlate.tsx for how
+  // it's rendered). No `id`, unlike Vehicle below: it's a copy, not a pointer to a row that
+  // might since have been edited or deleted. Absent if the driver didn't pick one.
+  vehicle?: VehicleSnapshot;
+}
+
+// ISO 3166-1 alpha-2 -- drives which country name/flag VehiclePlate.tsx renders on the
+// plate graphic. Kept to the handful of countries the picker actually offers (see
+// VEHICLE_COUNTRIES in auth-service's schemas.py), not every country in the world.
+export type VehicleCountry = 'AR' | 'BR' | 'UY' | 'PY' | 'CL' | 'BO';
+
+export interface VehicleSnapshot {
+  plate: string;
+  brand: string;
+  model: string;
+  country: VehicleCountry;
+}
+
+export interface Vehicle extends VehicleSnapshot {
+  id: string;
 }
 
 export interface Review {
@@ -168,8 +198,9 @@ export interface SettlementPayout {
 // Un lote de pago del propietario: un admin agrupa todo su saldo pendiente
 // (uno o más payouts de bookings ya completados+pagados+24h) en una única
 // transferencia. No hay concepto de "período" -- ocurre cuando un admin lo
-// arma, no en un calendario fijo. El propietario sólo ve las PAID (ver
-// getUserSettlementsApi) -- un draft PENDING todavía no es "su plata".
+// arma, no en un calendario fijo. El propietario ve tanto un draft PENDING
+// ("en preparación", recién armado por un admin) como uno ya PAID
+// ("liquidado") -- ver getUserSettlementsApi.
 export interface Settlement {
   id: string;
   ownerId: string;
@@ -185,12 +216,3 @@ export interface Settlement {
   payouts?: SettlementPayout[]; // sólo presente en el fetch de detalle
 }
 
-export type PaymentMethodType = 'card' | 'cash';
-
-export interface PaymentMethod {
-  id: string;
-  type: PaymentMethodType;
-  brand?: 'Visa' | 'Mastercard';
-  last4?: string;
-  label: string;
-}

@@ -24,6 +24,7 @@ import { ApiError } from '@/src/api/client';
 import { GeocodeCandidate, ParkingSpotPhotoAsset, reverseGeocode } from '@/src/api/parking';
 import { VehicleType } from '@/src/constants/vehicleTypes';
 import { t, useLanguage } from '@/src/i18n';
+import { useScale } from '@/src/theme/typography';
 
 const MAX_PHOTOS = 10;
 const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
@@ -31,6 +32,8 @@ const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export default function NewSpot() {
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const user = useSessionStore((s) => s.user);
@@ -189,10 +192,14 @@ export default function NewSpot() {
         stayAvailableUntil: staySettings.stayEnabled ? (staySettings.stayAvailableUntil.trim() || undefined) : undefined,
       });
       if (photos.length > 0) {
-        // La cochera ya existe -- si esto falla, el dueño todavía puede
-        // agregar fotos después desde la edición, así que no bloqueamos la
-        // publicación por un error acá.
-        await uploadParkingSpotPhotos(spot.id, photos).catch(() => {});
+        // La cochera ya existe -- si esto falla no bloqueamos la publicación,
+        // pero sí avisamos: el dueño puede agregar las fotos después desde la
+        // edición, y no tiene que creer que se subieron.
+        try {
+          await uploadParkingSpotPhotos(spot.id, photos);
+        } catch {
+          alert(t('owner.spot.new.photosUploadFailed'));
+        }
       }
       // Toda cochera nueva arranca PENDING_REVIEW (ver parking-service) --
       // replace en vez de push para que "más tarde"/volver desde la pantalla
@@ -218,7 +225,7 @@ export default function NewSpot() {
     // StaySettingsEditor ("Alquiler por hora"/"Estadía") -- el usuario pidió
     // que todos los títulos de sección del formulario luzcan igual a esos.
     sectionLabel: {
-      fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 4,
+      fontSize: sc(13), fontWeight: '600', color: colors.text, marginBottom: 4,
     },
 
     card: {
@@ -229,7 +236,7 @@ export default function NewSpot() {
 
     input: {
       borderWidth: 1, borderColor: colors.border, borderRadius: 10,
-      padding: 12, fontSize: 15, color: colors.text,
+      padding: 12, fontSize: sc(15), color: colors.text,
     },
     multiline: { minHeight: 80, textAlignVertical: 'top' },
 
@@ -239,7 +246,7 @@ export default function NewSpot() {
       borderRadius: 10, paddingVertical: 10, alignItems: 'center',
     },
     toggleActive: { backgroundColor: colors.teal, borderColor: colors.teal },
-    toggleText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+    toggleText: { fontSize: sc(14), fontWeight: '600', color: colors.textSecondary },
     toggleTextActive: { color: colors.surface, fontWeight: '700' },
 
     photosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -250,7 +257,7 @@ export default function NewSpot() {
       backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 4,
       paddingHorizontal: 4, paddingVertical: 1,
     },
-    coverBadgeText: { color: colors.white, fontSize: 9, fontWeight: '700' },
+    coverBadgeText: { color: colors.white, fontSize: sc(9), fontWeight: '700' },
     removePhotoBtn: {
       position: 'absolute', top: -6, right: -6,
       width: 20, height: 20, borderRadius: 10,
@@ -269,8 +276,8 @@ export default function NewSpot() {
       backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center',
     },
     locationConfirmedRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    locationConfirmed: { color: colors.success, fontSize: 12, fontWeight: '700' },
-    locationError: { color: '#C62828', fontSize: 12 },
+    locationConfirmed: { color: colors.success, fontSize: sc(12), fontWeight: '700' },
+    locationError: { color: '#C62828', fontSize: sc(12) },
 
     publishBtn: { marginTop: 4 },
   });
@@ -292,13 +299,13 @@ export default function NewSpot() {
                     </View>
                   )}
                   <TouchableOpacity style={styles.removePhotoBtn} onPress={() => removePhoto(index)}>
-                    <Ionicons name="close" size={13} color={colors.white} />
+                    <Ionicons name="close" size={sc(13)} color={colors.white} />
                   </TouchableOpacity>
                 </View>
               ))}
               {photos.length < MAX_PHOTOS && (
                 <TouchableOpacity style={styles.addPhotoThumb} onPress={pickPhotos}>
-                  <Ionicons name="add" size={22} color={colors.textSecondary} />
+                  <Ionicons name="add" size={sc(22)} color={colors.textSecondary} />
                 </TouchableOpacity>
               )}
             </View>
@@ -324,13 +331,13 @@ export default function NewSpot() {
                 {locating ? (
                   <ActivityIndicator color={colors.white} size="small" />
                 ) : (
-                  <Ionicons name="locate" size={20} color={colors.white} />
+                  <Ionicons name="locate" size={sc(20)} color={colors.white} />
                 )}
               </TouchableOpacity>
             </View>
             {coordinates && !addressSuggestionsOpen && (
               <View style={styles.locationConfirmedRow}>
-                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                <Ionicons name="checkmark-circle" size={sc(14)} color={colors.success} />
                 <Text style={styles.locationConfirmed}>{t('owner.spot.new.locationConfirmed')}</Text>
               </View>
             )}
@@ -348,7 +355,7 @@ export default function NewSpot() {
               placeholder="1"
               placeholderTextColor={colors.textSecondary}
             />
-            <Text style={{ fontSize: 12, color: colors.textSecondary }}>
+            <Text style={{ fontSize: sc(12), color: colors.textSecondary }}>
               {t('owner.spot.new.capacityHint')}
             </Text>
           </View>

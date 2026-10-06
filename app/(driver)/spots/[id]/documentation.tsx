@@ -6,6 +6,7 @@ import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
+import { useScale } from '@/src/theme/typography';
 import { getParkingSpotDetail } from '@/src/services/parkingService';
 import { uploadParkingSpotVerificationPhotos, ParkingSpotPhotoAsset } from '@/src/api/parking';
 import { useSpotsStore } from '@/src/store/useSpotsStore';
@@ -18,6 +19,8 @@ const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export default function SpotDocumentation() {
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const markUpdated = useSpotsStore((s) => s.markUpdated);
@@ -92,13 +95,13 @@ export default function SpotDocumentation() {
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     body: { padding: 16, gap: 14 },
-    intro: { fontSize: 14, color: colors.textSecondary, lineHeight: 20 },
+    intro: { fontSize: sc(14), color: colors.textSecondary, lineHeight: sc(20) },
     card: {
       backgroundColor: colors.surface,
       borderRadius: 14, borderWidth: 1, borderColor: colors.border,
       padding: 16, gap: 10,
     },
-    sectionLabel: { fontSize: 13, fontWeight: '600', color: colors.text },
+    sectionLabel: { fontSize: sc(13), fontWeight: '600', color: colors.text },
     photosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     photoThumbWrapper: { position: 'relative' },
     photoThumb: { width: 84, height: 84, borderRadius: 8 },
@@ -116,15 +119,15 @@ export default function SpotDocumentation() {
       backgroundColor: colors.warning + '14', borderColor: colors.warning, borderWidth: 1,
       borderRadius: 12, padding: 12,
     },
-    noticeText: { fontSize: 13, color: colors.text },
+    noticeText: { fontSize: sc(13), color: colors.text },
     rejectedBanner: {
       backgroundColor: '#C6282814', borderColor: '#C62828', borderWidth: 1,
       borderRadius: 12, padding: 12, gap: 4,
     },
-    rejectedTitle: { fontSize: 14, fontWeight: '700', color: '#C62828' },
-    rejectedReason: { fontSize: 13, color: colors.text },
+    rejectedTitle: { fontSize: sc(14), fontWeight: '700', color: '#C62828' },
+    rejectedReason: { fontSize: sc(13), color: colors.text },
     laterLink: { alignSelf: 'center', marginTop: 4 },
-    laterLinkText: { fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
+    laterLinkText: { fontSize: sc(13), color: colors.textSecondary, fontWeight: '600' },
     submitBtn: { marginTop: 4 },
   });
 
@@ -175,13 +178,13 @@ export default function SpotDocumentation() {
                   <View key={photo.uri} style={styles.photoThumbWrapper}>
                     <Image source={{ uri: photo.uri }} style={styles.photoThumb} />
                     <TouchableOpacity style={styles.removePhotoBtn} onPress={() => removeNewPhoto(index)}>
-                      <Ionicons name="close" size={13} color={colors.white} />
+                      <Ionicons name="close" size={sc(13)} color={colors.white} />
                     </TouchableOpacity>
                   </View>
                 ))}
                 {remainingSlots > 0 && (
                   <TouchableOpacity style={styles.addPhotoThumb} onPress={pickPhotos}>
-                    <Ionicons name="add" size={22} color={colors.textSecondary} />
+                    <Ionicons name="add" size={sc(22)} color={colors.textSecondary} />
                   </TouchableOpacity>
                 )}
               </View>

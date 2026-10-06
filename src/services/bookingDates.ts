@@ -1,4 +1,5 @@
 import { artDateFromISO } from './dateUtils';
+import { VehicleSnapshot } from '@/src/types';
 
 // Rango de fecha/hora de una reserva, derivado de sus timestamps `start`/`end`
 // crudos -- misma lógica para las 4 pantallas que mapean BookingApiResponse a
@@ -15,6 +16,10 @@ export interface BookingDateRange {
   startTime: string;
   endTime: string;
   hours: number;
+  // Los timestamps crudos, para lo que necesita comparar contra "ahora" (p. ej. la
+  // ventana en la que el propietario puede verificar el código de llegada).
+  startAt: string;
+  endAt: string;
 }
 
 export function mapBookingDateRange(start: string, end: string): BookingDateRange {
@@ -30,7 +35,19 @@ export function mapBookingDateRange(start: string, end: string): BookingDateRang
     startTime,
     endTime,
     hours,
+    startAt: start,
+    endAt: end,
   };
+}
+
+/** Same shared-mapping reasoning as mapBookingDateRange above, for
+ * BookingApiResponse.vehicle -- auth-service only ever hands out a country from its own
+ * fixed allowlist, so the cast is safe (never arbitrary user input). */
+export function toVehicleSnapshot(
+  v?: { plate: string; brand: string; model: string; country: string }
+): VehicleSnapshot | undefined {
+  if (!v) return undefined;
+  return { plate: v.plate, brand: v.brand, model: v.model, country: v.country as VehicleSnapshot['country'] };
 }
 
 /** "10/09" -- mismo formato corto usado en el resto de la app para fechas. */
@@ -83,4 +100,12 @@ export function formatBookingWhen(
     return `${item.date} · ${item.startTime} ${timeToLabel} ${item.endTime}`;
   }
   return `${checkInLabel} ${formatShortDate(item.date)} · ${item.startTime} — ${checkOutLabel} ${formatShortDate(item.endDate)} · ${item.endTime}`;
+}
+
+/** What the owner earns from a booking, in pesos: owner_amount when the API sent it, else
+ * `amount` -- a booking from before owner_amount existed stored the owner's own price
+ * there. Only meaningful for responses sent to the owner. */
+export function ownerEarningsFrom(b: { amount?: number; owner_amount?: number }): number {
+  const centavos = typeof b.owner_amount === 'number' ? b.owner_amount : typeof b.amount === 'number' ? b.amount : 0;
+  return centavos / 100;
 }

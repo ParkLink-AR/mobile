@@ -23,7 +23,8 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
     // Optimista: refleja el cambio ya, revierte si el pedido falla.
     set((state) => {
       const ids = new Set(state.ids);
-      wasFavorite ? ids.delete(parkingSpotId) : ids.add(parkingSpotId);
+      if (wasFavorite) ids.delete(parkingSpotId);
+      else ids.add(parkingSpotId);
       return { ids };
     });
 
@@ -33,7 +34,8 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
     } catch (err) {
       set((state) => {
         const ids = new Set(state.ids);
-        wasFavorite ? ids.add(parkingSpotId) : ids.delete(parkingSpotId);
+        if (wasFavorite) ids.add(parkingSpotId);
+        else ids.delete(parkingSpotId);
         return { ids };
       });
       throw err;

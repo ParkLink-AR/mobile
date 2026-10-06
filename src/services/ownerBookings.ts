@@ -1,13 +1,13 @@
 import { getBookingsForSpotApi, BookingApiResponse } from '@/src/api/booking';
 import { getParkingSpotsForOwner } from './parkingService';
-import { mapBookingDateRange } from './bookingDates';
+import { mapBookingDateRange, ownerEarningsFrom } from './bookingDates';
 import { Booking } from '@/src/types';
 
 // "Reservas reales" para las pantallas Hoy/Calendario del propietario:
-// confirmadas, pendientes de que el propietario las apruebe, o ya
-// completadas. Se excluyen las que todavía no se pagaron (pueden expirar
+// confirmadas, en curso (el conductor ya llegó y se verificó su código),
+// pendientes de que el propietario las apruebe, o ya completadas. Se excluyen las que todavía no se pagaron (pueden expirar
 // sin confirmarse) y las canceladas/rechazadas.
-const RELEVANT_STATUSES = new Set(['CONFIRMED', 'PENDING_OWNER_APPROVAL', 'COMPLETED']);
+const RELEVANT_STATUSES = new Set(['CONFIRMED', 'IN_PROGRESS', 'PENDING_OWNER_APPROVAL', 'COMPLETED']);
 
 function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
   const amount = typeof b.amount === 'number' ? b.amount / 100 : 0;
@@ -24,6 +24,7 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
     subtotal: amount,
     serviceCharge: 0,
     total: amount,
+    ownerEarnings: ownerEarningsFrom(b),
     status: b.status as Booking['status'],
   };
 }
