@@ -72,11 +72,6 @@ export default function Settlements() {
               <Text style={styles.amount}>
                 ${(item.netAmount / 100).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Text>
-              <Text style={typography.caption}>
-                {t('settlements.commission', {
-                  amount: (item.commissionAmount / 100).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-                })}
-              </Text>
             </Card>
           </TouchableOpacity>
         )}

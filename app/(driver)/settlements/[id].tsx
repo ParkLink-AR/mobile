@@ -76,10 +76,6 @@ export default function SettlementDetail() {
     errorText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
     amount: { color: colors.teal, fontWeight: '700', fontSize: sc(24), marginTop: 4 },
     preparingNote: { marginTop: 4 },
-    divider: { height: 1, backgroundColor: colors.border, marginVertical: 10 },
-    row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
-    rowLabel: { fontSize: sc(14), color: colors.textSecondary },
-    rowValue: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
     sectionTitle: { marginTop: 8 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
     sectionLabel: {
@@ -125,15 +121,6 @@ export default function SettlementDetail() {
         {settlement.status === 'PENDING' && (
           <Text style={[typography.caption, styles.preparingNote]}>{t('settlements.preparingNote')}</Text>
         )}
-        <View style={styles.divider} />
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>{t('settlements.grossAmount')}</Text>
-          <Text style={styles.rowValue}>{money(settlement.grossAmount)}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>{t('settlements.commissionLabel')}</Text>
-          <Text style={styles.rowValue}>{money(settlement.commissionAmount)}</Text>
-        </View>
       </Card>
 
       <Card>
