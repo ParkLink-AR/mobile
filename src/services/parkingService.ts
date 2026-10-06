@@ -300,6 +300,7 @@ export interface UpdateParkingSpotInput {
   // `null` explícito borra el precio-por-vehículo y vuelve a pricePerHour
   // único -- ver UpdateParkingSpotApiInput.
   pricePerHourByVehicleType?: Partial<Record<VehicleType, number>> | null;
+  title?: string;
   description?: string;
   covered?: boolean;
   vehicleTypes?: VehicleType[];
@@ -328,6 +329,7 @@ export async function updateParkingSpot(
     hourlyEnabled: updates.hourlyEnabled,
     pricePerHour: updates.pricePerHour,
     pricePerHourByVehicleType: updates.pricePerHourByVehicleType,
+    title: updates.title,
     description: updates.description,
     covered: updates.covered,
     vehicleTypes: updates.vehicleTypes,

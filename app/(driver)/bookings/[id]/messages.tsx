@@ -144,6 +144,8 @@ export default function BookingMessages() {
         ) : (
           <FlatList
             ref={listRef}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
             data={messages}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}

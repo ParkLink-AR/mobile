@@ -1,6 +1,6 @@
 import { getBookingsForSpotApi, BookingApiResponse } from '@/src/api/booking';
 import { getParkingSpotsForOwner } from './parkingService';
-import { mapBookingDateRange, ownerEarningsFrom } from './bookingDates';
+import { mapBookingDateRange, ownerEarningsFrom, toVehicleSnapshot } from './bookingDates';
 import { Booking } from '@/src/types';
 
 // "Reservas reales" para las pantallas Hoy/Calendario del propietario:
@@ -25,6 +25,8 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
     serviceCharge: 0,
     total: amount,
     ownerEarnings: ownerEarningsFrom(b),
+    ownerResponseDeadline: b.owner_response_deadline,
+    vehicle: toVehicleSnapshot(b.vehicle),
     status: b.status as Booking['status'],
   };
 }

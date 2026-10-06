@@ -1,7 +1,7 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Pressable, Modal, TouchableWithoutFeedback, Linking } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useFocusEffect, useLocalSearchParams, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
@@ -15,11 +15,15 @@ import {
   cancelBookingApi,
   getBookingReviewsApi,
   getRefundStatusApi,
+  approveBookingApi,
+  rejectBookingApi,
   BookingApiResponse,
   RefundStatusResponse,
   ReviewTargetType,
 } from '@/src/api/booking';
 import { useSessionStore } from '@/src/store/useSessionStore';
+import { useNotificationsStore } from '@/src/store/useNotificationsStore';
+import { ApiError } from '@/src/api/client';
 import { getParkingSpotDetail } from '@/src/api/parking';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { mapBookingDateRange, formatBookingWhen, formatFullDate, toVehicleSnapshot, ownerEarningsFrom } from '@/src/services/bookingDates';
@@ -106,6 +110,8 @@ export default function DriverBookingDetail() {
   // spot and its owner (booking-service rejects a second review of the same target).
   const [reviewPending, setReviewPending] = useState<boolean | null>(null);
   const [refund, setRefund] = useState<RefundStatusResponse | null>(null);
+  // Owner answering a PENDING_OWNER_APPROVAL request from here: which button is working.
+  const [answering, setAnswering] = useState<'approve' | 'reject' | null>(null);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -164,6 +170,20 @@ export default function DriverBookingDetail() {
     setConfirmCancelVisible(true);
   }
 
+  async function answerRequest(approve: boolean) {
+    if (!booking) return;
+    setAnswering(approve ? 'approve' : 'reject');
+    try {
+      await (approve ? approveBookingApi(booking.id) : rejectBookingApi(booking.id));
+      load();
+      if (userId) useNotificationsStore.getState().refresh(userId);
+    } catch (err) {
+      alert(err instanceof ApiError ? err.detail : t(approve ? 'owner.spot.requests.errorApprove' : 'owner.spot.requests.errorReject'));
+    } finally {
+      setAnswering(null);
+    }
+  }
+
   async function performCancel() {
     if (!booking) return;
     setConfirmCancelVisible(false);
@@ -210,7 +230,6 @@ export default function DriverBookingDetail() {
     detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     detailLabel: { flex: 1, fontSize: sc(14), color: colors.textSecondary },
     detailValue: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
-    vehicleDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     detailValueLink: { color: colors.teal },
     whenValue: { flex: 1, fontSize: sc(14), color: colors.text, fontWeight: '600' },
     totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -222,6 +241,15 @@ export default function DriverBookingDetail() {
     refundNote: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
     reviewedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12 },
     reviewedText: { fontSize: 14, color: colors.textSecondary, fontWeight: '600' },
+    answerRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingBottom: 16 },
+    answerBtn: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+      paddingVertical: 14, borderRadius: 12,
+    },
+    approveBtn: { backgroundColor: colors.teal },
+    rejectBtn: { borderWidth: 1.5, borderColor: '#C62828' },
+    approveBtnText: { color: colors.white, fontWeight: '700', fontSize: sc(15) },
+    rejectBtnText: { color: '#C62828', fontWeight: '700', fontSize: sc(15) },
     cancelButton: {
       borderRadius: 12,
       borderWidth: 1.5,
@@ -379,13 +407,18 @@ export default function DriverBookingDetail() {
             )}
 
             {booking.vehicle && (
-              <View style={styles.vehicleDetailRow}>
-                <VehiclePlate plate={booking.vehicle.plate} size="small" />
-                <View>
+              <>
+                <View style={styles.detailRow}>
+                  <Ionicons name="car-outline" size={sc(16)} color={colors.textSecondary} />
                   <Text style={styles.detailLabel}>{t('driver.booking.detail.vehicle')}</Text>
                   <Text style={styles.detailValue}>{booking.vehicle.brand} {booking.vehicle.model}</Text>
                 </View>
-              </View>
+                <View style={styles.detailRow}>
+                  <MaterialCommunityIcons name="card-text-outline" size={sc(16)} color={colors.textSecondary} />
+                  <Text style={styles.detailLabel}>{t('driver.booking.detail.plate')}</Text>
+                  <VehiclePlate plate={booking.vehicle.plate} size="small" align="end" />
+                </View>
+              </>
             )}
 
             <View style={styles.divider} />
@@ -608,6 +641,40 @@ export default function DriverBookingDetail() {
                 <Text style={styles.reviewedText}>{t('booking.review.done')}</Text>
               </View>
             )}
+          </View>
+        )}
+
+        {/* Solicitud a confirmar: el propietario la aprueba o rechaza desde acá mismo. */}
+        {isOwnerView && booking.status === 'PENDING_OWNER_APPROVAL' && (
+          <View style={styles.answerRow}>
+            <Pressable
+              style={[styles.answerBtn, styles.rejectBtn]}
+              onPress={() => answerRequest(false)}
+              disabled={answering !== null}
+            >
+              {answering === 'reject' ? (
+                <ActivityIndicator color="#C62828" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="close" size={sc(18)} color="#C62828" />
+                  <Text style={styles.rejectBtnText}>{t('owner.spot.requests.reject')}</Text>
+                </>
+              )}
+            </Pressable>
+            <Pressable
+              style={[styles.answerBtn, styles.approveBtn]}
+              onPress={() => answerRequest(true)}
+              disabled={answering !== null}
+            >
+              {answering === 'approve' ? (
+                <ActivityIndicator color={colors.white} size="small" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark" size={sc(18)} color={colors.white} />
+                  <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
+                </>
+              )}
+            </Pressable>
           </View>
         )}
 

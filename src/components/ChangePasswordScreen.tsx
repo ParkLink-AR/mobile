@@ -133,7 +133,7 @@ export default function ChangePasswordScreen() {
   }
 
   return (
-    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
+    <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
       <Text style={typography.h1}>{t('changePassword.title')}</Text>
       <Text style={styles.hint}>{t('changePassword.current.hint')}</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}

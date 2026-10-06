@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import {
   View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback,
 } from 'react-native';
@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router, useFocusEffect, useSegments } from 'expo-router';
 import { Button } from '@/src/components/Button';
-import { Screen } from '@/src/components/Screen';
+import { Screen, FORM_SCROLL_PROPS, useScrollToFocusedInput } from '@/src/components/Screen';
 import { RatingStars } from '@/src/components/RatingStars';
 import { dayGroupsToEntries, entriesToDayGroups } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
@@ -32,6 +32,7 @@ import {
 } from '@/src/services/parkingService';
 import { useSpotsStore } from '@/src/store/useSpotsStore';
 import { GeocodeCandidate, ParkingSpotPhotoAsset, reverseGeocode } from '@/src/api/parking';
+import { formatSpotTitle, SPOT_TITLE_MAX_LENGTH } from '@/src/utils/spotTitle';
 import { ApiError } from '@/src/api/client';
 import { ParkingSpot } from '@/src/types';
 import { VehicleType } from '@/src/constants/vehicleTypes';
@@ -47,6 +48,9 @@ export default function EditSpot() {
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
   useLanguage();
+  const scrollRef = useRef<ScrollView>(null);
+  const contentRef = useRef<View>(null);
+  useScrollToFocusedInput(scrollRef, contentRef);
   const group = `/${useSegments()[0]}`;
   const { id } = useLocalSearchParams<{ id: string }>();
   const markUpdated = useSpotsStore((s) => s.markUpdated);
@@ -59,6 +63,7 @@ export default function EditSpot() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [addressSuggestionsOpen, setAddressSuggestionsOpen] = useState(false);
   const [capacity, setCapacity] = useState('1');
+  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [covered, setCovered] = useState(true);
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
@@ -86,6 +91,7 @@ export default function EditSpot() {
         setAddress(s.address);
         setCoordinates({ lat: s.lat, lng: s.lng });
         setCapacity(String(s.capacity ?? 1));
+        setTitle(s.title);
         setDescription(s.description ?? '');
         setCovered(s.covered);
         setVehicleTypes(s.vehicleTypes);
@@ -240,6 +246,10 @@ export default function EditSpot() {
   if (!spot) return null;
 
   async function save() {
+    if (!title.trim()) {
+      alert(t('owner.spot.new.spotTitleRequired'));
+      return;
+    }
     if (!hourlySettings.hourlyEnabled && !staySettings.stayEnabled) {
       alert(t('owner.spot.new.requiredMode'));
       return;
@@ -284,6 +294,7 @@ export default function EditSpot() {
         pricePerHourByVehicleType: hourlySettings.hourlyEnabled
           ? (hourlySettings.pricePerVehicleType ? hourlyPricesByVehicleTypeToNumbers(hourlySettings, vehicleTypes) : null)
           : undefined,
+        title: title.trim(),
         description: description.trim(),
         covered,
         vehicleTypes,
@@ -480,12 +491,59 @@ export default function EditSpot() {
 
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <View style={styles.body}>
-          {/* Spot info (read-only) */}
+      <ScrollView ref={scrollRef} {...FORM_SCROLL_PROPS}>
+        <View ref={contentRef} collapsable={false} style={styles.body}>
+          {/* Spot info */}
           <View style={styles.infoCard}>
             <Text style={styles.spotTitle}>{spot.title}</Text>
             <RatingStars rating={spot.rating} count={spot.reviewCount} />
+          </View>
+
+          {/* Title */}
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>{t('owner.spot.new.spotTitle')}</Text>
+            <TextInput
+              style={styles.input}
+              value={title}
+              onChangeText={(text) => setTitle(formatSpotTitle(text))}
+              autoCapitalize="words"
+              maxLength={SPOT_TITLE_MAX_LENGTH}
+              placeholder={t('owner.spot.new.spotTitlePlaceholder')}
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
+
+          {/* Location */}
+          <View style={[styles.card, styles.locationCard]}>
+            <Text style={styles.sectionLabel}>{t('owner.spot.new.address')}</Text>
+            <View style={styles.addressRow}>
+              <AddressAutocomplete
+                value={address}
+                onChangeText={handleAddressChange}
+                onSelect={selectAddress}
+                placeholder={t('owner.spot.new.addressPlaceholder')}
+                onSuggestionsVisibilityChange={setAddressSuggestionsOpen}
+              />
+              <TouchableOpacity
+                style={styles.locateButton}
+                onPress={useCurrentLocation}
+                disabled={locating}
+                accessibilityLabel={t('owner.spot.new.useCurrentLocation')}
+              >
+                {locating ? (
+                  <ActivityIndicator color={colors.white} size="small" />
+                ) : (
+                  <Ionicons name="locate" size={sc(20)} color={colors.white} />
+                )}
+              </TouchableOpacity>
+            </View>
+            {coordinates && !addressSuggestionsOpen && (
+              <View style={styles.locationConfirmedRow}>
+                <Ionicons name="checkmark-circle" size={sc(14)} color={colors.success} />
+                <Text style={styles.locationConfirmed}>{t('owner.spot.new.locationConfirmed')}</Text>
+              </View>
+            )}
+            {locationError && !addressSuggestionsOpen && <Text style={styles.locationError}>{locationError}</Text>}
           </View>
 
           {/* Photos */}
@@ -527,39 +585,6 @@ export default function EditSpot() {
                 </TouchableOpacity>
               )}
             </View>
-          </View>
-
-          {/* Location */}
-          <View style={[styles.card, styles.locationCard]}>
-            <Text style={styles.sectionLabel}>{t('owner.spot.new.address')}</Text>
-            <View style={styles.addressRow}>
-              <AddressAutocomplete
-                value={address}
-                onChangeText={handleAddressChange}
-                onSelect={selectAddress}
-                placeholder={t('owner.spot.new.addressPlaceholder')}
-                onSuggestionsVisibilityChange={setAddressSuggestionsOpen}
-              />
-              <TouchableOpacity
-                style={styles.locateButton}
-                onPress={useCurrentLocation}
-                disabled={locating}
-                accessibilityLabel={t('owner.spot.new.useCurrentLocation')}
-              >
-                {locating ? (
-                  <ActivityIndicator color={colors.white} size="small" />
-                ) : (
-                  <Ionicons name="locate" size={sc(20)} color={colors.white} />
-                )}
-              </TouchableOpacity>
-            </View>
-            {coordinates && !addressSuggestionsOpen && (
-              <View style={styles.locationConfirmedRow}>
-                <Ionicons name="checkmark-circle" size={sc(14)} color={colors.success} />
-                <Text style={styles.locationConfirmed}>{t('owner.spot.new.locationConfirmed')}</Text>
-              </View>
-            )}
-            {locationError && !addressSuggestionsOpen && <Text style={styles.locationError}>{locationError}</Text>}
           </View>
 
           {/* Capacity */}

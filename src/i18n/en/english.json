@@ -219,6 +219,9 @@
   "owner.spot.new.capacityHint": "For a parking lot: how many identical spaces you rent at this same address.",
   "owner.spot.new.availability": "Availability",
   "owner.spot.new.description": "Description",
+  "owner.spot.new.spotTitle": "Title",
+  "owner.spot.new.spotTitlePlaceholder": "E.g. Covered garage in Palermo",
+  "owner.spot.new.spotTitleRequired": "Give your spot a title.",
   "owner.spot.new.descriptionPlaceholder": "Spacious garage for a medium car. Electric gate access.",
   "owner.spot.new.publish": "Publish spot",
   "owner.spot.new.requiredFields": "Please fill in the required fields",
@@ -311,6 +314,9 @@
   "owner.booking.youEarn": "You earn $%{amount}",
   "owner.booking.youEarnLabel": "You earn",
   "owner.booking.driverPaid": "The driver paid (including ParkLink's fee)",
+  "owner.requests.pendingSection": "Pending booking requests (%{count})",
+  "owner.requests.respondByToday": "Respond today before %{time}",
+  "owner.requests.respondByDate": "Respond before %{date} at %{time}",
   "owner.spot.edit.photos": "Photos",
   "owner.spot.edit.errorPhotos": "Couldn't update the photos.",
   "spot.ownedByYou": "This is your parking spot",
@@ -373,7 +379,7 @@
   "owner.payoutInfo.error.cuil": "CUIL must be 11 digits",
   "owner.payoutInfo.error.titular": "Enter the account holder's name",
   "owner.payoutInfo.error.generic": "Couldn't save your payout info",
-  "profile.changeMode": "Switch mode",
+  "profile.changeMode": "Mode",
   "profile.preferences": "PREFERENCES",
   "language.select": "Select language",
   "profile.language": "Language",
@@ -551,5 +557,6 @@
   "vehicles.none": "None",
   "vehicles.pickerEmpty": "You don't have any saved vehicles yet.",
   "driver.booking.vehicle.sectionTitle": "VEHICLE (OPTIONAL)",
-  "driver.booking.detail.vehicle": "Vehicle"
+  "driver.booking.detail.vehicle": "Vehicle",
+  "driver.booking.detail.plate": "License plate"
 }

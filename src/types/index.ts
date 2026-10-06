@@ -129,6 +129,9 @@ export interface Booking {
   // What the spot's owner earns from this booking, in pesos -- only known on the owner's
   // side. `total` is always what the driver was charged.
   ownerEarnings?: number;
+  // PENDING_OWNER_APPROVAL only: when it's auto-cancelled (and refunded) if the owner
+  // hasn't approved or rejected it yet.
+  ownerResponseDeadline?: string;
   serviceCharge: number;
   total: number;
   status: BookingStatus;

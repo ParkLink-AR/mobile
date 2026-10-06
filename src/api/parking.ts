@@ -141,6 +141,7 @@ export interface UpdateParkingSpotApiInput extends StayFields {
   // `null` explícito borra el precio-por-vehículo y vuelve a pricePerHour
   // único -- ver UpdateParkingSpotDto en parking-service.
   pricePerHourByVehicleType?: Partial<Record<VehicleType, number>> | null;
+  title?: string;
   description?: string;
   covered?: boolean;
   vehicleTypes?: VehicleType[];

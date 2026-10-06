@@ -11,6 +11,9 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getOwnerBookings } from '@/src/services/ownerBookings';
+import { approveBookingApi, rejectBookingApi } from '@/src/api/booking';
+import { ApiError } from '@/src/api/client';
+import { useNotificationsStore } from '@/src/store/useNotificationsStore';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { todayArtDateISO } from '@/src/services/dateUtils';
 import { formatBookingWhen, formatShortDate } from '@/src/services/bookingDates';
@@ -27,6 +30,11 @@ export default function OwnerToday() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [driverNames, setDriverNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  // Booking requests (PENDING_OWNER_APPROVAL) across every spot, soonest deadline first --
+  // they're auto-cancelled if left unanswered, so they lead the screen.
+  const [requests, setRequests] = useState<Booking[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const refreshNotifications = useNotificationsStore((s) => s.refresh);
 
   const load = useCallback(() => {
     if (!user) return;
@@ -34,10 +42,14 @@ export default function OwnerToday() {
     getOwnerBookings(user.id)
       .then((all) => {
         const today = todayArtDateISO();
-        const todays = all.filter((b) => b.date === today);
+        const todays = all.filter((b) => b.date === today && b.status !== 'PENDING_OWNER_APPROVAL');
         setBookings(todays);
+        const pending = all
+          .filter((b) => b.status === 'PENDING_OWNER_APPROVAL')
+          .sort((a, b) => (a.ownerResponseDeadline ?? '').localeCompare(b.ownerResponseDeadline ?? ''));
+        setRequests(pending);
 
-        const driverIds = [...new Set(todays.map((b) => b.driverId))];
+        const driverIds = [...new Set([...todays, ...pending].map((b) => b.driverId))];
         Promise.allSettled(
           driverIds.map((driverId) =>
             getPublicProfileApi(driverId).then((profile) => {
@@ -51,6 +63,32 @@ export default function OwnerToday() {
   }, [user?.id]);
 
   useFocusEffect(load);
+
+  async function answerRequest(bookingId: string, approve: boolean) {
+    setBusyId(bookingId);
+    try {
+      await (approve ? approveBookingApi(bookingId) : rejectBookingApi(bookingId));
+      load();
+      if (user) refreshNotifications(user.id);
+    } catch (err) {
+      alert(err instanceof ApiError ? err.detail : t(approve ? 'owner.spot.requests.errorApprove' : 'owner.spot.requests.errorReject'));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  /** "hoy a las 14:00" / "el 07/10 a las 14:00" */
+  function respondByLabel(deadline: string): string {
+    const date = new Date(deadline);
+    const time = date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+    if (date.toDateString() === new Date().toDateString()) {
+      return t('owner.requests.respondByToday', { time });
+    }
+    return t('owner.requests.respondByDate', {
+      date: date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
+      time,
+    });
+  }
 
   if (!user) return null;
 
@@ -94,6 +132,24 @@ export default function OwnerToday() {
     stayRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     stayLabel: { flex: 1, fontSize: sc(13), color: colors.textSecondary },
     stayValue: { fontSize: sc(13), fontWeight: '600', color: colors.text },
+    timeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    requestsList: { gap: 10 },
+    requestCard: { gap: 6, borderWidth: 1, borderColor: colors.warning },
+    requestSpotTitle: { fontSize: sc(15), fontWeight: '700', color: colors.text },
+    vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    vehicleText: { fontSize: sc(13), color: colors.textSecondary },
+    earnText: { fontSize: sc(14), fontWeight: '700', color: colors.teal },
+    deadlineRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    deadlineText: { fontSize: sc(13), fontWeight: '600', color: colors.warning },
+    actionsRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
+    actionBtn: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+      paddingVertical: 9, borderRadius: 10,
+    },
+    approveBtn: { backgroundColor: colors.teal },
+    rejectBtn: { borderWidth: 1.5, borderColor: '#C62828' },
+    approveBtnText: { color: colors.white, fontWeight: '700', fontSize: sc(14) },
+    rejectBtnText: { color: '#C62828', fontWeight: '700', fontSize: sc(14) },
   });
 
   return (
@@ -112,6 +168,78 @@ export default function OwnerToday() {
               </View>
               <Text style={styles.dateLabel}>{todayLabel}</Text>
             </View>
+
+            {requests.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>{t('owner.requests.pendingSection', { count: requests.length })}</Text>
+                  <View style={styles.sectionLine} />
+                </View>
+                <View style={styles.requestsList}>
+                  {requests.map((item) => (
+                    <Pressable key={item.id} onPress={() => router.push(`${group}/bookings/${item.id}`)}>
+                      <Card style={styles.requestCard}>
+                        <Text style={styles.requestSpotTitle}>{item.parkingSpotTitle}</Text>
+                        <View style={styles.driverRow}>
+                          <Ionicons name="person-circle-outline" size={sc(16)} color={colors.textSecondary} />
+                          <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
+                        </View>
+                        {item.vehicle && (
+                          <View style={styles.vehicleRow}>
+                            <Ionicons name="car-outline" size={sc(16)} color={colors.textSecondary} />
+                            <Text style={styles.vehicleText}>{item.vehicle.brand} {item.vehicle.model}</Text>
+                          </View>
+                        )}
+                        <Text style={typography.body}>
+                          {formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}
+                        </Text>
+                        <Text style={styles.earnText}>
+                          {t('owner.booking.youEarn', {
+                            amount: (item.ownerEarnings ?? item.total).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                          })}
+                        </Text>
+                        {item.ownerResponseDeadline && (
+                          <View style={styles.deadlineRow}>
+                            <Ionicons name="time-outline" size={sc(15)} color={colors.warning} />
+                            <Text style={styles.deadlineText}>{respondByLabel(item.ownerResponseDeadline)}</Text>
+                          </View>
+                        )}
+                        <View style={styles.actionsRow}>
+                          <Pressable
+                            style={[styles.actionBtn, styles.rejectBtn]}
+                            onPress={() => answerRequest(item.id, false)}
+                            disabled={busyId === item.id}
+                          >
+                            {busyId === item.id ? (
+                              <ActivityIndicator color="#C62828" size="small" />
+                            ) : (
+                              <>
+                                <Ionicons name="close" size={sc(16)} color="#C62828" />
+                                <Text style={styles.rejectBtnText}>{t('owner.spot.requests.reject')}</Text>
+                              </>
+                            )}
+                          </Pressable>
+                          <Pressable
+                            style={[styles.actionBtn, styles.approveBtn]}
+                            onPress={() => answerRequest(item.id, true)}
+                            disabled={busyId === item.id}
+                          >
+                            {busyId === item.id ? (
+                              <ActivityIndicator color={colors.white} size="small" />
+                            ) : (
+                              <>
+                                <Ionicons name="checkmark" size={sc(16)} color={colors.white} />
+                                <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
+                              </>
+                            )}
+                          </Pressable>
+                        </View>
+                      </Card>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
 
             <View style={styles.statsRow}>
               <View style={styles.statCard}>

@@ -219,6 +219,9 @@
   "owner.spot.new.capacityHint": "Para una playa: cuántos lugares idénticos alquilás en esta misma dirección.",
   "owner.spot.new.availability": "Disponibilidad",
   "owner.spot.new.description": "Descripción",
+  "owner.spot.new.spotTitle": "Título",
+  "owner.spot.new.spotTitlePlaceholder": "Ej.: Cochera techada en Palermo",
+  "owner.spot.new.spotTitleRequired": "Ponele un título a tu cochera.",
   "owner.spot.new.descriptionPlaceholder": "Cochera amplia para auto mediano. Acceso por portón eléctrico.",
   "owner.spot.new.publish": "Publicar cochera",
   "owner.spot.new.requiredFields": "Por favor completa los campos requeridos",
@@ -311,6 +314,9 @@
   "owner.booking.youEarn": "Ganás $%{amount}",
   "owner.booking.youEarnLabel": "Ganás",
   "owner.booking.driverPaid": "El conductor pagó (con la comisión de ParkLink)",
+  "owner.requests.pendingSection": "Solicitudes de reserva pendientes (%{count})",
+  "owner.requests.respondByToday": "Respondé hoy antes de las %{time}",
+  "owner.requests.respondByDate": "Respondé antes del %{date} a las %{time}",
   "owner.spot.edit.photos": "Fotos",
   "owner.spot.edit.errorPhotos": "No se pudo actualizar las fotos.",
   "spot.ownedByYou": "Esta es tu cochera",
@@ -551,5 +557,6 @@
   "vehicles.none": "Ninguno",
   "vehicles.pickerEmpty": "Todavía no tenés vehículos guardados.",
   "driver.booking.vehicle.sectionTitle": "VEHÍCULO (OPCIONAL)",
-  "driver.booking.detail.vehicle": "Vehículo"
+  "driver.booking.detail.vehicle": "Vehículo",
+  "driver.booking.detail.plate": "Dominio"
 }

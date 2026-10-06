@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { View, Text, TextInput, Pressable, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView, Image } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
-import { Screen } from '@/src/components/Screen';
+import { Screen, FORM_SCROLL_PROPS, useScrollToFocusedInput } from '@/src/components/Screen';
 import { dayGroupsToEntries } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
 import { StaySettingsEditor, StaySettingsFormValue, EMPTY_STAY_SETTINGS } from '@/src/components/StaySettingsEditor';
@@ -22,6 +22,7 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { createParkingSpot, uploadParkingSpotPhotos } from '@/src/services/parkingService';
 import { ApiError } from '@/src/api/client';
 import { GeocodeCandidate, ParkingSpotPhotoAsset, reverseGeocode } from '@/src/api/parking';
+import { formatSpotTitle, SPOT_TITLE_MAX_LENGTH } from '@/src/utils/spotTitle';
 import { VehicleType } from '@/src/constants/vehicleTypes';
 import { t, useLanguage } from '@/src/i18n';
 import { useScale } from '@/src/theme/typography';
@@ -35,6 +36,9 @@ export default function NewSpot() {
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
   useLanguage();
+  const scrollRef = useRef<ScrollView>(null);
+  const contentRef = useRef<View>(null);
+  useScrollToFocusedInput(scrollRef, contentRef);
   const user = useSessionStore((s) => s.user);
 
   const [address, setAddress] = useState('');
@@ -47,6 +51,7 @@ export default function NewSpot() {
   const [capacity, setCapacity] = useState('1');
   const [hourlySettings, setHourlySettings] = useState<HourlySettingsFormValue>(EMPTY_HOURLY_SETTINGS);
   const [staySettings, setStaySettings] = useState<StaySettingsFormValue>(EMPTY_STAY_SETTINGS);
+  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [photos, setPhotos] = useState<ParkingSpotPhotoAsset[]>([]);
@@ -134,6 +139,10 @@ export default function NewSpot() {
       alert(t('owner.spot.new.requiredFields'));
       return;
     }
+    if (!title.trim()) {
+      alert(t('owner.spot.new.spotTitleRequired'));
+      return;
+    }
     if (!hourlySettings.hourlyEnabled && !staySettings.stayEnabled) {
       alert(t('owner.spot.new.requiredMode'));
       return;
@@ -164,7 +173,7 @@ export default function NewSpot() {
     try {
       setPublishing(true);
       const spot = await createParkingSpot({
-        title: address.split(',')[0] || address,
+        title: title.trim(),
         address: address.trim(),
         lat: coordinates.lat,
         lng: coordinates.lng,
@@ -280,31 +289,20 @@ export default function NewSpot() {
 
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <View style={styles.body}>
-          {/* Photos */}
+      <ScrollView ref={scrollRef} {...FORM_SCROLL_PROPS}>
+        <View ref={contentRef} collapsable={false} style={styles.body}>
+          {/* Title */}
           <View style={styles.card}>
-            <Text style={styles.sectionLabel}>{t('owner.spot.new.photos')}</Text>
-            <View style={styles.photosRow}>
-              {photos.map((photo, index) => (
-                <View key={photo.uri} style={styles.photoThumbWrapper}>
-                  <Image source={{ uri: photo.uri }} style={styles.photoThumb} />
-                  {index === 0 && (
-                    <View style={styles.coverBadge}>
-                      <Text style={styles.coverBadgeText}>{t('owner.spot.new.cover')}</Text>
-                    </View>
-                  )}
-                  <TouchableOpacity style={styles.removePhotoBtn} onPress={() => removePhoto(index)}>
-                    <Ionicons name="close" size={sc(13)} color={colors.white} />
-                  </TouchableOpacity>
-                </View>
-              ))}
-              {photos.length < MAX_PHOTOS && (
-                <TouchableOpacity style={styles.addPhotoThumb} onPress={pickPhotos}>
-                  <Ionicons name="add" size={sc(22)} color={colors.textSecondary} />
-                </TouchableOpacity>
-              )}
-            </View>
+            <Text style={styles.sectionLabel}>{t('owner.spot.new.spotTitle')}</Text>
+            <TextInput
+              style={styles.input}
+              value={title}
+              onChangeText={(text) => setTitle(formatSpotTitle(text))}
+              autoCapitalize="words"
+              maxLength={SPOT_TITLE_MAX_LENGTH}
+              placeholder={t('owner.spot.new.spotTitlePlaceholder')}
+              placeholderTextColor={colors.textSecondary}
+            />
           </View>
 
           {/* Location */}
@@ -338,6 +336,31 @@ export default function NewSpot() {
               </View>
             )}
             {locationError && !addressSuggestionsOpen && <Text style={styles.locationError}>{locationError}</Text>}
+          </View>
+
+          {/* Photos */}
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>{t('owner.spot.new.photos')}</Text>
+            <View style={styles.photosRow}>
+              {photos.map((photo, index) => (
+                <View key={photo.uri} style={styles.photoThumbWrapper}>
+                  <Image source={{ uri: photo.uri }} style={styles.photoThumb} />
+                  {index === 0 && (
+                    <View style={styles.coverBadge}>
+                      <Text style={styles.coverBadgeText}>{t('owner.spot.new.cover')}</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity style={styles.removePhotoBtn} onPress={() => removePhoto(index)}>
+                    <Ionicons name="close" size={sc(13)} color={colors.white} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {photos.length < MAX_PHOTOS && (
+                <TouchableOpacity style={styles.addPhotoThumb} onPress={pickPhotos}>
+                  <Ionicons name="add" size={sc(22)} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {/* Capacity */}

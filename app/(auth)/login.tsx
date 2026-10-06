@@ -66,7 +66,7 @@ export default function Login() {
   }
 
   return (
-    <Screen style={styles.container}>
+    <Screen form style={styles.container}>
       <Image
         source={require('@/assets/logo-parklink.png')}
         style={styles.logo}

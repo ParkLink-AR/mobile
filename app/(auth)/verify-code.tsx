@@ -86,7 +86,7 @@ export default function VerifyCode() {
   }
 
   return (
-    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
+    <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
       <Text style={typography.h1}>{t('auth.verifyCode.title')}</Text>
       <Text style={typography.body}>
         {t('auth.verifyCode.helper', { email })}
