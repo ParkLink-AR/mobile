@@ -1,6 +1,6 @@
-import { Platform } from 'react-native';
 import { AccountType, AuthTokens, AuthUser, Vehicle } from '@/src/types';
 import { request, requestMultipart } from './client';
+import { appendLocalFile } from './formDataFile';
 
 interface RegisterInput {
   firstName: string;
@@ -231,22 +231,7 @@ export interface AvatarAsset {
 
 export async function uploadAvatar(userId: string, asset: AvatarAsset): Promise<AuthUser> {
   const formData = new FormData();
-  if (Platform.OS === 'web') {
-    // react-native-web's FormData is the browser's real implementation, which
-    // has no idea what to do with RN's {uri, name, type} object -- it just
-    // stringifies it (into the literal text "[object Object]"), so the
-    // actual file bytes have to be fetched into a real Blob first.
-    const blob = await (await fetch(asset.uri)).blob();
-    formData.append('file', blob, asset.name);
-  } else {
-    // On native, this {uri, name, type} shape is exactly what RN's bridge
-    // expects and turns into a proper multipart file part.
-    formData.append('file', {
-      uri: asset.uri,
-      name: asset.name,
-      type: asset.type,
-    } as unknown as Blob);
-  }
+  await appendLocalFile(formData, 'file', asset);
   const userResponse = await requestMultipart<UserOutResponse>(`/users/${userId}/avatar`, formData);
   return toAuthUser(userResponse);
 }

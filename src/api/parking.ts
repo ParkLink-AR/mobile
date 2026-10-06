@@ -1,5 +1,5 @@
-import { Platform } from 'react-native';
 import { request, requestMultipart } from './client';
+import { appendLocalFile } from './formDataFile';
 import { ScheduleEntry } from '@/src/types';
 import { ReviewListApiResponse } from './booking';
 import { VehicleType } from '@/src/constants/vehicleTypes';
@@ -268,18 +268,7 @@ export async function uploadParkingSpotPhotos(
 ): Promise<ParkingSpotApiResponse> {
   const formData = new FormData();
   for (const asset of assets) {
-    if (Platform.OS === 'web') {
-      // Same reasoning as uploadAvatar in api/auth.ts: react-native-web's
-      // FormData needs a real Blob, not RN's {uri, name, type} shape.
-      const blob = await (await fetch(asset.uri)).blob();
-      formData.append('files', blob, asset.name);
-    } else {
-      formData.append('files', {
-        uri: asset.uri,
-        name: asset.name,
-        type: asset.type,
-      } as unknown as Blob);
-    }
+    await appendLocalFile(formData, 'files', asset);
   }
   return requestMultipart<ParkingSpotApiResponse>(`/parking-spots/${spotId}/photos`, formData);
 }
