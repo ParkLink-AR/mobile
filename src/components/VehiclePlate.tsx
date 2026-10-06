@@ -103,11 +103,23 @@ function formatPlate(plate: string): string {
   return groups ? groups.join(GROUP_GAP) : clean;
 }
 
+type PlateAlign = 'center' | 'start' | 'end';
+
 interface VehiclePlateProps {
   plate: string;
   /** 'large' for the picker/detail view, 'small' for an inline chip next to other text. */
   size?: 'large' | 'small';
+  /** Every plate takes a car plate's width; narrower ones (motorcycle, legacy) sit centered
+   * in it by default -- 'end' pushes them to its right edge instead, for a plate shown as a
+   * right-aligned value. */
+  align?: PlateAlign;
 }
+
+const SLOT_ALIGN: Record<PlateAlign, 'center' | 'flex-start' | 'flex-end'> = {
+  center: 'center',
+  start: 'flex-start',
+  end: 'flex-end',
+};
 
 /**
  * Argentina's plate graphic, with the plate number overlaid in the real plate typeface
@@ -120,17 +132,17 @@ interface VehiclePlateProps {
  *     (see LegacyBikePlate).
  * See isValidArgentinePlate for the four patterns Argentina actually issues.
  */
-export function VehiclePlate({ plate, size = 'large' }: VehiclePlateProps) {
+export function VehiclePlate({ plate, size = 'large', align = 'center' }: VehiclePlateProps) {
   const [fontLoaded] = useFonts({
     [PLATE_FONT]: require('../../assets/fonts/PlateNumber.ttf'),
     [LEGACY_PLATE_FONT]: require('../../assets/fonts/PlateLegacy.ttf'),
   });
   const clean = cleanPlate(plate);
   if (MOTO_MERCOSUR_FORMAT.test(clean)) {
-    return <MercosurBikePlate clean={clean} size={size} fontLoaded={fontLoaded} />;
+    return <MercosurBikePlate clean={clean} size={size} align={align} fontLoaded={fontLoaded} />;
   }
   if (MOTO_OLD_FORMAT.test(clean)) {
-    return <LegacyBikePlate clean={clean} size={size} fontLoaded={fontLoaded} />;
+    return <LegacyBikePlate clean={clean} size={size} align={align} fontLoaded={fontLoaded} />;
   }
   const large = size === 'large';
   // Every plate is laid out in the modern plate's footprint (slotWidth), so whatever sits
@@ -148,7 +160,7 @@ export function VehiclePlate({ plate, size = 'large' }: VehiclePlateProps) {
   // Letter size stays what it was (61px of the image's 104), independent of the window.
   const letterHeight = 61 / PLATE_IMAGE_HEIGHT;
   const styles = StyleSheet.create({
-    slot: { width: slotWidth, alignItems: 'center' },
+    slot: { width: slotWidth, alignItems: SLOT_ALIGN[align] },
     container: { width: plateWidth, height },
     textWindow: {
       position: 'absolute',
@@ -206,10 +218,12 @@ export function VehiclePlate({ plate, size = 'large' }: VehiclePlateProps) {
 function MercosurBikePlate({
   clean,
   size,
+  align,
   fontLoaded,
 }: {
   clean: string;
   size: 'large' | 'small';
+  align: PlateAlign;
   fontLoaded: boolean;
 }) {
   const carWidth = size === 'large' ? 220 : 140;
@@ -224,7 +238,7 @@ function MercosurBikePlate({
     // Takes the same width as a car plate and centers the (narrower) motorcycle plate in
     // it, so whatever sits next to a plate in a list (brand/model, etc.) starts at the same
     // place for both kinds of vehicle.
-    slot: { width: carWidth, alignItems: 'center' },
+    slot: { width: carWidth, alignItems: SLOT_ALIGN[align] },
     container: { width, height },
     textWindow: {
       position: 'absolute',
@@ -327,10 +341,12 @@ function LegacyPlateText({
 function LegacyBikePlate({
   clean,
   size,
+  align,
   fontLoaded,
 }: {
   clean: string;
   size: 'large' | 'small';
+  align: PlateAlign;
   fontLoaded: boolean;
 }) {
   const carWidth = size === 'large' ? 220 : 140;
@@ -342,7 +358,7 @@ function LegacyBikePlate({
   const letterSpacing = Math.round(height * 0.02);
 
   const styles = StyleSheet.create({
-    slot: { width: carWidth, alignItems: 'center' },
+    slot: { width: carWidth, alignItems: SLOT_ALIGN[align] },
     container: { width, height },
   });
 

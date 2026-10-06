@@ -141,7 +141,7 @@ export default function PayoutInfoScreen() {
   }
 
   return (
-    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
+    <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
       <Text style={typography.h1}>{t('owner.payoutInfo.title')}</Text>
       <Text style={styles.helper}>{t('owner.payoutInfo.helper')}</Text>
 

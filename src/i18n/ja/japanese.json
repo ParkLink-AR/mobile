@@ -221,6 +221,9 @@
   "owner.spot.new.capacityHint": "駐車場の場合：同じ住所で貸し出す同一スペースの数。",
   "owner.spot.new.availability": "利用可能時間",
   "owner.spot.new.description": "説明",
+  "owner.spot.new.spotTitle": "タイトル",
+  "owner.spot.new.spotTitlePlaceholder": "例：パレルモの屋根付きガレージ",
+  "owner.spot.new.spotTitleRequired": "ガレージのタイトルを入力してください。",
   "owner.spot.new.descriptionPlaceholder": "中型車用の広いガレージ。電動ゲートからのアクセス。",
   "owner.spot.new.publish": "スペースを公開",
   "owner.spot.new.requiredFields": "必須項目を入力してください",
@@ -333,6 +336,9 @@
   "owner.booking.youEarn": "受取額 $%{amount}",
   "owner.booking.youEarnLabel": "受取額",
   "owner.booking.driverPaid": "ドライバーの支払額（ParkLink手数料込み）",
+  "owner.requests.pendingSection": "未対応の予約リクエスト（%{count}）",
+  "owner.requests.respondByToday": "本日%{time}までに返答してください",
+  "owner.requests.respondByDate": "%{date} %{time}までに返答してください",
   "owner.spot.edit.photos": "写真",
   "owner.spot.edit.errorPhotos": "写真を更新できませんでした。",
   "spot.ownedByYou": "これはあなたの駐車スペースです",
@@ -395,7 +401,7 @@
   "owner.payoutInfo.error.cuil": "CUILは11桁である必要があります",
   "owner.payoutInfo.error.titular": "口座名義人の名前を入力してください",
   "owner.payoutInfo.error.generic": "振込先情報を保存できませんでした",
-  "profile.changeMode": "モードを切り替える",
+  "profile.changeMode": "モード",
   "profile.preferences": "設定",
   "language.select": "言語を選択",
   "profile.language": "言語",
@@ -573,5 +579,6 @@
   "vehicles.none": "なし",
   "vehicles.pickerEmpty": "保存された車両がまだありません。",
   "driver.booking.vehicle.sectionTitle": "車両(任意)",
-  "driver.booking.detail.vehicle": "車両"
+  "driver.booking.detail.vehicle": "車両",
+  "driver.booking.detail.plate": "ナンバー"
 }

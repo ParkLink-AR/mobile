@@ -1,8 +1,9 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, TextInput, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
+import { ModalKeyboardAvoider } from '@/src/components/ModalKeyboardAvoider';
 import { verifyBookingCodeApi } from '@/src/api/booking';
 import { ApiError } from '@/src/api/client';
 import { verificationWindowState, verificationAvailableFromLabel } from '@/src/services/verificationWindow';
@@ -120,39 +121,43 @@ export function VerifyArrivalCode({ bookingId, startAt, endAt, onVerified }: Ver
       </TouchableOpacity>
 
       <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.overlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{t('owner.spot.requests.verifyCodeModalTitle')}</Text>
-            <Text style={styles.modalSubtitle}>{t('owner.spot.requests.verifyCodeModalSubtitle')}</Text>
-            <TextInput
-              style={styles.codeInput}
-              value={code}
-              onChangeText={(text) => setCode(text.replace(/[^0-9]/g, '').slice(0, 4))}
-              keyboardType="number-pad"
-              maxLength={4}
-              placeholder="0000"
-              placeholderTextColor={colors.textSecondary}
-              autoFocus
-            />
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-            <View style={styles.modalActionsRow}>
-              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.modalCancelBtnText}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalConfirmBtn}
-                onPress={handleConfirm}
-                disabled={code.length !== 4 || busy}
-              >
-                {busy ? (
-                  <ActivityIndicator color={colors.white} size="small" />
-                ) : (
-                  <Text style={styles.modalConfirmBtnText}>{t('owner.spot.requests.verifyCodeConfirm')}</Text>
-                )}
-              </TouchableOpacity>
+        <ModalKeyboardAvoider>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.overlay}>
+              <View style={styles.modalCard}>
+                <Text style={styles.modalTitle}>{t('owner.spot.requests.verifyCodeModalTitle')}</Text>
+                <Text style={styles.modalSubtitle}>{t('owner.spot.requests.verifyCodeModalSubtitle')}</Text>
+                <TextInput
+                  style={styles.codeInput}
+                  value={code}
+                  onChangeText={(text) => setCode(text.replace(/[^0-9]/g, '').slice(0, 4))}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  placeholder="0000"
+                  placeholderTextColor={colors.textSecondary}
+                  autoFocus
+                />
+                {error ? <Text style={styles.errorText}>{error}</Text> : null}
+                <View style={styles.modalActionsRow}>
+                  <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setModalVisible(false)}>
+                    <Text style={styles.modalCancelBtnText}>{t('common.cancel')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.modalConfirmBtn}
+                    onPress={handleConfirm}
+                    disabled={code.length !== 4 || busy}
+                  >
+                    {busy ? (
+                      <ActivityIndicator color={colors.white} size="small" />
+                    ) : (
+                      <Text style={styles.modalConfirmBtnText}>{t('owner.spot.requests.verifyCodeConfirm')}</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </ModalKeyboardAvoider>
       </Modal>
     </>
   );

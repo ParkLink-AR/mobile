@@ -221,7 +221,7 @@ function ReviewForm({
   }
 
   return (
-    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
+    <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
       {context && (
         <Card style={styles.bookingSummary}>
           <View style={styles.summaryRow}>

@@ -138,7 +138,7 @@ export default function ChangeEmailScreen() {
   }
 
   return (
-    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
+    <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
       <Text style={typography.h1}>{t('changeEmail.title')}</Text>
       <View>
         <Text style={styles.current}>{user.email}</Text>

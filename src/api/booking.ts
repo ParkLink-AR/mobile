@@ -12,6 +12,8 @@ export interface BookingApiResponse {
   end: string;
   status: string;
   hold_expires_at?: string;
+  // When a PENDING_OWNER_APPROVAL booking is auto-cancelled if the owner doesn't answer.
+  owner_response_deadline?: string;
   amount: number; // centavos -- what the driver was charged (owner's price + commission)
   // centavos -- what the spot's owner earns (their own price). Only sent to the owner;
   // absent for a booking that predates it, whose `amount` was the owner's price itself.

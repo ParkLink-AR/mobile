@@ -10,11 +10,13 @@ import {
   TouchableWithoutFeedback,
   StyleSheet,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
+import { ModalKeyboardAvoider } from '@/src/components/ModalKeyboardAvoider';
 import { Screen } from '@/src/components/Screen';
 import { VehiclePlate, isValidArgentinePlate } from '@/src/components/VehiclePlate';
 import { useThemeColors } from '@/src/theme/useThemeColors';
@@ -176,65 +178,67 @@ export default function VehiclesScreen() {
 
       {/* Add vehicle */}
       <Modal visible={formVisible} transparent animationType="fade" onRequestClose={() => setFormVisible(false)}>
-        <TouchableWithoutFeedback onPress={() => setFormVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.modalSheet}>
-                <Text style={styles.modalTitle}>{t('vehicles.add')}</Text>
+        <ModalKeyboardAvoider>
+          <TouchableWithoutFeedback onPress={() => setFormVisible(false)}>
+            <View style={styles.modalOverlay}>
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View style={styles.modalSheet}>
+                  <Text style={styles.modalTitle}>{t('vehicles.add')}</Text>
 
-                {error ? <Text style={styles.error}>{error}</Text> : null}
+                  {error ? <Text style={styles.error}>{error}</Text> : null}
 
-                <View>
-                  <Text style={styles.label}>{t('vehicles.plate')}</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="AB123CD"
-                    placeholderTextColor={colors.textSecondary}
-                    autoCapitalize="characters"
-                    maxLength={10}
-                    value={plate}
-                    onChangeText={setPlate}
-                  />
-                </View>
+                  <View>
+                    <Text style={styles.label}>{t('vehicles.plate')}</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="AB123CD"
+                      placeholderTextColor={colors.textSecondary}
+                      autoCapitalize="characters"
+                      maxLength={10}
+                      value={plate}
+                      onChangeText={setPlate}
+                    />
+                  </View>
 
-                <View>
-                  <Text style={styles.label}>{t('vehicles.brand')}</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Toyota"
-                    placeholderTextColor={colors.textSecondary}
-                    value={brand}
-                    onChangeText={setBrand}
-                  />
-                </View>
+                  <View>
+                    <Text style={styles.label}>{t('vehicles.brand')}</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Toyota"
+                      placeholderTextColor={colors.textSecondary}
+                      value={brand}
+                      onChangeText={setBrand}
+                    />
+                  </View>
 
-                <View>
-                  <Text style={styles.label}>{t('vehicles.model')}</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Corolla"
-                    placeholderTextColor={colors.textSecondary}
-                    value={model}
-                    onChangeText={setModel}
-                  />
-                </View>
+                  <View>
+                    <Text style={styles.label}>{t('vehicles.model')}</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Corolla"
+                      placeholderTextColor={colors.textSecondary}
+                      value={model}
+                      onChangeText={setModel}
+                    />
+                  </View>
 
-                <View style={styles.modalActions}>
-                  <Pressable style={styles.cancelBtn} onPress={() => setFormVisible(false)}>
-                    <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
-                  </Pressable>
-                  <View style={{ flex: 1 }}>
-                    {saving ? (
-                      <ActivityIndicator color={colors.teal} />
-                    ) : (
-                      <Button title={t('vehicles.save')} onPress={handleSave} />
-                    )}
+                  <View style={styles.modalActions}>
+                    <Pressable style={styles.cancelBtn} onPress={() => setFormVisible(false)}>
+                      <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
+                    </Pressable>
+                    <View style={{ flex: 1 }}>
+                      {saving ? (
+                        <ActivityIndicator color={colors.teal} />
+                      ) : (
+                        <Button title={t('vehicles.save')} onPress={handleSave} />
+                      )}
+                    </View>
                   </View>
                 </View>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </ModalKeyboardAvoider>
       </Modal>
 
       {/* Delete confirmation */}

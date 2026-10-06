@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useUnseenNotificationsCount } from '@/src/store/useNotificationsStore';
+import { useNotificationsStore, useUnseenNotificationsCount } from '@/src/store/useNotificationsStore';
 import { t, useLanguage } from '@/src/i18n';
 import { useScale } from '@/src/theme/typography';
 
@@ -14,14 +14,16 @@ interface TabKey {
   labelKey: string;
   icon: IoniconName;
   activeIcon: IoniconName;
-  showBadge?: boolean;
+  // Which count the tab shows as a badge: unseen notifications, or booking requests still
+  // waiting for the owner's answer.
+  badge?: 'notifications' | 'requests';
 }
 
 const OWNER_TAB_KEYS: TabKey[] = [
-  { name: 'index',         labelKey: 'tabs.owner.today',         icon: 'today-outline',         activeIcon: 'today' },
+  { name: 'index',         labelKey: 'tabs.owner.today',         icon: 'today-outline',         activeIcon: 'today', badge: 'requests' },
   { name: 'calendar',      labelKey: 'tabs.owner.calendar',      icon: 'calendar-outline',      activeIcon: 'calendar' },
   { name: 'spots',         labelKey: 'tabs.owner.spots',         icon: 'car-outline',           activeIcon: 'car' },
-  { name: 'notifications', labelKey: 'tabs.owner.notifications', icon: 'notifications-outline', activeIcon: 'notifications', showBadge: true },
+  { name: 'notifications', labelKey: 'tabs.owner.notifications', icon: 'notifications-outline', activeIcon: 'notifications', badge: 'notifications' },
   { name: 'profile',       labelKey: 'tabs.owner.profile',       icon: 'person-outline',        activeIcon: 'person' },
 ];
 
@@ -32,6 +34,11 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
   const sc = (n: number) => Math.round(n * scale);
   const insets = useSafeAreaInsets();
   const unseenCount = useUnseenNotificationsCount();
+  // Pending requests come from the same polled notification feed (one owner_request per
+  // PENDING_OWNER_APPROVAL booking across every spot).
+  const pendingRequestsCount = useNotificationsStore(
+    (s) => s.items.filter((item) => item.kind === 'owner_request').length,
+  );
 
   const styles = StyleSheet.create({
     bar: {
@@ -91,11 +98,14 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
           >
             <View style={styles.iconWrapper}>
               <Ionicons name={focused ? tab.activeIcon : tab.icon} size={sc(22)} color={color} />
-              {tab.showBadge && unseenCount > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{unseenCount > 9 ? '9+' : unseenCount}</Text>
-                </View>
-              )}
+              {(() => {
+                const count = tab.badge === 'notifications' ? unseenCount : tab.badge === 'requests' ? pendingRequestsCount : 0;
+                return count > 0 ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{count > 9 ? '9+' : count}</Text>
+                  </View>
+                ) : null;
+              })()}
             </View>
             <Text numberOfLines={1} style={[styles.label, { color }]}>{t(tab.labelKey as any)}</Text>
           </Pressable>

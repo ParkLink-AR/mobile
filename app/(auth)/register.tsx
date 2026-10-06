@@ -307,7 +307,7 @@ export default function Register() {
   }
 
   return (
-    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
+    <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
       <Image
         source={require('@/assets/logo-parklink.png')}
         style={styles.logo}

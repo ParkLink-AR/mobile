@@ -160,7 +160,12 @@ export default function DriverProfileEdit() {
       />
     <Screen style={styles.outer} edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        >
           <Text style={typography.h1}>{t('profile.edit.title')}</Text>
           {error ? <Text style={styles.error}>{error}</Text> : null}
 

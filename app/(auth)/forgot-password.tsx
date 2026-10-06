@@ -117,7 +117,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
+    <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
       <Text style={typography.h1}>{t('auth.forgotPassword.title')}</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {info ? <Text style={styles.info}>{info}</Text> : null}
