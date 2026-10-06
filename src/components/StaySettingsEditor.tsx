@@ -4,6 +4,7 @@ import { DatePickerField } from '@/src/components/DatePickerField';
 import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { t } from '@/src/i18n';
+import { useScale } from '@/src/theme/typography';
 
 // Todo en string (no number) porque son valores de TextInput controlados --
 // mismo criterio que `price`/`capacity` en spots/new.tsx y edit.tsx. El
@@ -49,18 +50,20 @@ interface StaySettingsEditorProps {
 export function StaySettingsEditor({ value, onChange }: StaySettingsEditorProps) {
   const colors = useThemeColors();
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
 
   const styles = StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
     labelBlock: { flex: 1, gap: 2 },
-    hint: { fontSize: 12, color: colors.textSecondary },
+    hint: { fontSize: sc(12), color: colors.textSecondary },
     fields: { gap: 10, marginTop: 12 },
     input: {
       borderWidth: 1, borderColor: colors.border, borderRadius: 8,
-      padding: 12, fontSize: 15, color: colors.text,
+      padding: 12, fontSize: sc(15), color: colors.text,
     },
-    fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 4 },
-    priceBreakdown: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },
+    fieldLabel: { fontSize: sc(13), fontWeight: '600', color: colors.text, marginBottom: 4 },
+    priceBreakdown: { fontSize: sc(12), color: colors.textSecondary, marginTop: 4 },
   });
 
   function numericField(text: string, onChangeText: (v: string) => void) {

@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSegments } from 'expo-router';
 import { t } from '@/src/i18n';
 import { useThemeColors } from '@/src/theme/useThemeColors';
+import { useScale } from '@/src/theme/typography';
 
 type Role = 'driver' | 'owner';
 
@@ -24,6 +25,8 @@ function useRoleAppearance(role: Role) {
 export function RoleBadge() {
   const role: Role = useSegments()[0] === '(owner)' ? 'owner' : 'driver';
   const { color, icon, a11yLabel } = useRoleAppearance(role);
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
 
   const styles = StyleSheet.create({
     badge: {
@@ -35,12 +38,12 @@ export function RoleBadge() {
       borderRadius: 999,
       backgroundColor: `${color}1A`,
     },
-    label: { fontSize: 12, fontWeight: '700', color },
+    label: { fontSize: sc(12), fontWeight: '700', color },
   });
 
   return (
     <View style={styles.badge} accessibilityLabel={a11yLabel}>
-      <Ionicons name={icon} size={13} color={color} />
+      <Ionicons name={icon} size={sc(13)} color={color} />
       <Text style={styles.label}>{t(role === 'owner' ? 'roleBadge.owner' : 'roleBadge.driver')}</Text>
     </View>
   );

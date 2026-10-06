@@ -5,7 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { confirmEmailCode, resendVerificationCode } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
 
@@ -14,6 +14,8 @@ const RESEND_COOLDOWN_SECONDS = 60;
 export default function VerifyCode() {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
   const { email } = useLocalSearchParams<{ email: string }>();
   const [code, setCode] = useState('');
@@ -36,13 +38,13 @@ export default function VerifyCode() {
       borderColor: colors.border,
       borderRadius: 8,
       padding: 12,
-      fontSize: 24,
+      fontSize: sc(24),
       letterSpacing: 8,
       textAlign: 'center',
       color: colors.text,
     },
-    error: { color: '#C62828', fontSize: 13, textAlign: 'center' },
-    info: { color: colors.teal, fontSize: 13, textAlign: 'center' },
+    error: { color: '#C62828', fontSize: sc(13), textAlign: 'center' },
+    info: { color: colors.teal, fontSize: sc(13), textAlign: 'center' },
     link: { color: colors.teal, textAlign: 'center', marginTop: 8 },
     linkDisabled: { color: colors.textSecondary },
   });

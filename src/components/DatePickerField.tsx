@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, Platform, StyleProp, ViewStyle } fro
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
+import { useScale } from '@/src/theme/typography';
 
 interface DatePickerFieldProps {
   /** YYYY-MM-DD, o '' si no hay fecha elegida. */
@@ -45,13 +46,15 @@ function formatDisplay(iso: string): string {
  */
 export function DatePickerField({ value, onChange, placeholder, minimumDate, style }: DatePickerFieldProps) {
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const [showPicker, setShowPicker] = useState(false);
 
   const styles = StyleSheet.create({
     box: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8,
     },
-    text: { fontSize: 15, color: value ? colors.text : colors.textSecondary },
+    text: { fontSize: sc(15), color: value ? colors.text : colors.textSecondary },
   });
 
   if (Platform.OS === 'web') {
@@ -80,7 +83,7 @@ export function DatePickerField({ value, onChange, placeholder, minimumDate, sty
           }}
           hitSlop={8}
         >
-          <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+          <Ionicons name="close-circle" size={sc(18)} color={colors.textSecondary} />
         </Pressable>
       )}
       {showPicker && (

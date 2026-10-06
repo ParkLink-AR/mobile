@@ -5,7 +5,6 @@
   "auth.login.forgot": "Olvidé mi contraseña",
   "auth.login.button": "Ingresar",
   "auth.register.button": "Crear cuenta",
-
   "auth.emailPlaceholder": "Email",
   "auth.sendCodeButton": "Enviar código",
   "auth.resendCode": "Reenviar código",
@@ -16,11 +15,9 @@
   "auth.error.resendCode": "No se pudo reenviar el código.",
   "auth.error.codeLength": "Ingresá el código de 6 dígitos.",
   "auth.error.emailRequired": "Ingresá tu email.",
-
   "auth.login.emailPlaceholder": "Email",
   "auth.login.error.required": "Completá email y contraseña.",
   "auth.login.error.generic": "No se pudo iniciar sesión.",
-
   "auth.register.email.title": "¿Cuál es tu email?",
   "auth.register.emailCode.title": "Confirmá tu email",
   "auth.register.emailCode.helper": "Te mandamos un código de 6 dígitos a %{email}.",
@@ -40,19 +37,15 @@
   "auth.register.personal.passwordHint": "Mínimo 8 caracteres, con una mayúscula, una minúscula y un número. Tenés que ser mayor de 18 años.",
   "auth.register.personal.error.required": "Completá todos los campos.",
   "auth.register.personal.error.submit": "No se pudo crear la cuenta.",
-
   "auth.forgotPassword.reset.helper": "Te mandamos un código de 6 dígitos a %{email}. Ingresalo junto con tu nueva contraseña.",
   "auth.forgotPassword.reset.newPassword": "Nueva contraseña",
   "auth.forgotPassword.reset.confirmPassword": "Repetí la contraseña",
   "auth.forgotPassword.reset.passwordMismatch": "Las contraseñas no coinciden.",
   "auth.forgotPassword.reset.button": "Restablecer contraseña",
   "auth.forgotPassword.error.submit": "No se pudo restablecer la contraseña.",
-
   "auth.verifyCode.title": "Confirmá tu email",
   "auth.verifyCode.helper": "Te mandamos un código de 6 dígitos a %{email}. Ingresalo acá para activar tu cuenta.",
-
   "common.back": "Atrás",
-
   "driver.bookings.title": "Mis reservas",
   "driver.bookings.empty": "Todavía no tenés reservas. Cuando reserves una cochera, la vas a ver acá.",
   "notifications.empty": "No tenés notificaciones por ahora.",
@@ -137,7 +130,6 @@
   "review.submitting": "Enviando...",
   "review.allDone": "Ya calificaste todo lo pendiente. ¡Gracias!",
   "review.errorSubmit": "No pudimos enviar tu calificación. Intentá de nuevo.",
-
   "spot.description": "Descripción",
   "spot.address": "Dirección",
   "spot.postedBy": "Publicado por %{name}",
@@ -164,12 +156,10 @@
   "spot.calendar.available": "Disponible",
   "spot.calendar.unavailable": "No disponible",
   "spot.availabilityRetry": "Reintentar",
-
   "spot.reviews.count": "%{count} reseñas",
   "profile.public.memberSince": "Miembro desde %{date}",
   "profile.public.reviews": "Reseñas recibidas",
   "spot.reviews.empty": "Todavía no hay reseñas para mostrar.",
-
   "spot.tag.covered": "Cubierta",
   "spot.tag.uncovered": "Descubierta",
   "spot.tag.access247": "Acceso 24/7",
@@ -180,7 +170,6 @@
   "vehicleType.motorcycle": "Moto",
   "vehicleType.bicycle": "Bicicleta",
   "spot.tag.stay": "Estadía",
-
   "spot.stay.section": "Estadía",
   "spot.stay.checkIn": "Check-in",
   "spot.stay.checkOut": "Check-out",
@@ -408,7 +397,6 @@
   "roleBadge.owner": "Propietario",
   "roleBadge.driverA11y": "Estás en modo conductor",
   "roleBadge.ownerA11y": "Estás en modo propietario",
-
   "tabs.driver.search": "Buscar",
   "tabs.driver.favorites": "Favoritos",
   "tabs.driver.bookings": "Reservas",
@@ -530,7 +518,6 @@
   "driver.booking.errorCreating": "No pudimos reservar el turno. Intentá de nuevo.",
   "driver.booking.errorConflict": "Este horario ya está reservado. Volvé y elegí otro.",
   "driver.booking.errorConflictAction": "Elegir otro horario",
-
   "driver.payment.errorTitle": "Error al pagar",
   "driver.payment.errorCreatingPreference": "No pudimos iniciar el pago. Intentá de nuevo.",
   "driver.payment.approved": "Tu reserva fue confirmada. ¡Ya podés ir a estacionar!",
@@ -538,6 +525,7 @@
   "driver.payment.confirmed.bodyWithDate": "Pagaste el %{date}. Tu cochera ya está reservada.",
   "driver.payment.pending.title": "Procesando pago…",
   "driver.payment.pending.body": "Estamos esperando la confirmación de Mercado Pago.",
+  "driver.payment.pending.leaveHint": "Si no vas a completar el pago, podés salir: la reserva se libera sola a los 15 minutos.",
   "driver.payment.rejected.title": "Pago rechazado",
   "driver.payment.rejected.body": "El pago fue rechazado o cancelado. La reserva no fue confirmada.",
   "driver.payment.rejected.retry": "Buscar otra cochera",

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useUnseenNotificationsCount } from '@/src/store/useNotificationsStore';
 import { t, useLanguage } from '@/src/i18n';
+import { useScale } from '@/src/theme/typography';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -22,6 +23,8 @@ const TAB_KEYS: { name: string; labelKey: string; icon: IoniconName; activeIcon:
 export function DockTabBar({ state, navigation }: BottomTabBarProps) {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const insets = useSafeAreaInsets();
   const unseenCount = useUnseenNotificationsCount();
 
@@ -40,6 +43,7 @@ export function DockTabBar({ state, navigation }: BottomTabBarProps) {
       justifyContent: 'center',
       gap: 3,
       paddingVertical: 4,
+      paddingHorizontal: 2,
     },
     iconWrapper: { position: 'relative' },
     badge: {
@@ -49,10 +53,13 @@ export function DockTabBar({ state, navigation }: BottomTabBarProps) {
       alignItems: 'center', justifyContent: 'center',
       paddingHorizontal: 3,
     },
-    badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+    badgeText: { color: '#fff', fontSize: sc(10), fontWeight: '700' },
+    // Mismo tamaño para las cinco etiquetas; no crece con "Texto: Grande" (no entra
+    // "Notificaciones" en ~80pt). El ícono sí escala.
     label: {
-      fontSize: 11,
+      fontSize: Math.round(10 * Math.min(scale, 1)),
       fontWeight: '600',
+      textAlign: 'center',
     },
   });
 
@@ -81,14 +88,14 @@ export function DockTabBar({ state, navigation }: BottomTabBarProps) {
             android_ripple={{ borderless: true, radius: 32 }}
           >
             <View style={styles.iconWrapper}>
-              <Ionicons name={focused ? tab.activeIcon : tab.icon} size={22} color={color} />
+              <Ionicons name={focused ? tab.activeIcon : tab.icon} size={sc(22)} color={color} />
               {tab.name === 'notifications' && unseenCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{unseenCount > 9 ? '9+' : unseenCount}</Text>
                 </View>
               )}
             </View>
-            <Text style={[styles.label, { color }]}>{t(tab.labelKey)}</Text>
+            <Text numberOfLines={1} style={[styles.label, { color }]}>{t(tab.labelKey)}</Text>
           </Pressable>
         );
       })}

@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
 import { Button } from '@/src/components/Button';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useAccountTypeStore, tabRouteFor } from '@/src/store/useAccountTypeStore';
 import { updateAccountType } from '@/src/api/auth';
@@ -50,6 +50,8 @@ const OPTIONS: AccountOption[] = [
 export default function AccountTypeScreen() {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
 
   const user = useSessionStore((s) => s.user);
@@ -92,7 +94,7 @@ export default function AccountTypeScreen() {
       justifyContent: 'center',
     },
     subtitle: {
-      fontSize: 14,
+      fontSize: sc(14),
       color: colors.textSecondary,
       textAlign: 'center',
       marginBottom: 8,
@@ -127,14 +129,14 @@ export default function AccountTypeScreen() {
       backgroundColor: colors.teal + '22',
     },
     cardText: { flex: 1, gap: 2 },
-    cardTitle: { fontSize: 16, fontWeight: '700' },
+    cardTitle: { fontSize: sc(16), fontWeight: '700' },
     cardTitleUnselected: { color: colors.text },
     cardTitleSelected: { color: colors.teal },
-    cardDesc: { fontSize: 13, lineHeight: 18 },
+    cardDesc: { fontSize: sc(13), lineHeight: sc(18) },
     cardDescUnselected: { color: colors.textSecondary },
     cardDescSelected: { color: colors.teal + 'CC' },
     checkWrap: { width: 24, alignItems: 'center' },
-    errorText: { color: '#C62828', fontSize: 13, textAlign: 'center' },
+    errorText: { color: '#C62828', fontSize: sc(13), textAlign: 'center' },
     btnWrap: { marginTop: 8 },
   });
 
@@ -162,7 +164,7 @@ export default function AccountTypeScreen() {
             <View style={[styles.iconWrap, isSelected ? styles.iconWrapSelected : styles.iconWrapUnselected]}>
               <Ionicons
                 name={opt.icon}
-                size={26}
+                size={sc(26)}
                 color={isSelected ? colors.teal : colors.textSecondary}
               />
             </View>
@@ -176,7 +178,7 @@ export default function AccountTypeScreen() {
             </View>
             <View style={styles.checkWrap}>
               {isSelected && (
-                <Ionicons name="checkmark-circle" size={22} color={colors.teal} />
+                <Ionicons name="checkmark-circle" size={sc(22)} color={colors.teal} />
               )}
             </View>
           </Pressable>

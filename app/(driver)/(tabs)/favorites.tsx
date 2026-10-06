@@ -7,7 +7,7 @@ import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
 import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
 import { getFavoriteSpots } from '@/src/services/parkingService';
@@ -16,6 +16,8 @@ import { ParkingSpot } from '@/src/types';
 export default function Favorites() {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
   const favoriteIds = useFavoritesStore((s) => s.ids);
@@ -40,7 +42,7 @@ export default function Favorites() {
     container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 8, gap: 8 },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-    emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    emptyText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
   });
 
   if (loading) {
@@ -66,7 +68,7 @@ export default function Favorites() {
         contentContainerStyle={spots.length === 0 ? { gap: 10, flexGrow: 1 } : { gap: 10 }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="heart-outline" size={40} color={colors.textSecondary} />
+            <Ionicons name="heart-outline" size={sc(40)} color={colors.textSecondary} />
             <Text style={styles.emptyText}>{t('driver.favorites.empty')}</Text>
           </View>
         }

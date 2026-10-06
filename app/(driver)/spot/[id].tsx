@@ -17,7 +17,7 @@ import {
 import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
 import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
 import { getParkingSpotDetail, formatScheduleForDisplay, getSpotPricePerHour, getMinPricePerHour } from '@/src/services/parkingService';
@@ -108,6 +108,8 @@ const STAY_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => hour);
 
 export default function SpotDetail() {
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   useLanguage();
@@ -300,7 +302,7 @@ export default function SpotDetail() {
     },
     tagRow: { flexDirection: 'row', flexWrap: 'wrap', marginVertical: 4 },
     ownerRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
-    ownerRowText: { flex: 1, fontSize: 13, color: colors.textSecondary },
+    ownerRowText: { flex: 1, fontSize: sc(13), color: colors.textSecondary },
     row: { marginTop: 6 },
     total: { ...typography.h2, color: colors.teal, marginVertical: 4 },
     ownerBanner: {
@@ -309,19 +311,19 @@ export default function SpotDetail() {
       borderRadius: 10, padding: 12,
       borderWidth: 1, borderColor: colors.teal + '44',
     },
-    ownerBannerText: { fontSize: 14, fontWeight: '600', color: colors.teal, flex: 1 },
+    ownerBannerText: { fontSize: sc(14), fontWeight: '600', color: colors.teal, flex: 1 },
     editBtn: {
       flexDirection: 'row', alignItems: 'center', gap: 6,
       backgroundColor: colors.teal, borderRadius: 10,
       paddingVertical: 13, paddingHorizontal: 16, justifyContent: 'center',
     },
-    editBtnText: { fontSize: 15, fontWeight: '700', color: colors.white },
+    editBtnText: { fontSize: sc(15), fontWeight: '700', color: colors.white },
 
     sectionLabel: {
-      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4,
     },
-    fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 4 },
+    fieldLabel: { fontSize: sc(13), fontWeight: '600', color: colors.text, marginBottom: 4 },
 
     // Mode switch (por hora / estadía)
     modeToggleRow: { flexDirection: 'row', gap: 8 },
@@ -330,7 +332,7 @@ export default function SpotDetail() {
       borderRadius: 10, paddingVertical: 10, alignItems: 'center',
     },
     modeToggleActive: { backgroundColor: colors.teal, borderColor: colors.teal },
-    modeToggleText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+    modeToggleText: { fontSize: sc(14), fontWeight: '600', color: colors.textSecondary },
     modeToggleTextActive: { color: colors.surface, fontWeight: '700' },
     card: {
       backgroundColor: colors.surface,
@@ -357,7 +359,7 @@ export default function SpotDetail() {
       backgroundColor: colors.surface,
     },
     slotChipSelected: { backgroundColor: colors.teal },
-    slotChipText: { fontSize: 14, fontWeight: '500', color: colors.teal },
+    slotChipText: { fontSize: sc(14), fontWeight: '500', color: colors.teal },
     slotChipTextSelected: { color: colors.white },
     noSlotsText: { ...typography.body, color: colors.warning },
 
@@ -374,7 +376,7 @@ export default function SpotDetail() {
         <TouchableOpacity style={styles.favoriteBtn} onPress={() => toggleFavorite(spot.id)}>
           <Ionicons
             name={isFavorite ? 'heart' : 'heart-outline'}
-            size={20}
+            size={sc(20)}
             color={isFavorite ? FAVORITE_RED : colors.white}
           />
         </TouchableOpacity>
@@ -399,9 +401,9 @@ export default function SpotDetail() {
               style={styles.ownerRow}
               onPress={() => router.push(`${group}/profile/${spot.ownerId}?as=owner`)}
             >
-              <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
+              <Ionicons name="person-circle-outline" size={sc(16)} color={colors.textSecondary} />
               <Text style={styles.ownerRowText}>{t('spot.postedBy', { name: ownerName })}</Text>
-              <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} />
+              <Ionicons name="chevron-forward" size={sc(13)} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
           <View style={styles.tagRow}>
@@ -445,7 +447,7 @@ export default function SpotDetail() {
               style={styles.editBtn}
               onPress={() => router.push(`${group}/spots/${spot.id}/edit`)}
             >
-              <Ionicons name="pencil-outline" size={16} color={colors.white} />
+              <Ionicons name="pencil-outline" size={sc(16)} color={colors.white} />
               <Text style={styles.editBtnText}>{t('spot.editSpot')}</Text>
             </TouchableOpacity>
           </>

@@ -12,6 +12,7 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getMessagesApi, sendMessageApi, MessageApiResponse } from '@/src/api/booking';
 import { ApiError } from '@/src/api/client';
+import { useScale } from '@/src/theme/typography';
 
 // Polling interval while this screen is focused -- there's no websocket/push-driven
 // live update on this screen itself (the OTHER party gets a push notification when a
@@ -27,6 +28,8 @@ export default function BookingMessages() {
   useLanguage();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const { id } = useLocalSearchParams<{ id: string }>();
   const userId = useSessionStore((s) => s.user?.id);
   const [messages, setMessages] = useState<MessageApiResponse[]>([]);
@@ -89,7 +92,7 @@ export default function BookingMessages() {
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-    errorText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    errorText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
     list: { padding: 16, gap: 8, flexGrow: 1 },
     bubbleRow: { flexDirection: 'row' },
     bubbleRowMine: { justifyContent: 'flex-end' },
@@ -97,10 +100,10 @@ export default function BookingMessages() {
     bubble: { maxWidth: '78%', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10 },
     bubbleMine: { backgroundColor: colors.teal, borderBottomRightRadius: 4 },
     bubbleTheirs: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4 },
-    bubbleText: { fontSize: 14.5, lineHeight: 20 },
+    bubbleText: { fontSize: sc(14.5), lineHeight: sc(20) },
     bubbleTextMine: { color: colors.white },
     bubbleTextTheirs: { color: colors.text },
-    bubbleTime: { fontSize: 10.5, marginTop: 4 },
+    bubbleTime: { fontSize: sc(10.5), marginTop: 4 },
     bubbleTimeMine: { color: 'rgba(255,255,255,0.7)', textAlign: 'right' },
     bubbleTimeTheirs: { color: colors.textSecondary },
     inputRow: {
@@ -109,7 +112,7 @@ export default function BookingMessages() {
     },
     input: {
       flex: 1, maxHeight: 100, borderWidth: 1, borderColor: colors.border, borderRadius: 20,
-      paddingHorizontal: 16, paddingVertical: 10, fontSize: 14.5, color: colors.text,
+      paddingHorizontal: 16, paddingVertical: 10, fontSize: sc(14.5), color: colors.text,
     },
     sendBtn: {
       width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
@@ -122,7 +125,7 @@ export default function BookingMessages() {
     return (
       <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
         <View style={styles.centered}>
-          <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
+          <Ionicons name="alert-circle-outline" size={sc(40)} color={colors.textSecondary} />
           <Text style={styles.errorText}>{t('driver.booking.messages.error')}</Text>
         </View>
       </Screen>
@@ -147,7 +150,7 @@ export default function BookingMessages() {
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
             ListEmptyComponent={
               <View style={styles.centered}>
-                <Ionicons name="chatbubbles-outline" size={40} color={colors.textSecondary} />
+                <Ionicons name="chatbubbles-outline" size={sc(40)} color={colors.textSecondary} />
                 <Text style={styles.errorText}>{t('driver.booking.messages.empty')}</Text>
               </View>
             }
@@ -186,7 +189,7 @@ export default function BookingMessages() {
             {sending ? (
               <ActivityIndicator color={colors.white} size="small" />
             ) : (
-              <Ionicons name="send" size={17} color={colors.white} />
+              <Ionicons name="send" size={sc(17)} color={colors.white} />
             )}
           </Pressable>
         </View>

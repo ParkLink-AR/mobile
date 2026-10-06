@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getPayoutInfo, updatePayoutInfo } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
@@ -29,6 +29,8 @@ function cbuCheckDigitsOk(cbu: string): boolean {
 export default function PayoutInfoScreen() {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
   const user = useSessionStore((s) => s.user)!;
 
@@ -66,22 +68,22 @@ export default function PayoutInfoScreen() {
     container: { flex: 1, backgroundColor: colors.background, padding: 20, gap: 14 },
     loadingContainer: { flex: 1, backgroundColor: colors.background, justifyContent: 'center' },
     failedContainer: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 40 },
-    helper: { fontSize: 13.5, color: colors.textSecondary, lineHeight: 19 },
+    helper: { fontSize: sc(13.5), color: colors.textSecondary, lineHeight: sc(19) },
     banner: {
       flexDirection: 'row', alignItems: 'center', gap: 8,
       backgroundColor: colors.teal + '18', borderRadius: 10, padding: 12, marginBottom: 4,
     },
-    bannerText: { flex: 1, fontSize: 13, color: colors.teal, fontWeight: '600' },
-    label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 },
+    bannerText: { flex: 1, fontSize: sc(13), color: colors.teal, fontWeight: '600' },
+    label: { fontSize: sc(13), fontWeight: '600', color: colors.textSecondary, marginBottom: 4 },
     input: {
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 8,
       padding: 12,
-      fontSize: 15,
+      fontSize: sc(15),
       color: colors.text,
     },
-    error: { color: '#C62828', fontSize: 13 },
+    error: { color: '#C62828', fontSize: sc(13) },
   });
 
   if (loading) {
@@ -145,7 +147,7 @@ export default function PayoutInfoScreen() {
 
       {!hasPayoutInfo && (
         <View style={styles.banner}>
-          <Ionicons name="information-circle" size={18} color={colors.teal} />
+          <Ionicons name="information-circle" size={sc(18)} color={colors.teal} />
           <Text style={styles.bannerText}>{t('owner.payoutInfo.requiredBanner')}</Text>
         </View>
       )}

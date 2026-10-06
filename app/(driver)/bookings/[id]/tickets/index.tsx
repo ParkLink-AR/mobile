@@ -7,6 +7,7 @@ import { Screen } from '@/src/components/Screen';
 import { Card } from '@/src/components/Card';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { getMyTicketsApi, TicketApiResponse, TicketStatus } from '@/src/api/booking';
+import { useScale } from '@/src/theme/typography';
 
 const STATUS_LABELS: Record<TicketStatus, string> = {
   OPEN: 'ABIERTO',
@@ -22,6 +23,8 @@ function formatTicketDate(iso: string): string {
 export default function BookingTickets() {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const group = `/${useSegments()[0]}`;
   const { id } = useLocalSearchParams<{ id: string }>();
   const [tickets, setTickets] = useState<TicketApiResponse[]>([]);
@@ -55,27 +58,27 @@ export default function BookingTickets() {
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-    errorText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    errorText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
     list: { paddingHorizontal: 16, paddingTop: 16, gap: 10 },
     listEmpty: { flexGrow: 1 },
     row: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    subject: { fontSize: 15, fontWeight: '600', color: colors.text, flex: 1 },
-    date: { fontSize: 12.5, color: colors.textSecondary, marginTop: 4 },
+    subject: { fontSize: sc(15), fontWeight: '600', color: colors.text, flex: 1 },
+    date: { fontSize: sc(12.5), color: colors.textSecondary, marginTop: 4 },
     badge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' },
-    badgeText: { color: colors.white, fontSize: 10.5, fontWeight: '700' },
+    badgeText: { color: colors.white, fontSize: sc(10.5), fontWeight: '700' },
     fab: {
       position: 'absolute', right: 20, bottom: 24,
       flexDirection: 'row', alignItems: 'center', gap: 8,
       backgroundColor: colors.teal, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 13,
     },
-    fabText: { color: colors.white, fontSize: 14.5, fontWeight: '700' },
+    fabText: { color: colors.white, fontSize: sc(14.5), fontWeight: '700' },
   });
 
   if (loadError) {
     return (
       <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
         <View style={styles.centered}>
-          <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
+          <Ionicons name="alert-circle-outline" size={sc(40)} color={colors.textSecondary} />
           <Text style={styles.errorText}>{t('driver.booking.tickets.error')}</Text>
         </View>
       </Screen>
@@ -93,7 +96,7 @@ export default function BookingTickets() {
           contentContainerStyle={[styles.list, tickets.length === 0 && styles.listEmpty]}
           ListEmptyComponent={
             <View style={styles.centered}>
-              <Ionicons name="help-buoy-outline" size={40} color={colors.textSecondary} />
+              <Ionicons name="help-buoy-outline" size={sc(40)} color={colors.textSecondary} />
               <Text style={styles.errorText}>{t('driver.booking.tickets.empty')}</Text>
             </View>
           }
@@ -114,7 +117,7 @@ export default function BookingTickets() {
       )}
 
       <Pressable style={styles.fab} onPress={() => router.push(`${group}/bookings/${id}/tickets/new`)}>
-        <Ionicons name="add" size={18} color={colors.white} />
+        <Ionicons name="add" size={sc(18)} color={colors.white} />
         <Text style={styles.fabText}>{t('driver.booking.tickets.new')}</Text>
       </Pressable>
     </Screen>

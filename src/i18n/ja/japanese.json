@@ -5,7 +5,6 @@
   "auth.login.forgot": "パスワードをお忘れですか",
   "auth.login.button": "ログイン",
   "auth.register.button": "アカウントを作成",
-
   "auth.emailPlaceholder": "メールアドレス",
   "auth.sendCodeButton": "コードを送信",
   "auth.resendCode": "コードを再送信",
@@ -16,11 +15,9 @@
   "auth.error.resendCode": "コードを再送信できませんでした。",
   "auth.error.codeLength": "6桁のコードを入力してください。",
   "auth.error.emailRequired": "メールアドレスを入力してください。",
-
   "auth.login.emailPlaceholder": "メールアドレス",
   "auth.login.error.required": "メールアドレスとパスワードを入力してください。",
   "auth.login.error.generic": "ログインできませんでした。",
-
   "auth.register.email.title": "メールアドレスを入力してください",
   "auth.register.emailCode.title": "メールアドレスを確認",
   "auth.register.emailCode.helper": "%{email} に6桁のコードを送信しました。",
@@ -40,19 +37,15 @@
   "auth.register.personal.passwordHint": "8文字以上で、大文字・小文字・数字を含めてください。18歳以上である必要があります。",
   "auth.register.personal.error.required": "すべての項目を入力してください。",
   "auth.register.personal.error.submit": "アカウントを作成できませんでした。",
-
   "auth.forgotPassword.reset.helper": "%{email} に6桁のコードを送信しました。新しいパスワードと一緒に入力してください。",
   "auth.forgotPassword.reset.newPassword": "新しいパスワード",
   "auth.forgotPassword.reset.confirmPassword": "パスワードを再入力",
   "auth.forgotPassword.reset.passwordMismatch": "パスワードが一致しません。",
   "auth.forgotPassword.reset.button": "パスワードを再設定",
   "auth.forgotPassword.error.submit": "パスワードを再設定できませんでした。",
-
   "auth.verifyCode.title": "メールアドレスを確認",
   "auth.verifyCode.helper": "%{email} に6桁のコードを送信しました。アカウントを有効にするにはここに入力してください。",
-
   "common.back": "戻る",
-
   "driver.bookings.title": "マイ予約",
   "driver.bookings.empty": "まだ予約がありません。予約すると、ここに表示されます。",
   "notifications.empty": "今のところ通知はありません。",
@@ -137,7 +130,6 @@
   "review.submitting": "送信中...",
   "review.allDone": "評価はすべて完了しています。ありがとうございました！",
   "review.errorSubmit": "評価を送信できませんでした。もう一度お試しください。",
-
   "spot.description": "説明",
   "spot.address": "住所",
   "spot.postedBy": "%{name}さんが掲載",
@@ -164,12 +156,10 @@
   "spot.calendar.available": "利用可能",
   "spot.calendar.unavailable": "利用不可",
   "spot.availabilityRetry": "再試行",
-
   "spot.reviews.count": "レビュー%{count}件",
   "profile.public.memberSince": "%{date}から利用",
   "profile.public.reviews": "受け取ったレビュー",
   "spot.reviews.empty": "まだレビューがありません。",
-
   "spot.tag.covered": "屋根あり",
   "spot.tag.uncovered": "屋根なし",
   "spot.tag.access247": "24時間アクセス",
@@ -180,7 +170,6 @@
   "vehicleType.motorcycle": "バイク",
   "vehicleType.bicycle": "自転車",
   "spot.tag.stay": "連泊利用",
-
   "spot.stay.section": "連泊利用",
   "spot.stay.checkIn": "チェックイン",
   "spot.stay.checkOut": "チェックアウト",
@@ -408,7 +397,6 @@
   "roleBadge.owner": "オーナー",
   "roleBadge.driverA11y": "ドライバーモードです",
   "roleBadge.ownerA11y": "オーナーモードです",
-
   "tabs.driver.search": "検索",
   "tabs.driver.favorites": "お気に入り",
   "tabs.driver.bookings": "予約",
@@ -530,7 +518,6 @@
   "driver.booking.errorCreating": "枠を予約できませんでした。もう一度お試しください。",
   "driver.booking.errorConflict": "この時間帯はすでに予約されています。戻って別の時間を選んでください。",
   "driver.booking.errorConflictAction": "別の時間を選ぶ",
-
   "driver.payment.errorTitle": "支払いエラー",
   "driver.payment.errorCreatingPreference": "支払いを開始できませんでした。もう一度お試しください。",
   "driver.payment.approved": "予約が確定しました。駐車場へどうぞ！",
@@ -538,6 +525,7 @@
   "driver.payment.confirmed.bodyWithDate": "%{date}に支払いが完了しました。駐車スペースはすでに予約されています。",
   "driver.payment.pending.title": "支払い処理中…",
   "driver.payment.pending.body": "Mercado Pagoの確認を待っています。",
+  "driver.payment.pending.leaveHint": "お支払いを完了しない場合はこのまま退出できます。予約は15分後に自動的に解除されます。",
   "driver.payment.rejected.title": "支払い拒否",
   "driver.payment.rejected.body": "支払いが拒否またはキャンセルされました。予約は確定していません。",
   "driver.payment.rejected.retry": "他の駐車スペースを探す",

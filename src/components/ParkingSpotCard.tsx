@@ -8,6 +8,7 @@ import { ParkingSpot } from '@/src/types';
 import { VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { t, useLanguage } from '@/src/i18n';
 import { Ionicons } from '@expo/vector-icons';
+import { useScale } from '@/src/theme/typography';
 
 export const FAVORITE_RED = '#FF385C';
 
@@ -48,6 +49,8 @@ interface ParkingSpotCardProps {
 export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }: ParkingSpotCardProps) {
   const colors = useThemeColors();
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   useLanguage();
   const styles = StyleSheet.create({
     card: { padding: 0, overflow: 'hidden' },
@@ -73,7 +76,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
       backgroundColor: 'rgba(0,0,0,0.65)',
       borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6,
     },
-    unavailableBadgeText: { color: colors.white, fontWeight: '700', fontSize: 13 },
+    unavailableBadgeText: { color: colors.white, fontWeight: '700', fontSize: sc(13) },
     contentDimmed: { opacity: 0.5 },
     body: { padding: 14, gap: 6 },
     bodyCompact: { padding: 10, gap: 4 },
@@ -85,7 +88,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
     },
     title: {
       flex: 1,
-      fontSize: 16,
+      fontSize: sc(16),
       fontWeight: '700',
       color: colors.text,
       letterSpacing: -0.2,
@@ -99,17 +102,17 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
     priceText: {
       color: colors.teal,
       fontWeight: '700',
-      fontSize: 14,
+      fontSize: sc(14),
     },
     addressText: {
-      fontSize: 13,
+      fontSize: sc(13),
       color: colors.textSecondary,
-      lineHeight: 17,
+      lineHeight: sc(17),
     },
     description: {
-      fontSize: 13,
+      fontSize: sc(13),
       color: colors.textSecondary,
-      lineHeight: 17,
+      lineHeight: sc(17),
     },
     tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
     tag: {
@@ -121,7 +124,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
       paddingHorizontal: 8,
       paddingVertical: 4,
     },
-    tagText: { fontSize: 12, fontWeight: '500', color: colors.textSecondary },
+    tagText: { fontSize: sc(12), fontWeight: '500', color: colors.textSecondary },
     divider: {
       height: 1,
       backgroundColor: colors.border,
@@ -134,10 +137,10 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
       marginTop: 4,
     },
     ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    ratingText: { fontSize: 13, fontWeight: '600', color: colors.text },
-    reviewCountText: { fontSize: 12, color: colors.textSecondary },
+    ratingText: { fontSize: sc(13), fontWeight: '600', color: colors.text },
+    reviewCountText: { fontSize: sc(12), color: colors.textSecondary },
     distanceRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-    distanceText: { fontSize: 12, color: colors.textSecondary },
+    distanceText: { fontSize: sc(12), color: colors.textSecondary },
   });
 
   const distanceLabel =
@@ -161,7 +164,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
             <Image source={{ uri: spot.photoUrl }} style={styles.photo} />
           ) : (
             <View style={styles.photoPlaceholder}>
-              <Ionicons name="image-outline" size={32} color={colors.textSecondary} />
+              <Ionicons name="image-outline" size={sc(32)} color={colors.textSecondary} />
             </View>
           )}
           {!spot.active && (
@@ -175,7 +178,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
             <TouchableOpacity style={styles.favoriteBtn} onPress={handleFavoritePress}>
               <Ionicons
                 name={isFavorite ? 'heart' : 'heart-outline'}
-                size={17}
+                size={sc(17)}
                 color={isFavorite ? FAVORITE_RED : colors.white}
               />
             </TouchableOpacity>
@@ -204,7 +207,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
           <View style={styles.tagRow}>
             {spot.vehicleTypes.length > 0 && (
               <View style={styles.tag}>
-                <Ionicons name="car-outline" size={12} color={colors.teal} />
+                <Ionicons name="car-outline" size={sc(12)} color={colors.teal} />
                 <Text style={styles.tagText} numberOfLines={1}>
                   {spot.vehicleTypes.map((vt) => t(VEHICLE_TYPE_LABEL_KEYS[vt])).join(', ')}
                 </Text>
@@ -227,7 +230,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
                     {entry && (
                       <Ionicons
                         name={entry.iconName as any}
-                        size={12}
+                        size={sc(12)}
                         color={colors.teal}
                       />
                     )}
@@ -242,7 +245,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
                 // se muestra acá aparte para que el buscador identifique de un
                 // vistazo qué cocheras aceptan estadía por día/semana/mes.
                 <View style={styles.tag}>
-                  <Ionicons name="calendar-outline" size={12} color={colors.teal} />
+                  <Ionicons name="calendar-outline" size={sc(12)} color={colors.teal} />
                   <Text style={styles.tagText}>{t('spot.tag.stay')}</Text>
                 </View>
               )}
@@ -254,12 +257,12 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
 
         <View style={styles.footerRow}>
           <View style={styles.ratingRow}>
-            <Ionicons name="star" size={13} color="#F59E0B" />
+            <Ionicons name="star" size={sc(13)} color="#F59E0B" />
             <Text style={styles.ratingText}>{spot.rating.toFixed(1)}</Text>
             <Text style={styles.reviewCountText}>({spot.reviewCount})</Text>
           </View>
           <View style={styles.distanceRow}>
-            <Ionicons name="navigate-outline" size={12} color={colors.textSecondary} />
+            <Ionicons name="navigate-outline" size={sc(12)} color={colors.textSecondary} />
             <Text style={styles.distanceText}>{distanceLabel}</Text>
           </View>
         </View>

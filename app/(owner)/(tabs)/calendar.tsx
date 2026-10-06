@@ -13,7 +13,7 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { getOwnerBookings } from '@/src/services/ownerBookings';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { todayArtDateISO } from '@/src/services/dateUtils';
-import { formatBookingWhen } from '@/src/services/bookingDates';
+import { formatBookingWhen, formatShortDate } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 // Mismo criterio que spot/[id].tsx: 0=Lunes … 6=Domingo.
@@ -181,11 +181,14 @@ export default function OwnerCalendar() {
       padding: 24, alignItems: 'center', gap: 8,
     },
     emptyText: { fontSize: Math.round(14 * scale), color: colors.textSecondary, textAlign: 'center' },
-    bookingCard: { gap: 6 },
+    bookingCard: { gap: 8 },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
     driverRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
     driverRowText: { fontSize: Math.round(13 * scale), fontWeight: '600', color: colors.textSecondary },
-    spotTitle: { fontSize: Math.round(15 * scale), fontWeight: '700', color: colors.text },
-    timeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    spotTitle: { fontSize: Math.round(15 * scale), fontWeight: '700', color: colors.text, flex: 1 },
+    stayRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    stayLabel: { flex: 1, fontSize: Math.round(13 * scale), color: colors.textSecondary },
+    stayValue: { fontSize: Math.round(13 * scale), fontWeight: '600', color: colors.text },
   });
 
   const selectedDateLabel = new Date(selectedDate + 'T12:00:00Z').toLocaleDateString('es-AR', {
@@ -277,17 +280,35 @@ export default function OwnerCalendar() {
         renderItem={({ item }) => (
           <Pressable onPress={() => router.push(`${group}/bookings/${item.id}`)}>
             <Card style={styles.bookingCard}>
-              <Text style={styles.spotTitle}>{item.parkingSpotTitle}</Text>
+              <View style={styles.cardHeader}>
+                <Text style={styles.spotTitle}>{item.parkingSpotTitle}</Text>
+                <StatusBadge status={item.status} />
+              </View>
               <View style={styles.driverRow}>
                 <Ionicons name="person-circle-outline" size={Math.round(16 * scale)} color={colors.textSecondary} />
                 <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
               </View>
-              <View style={styles.timeRow}>
-                <Text style={typography.body}>
-                  {formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}
-                </Text>
-                <StatusBadge status={item.status} />
-              </View>
+              {item.date === item.endDate ? (
+                <View style={styles.stayRow}>
+                  <Ionicons name="time-outline" size={Math.round(15 * scale)} color={colors.textSecondary} />
+                  <Text style={typography.body}>
+                    {formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.stayRow}>
+                    <Ionicons name="log-in-outline" size={Math.round(15 * scale)} color={colors.textSecondary} />
+                    <Text style={styles.stayLabel}>{t('spot.stay.checkIn')}</Text>
+                    <Text style={styles.stayValue}>{formatShortDate(item.date)} · {item.startTime}</Text>
+                  </View>
+                  <View style={styles.stayRow}>
+                    <Ionicons name="log-out-outline" size={Math.round(15 * scale)} color={colors.textSecondary} />
+                    <Text style={styles.stayLabel}>{t('spot.stay.checkOut')}</Text>
+                    <Text style={styles.stayValue}>{formatShortDate(item.endDate)} · {item.endTime}</Text>
+                  </View>
+                </>
+              )}
             </Card>
           </Pressable>
         )}

@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { BookingStatus } from '@/src/types';
+import { useScale } from '@/src/theme/typography';
 
 const LABELS: Record<BookingStatus, string> = {
   PENDING_PAYMENT: 'PENDIENTE',
@@ -14,6 +15,8 @@ const LABELS: Record<BookingStatus, string> = {
 
 export function StatusBadge({ status }: { status: BookingStatus }) {
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const COLORS: Record<BookingStatus, string> = {
     PENDING_PAYMENT: colors.warning,
     CONFIRMED: colors.success,
@@ -29,10 +32,11 @@ export function StatusBadge({ status }: { status: BookingStatus }) {
       paddingHorizontal: 8,
       paddingVertical: 2,
       alignSelf: 'flex-start',
+      flexShrink: 0,
     },
     text: {
       color: colors.white,
-      fontSize: 11,
+      fontSize: sc(11),
       fontWeight: '700',
     },
   });
