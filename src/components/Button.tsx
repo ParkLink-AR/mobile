@@ -1,5 +1,6 @@
 import { Pressable, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { colors } from '@/src/theme/colors';
+import { useScale } from '@/src/theme/typography';
 
 interface ButtonProps {
   title: string;
@@ -10,13 +11,14 @@ interface ButtonProps {
 }
 
 export function Button({ title, onPress, disabled, style, textStyle }: ButtonProps) {
+  const scale = useScale();
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       style={[styles.button, disabled && styles.disabled, style]}
     >
-      <Text style={[styles.text, textStyle]}>{title}</Text>
+      <Text style={[styles.text, { fontSize: Math.round(16 * scale) }, textStyle]}>{title}</Text>
     </Pressable>
   );
 }

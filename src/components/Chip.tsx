@@ -1,6 +1,7 @@
 import { Pressable, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
+import { useScale } from '@/src/theme/typography';
 
 interface ChipProps {
   label: string;
@@ -13,6 +14,8 @@ interface ChipProps {
 
 export function Chip({ label, onPress, onRemove, selected, icon }: ChipProps) {
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const styles = StyleSheet.create({
     chip: {
       flexDirection: 'row',
@@ -35,7 +38,7 @@ export function Chip({ label, onPress, onRemove, selected, icon }: ChipProps) {
     text: {
       flexShrink: 1,
       minWidth: 0,
-      fontSize: 13,
+      fontSize: sc(13),
       fontWeight: '500',
       color: colors.text,
     },
@@ -43,7 +46,7 @@ export function Chip({ label, onPress, onRemove, selected, icon }: ChipProps) {
       color: colors.white,
     },
     removeText: {
-      fontSize: 11,
+      fontSize: sc(11),
       color: colors.textSecondary,
       marginLeft: 2,
     },
@@ -57,7 +60,7 @@ export function Chip({ label, onPress, onRemove, selected, icon }: ChipProps) {
       onPress={onRemove ?? onPress}
     >
       {icon && (
-        <Ionicons name={icon} size={13} color={selected ? colors.white : colors.teal} />
+        <Ionicons name={icon} size={sc(13)} color={selected ? colors.white : colors.teal} />
       )}
       <Text style={[styles.text, selected && styles.textSelected]} numberOfLines={1} ellipsizeMode="tail">
         {label}

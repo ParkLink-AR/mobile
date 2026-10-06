@@ -17,6 +17,7 @@ import { View, Text, StyleSheet, Pressable, TouchableOpacity } from 'react-nativ
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { t } from '@/src/i18n';
+import { useScale } from '@/src/theme/typography';
 
 export interface TimeSlot {
   startHour: number;
@@ -64,6 +65,8 @@ function hasConflict(slots: TimeSlot[], slotIndex: number): boolean {
 
 export function AvailabilityPicker({ value, onChange }: AvailabilityPickerProps) {
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
 
   // ── Day toggle ────────────────────────────────────────────────────────────
   function toggleDay(idx: number) {
@@ -135,7 +138,7 @@ export function AvailabilityPicker({ value, onChange }: AvailabilityPickerProps)
       borderWidth: 1.5, borderColor: colors.border,
     },
     chipActive: { backgroundColor: colors.teal, borderColor: colors.teal },
-    chipText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
+    chipText: { fontSize: sc(12), fontWeight: '600', color: colors.textSecondary },
     chipTextActive: { color: '#fff' },
 
     dayBlock: {
@@ -146,18 +149,18 @@ export function AvailabilityPicker({ value, onChange }: AvailabilityPickerProps)
     },
     dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     dayBlockLabel: {
-      fontSize: 12, fontWeight: '700', color: colors.teal,
+      fontSize: sc(12), fontWeight: '700', color: colors.teal,
       textTransform: 'uppercase', letterSpacing: 0.5,
     },
 
     slotRow: { gap: 4 },
     slotInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     slotConflict: {
-      fontSize: 11, color: '#C62828', fontWeight: '500', marginLeft: 4,
+      fontSize: sc(11), color: '#C62828', fontWeight: '500', marginLeft: 4,
     },
     hourPair: { flex: 1, flexDirection: 'row', gap: 8 },
     hourBlock: { flex: 1, gap: 3 },
-    hourLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '500' },
+    hourLabel: { fontSize: sc(11), color: colors.textSecondary, fontWeight: '500' },
     hourControl: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       borderWidth: 1, borderColor: colors.border, borderRadius: 8,
@@ -171,7 +174,7 @@ export function AvailabilityPicker({ value, onChange }: AvailabilityPickerProps)
       alignItems: 'center', justifyContent: 'center',
     },
     hourValue: {
-      fontSize: 14, fontWeight: '700', color: colors.text,
+      fontSize: sc(14), fontWeight: '700', color: colors.text,
       minWidth: 44, textAlign: 'center',
     },
     removeBtn: {
@@ -189,7 +192,7 @@ export function AvailabilityPicker({ value, onChange }: AvailabilityPickerProps)
       paddingHorizontal: 10, paddingVertical: 6,
       borderRadius: 8, borderWidth: 1, borderColor: colors.teal,
     },
-    addSlotText: { fontSize: 12, fontWeight: '600', color: colors.teal },
+    addSlotText: { fontSize: sc(12), fontWeight: '600', color: colors.teal },
   });
 
   return (
@@ -235,14 +238,14 @@ export function AvailabilityPicker({ value, onChange }: AvailabilityPickerProps)
                           style={styles.hourBtn}
                           onPress={() => updateHour(day.dayIndex, slotIdx, 'startHour', -1)}
                         >
-                          <Ionicons name="remove" size={14} color={colors.text} />
+                          <Ionicons name="remove" size={sc(14)} color={colors.text} />
                         </Pressable>
                         <Text style={styles.hourValue}>{fmt(slot.startHour)}</Text>
                         <Pressable
                           style={styles.hourBtn}
                           onPress={() => updateHour(day.dayIndex, slotIdx, 'startHour', +1)}
                         >
-                          <Ionicons name="add" size={14} color={colors.text} />
+                          <Ionicons name="add" size={sc(14)} color={colors.text} />
                         </Pressable>
                       </View>
                     </View>
@@ -255,14 +258,14 @@ export function AvailabilityPicker({ value, onChange }: AvailabilityPickerProps)
                           style={styles.hourBtn}
                           onPress={() => updateHour(day.dayIndex, slotIdx, 'endHour', -1)}
                         >
-                          <Ionicons name="remove" size={14} color={colors.text} />
+                          <Ionicons name="remove" size={sc(14)} color={colors.text} />
                         </Pressable>
                         <Text style={styles.hourValue}>{fmt(slot.endHour)}</Text>
                         <Pressable
                           style={styles.hourBtn}
                           onPress={() => updateHour(day.dayIndex, slotIdx, 'endHour', +1)}
                         >
-                          <Ionicons name="add" size={14} color={colors.text} />
+                          <Ionicons name="add" size={sc(14)} color={colors.text} />
                         </Pressable>
                       </View>
                     </View>
@@ -275,7 +278,7 @@ export function AvailabilityPicker({ value, onChange }: AvailabilityPickerProps)
                       onPress={() => removeSlot(day.dayIndex, slotIdx)}
                       accessibilityLabel={t('owner.availability.removeSlot')}
                     >
-                      <Ionicons name="trash-outline" size={14} color={colors.textSecondary} />
+                      <Ionicons name="trash-outline" size={sc(14)} color={colors.textSecondary} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -295,7 +298,7 @@ export function AvailabilityPicker({ value, onChange }: AvailabilityPickerProps)
             onPress={() => addSlot(day.dayIndex)}
             accessibilityLabel={t('owner.availability.addSlot')}
           >
-            <Ionicons name="add" size={14} color={colors.teal} />
+            <Ionicons name="add" size={sc(14)} color={colors.teal} />
             <Text style={styles.addSlotText}>{t('owner.availability.addSlot')}</Text>
           </TouchableOpacity>
         </View>

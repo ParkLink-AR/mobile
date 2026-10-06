@@ -9,7 +9,7 @@ import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail, getSpotPricePerHour, toISOToday } from '@/src/services/parkingService';
 import { getDriverVisiblePrice } from '@/src/services/utils';
@@ -62,6 +62,8 @@ export default function ConfirmBooking() {
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   const { spotId, hours, startHour, endHour, bookingDate, vehicleType } = useLocalSearchParams<{
@@ -281,23 +283,23 @@ export default function ConfirmBooking() {
       padding: 16,
       gap: 4,
     },
-    spotTitle: { fontSize: 19, fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
+    spotTitle: { fontSize: sc(19), fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
     addressRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    spotAddress: { flex: 1, fontSize: 13, color: colors.textSecondary, lineHeight: 17 },
+    spotAddress: { flex: 1, fontSize: sc(13), color: colors.textSecondary, lineHeight: sc(17) },
 
     card: { gap: 12 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     sectionLabel: {
-      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase',
     },
     detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    detailLabel: { flex: 1, fontSize: 14, color: colors.textSecondary },
-    detailValue: { fontSize: 14, color: colors.text, fontWeight: '600' },
+    detailLabel: { flex: 1, fontSize: sc(14), color: colors.textSecondary },
+    detailValue: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
     divider: { height: 1, backgroundColor: colors.border },
     totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    totalLabel: { fontSize: 14, color: colors.text, fontWeight: '600' },
-    totalValue: { fontSize: 18, color: colors.teal, fontWeight: '700' },
+    totalLabel: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
+    totalValue: { fontSize: sc(18), color: colors.teal, fontWeight: '700' },
 
     button: { marginTop: 2 },
 
@@ -310,18 +312,18 @@ export default function ConfirmBooking() {
       backgroundColor: colors.surface, alignItems: 'center', gap: 8,
     },
     modalTitle: {
-      fontSize: 16, fontWeight: '700', color: colors.text,
+      fontSize: sc(16), fontWeight: '700', color: colors.text,
       marginBottom: 8, textAlign: 'center',
     },
     modalBody: {
-      fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 18,
+      fontSize: sc(13), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(18),
       marginBottom: 8,
     },
     modalConfirmBtn: {
       width: '100%', borderRadius: 10, paddingVertical: 12, alignItems: 'center',
       backgroundColor: colors.teal, marginTop: 8,
     },
-    modalConfirmBtnText: { fontSize: 15, fontWeight: '600', color: colors.white },
+    modalConfirmBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.white },
   });
 
   return (
@@ -331,7 +333,7 @@ export default function ConfirmBooking() {
           <View style={styles.heroCard}>
             <Text style={styles.spotTitle}>{spot.title}</Text>
             <View style={styles.addressRow}>
-              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+              <Ionicons name="location-outline" size={sc(14)} color={colors.textSecondary} />
               <Text style={styles.spotAddress} numberOfLines={2}>{spot.address}</Text>
             </View>
           </View>
@@ -339,12 +341,12 @@ export default function ConfirmBooking() {
           <Card>
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+                <Ionicons name="calendar-outline" size={sc(15)} color={colors.textSecondary} />
                 <Text style={styles.sectionLabel}>{t('driver.booking.summary')}</Text>
               </View>
 
               <View style={styles.detailRow}>
-                <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="calendar-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('driver.booking.date')}</Text>
                 <Text style={styles.detailValue}>
                   {bookingDate
@@ -353,7 +355,7 @@ export default function ConfirmBooking() {
                 </Text>
               </View>
               <View style={styles.detailRow}>
-                <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="time-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('driver.booking.time')}</Text>
                 <Text style={styles.detailValue}>
                   {String(start).padStart(2, '0')}:00 {t('driver.booking.timeTo')} {String(end).padStart(2, '0')}:00
@@ -361,18 +363,18 @@ export default function ConfirmBooking() {
               </View>
               {spot.pricePerHourByVehicleType && effectiveVehicleType && (
                 <View style={styles.detailRow}>
-                  <Ionicons name="car-outline" size={16} color={colors.textSecondary} />
+                  <Ionicons name="car-outline" size={sc(16)} color={colors.textSecondary} />
                   <Text style={styles.detailLabel}>{t('spot.vehicleType')}</Text>
                   <Text style={styles.detailValue}>{t(VEHICLE_TYPE_LABEL_KEYS[effectiveVehicleType])}</Text>
                 </View>
               )}
               <View style={styles.detailRow}>
-                <Ionicons name="pricetag-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="pricetag-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('driver.booking.pricePerHour')}</Text>
                 <Text style={styles.detailValue}>${visiblePricePerHour}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Ionicons name="hourglass-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="hourglass-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('driver.booking.hours')}</Text>
                 <Text style={styles.detailValue}>{reservedHours} {t('driver.booking.hoursUnit')}</Text>
               </View>
@@ -389,7 +391,7 @@ export default function ConfirmBooking() {
           <Card>
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="car-sport-outline" size={15} color={colors.textSecondary} />
+                <Ionicons name="car-sport-outline" size={sc(15)} color={colors.textSecondary} />
                 <Text style={styles.sectionLabel}>{t('driver.booking.vehicle.sectionTitle')}</Text>
               </View>
               <VehiclePicker
@@ -404,7 +406,7 @@ export default function ConfirmBooking() {
           <Card>
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="card-outline" size={15} color={colors.textSecondary} />
+                <Ionicons name="card-outline" size={sc(15)} color={colors.textSecondary} />
                 <Text style={styles.sectionLabel}>{t('driver.booking.methodPayment')}</Text>
               </View>
               <PaymentMethodDisplay />

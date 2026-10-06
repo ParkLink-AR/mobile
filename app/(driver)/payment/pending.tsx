@@ -222,10 +222,15 @@ export default function PaymentPendingScreen() {
       <ActivityIndicator size="large" color={colors.teal} />
       <Text style={typography.h2}>{t('driver.payment.pending.title')}</Text>
       <Text style={[typography.body, { textAlign: 'center' }]}>{t('driver.payment.pending.body')}</Text>
+      <Text style={[typography.caption, { textAlign: 'center' }]}>{t('driver.payment.pending.leaveHint')}</Text>
+      {/* No cancel call here on purpose: POST /bookings/{id}/cancel only accepts CONFIRMED /
+          PENDING_OWNER_APPROVAL, so an unpaid PENDING_PAYMENT hold can't be cancelled -- it
+          just expires on its own. Text colour is set explicitly: Button's default is white. */}
       <Button
-        title={t('common.cancel')}
-        onPress={() => router.replace(`${group}/(tabs)`)}
-        style={{ marginTop: 24, backgroundColor: 'transparent', borderWidth: 1, borderColor: '#888' }}
+        title={t('driver.booking.success.viewBookings')}
+        onPress={() => router.replace(`${group}/(tabs)/bookings`)}
+        style={{ marginTop: 24, backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border }}
+        textStyle={{ color: colors.text }}
       />
     </Screen>
   );

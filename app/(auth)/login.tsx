@@ -9,10 +9,13 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { useAccountTypeStore, tabRouteFor } from '@/src/store/useAccountTypeStore';
 import { login } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
+import { useScale } from '@/src/theme/typography';
 
 export default function Login() {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const { email: prefilledEmail } = useLocalSearchParams<{ email?: string }>();
   const [email, setEmail] = useState(prefilledEmail ?? '');
   const [password, setPassword] = useState('');
@@ -28,11 +31,11 @@ export default function Login() {
       borderColor: colors.border,
       borderRadius: 8,
       padding: 12,
-      fontSize: 15,
+      fontSize: sc(15),
       color: colors.text,
     },
     link: { color: colors.teal, textAlign: 'center', marginTop: 8 },
-    error: { color: '#C62828', fontSize: 13, textAlign: 'center' },
+    error: { color: '#C62828', fontSize: sc(13), textAlign: 'center' },
   });
 
   async function handleLogin() {

@@ -9,7 +9,7 @@ import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { SettlementStatusBadge } from '@/src/components/SettlementStatusBadge';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { getSettlementById } from '@/src/services/paymentService';
 import { getBookingApi } from '@/src/api/booking';
 import { formatFullDateTime, mapBookingDateRange, formatBookingWhen } from '@/src/services/bookingDates';
@@ -46,6 +46,8 @@ async function resolvePayoutRow(payout: SettlementPayout): Promise<PayoutRow> {
 export default function SettlementDetail() {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [settlement, setSettlement] = useState<Settlement | null>(null);
@@ -71,29 +73,29 @@ export default function SettlementDetail() {
     container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 16, gap: 12 },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    errorText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
-    amount: { color: colors.teal, fontWeight: '700', fontSize: 24, marginTop: 4 },
+    errorText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
+    amount: { color: colors.teal, fontWeight: '700', fontSize: sc(24), marginTop: 4 },
     preparingNote: { marginTop: 4 },
     divider: { height: 1, backgroundColor: colors.border, marginVertical: 10 },
     row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
-    rowLabel: { fontSize: 14, color: colors.textSecondary },
-    rowValue: { fontSize: 14, color: colors.text, fontWeight: '600' },
+    rowLabel: { fontSize: sc(14), color: colors.textSecondary },
+    rowValue: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
     sectionTitle: { marginTop: 8 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
     sectionLabel: {
-      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase',
     },
     viewProofBtn: { alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 16 },
-    noProofText: { fontSize: 13, color: colors.textSecondary },
-    bookingWhen: { fontSize: 14, color: colors.text, fontWeight: '600' },
+    noProofText: { fontSize: sc(13), color: colors.textSecondary },
+    bookingWhen: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
   });
 
   if (error) {
     return (
       <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
         <View style={styles.centered}>
-          <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
+          <Ionicons name="alert-circle-outline" size={sc(40)} color={colors.textSecondary} />
           <Text style={styles.errorText}>{t('settlements.detail.error')}</Text>
         </View>
       </Screen>
@@ -136,7 +138,7 @@ export default function SettlementDetail() {
 
       <Card>
         <View style={styles.sectionHeader}>
-          <Ionicons name="receipt-outline" size={15} color={colors.textSecondary} />
+          <Ionicons name="receipt-outline" size={sc(15)} color={colors.textSecondary} />
           <Text style={styles.sectionLabel}>{t('settlements.proofTitle')}</Text>
         </View>
         {settlement.proofUrl ? (

@@ -15,6 +15,7 @@ import {
   TicketApiResponse, TicketMessageApiResponse, TicketStatus,
 } from '@/src/api/booking';
 import { ApiError } from '@/src/api/client';
+import { useScale } from '@/src/theme/typography';
 
 // Same reasoning as the booking chat screen: no websocket, so a short poll is
 // what makes the thread feel live while it's open (the ticket creator gets a
@@ -36,6 +37,8 @@ export default function TicketThread() {
   useLanguage();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const { ticketId } = useLocalSearchParams<{ ticketId: string }>();
   const userId = useSessionStore((s) => s.user?.id);
   const [ticket, setTicket] = useState<TicketApiResponse | null>(null);
@@ -98,15 +101,15 @@ export default function TicketThread() {
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-    errorText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    errorText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
     header: {
       flexDirection: 'row', alignItems: 'center', gap: 8,
       paddingHorizontal: 16, paddingVertical: 12,
       borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface,
     },
-    headerSubject: { fontSize: 15, fontWeight: '600', color: colors.text, flex: 1 },
+    headerSubject: { fontSize: sc(15), fontWeight: '600', color: colors.text, flex: 1 },
     badge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
-    badgeText: { color: colors.white, fontSize: 10.5, fontWeight: '700' },
+    badgeText: { color: colors.white, fontSize: sc(10.5), fontWeight: '700' },
     list: { padding: 16, gap: 8, flexGrow: 1 },
     bubbleRow: { flexDirection: 'row' },
     bubbleRowMine: { justifyContent: 'flex-end' },
@@ -114,12 +117,12 @@ export default function TicketThread() {
     bubble: { maxWidth: '78%', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10 },
     bubbleMine: { backgroundColor: colors.teal, borderBottomRightRadius: 4 },
     bubbleTheirs: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4 },
-    bubbleSender: { fontSize: 11, fontWeight: '700', marginBottom: 2 },
+    bubbleSender: { fontSize: sc(11), fontWeight: '700', marginBottom: 2 },
     bubbleSenderTheirs: { color: colors.teal },
-    bubbleText: { fontSize: 14.5, lineHeight: 20 },
+    bubbleText: { fontSize: sc(14.5), lineHeight: sc(20) },
     bubbleTextMine: { color: colors.white },
     bubbleTextTheirs: { color: colors.text },
-    bubbleTime: { fontSize: 10.5, marginTop: 4 },
+    bubbleTime: { fontSize: sc(10.5), marginTop: 4 },
     bubbleTimeMine: { color: 'rgba(255,255,255,0.7)', textAlign: 'right' },
     bubbleTimeTheirs: { color: colors.textSecondary },
     inputRow: {
@@ -128,7 +131,7 @@ export default function TicketThread() {
     },
     input: {
       flex: 1, maxHeight: 100, borderWidth: 1, borderColor: colors.border, borderRadius: 20,
-      paddingHorizontal: 16, paddingVertical: 10, fontSize: 14.5, color: colors.text,
+      paddingHorizontal: 16, paddingVertical: 10, fontSize: sc(14.5), color: colors.text,
     },
     sendBtn: {
       width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
@@ -148,7 +151,7 @@ export default function TicketThread() {
     return (
       <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
         <View style={styles.centered}>
-          <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
+          <Ionicons name="alert-circle-outline" size={sc(40)} color={colors.textSecondary} />
           <Text style={styles.errorText}>{t('driver.booking.tickets.error')}</Text>
         </View>
       </Screen>
@@ -221,7 +224,7 @@ export default function TicketThread() {
             {sending ? (
               <ActivityIndicator color={colors.white} size="small" />
             ) : (
-              <Ionicons name="send" size={17} color={colors.white} />
+              <Ionicons name="send" size={sc(17)} color={colors.white} />
             )}
           </Pressable>
         </View>

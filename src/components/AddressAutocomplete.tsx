@@ -5,6 +5,7 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { geocodeAddress, GeocodeCandidate } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { t, useLanguage } from '@/src/i18n';
+import { useScale } from '@/src/theme/typography';
 
 const MIN_QUERY_LENGTH = 3;
 const DEBOUNCE_MS = 400;
@@ -35,6 +36,8 @@ export function AddressAutocomplete({
 }: AddressAutocompleteProps) {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const [candidates, setCandidates] = useState<GeocodeCandidate[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
@@ -121,7 +124,7 @@ export function AddressAutocomplete({
       paddingHorizontal: 12,
       height: 44,
     },
-    input: { flex: 1, minWidth: 0, fontSize: 14, color: colors.text, height: '100%' },
+    input: { flex: 1, minWidth: 0, fontSize: sc(14), color: colors.text, height: '100%' },
     dropdown: {
       position: 'absolute',
       top: '100%',
@@ -147,8 +150,8 @@ export function AddressAutocomplete({
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    candidateMain: { flex: 1, minWidth: 0, fontSize: 14, color: colors.text, lineHeight: 19 },
-    empty: { paddingVertical: 16, fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
+    candidateMain: { flex: 1, minWidth: 0, fontSize: sc(14), color: colors.text, lineHeight: sc(19) },
+    empty: { paddingVertical: 16, fontSize: sc(13), color: colors.textSecondary, textAlign: 'center' },
   });
 
   return (
@@ -157,7 +160,7 @@ export function AddressAutocomplete({
         {geocoding ? (
           <ActivityIndicator color={colors.textSecondary} size="small" />
         ) : (
-          <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
+          <Ionicons name="search-outline" size={sc(16)} color={colors.textSecondary} />
         )}
         <TextInput
           style={styles.input}
@@ -184,7 +187,7 @@ export function AddressAutocomplete({
                   style={styles.candidateRow}
                   onPress={() => handleSelect(item)}
                 >
-                  <Ionicons name="location-outline" size={18} color={colors.teal} />
+                  <Ionicons name="location-outline" size={sc(18)} color={colors.teal} />
                   <Text style={styles.candidateMain} numberOfLines={2}>
                     {item.displayName}
                   </Text>

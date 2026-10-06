@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { requestEmailChange, confirmEmailChange } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
@@ -15,6 +15,8 @@ const RESEND_COOLDOWN_SECONDS = 60;
 export default function ChangeEmailScreen() {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
   const user = useSessionStore((s) => s.user)!;
   const setUser = useSessionStore((s) => s.setUser);
@@ -34,13 +36,13 @@ export default function ChangeEmailScreen() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.surface, padding: 24, gap: 12, justifyContent: 'center' },
-    current: { fontSize: 14, color: colors.textSecondary, marginBottom: 4 },
+    current: { fontSize: sc(14), color: colors.textSecondary, marginBottom: 4 },
     input: {
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 8,
       padding: 12,
-      fontSize: 15,
+      fontSize: sc(15),
       color: colors.text,
     },
     codeInput: {
@@ -48,13 +50,13 @@ export default function ChangeEmailScreen() {
       borderColor: colors.border,
       borderRadius: 8,
       padding: 12,
-      fontSize: 24,
+      fontSize: sc(24),
       letterSpacing: 8,
       textAlign: 'center',
       color: colors.text,
     },
-    error: { color: '#C62828', fontSize: 13, textAlign: 'center' },
-    success: { color: colors.teal, fontSize: 15, fontWeight: '600', textAlign: 'center' },
+    error: { color: '#C62828', fontSize: sc(13), textAlign: 'center' },
+    success: { color: colors.teal, fontSize: sc(15), fontWeight: '600', textAlign: 'center' },
     link: { color: colors.teal, textAlign: 'center', marginTop: 8 },
     linkDisabled: { color: colors.textSecondary },
   });

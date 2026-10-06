@@ -36,6 +36,7 @@ import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 import { useLocationPermission } from '@/src/hooks/useLocationPermission';
 import { MAP_STYLE } from '@/src/theme/mapStyle';
+import { useScale } from '@/src/theme/typography';
 
 // Precio a mostrar en el pin del mapa: por hora si la cochera lo ofrece
 // (aunque también tenga estadía -- ver el pedido del usuario de priorizar
@@ -63,6 +64,8 @@ const DEFAULT_REGION: Region = {
 export function SearchScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const group = `/${useSegments()[0]}`;
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   useLanguage();
@@ -433,7 +436,7 @@ export function SearchScreen() {
     locationErrorText: { flex: 1, fontSize: 13, color: colors.textSecondary },
     candidateEmpty: {
       paddingVertical: 16,
-      fontSize: 13,
+      fontSize: sc(13),
       color: colors.textSecondary,
       textAlign: 'center',
     },
@@ -453,7 +456,7 @@ export function SearchScreen() {
     searchInput: {
       flex: 1,
       minWidth: 0,
-      fontSize: 14,
+      fontSize: sc(14),
       color: colors.text,
       height: '100%',
     },
@@ -471,7 +474,7 @@ export function SearchScreen() {
       paddingHorizontal: 20,
       paddingTop: 8,
       color: colors.textSecondary,
-      fontSize: 13,
+      fontSize: sc(13),
       backgroundColor: colors.surface,
     },
     error: {
@@ -479,7 +482,7 @@ export function SearchScreen() {
       paddingTop: 4,
       paddingBottom: 8,
       color: '#C62828',
-      fontSize: 13,
+      fontSize: sc(13),
       backgroundColor: colors.surface,
     },
     // ── Toolbar (filters + view toggle) ─────────────────────────────────────
@@ -505,7 +508,7 @@ export function SearchScreen() {
       backgroundColor: hasActiveFilters ? colors.teal + '12' : colors.surface,
     },
     filterButtonText: {
-      fontSize: 13,
+      fontSize: sc(13),
       fontWeight: '600',
       color: hasActiveFilters ? colors.teal : colors.textSecondary,
     },
@@ -518,7 +521,7 @@ export function SearchScreen() {
       justifyContent: 'center',
     },
     filterBadgeText: {
-      fontSize: 10,
+      fontSize: sc(10),
       fontWeight: '700',
       color: colors.white,
     },
@@ -543,7 +546,7 @@ export function SearchScreen() {
       backgroundColor: colors.teal,
     },
     segmentText: {
-      fontSize: 13,
+      fontSize: sc(13),
       fontWeight: '600',
       color: colors.textSecondary,
     },
@@ -570,10 +573,10 @@ export function SearchScreen() {
       gap: 12,
     },
     feedbackText: {
-      fontSize: 15,
+      fontSize: sc(15),
       color: colors.textSecondary,
       textAlign: 'center',
-      lineHeight: 22,
+      lineHeight: sc(22),
     },
     retryButton: {
       marginTop: 4,
@@ -584,7 +587,7 @@ export function SearchScreen() {
       borderColor: colors.teal,
     },
     retryButtonText: {
-      fontSize: 13,
+      fontSize: sc(13),
       fontWeight: '600',
       color: colors.teal,
     },
@@ -623,7 +626,7 @@ export function SearchScreen() {
       backgroundColor: colors.teal,
       transform: [{ scale: 1.15 }],
     },
-    pinText: { color: colors.white, fontSize: 12, fontWeight: '700' },
+    pinText: { color: colors.white, fontSize: sc(12), fontWeight: '700' },
     // "My location" FAB -- top-right, clear of the selected-spot card that
     // can pop up over the bottom of the map (avoids guessing that card's
     // height to avoid overlapping it).
@@ -680,14 +683,14 @@ export function SearchScreen() {
       marginBottom: 16,
     },
     modalTitle: {
-      fontSize: 18,
+      fontSize: sc(18),
       fontWeight: '700',
       color: colors.text,
       letterSpacing: -0.3,
       marginBottom: 4,
     },
     sectionLabel: {
-      fontSize: 12,
+      fontSize: sc(12),
       fontWeight: '600',
       color: colors.textSecondary,
       letterSpacing: 0.6,
@@ -707,14 +710,14 @@ export function SearchScreen() {
       borderColor: colors.border,
       borderRadius: 10,
       padding: 12,
-      fontSize: 15,
+      fontSize: sc(15),
       color: colors.text,
       backgroundColor: colors.background,
     },
     dateRow: { marginTop: 4 },
     scheduleRow: { flexDirection: 'row', gap: 12, marginTop: 10 },
     hourBlock: { flex: 1, gap: 4 },
-    hourLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '500' },
+    hourLabel: { fontSize: sc(11), color: colors.textSecondary, fontWeight: '500' },
     hourControl: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       borderWidth: 1, borderColor: colors.border, borderRadius: 8,
@@ -724,13 +727,13 @@ export function SearchScreen() {
       width: 26, height: 26, borderRadius: 13,
       backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
     },
-    hourValue: { fontSize: 14, fontWeight: '700', color: colors.text, minWidth: 44, textAlign: 'center' },
+    hourValue: { fontSize: sc(14), fontWeight: '700', color: colors.text, minWidth: 44, textAlign: 'center' },
     applyButton: { marginTop: 20, marginBottom: 6 },
     clearLink: {
       textAlign: 'center',
       marginTop: 10,
       marginBottom: 4,
-      fontSize: 14,
+      fontSize: sc(14),
       color: colors.textSecondary,
       fontWeight: '500',
     },
@@ -744,7 +747,7 @@ export function SearchScreen() {
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    candidateMain: { flex: 1, minWidth: 0, fontSize: 14, color: colors.text, lineHeight: 19 },
+    candidateMain: { flex: 1, minWidth: 0, fontSize: sc(14), color: colors.text, lineHeight: sc(19) },
   });
 
   return (
@@ -761,7 +764,7 @@ export function SearchScreen() {
             {geocoding ? (
               <ActivityIndicator color={colors.textSecondary} size="small" />
             ) : (
-              <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
+              <Ionicons name="search-outline" size={sc(16)} color={colors.textSecondary} />
             )}
             <TextInput
               style={styles.searchInput}
@@ -786,7 +789,7 @@ export function SearchScreen() {
                 }}
                 accessibilityLabel={t('search.clearAddress')}
               >
-                <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                <Ionicons name="close-circle" size={sc(18)} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
           </View>
@@ -799,7 +802,7 @@ export function SearchScreen() {
             {locating ? (
               <ActivityIndicator color={colors.white} size="small" />
             ) : (
-              <Ionicons name="locate" size={20} color={colors.white} />
+              <Ionicons name="locate" size={sc(20)} color={colors.white} />
             )}
           </TouchableOpacity>
         </View>
@@ -813,7 +816,7 @@ export function SearchScreen() {
                 keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => (
                   <TouchableOpacity style={styles.candidateRow} onPress={() => selectCandidate(item)}>
-                    <Ionicons name="location-outline" size={18} color={colors.teal} />
+                    <Ionicons name="location-outline" size={sc(18)} color={colors.teal} />
                     <Text style={styles.candidateMain} numberOfLines={2}>
                       {item.displayName}
                     </Text>
@@ -840,7 +843,7 @@ export function SearchScreen() {
         <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
           <Ionicons
             name="options-outline"
-            size={15}
+            size={sc(15)}
             color={hasActiveFilters ? colors.teal : colors.textSecondary}
           />
           <Text style={styles.filterButtonText}>{t('search.filters')}</Text>
@@ -860,7 +863,7 @@ export function SearchScreen() {
           >
             <Ionicons
               name="list-outline"
-              size={14}
+              size={sc(14)}
               color={viewMode === 'list' ? colors.white : colors.textSecondary}
             />
             <Text style={[styles.segmentText, viewMode === 'list' && styles.segmentTextActive]}>
@@ -880,7 +883,7 @@ export function SearchScreen() {
             >
               <Ionicons
                 name="map-outline"
-                size={14}
+                size={sc(14)}
                 color={viewMode === 'map' ? colors.white : colors.textSecondary}
               />
               <Text style={[styles.segmentText, viewMode === 'map' && styles.segmentTextActive]}>
@@ -908,7 +911,7 @@ export function SearchScreen() {
           </View>
         ) : spotsError ? (
           <View style={styles.centeredFeedback}>
-            <Ionicons name="cloud-offline-outline" size={40} color={colors.textSecondary} />
+            <Ionicons name="cloud-offline-outline" size={sc(40)} color={colors.textSecondary} />
             <Text style={styles.feedbackText}>{spotsError}</Text>
             <TouchableOpacity
               style={styles.retryButton}
@@ -929,7 +932,7 @@ export function SearchScreen() {
           </View>
         ) : spots.length === 0 ? (
           <View style={styles.centeredFeedback}>
-            <Ionicons name="car-outline" size={40} color={colors.textSecondary} />
+            <Ionicons name="car-outline" size={sc(40)} color={colors.textSecondary} />
             <Text style={styles.feedbackText}>{t('search.noResults')}</Text>
           </View>
         ) : (
@@ -1021,7 +1024,7 @@ export function SearchScreen() {
               ]}
             >
               <View style={{ backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 16, alignItems: 'center', gap: 8 }}>
-                <Ionicons name="car-outline" size={28} color={colors.textSecondary} />
+                <Ionicons name="car-outline" size={sc(28)} color={colors.textSecondary} />
                 <Text style={styles.feedbackText}>{t('search.noResults')}</Text>
               </View>
             </View>
@@ -1049,7 +1052,7 @@ export function SearchScreen() {
             {locating ? (
               <ActivityIndicator size="small" color={colors.teal} />
             ) : (
-              <Ionicons name="locate" size={20} color={colors.teal} />
+              <Ionicons name="locate" size={sc(20)} color={colors.teal} />
             )}
           </TouchableOpacity>
 
@@ -1165,14 +1168,14 @@ export function SearchScreen() {
                           style={styles.hourBtn}
                           onPress={() => setFromHourInput((h) => Math.max(0, Math.min(h - 1, toHourInput - 1)))}
                         >
-                          <Ionicons name="remove" size={14} color={colors.text} />
+                          <Ionicons name="remove" size={sc(14)} color={colors.text} />
                         </TouchableOpacity>
                         <Text style={styles.hourValue}>{String(fromHourInput).padStart(2, '0')}:00</Text>
                         <TouchableOpacity
                           style={styles.hourBtn}
                           onPress={() => setFromHourInput((h) => Math.min(toHourInput - 1, h + 1))}
                         >
-                          <Ionicons name="add" size={14} color={colors.text} />
+                          <Ionicons name="add" size={sc(14)} color={colors.text} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -1183,14 +1186,14 @@ export function SearchScreen() {
                           style={styles.hourBtn}
                           onPress={() => setToHourInput((h) => Math.max(fromHourInput + 1, h - 1))}
                         >
-                          <Ionicons name="remove" size={14} color={colors.text} />
+                          <Ionicons name="remove" size={sc(14)} color={colors.text} />
                         </TouchableOpacity>
                         <Text style={styles.hourValue}>{String(toHourInput).padStart(2, '0')}:00</Text>
                         <TouchableOpacity
                           style={styles.hourBtn}
                           onPress={() => setToHourInput((h) => Math.min(23, Math.max(h + 1, fromHourInput + 1)))}
                         >
-                          <Ionicons name="add" size={14} color={colors.text} />
+                          <Ionicons name="add" size={sc(14)} color={colors.text} />
                         </TouchableOpacity>
                       </View>
                     </View>

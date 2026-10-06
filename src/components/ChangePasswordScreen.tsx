@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { verifyCurrentPassword, changePassword } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
@@ -15,6 +15,8 @@ export default function ChangePasswordScreen() {
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
   const user = useSessionStore((s) => s.user)!;
 
@@ -27,18 +29,18 @@ export default function ChangePasswordScreen() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.surface, padding: 24, gap: 12, justifyContent: 'center' },
-    hint: { fontSize: 13, color: colors.textSecondary },
+    hint: { fontSize: sc(13), color: colors.textSecondary },
     input: {
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 8,
       padding: 12,
-      fontSize: 15,
+      fontSize: sc(15),
       color: colors.text,
     },
-    error: { color: '#C62828', fontSize: 13, textAlign: 'center' },
+    error: { color: '#C62828', fontSize: sc(13), textAlign: 'center' },
     successContainer: { flex: 1, backgroundColor: colors.surface, padding: 24, gap: 12, alignItems: 'center', justifyContent: 'center' },
-    successMessage: { fontSize: 15, color: colors.textSecondary, textAlign: 'center' },
+    successMessage: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center' },
   });
 
   function handleBackFromSuccess() {
@@ -91,7 +93,7 @@ export default function ChangePasswordScreen() {
   if (step === 'success') {
     return (
       <Screen style={styles.successContainer} edges={['left', 'right', 'bottom']}>
-        <Ionicons name="checkmark-circle" size={44} color={colors.teal} />
+        <Ionicons name="checkmark-circle" size={sc(44)} color={colors.teal} />
         <Text style={typography.h1}>{t('changePassword.success.title')}</Text>
         <Text style={styles.successMessage}>{t('changePassword.success.message')}</Text>
         <Button title={t('common.continue')} onPress={handleBackFromSuccess} />

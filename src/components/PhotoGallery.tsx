@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
+import { useScale } from '@/src/theme/typography';
 
 interface PhotoGalleryProps {
   /** All photos for the spot, in order (photos[0] is the cover). */
@@ -33,6 +34,8 @@ interface PhotoGalleryProps {
  */
 export function PhotoGallery({ photos, fallbackUri }: PhotoGalleryProps) {
   const { width } = useWindowDimensions();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const colors = useThemeColors();
   const [index, setIndex] = useState(0);
   const uris = photos.length > 0 ? photos : fallbackUri ? [fallbackUri] : [];
@@ -111,13 +114,13 @@ export function PhotoGallery({ photos, fallbackUri }: PhotoGalleryProps) {
       backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 12,
       paddingHorizontal: 10, paddingVertical: 4,
     },
-    counterText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+    counterText: { color: '#fff', fontSize: sc(12), fontWeight: '700' },
   });
 
   if (uris.length === 0) {
     return (
       <View style={styles.placeholder}>
-        <Ionicons name="image-outline" size={40} color={colors.textSecondary} />
+        <Ionicons name="image-outline" size={sc(40)} color={colors.textSecondary} />
       </View>
     );
   }

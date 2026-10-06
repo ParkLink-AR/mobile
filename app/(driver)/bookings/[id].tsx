@@ -24,6 +24,7 @@ import { getParkingSpotDetail } from '@/src/api/parking';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { mapBookingDateRange, formatBookingWhen, formatFullDate, toVehicleSnapshot, ownerEarningsFrom } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
+import { useScale } from '@/src/theme/typography';
 
 /** Maps the backend wire shape to the UI Booking type -- same mapping as the
  * driver's booking list (see (tabs)/bookings.tsx), plus payment_id/updated_at
@@ -89,6 +90,8 @@ export default function DriverBookingDetail() {
   // Without it, the route group decides: the owner screens open the owner's view.
   const { id, view } = useLocalSearchParams<{ id: string; view?: 'owner' | 'driver' }>();
   const isOwnerView = view ? view === 'owner' : segment === '(owner)';
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [spotLocation, setSpotLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [driverName, setDriverName] = useState<string | null>(null);
@@ -181,7 +184,7 @@ export default function DriverBookingDetail() {
     screen: { flex: 1, backgroundColor: colors.background },
     body: { padding: 16, gap: 14 },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-    errorText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    errorText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
 
     heroCard: {
       backgroundColor: colors.surface,
@@ -192,27 +195,27 @@ export default function DriverBookingDetail() {
       gap: 10,
     },
     titleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
-    spotTitle: { flex: 1, fontSize: 19, fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
+    spotTitle: { flex: 1, fontSize: sc(19), fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
     kindRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    kindText: { fontSize: 13, fontWeight: '600', color: colors.teal },
+    kindText: { fontSize: sc(13), fontWeight: '600', color: colors.teal },
 
     cardContent: { gap: 12 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     sectionLabel: {
-      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase',
     },
 
     divider: { height: 1, backgroundColor: colors.border },
     detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    detailLabel: { flex: 1, fontSize: 14, color: colors.textSecondary },
-    detailValue: { fontSize: 14, color: colors.text, fontWeight: '600' },
+    detailLabel: { flex: 1, fontSize: sc(14), color: colors.textSecondary },
+    detailValue: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
     vehicleDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     detailValueLink: { color: colors.teal },
-    whenValue: { flex: 1, fontSize: 14, color: colors.text, fontWeight: '600' },
+    whenValue: { flex: 1, fontSize: sc(14), color: colors.text, fontWeight: '600' },
     totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    totalLabel: { fontSize: 14, color: colors.text, fontWeight: '600' },
-    totalValue: { fontSize: 18, color: colors.teal, fontWeight: '700' },
+    totalLabel: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
+    totalValue: { fontSize: sc(18), color: colors.teal, fontWeight: '700' },
 
     refundReason: { fontSize: 14, color: colors.text, fontWeight: '600' },
     refundBody: { flex: 1, fontSize: 14, color: colors.text, lineHeight: 20 },
@@ -227,7 +230,7 @@ export default function DriverBookingDetail() {
       alignItems: 'center',
     },
     cancelButtonText: {
-      fontSize: 15,
+      fontSize: sc(15),
       fontWeight: '600',
       color: '#e53e3e',
     },
@@ -241,9 +244,9 @@ export default function DriverBookingDetail() {
       alignItems: 'center',
       gap: 4,
     },
-    codeLabel: { fontSize: 12, color: colors.textSecondary },
-    codeValue: { fontSize: 32, fontWeight: '700', color: colors.teal, letterSpacing: 6 },
-    codeHint: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
+    codeLabel: { fontSize: sc(12), color: colors.textSecondary },
+    codeValue: { fontSize: sc(32), fontWeight: '700', color: colors.teal, letterSpacing: 6 },
+    codeHint: { fontSize: sc(12), color: colors.textSecondary, textAlign: 'center' },
 
     verifyCard: {
       backgroundColor: colors.surface,
@@ -276,11 +279,11 @@ export default function DriverBookingDetail() {
       backgroundColor: colors.surface, alignItems: 'center', gap: 8,
     },
     modalTitle: {
-      fontSize: 16, fontWeight: '700', color: colors.text,
+      fontSize: sc(16), fontWeight: '700', color: colors.text,
       marginBottom: 8, textAlign: 'center',
     },
     modalBody: {
-      fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 18,
+      fontSize: sc(13), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(18),
       marginBottom: 8,
     },
     modalActions: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 8 },
@@ -288,24 +291,24 @@ export default function DriverBookingDetail() {
       flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center',
       borderWidth: 1.5, borderColor: colors.border,
     },
-    modalCancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.text },
+    modalCancelBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.text },
     modalConfirmBtn: {
       flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center',
       backgroundColor: '#e53e3e',
     },
-    modalConfirmBtnText: { fontSize: 15, fontWeight: '600', color: colors.white },
+    modalConfirmBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.white },
     modalAckBtn: {
       width: '100%', borderRadius: 10, paddingVertical: 12, alignItems: 'center',
       marginTop: 8,
     },
-    modalAckBtnText: { fontSize: 15, fontWeight: '600', color: colors.white },
+    modalAckBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.white },
   });
 
   if (error) {
     return (
       <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
         <View style={styles.centered}>
-          <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
+          <Ionicons name="alert-circle-outline" size={sc(40)} color={colors.textSecondary} />
           <Text style={styles.errorText}>{t('driver.booking.detail.error')}</Text>
         </View>
       </Screen>
@@ -345,7 +348,7 @@ export default function DriverBookingDetail() {
             </View>
 
             <View style={styles.kindRow}>
-              <Ionicons name={booking.kind === 'STAY' ? 'calendar-outline' : 'time-outline'} size={14} color={colors.teal} />
+              <Ionicons name={booking.kind === 'STAY' ? 'calendar-outline' : 'time-outline'} size={sc(14)} color={colors.teal} />
               <Text style={styles.kindText}>
                 {t(booking.kind === 'STAY' ? 'driver.booking.kind.stay' : 'driver.booking.kind.hourly')}
               </Text>
@@ -356,10 +359,10 @@ export default function DriverBookingDetail() {
                 style={styles.detailRow}
                 onPress={() => router.push(`${group}/profile/${booking.driverId}?as=driver`)}
               >
-                <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="person-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('driver.booking.detail.driver')}</Text>
                 <Text style={[styles.detailValue, styles.detailValueLink]}>{driverName}</Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.teal} />
+                <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
               </Pressable>
             )}
 
@@ -368,10 +371,10 @@ export default function DriverBookingDetail() {
                 style={styles.detailRow}
                 onPress={() => router.push(`${group}/profile/${booking.ownerId}?as=owner`)}
               >
-                <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="person-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('driver.booking.detail.owner')}</Text>
                 <Text style={[styles.detailValue, styles.detailValueLink]}>{ownerName}</Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.teal} />
+                <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
               </Pressable>
             )}
 
@@ -388,31 +391,31 @@ export default function DriverBookingDetail() {
             <View style={styles.divider} />
 
             <View style={styles.sectionHeader}>
-              <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+              <Ionicons name="calendar-outline" size={sc(15)} color={colors.textSecondary} />
               <Text style={styles.sectionLabel}>{t('driver.booking.summary')}</Text>
             </View>
 
             {booking.kind === 'STAY' ? (
               <>
                 <View style={styles.detailRow}>
-                  <Ionicons name="log-in-outline" size={16} color={colors.textSecondary} />
+                  <Ionicons name="log-in-outline" size={sc(16)} color={colors.textSecondary} />
                   <Text style={styles.detailLabel}>{t('spot.stay.checkIn')}</Text>
                   <Text style={styles.detailValue}>{formatFullDate(booking.date)} · {booking.startTime}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Ionicons name="log-out-outline" size={16} color={colors.textSecondary} />
+                  <Ionicons name="log-out-outline" size={sc(16)} color={colors.textSecondary} />
                   <Text style={styles.detailLabel}>{t('spot.stay.checkOut')}</Text>
                   <Text style={styles.detailValue}>{formatFullDate(booking.endDate)} · {booking.endTime}</Text>
                 </View>
               </>
             ) : (
               <View style={styles.detailRow}>
-                <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="calendar-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.whenValue}>{formatBookingWhen(booking, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}</Text>
               </View>
             )}
             <View style={styles.detailRow}>
-              <Ionicons name="hourglass-outline" size={16} color={colors.textSecondary} />
+              <Ionicons name="hourglass-outline" size={sc(16)} color={colors.textSecondary} />
               <Text style={styles.detailLabel}>{t('driver.booking.detail.duration')}</Text>
               <Text style={styles.detailValue}>{durationLabel(booking)}</Text>
             </View>
@@ -525,13 +528,13 @@ export default function DriverBookingDetail() {
             <Card>
               <View style={styles.cardContent}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="card-outline" size={15} color={colors.textSecondary} />
+                  <Ionicons name="card-outline" size={sc(15)} color={colors.textSecondary} />
                   <Text style={styles.sectionLabel}>{t('driver.booking.detail.paymentSection')}</Text>
                 </View>
 
                 {paidDate && (
                   <View style={styles.detailRow}>
-                    <Ionicons name="checkmark-circle-outline" size={16} color={colors.textSecondary} />
+                    <Ionicons name="checkmark-circle-outline" size={sc(16)} color={colors.textSecondary} />
                     <Text style={styles.detailLabel}>{t('driver.booking.detail.paidAt')}</Text>
                     <Text style={styles.detailValue}>
                       {paidDate.toLocaleDateString('es-AR')} · {paidDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
@@ -540,7 +543,7 @@ export default function DriverBookingDetail() {
                 )}
                 {booking.paymentId && (
                   <View style={styles.detailRow}>
-                    <Ionicons name="receipt-outline" size={16} color={colors.textSecondary} />
+                    <Ionicons name="receipt-outline" size={sc(16)} color={colors.textSecondary} />
                     <Text style={styles.detailLabel}>{t('driver.booking.detail.paymentRef')}</Text>
                     <Text style={styles.detailValue} numberOfLines={1}>{booking.paymentId}</Text>
                   </View>
@@ -561,10 +564,10 @@ export default function DriverBookingDetail() {
                     style={styles.sectionHeader}
                     onPress={() => openDirections(spotLocation.lat, spotLocation.lng)}
                   >
-                    <Ionicons name="navigate-outline" size={15} color={colors.textSecondary} />
+                    <Ionicons name="navigate-outline" size={sc(15)} color={colors.textSecondary} />
                     <Text style={styles.sectionLabel}>{t('driver.booking.detail.directions')}</Text>
                     <View style={{ flex: 1 }} />
-                    <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+                    <Ionicons name="chevron-forward" size={sc(13)} color={colors.teal} />
                   </Pressable>
 
                   <View style={styles.divider} />
@@ -572,19 +575,19 @@ export default function DriverBookingDetail() {
               )}
 
               <Pressable style={styles.sectionHeader} onPress={() => router.push(`${group}/bookings/${id}/messages`)}>
-                <Ionicons name="chatbubble-outline" size={15} color={colors.textSecondary} />
+                <Ionicons name="chatbubble-outline" size={sc(15)} color={colors.textSecondary} />
                 <Text style={styles.sectionLabel}>{t('driver.booking.messages.link')}</Text>
                 <View style={{ flex: 1 }} />
-                <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+                <Ionicons name="chevron-forward" size={sc(13)} color={colors.teal} />
               </Pressable>
 
               <View style={styles.divider} />
 
               <Pressable style={styles.sectionHeader} onPress={() => router.push(`${group}/bookings/${id}/tickets`)}>
-                <Ionicons name="help-buoy-outline" size={15} color={colors.textSecondary} />
+                <Ionicons name="help-buoy-outline" size={sc(15)} color={colors.textSecondary} />
                 <Text style={styles.sectionLabel}>{t('driver.booking.tickets.link')}</Text>
                 <View style={{ flex: 1 }} />
-                <Ionicons name="chevron-forward" size={13} color={colors.teal} />
+                <Ionicons name="chevron-forward" size={sc(13)} color={colors.teal} />
               </Pressable>
             </View>
           </Card>
@@ -668,7 +671,7 @@ export default function DriverBookingDetail() {
               <View style={styles.modalSheet}>
                 <Ionicons
                   name={cancelResult?.ok ? 'checkmark-circle' : 'alert-circle'}
-                  size={44}
+                  size={sc(44)}
                   color={cancelResult?.ok ? colors.teal : '#e53e3e'}
                 />
                 <Text style={styles.modalTitle}>

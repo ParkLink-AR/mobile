@@ -10,9 +10,12 @@ import { getParkingSpotDetail, updateParkingSpot, formatScheduleForDisplay } fro
 import { useSpotsStore } from '@/src/store/useSpotsStore';
 import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
+import { useScale } from '@/src/theme/typography';
 
 export default function SpotAvailability() {
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const markUpdated = useSpotsStore((s) => s.markUpdated);
@@ -64,8 +67,8 @@ export default function SpotAvailability() {
       borderRadius: 14, borderWidth: 1, borderColor: colors.border,
       padding: 16, gap: 6,
     },
-    spotTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
-    currentSchedule: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
+    spotTitle: { fontSize: sc(18), fontWeight: '700', color: colors.text },
+    currentSchedule: { fontSize: sc(13), color: colors.textSecondary, lineHeight: sc(18) },
 
     card: {
       backgroundColor: colors.surface,
@@ -74,7 +77,7 @@ export default function SpotAvailability() {
     },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     sectionLabel: {
-      fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+      fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase',
     },
 
@@ -96,7 +99,7 @@ export default function SpotAvailability() {
 
           <View style={styles.card}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+              <Ionicons name="calendar-outline" size={sc(15)} color={colors.textSecondary} />
               <Text style={styles.sectionLabel}>{t('owner.spot.edit.availability')}</Text>
             </View>
             <AvailabilityPicker value={schedule} onChange={setSchedule} />

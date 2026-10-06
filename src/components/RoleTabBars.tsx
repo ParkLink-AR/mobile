@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useUnseenNotificationsCount } from '@/src/store/useNotificationsStore';
 import { t, useLanguage } from '@/src/i18n';
+import { useScale } from '@/src/theme/typography';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -27,6 +28,8 @@ const OWNER_TAB_KEYS: TabKey[] = [
 function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[] }) {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const insets = useSafeAreaInsets();
   const unseenCount = useUnseenNotificationsCount();
 
@@ -45,6 +48,7 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
       justifyContent: 'center',
       gap: 3,
       paddingVertical: 4,
+      paddingHorizontal: 2,
     },
     iconWrapper: { position: 'relative' },
     badge: {
@@ -54,8 +58,11 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
       alignItems: 'center', justifyContent: 'center',
       paddingHorizontal: 3,
     },
-    badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-    label: { fontSize: 11, fontWeight: '600' },
+    badgeText: { color: '#fff', fontSize: sc(10), fontWeight: '700' },
+    // Todas las etiquetas comparten el mismo tamaño y no crecen con "Texto: Grande": cinco
+    // pestañas en ~80pt c/u no alcanzan para "Notificaciones" más grande que esto. Lo que
+    // sí escala es el ícono.
+    label: { fontSize: Math.round(10 * Math.min(scale, 1)), fontWeight: '600', textAlign: 'center' },
   });
 
   return (
@@ -83,14 +90,14 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
             android_ripple={{ borderless: true, radius: 32 }}
           >
             <View style={styles.iconWrapper}>
-              <Ionicons name={focused ? tab.activeIcon : tab.icon} size={22} color={color} />
+              <Ionicons name={focused ? tab.activeIcon : tab.icon} size={sc(22)} color={color} />
               {tab.showBadge && unseenCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{unseenCount > 9 ? '9+' : unseenCount}</Text>
                 </View>
               )}
             </View>
-            <Text style={[styles.label, { color }]}>{t(tab.labelKey as any)}</Text>
+            <Text numberOfLines={1} style={[styles.label, { color }]}>{t(tab.labelKey as any)}</Text>
           </Pressable>
         );
       })}

@@ -5,6 +5,7 @@ import { VehicleType, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTyp
 import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { t } from '@/src/i18n';
+import { useScale } from '@/src/theme/typography';
 
 // pricePerHour en string (controlado por TextInput) -- mismo criterio que
 // StaySettingsFormValue. El caller (new.tsx/edit.tsx) convierte a number
@@ -84,20 +85,22 @@ interface HourlySettingsEditorProps {
 export function HourlySettingsEditor({ value, onChange, vehicleTypes }: HourlySettingsEditorProps) {
   const colors = useThemeColors();
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
 
   const styles = StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
     labelBlock: { flex: 1, gap: 2 },
-    hint: { fontSize: 12, color: colors.textSecondary },
+    hint: { fontSize: sc(12), color: colors.textSecondary },
     fields: { gap: 10, marginTop: 12 },
     input: {
       borderWidth: 1, borderColor: colors.border, borderRadius: 8,
-      padding: 12, fontSize: 15, color: colors.text,
+      padding: 12, fontSize: sc(15), color: colors.text,
     },
-    fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 4 },
+    fieldLabel: { fontSize: sc(13), fontWeight: '600', color: colors.text, marginBottom: 4 },
     vehiclePriceRow: { gap: 10 },
-    warning: { fontSize: 12, color: colors.warning },
-    priceBreakdown: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },
+    warning: { fontSize: sc(12), color: colors.warning },
+    priceBreakdown: { fontSize: sc(12), color: colors.textSecondary, marginTop: 4 },
   });
 
   function setVehiclePrice(vehicleType: VehicleType, text: string) {

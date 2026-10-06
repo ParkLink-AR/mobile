@@ -8,7 +8,7 @@ import { StatusBadge } from '@/src/components/StatusBadge';
 import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getUserBookingsApi, BookingApiResponse } from '@/src/api/booking';
 import { getParkingSpotsByIds } from '@/src/api/parking';
@@ -41,6 +41,8 @@ export default function DriverBookings() {
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
   const user = useSessionStore((s) => s.user);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -71,7 +73,7 @@ export default function DriverBookings() {
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 8, gap: 8 },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
     total: { color: colors.teal, fontWeight: '700', marginTop: 4 },
     codeChip: {
       alignSelf: 'flex-start',
@@ -83,9 +85,9 @@ export default function DriverBookings() {
       borderWidth: 1,
       borderColor: colors.teal,
     },
-    codeChipText: { color: colors.teal, fontWeight: '700', fontSize: 12 },
+    codeChipText: { color: colors.teal, fontWeight: '700', fontSize: sc(12) },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-    emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    emptyText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
   });
 
   if (loading) {
@@ -111,7 +113,7 @@ export default function DriverBookings() {
         contentContainerStyle={bookings.length === 0 ? { gap: 10, flexGrow: 1 } : { gap: 10 }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="calendar-outline" size={40} color={colors.textSecondary} />
+            <Ionicons name="calendar-outline" size={sc(40)} color={colors.textSecondary} />
             <Text style={styles.emptyText}>{t('driver.bookings.empty')}</Text>
           </View>
         }
@@ -119,7 +121,7 @@ export default function DriverBookings() {
           <TouchableOpacity onPress={() => router.push(`${group}/bookings/${item.id}`)}>
             <Card>
               <View style={styles.row}>
-                <Text style={typography.h2}>{item.parkingSpotTitle}</Text>
+                <Text style={[typography.h2, { flex: 1 }]}>{item.parkingSpotTitle}</Text>
                 <StatusBadge status={item.status} />
               </View>
               <Text style={typography.caption}>

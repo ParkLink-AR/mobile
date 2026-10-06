@@ -5,6 +5,7 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { getAvailability, getStayAvailability } from '@/src/api/parking';
 import { todayArtDateISO } from '@/src/services/dateUtils';
 import { t } from '@/src/i18n';
+import { useScale } from '@/src/theme/typography';
 
 const UNAVAILABLE_RED = '#C62828';
 const DAY_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']; // 0=Lunes … 6=Domingo, igual que el resto de la app
@@ -134,6 +135,8 @@ export function AvailabilityDatePickerField({
   fetchAvailability,
 }: AvailabilityDatePickerFieldProps) {
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const [modalVisible, setModalVisible] = useState(false);
 
   const today = todayArtDateISO();
@@ -222,7 +225,7 @@ export function AvailabilityDatePickerField({
     box: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8,
     },
-    text: { fontSize: 15, color: value ? colors.text : colors.textSecondary },
+    text: { fontSize: sc(15), color: value ? colors.text : colors.textSecondary },
     modalOverlay: {
       flex: 1, backgroundColor: 'rgba(4, 35, 71, 0.45)', justifyContent: 'center', alignItems: 'center', padding: 20,
     },
@@ -232,11 +235,11 @@ export function AvailabilityDatePickerField({
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     monthNav: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     navBtn: { padding: 6 },
-    monthLabel: { fontSize: 16, fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
+    monthLabel: { fontSize: sc(16), fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
     closeBtn: { padding: 4 },
     weekRow: { flexDirection: 'row' },
     weekDayCell: { flex: 1, alignItems: 'center', paddingBottom: 4 },
-    weekDayText: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
+    weekDayText: { fontSize: sc(11), fontWeight: '700', color: colors.textSecondary },
     grid: { gap: 2 },
     weekRowGrid: { flexDirection: 'row' },
     dayCell: { flex: 1, aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
@@ -247,7 +250,7 @@ export function AvailabilityDatePickerField({
     dayCircleUnavailable: { borderColor: UNAVAILABLE_RED },
     dayCircleDisabled: { borderColor: 'transparent' },
     dayCircleSelected: { backgroundColor: colors.teal, borderColor: colors.teal },
-    dayText: { fontSize: 14, color: colors.text },
+    dayText: { fontSize: sc(14), color: colors.text },
     dayTextAvailable: { color: colors.success, fontWeight: '600' },
     dayTextUnavailable: { color: UNAVAILABLE_RED },
     dayTextDisabled: { color: colors.textSecondary, opacity: 0.35 },
@@ -255,8 +258,8 @@ export function AvailabilityDatePickerField({
     legendRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 2 },
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     legendDot: { width: 10, height: 10, borderRadius: 5 },
-    legendText: { fontSize: 12, color: colors.textSecondary },
-    errorText: { fontSize: 13, color: UNAVAILABLE_RED, textAlign: 'center' },
+    legendText: { fontSize: sc(12), color: colors.textSecondary },
+    errorText: { fontSize: sc(13), color: UNAVAILABLE_RED, textAlign: 'center' },
   });
 
   return (
@@ -265,7 +268,7 @@ export function AvailabilityDatePickerField({
         <Pressable style={{ flex: 1 }} onPress={openModal}>
           <Text style={styles.text}>{value ? formatDisplay(value) : placeholder}</Text>
         </Pressable>
-        <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
+        <Ionicons name="calendar-outline" size={sc(18)} color={colors.textSecondary} />
       </View>
 
       <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
@@ -274,15 +277,15 @@ export function AvailabilityDatePickerField({
             <View style={styles.header}>
               <View style={styles.monthNav}>
                 <Pressable style={styles.navBtn} onPress={() => goToMonth(-1)} hitSlop={8}>
-                  <Ionicons name="chevron-back" size={20} color={colors.text} />
+                  <Ionicons name="chevron-back" size={sc(20)} color={colors.text} />
                 </Pressable>
                 <Text style={styles.monthLabel}>{monthLabel}</Text>
                 <Pressable style={styles.navBtn} onPress={() => goToMonth(1)} hitSlop={8}>
-                  <Ionicons name="chevron-forward" size={20} color={colors.text} />
+                  <Ionicons name="chevron-forward" size={sc(20)} color={colors.text} />
                 </Pressable>
               </View>
               <Pressable style={styles.closeBtn} onPress={() => setModalVisible(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <Ionicons name="close" size={sc(22)} color={colors.textSecondary} />
               </Pressable>
             </View>
 

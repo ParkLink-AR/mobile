@@ -9,7 +9,7 @@ import { VehiclePlate } from '@/src/components/VehiclePlate';
 import { VerifyArrivalCode } from '@/src/components/VerifyArrivalCode';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import {
   getBookingsForSpotApi,
   approveBookingApi,
@@ -46,6 +46,8 @@ export default function SpotBookingRequests() {
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const typography = useTypography();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -99,11 +101,11 @@ export default function SpotBookingRequests() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 16, gap: 12 },
-    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
     driverRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
-    driverRowText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+    driverRowText: { flex: 1, fontSize: sc(13), fontWeight: '600', color: colors.textSecondary },
     vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-    vehicleText: { fontSize: 13, color: colors.textSecondary },
+    vehicleText: { fontSize: sc(13), color: colors.textSecondary },
     total: { color: colors.teal, fontWeight: '700', marginTop: 4 },
     actionsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
     actionBtn: {
@@ -115,7 +117,7 @@ export default function SpotBookingRequests() {
     approveBtnText: { color: colors.white, fontWeight: '700' },
     rejectBtnText: { color: '#C62828', fontWeight: '700' },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-    emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    emptyText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
   });
 
   return (
@@ -127,7 +129,7 @@ export default function SpotBookingRequests() {
         contentContainerStyle={bookings.length === 0 ? { gap: 10, flexGrow: 1 } : { gap: 10 }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="calendar-outline" size={40} color={colors.textSecondary} />
+            <Ionicons name="calendar-outline" size={sc(40)} color={colors.textSecondary} />
             <Text style={styles.emptyText}>{t('owner.spot.requests.empty')}</Text>
           </View>
         }
@@ -139,9 +141,9 @@ export default function SpotBookingRequests() {
                 onPress={() => router.push(`${group}/profile/${item.driverId}?as=driver`)}
                 disabled={!driverNames[item.driverId]}
               >
-                <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="person-circle-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
-                {!!driverNames[item.driverId] && <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} />}
+                {!!driverNames[item.driverId] && <Ionicons name="chevron-forward" size={sc(13)} color={colors.textSecondary} />}
               </TouchableOpacity>
               {item.vehicle && (
                 <View style={styles.vehicleRow}>
@@ -150,7 +152,7 @@ export default function SpotBookingRequests() {
                 </View>
               )}
               <View style={styles.row}>
-                <Text style={typography.body}>
+                <Text style={[typography.body, { flex: 1 }]}>
                   {formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}
                 </Text>
                 <StatusBadge status={item.status} />
@@ -170,7 +172,7 @@ export default function SpotBookingRequests() {
                       <ActivityIndicator color="#C62828" size="small" />
                     ) : (
                       <>
-                        <Ionicons name="close" size={16} color="#C62828" />
+                        <Ionicons name="close" size={sc(16)} color="#C62828" />
                         <Text style={styles.rejectBtnText}>{t('owner.spot.requests.reject')}</Text>
                       </>
                     )}
@@ -184,7 +186,7 @@ export default function SpotBookingRequests() {
                       <ActivityIndicator color={colors.white} size="small" />
                     ) : (
                       <>
-                        <Ionicons name="checkmark" size={16} color={colors.white} />
+                        <Ionicons name="checkmark" size={sc(16)} color={colors.white} />
                         <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
                       </>
                     )}

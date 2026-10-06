@@ -5,7 +5,6 @@
   "auth.login.forgot": "Forgot my password",
   "auth.login.button": "Sign in",
   "auth.register.button": "Create account",
-
   "auth.emailPlaceholder": "Email",
   "auth.sendCodeButton": "Send code",
   "auth.resendCode": "Resend code",
@@ -16,11 +15,9 @@
   "auth.error.resendCode": "We couldn't resend the code.",
   "auth.error.codeLength": "Enter the 6-digit code.",
   "auth.error.emailRequired": "Enter your email.",
-
   "auth.login.emailPlaceholder": "Email",
   "auth.login.error.required": "Fill in your email and password.",
   "auth.login.error.generic": "We couldn't log you in.",
-
   "auth.register.email.title": "What's your email?",
   "auth.register.emailCode.title": "Confirm your email",
   "auth.register.emailCode.helper": "We sent a 6-digit code to %{email}.",
@@ -40,19 +37,15 @@
   "auth.register.personal.passwordHint": "At least 8 characters, with an uppercase letter, a lowercase letter, and a number. You must be 18 or older.",
   "auth.register.personal.error.required": "Fill in every field.",
   "auth.register.personal.error.submit": "We couldn't create the account.",
-
   "auth.forgotPassword.reset.helper": "We sent a 6-digit code to %{email}. Enter it along with your new password.",
   "auth.forgotPassword.reset.newPassword": "New password",
   "auth.forgotPassword.reset.confirmPassword": "Repeat the password",
   "auth.forgotPassword.reset.passwordMismatch": "The passwords don't match.",
   "auth.forgotPassword.reset.button": "Reset password",
   "auth.forgotPassword.error.submit": "We couldn't reset your password.",
-
   "auth.verifyCode.title": "Confirm your email",
   "auth.verifyCode.helper": "We sent a 6-digit code to %{email}. Enter it here to activate your account.",
-
   "common.back": "Back",
-
   "driver.bookings.title": "My bookings",
   "driver.bookings.empty": "You don't have any bookings yet. Once you book a spot, it'll show up here.",
   "notifications.empty": "No notifications for now.",
@@ -137,7 +130,6 @@
   "review.submitting": "Submitting...",
   "review.allDone": "You're all caught up on reviews. Thanks!",
   "review.errorSubmit": "We couldn't submit your review. Try again.",
-
   "spot.description": "Description",
   "spot.address": "Address",
   "spot.postedBy": "Posted by %{name}",
@@ -164,12 +156,10 @@
   "spot.calendar.available": "Available",
   "spot.calendar.unavailable": "Not available",
   "spot.availabilityRetry": "Retry",
-
   "spot.reviews.count": "%{count} reviews",
   "profile.public.memberSince": "Member since %{date}",
   "profile.public.reviews": "Reviews received",
   "spot.reviews.empty": "There are no reviews yet.",
-
   "spot.tag.covered": "Covered",
   "spot.tag.uncovered": "Uncovered",
   "spot.tag.access247": "24/7 Access",
@@ -180,7 +170,6 @@
   "vehicleType.motorcycle": "Motorcycle",
   "vehicleType.bicycle": "Bicycle",
   "spot.tag.stay": "Stay",
-
   "spot.stay.section": "Stay",
   "spot.stay.checkIn": "Check-in",
   "spot.stay.checkOut": "Check-out",
@@ -408,7 +397,6 @@
   "roleBadge.owner": "Owner",
   "roleBadge.driverA11y": "You're in driver mode",
   "roleBadge.ownerA11y": "You're in owner mode",
-
   "tabs.driver.search": "Search",
   "tabs.driver.favorites": "Favorites",
   "tabs.driver.bookings": "Bookings",
@@ -530,7 +518,6 @@
   "driver.booking.errorCreating": "We couldn't reserve the slot. Please try again.",
   "driver.booking.errorConflict": "This time slot is already taken. Go back and choose a different one.",
   "driver.booking.errorConflictAction": "Choose another time",
-
   "driver.payment.errorTitle": "Payment error",
   "driver.payment.errorCreatingPreference": "We couldn't start the payment. Please try again.",
   "driver.payment.approved": "Your booking is confirmed. You're good to go!",
@@ -538,6 +525,7 @@
   "driver.payment.confirmed.bodyWithDate": "You paid on %{date}. Your spot is already reserved.",
   "driver.payment.pending.title": "Processing payment…",
   "driver.payment.pending.body": "Waiting for Mercado Pago confirmation.",
+  "driver.payment.pending.leaveHint": "If you are not going to complete the payment you can leave: the booking is released automatically after 15 minutes.",
   "driver.payment.rejected.title": "Payment rejected",
   "driver.payment.rejected.body": "The payment was rejected or cancelled. The booking was not confirmed.",
   "driver.payment.rejected.retry": "Find another spot",

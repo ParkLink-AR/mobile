@@ -8,7 +8,7 @@ import { Card } from '@/src/components/Card';
 import { Screen } from '@/src/components/Screen';
 import { StatusIcon } from '@/src/components/StatusIcon';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
+import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useNotificationsStore } from '@/src/store/useNotificationsStore';
 import { VehiclePlate } from '@/src/components/VehiclePlate';
@@ -153,6 +153,8 @@ function ReviewForm({
   onSubmitted: (targetTypes: ReviewTargetType[]) => void;
 }) {
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const [ratings, setRatings] = useState<Record<string, { stars: number; comment: string }>>(() =>
     Object.fromEntries(targets.map((target) => [target.targetType, { stars: 5, comment: '' }])),
   );
@@ -161,20 +163,20 @@ function ReviewForm({
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.surface, padding: 16, gap: 16 },
     card: { gap: 10 },
-    blockTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+    blockTitle: { fontSize: sc(15), fontWeight: '700', color: colors.text },
     bookingSummary: { gap: 8 },
     summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    summaryText: { flex: 1, fontSize: 14, color: colors.text, fontWeight: '600' },
-    vehicleText: { fontSize: 13, color: colors.textSecondary },
+    summaryText: { flex: 1, fontSize: sc(14), color: colors.text, fontWeight: '600' },
+    vehicleText: { fontSize: sc(13), color: colors.textSecondary },
     subjectRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     subjectImage: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.border },
     subjectImageSquare: { borderRadius: 10 },
     subjectPlaceholder: { alignItems: 'center', justifyContent: 'center' },
     subjectText: { flex: 1, gap: 2 },
-    subjectRole: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6 },
-    subjectName: { fontSize: 16, fontWeight: '700', color: colors.text },
+    subjectRole: { fontSize: sc(12), fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6 },
+    subjectName: { fontSize: sc(16), fontWeight: '700', color: colors.text },
     starsRow: { flexDirection: 'row', gap: 8 },
-    star: { fontSize: 32, color: colors.border },
+    star: { fontSize: sc(32), color: colors.border },
     starActive: { color: colors.warning },
     input: {
       borderWidth: 1,
@@ -182,6 +184,7 @@ function ReviewForm({
       borderRadius: 8,
       padding: 12,
       minHeight: 70,
+      fontSize: sc(15),
       textAlignVertical: 'top',
       color: colors.text,
     },
