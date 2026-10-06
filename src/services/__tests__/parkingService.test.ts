@@ -33,6 +33,8 @@ function makeApiSpot(overrides: Partial<ParkingSpotApiResponse> = {}): ParkingSp
     capacity: 1,
     schedule: MON_FRI_8_22,
     photos: [],
+    verificationPhotos: [],
+    reviewNotes: null,
     rules: [],
     status: 'active',
     createdAt: '2026-01-01T00:00:00.000Z',

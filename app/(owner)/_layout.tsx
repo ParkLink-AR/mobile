@@ -18,6 +18,7 @@ export default function OwnerLayout() {
       <Stack.Screen name="spots/[id]/edit" options={{ title: t('owner.spot.edit.title') }} />
       <Stack.Screen name="spots/[id]/availability" options={{ title: t('layout.owner.availability') }} />
       <Stack.Screen name="spots/[id]/requests" options={{ title: t('owner.spot.requests.title') }} />
+      <Stack.Screen name="spots/[id]/documentation" options={{ title: t('owner.spot.documentation.title') }} />
       {/* Bookings */}
       <Stack.Screen name="bookings/[id]" options={{ title: t('layout.driver.bookingDetail') }} />
       <Stack.Screen name="bookings/[id]/messages" options={{ title: t('driver.booking.messages.link') }} />

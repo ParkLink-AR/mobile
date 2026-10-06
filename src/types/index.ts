@@ -91,6 +91,11 @@ export interface ParkingSpot {
   description: string;
   descriptionKey?: string;
   active: boolean;
+  status: 'pending_review' | 'active' | 'paused' | 'rejected' | 'deleted';
+  // Fotos de respaldo para que un admin revise la cochera -- nunca se
+  // muestran al conductor. reviewNotes es el motivo si status es 'rejected'.
+  verificationPhotos: string[];
+  reviewNotes: string | null;
 }
 
 export type BookingStatus =
