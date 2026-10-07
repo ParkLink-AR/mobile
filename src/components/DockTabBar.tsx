@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/src/theme/useThemeColors';
+import { useSettingsStore } from '@/src/store/useSettingsStore';
 import { useUnseenNotificationsCount } from '@/src/store/useNotificationsStore';
 import { t, useLanguage } from '@/src/i18n';
 import { useScale } from '@/src/theme/typography';
@@ -26,6 +27,9 @@ export function DockTabBar({ state, navigation }: BottomTabBarProps) {
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
   const insets = useSafeAreaInsets();
+  // With large text the labels no longer fit under the icons: icons only (each tab
+  // still has its name as accessibility label).
+  const showLabels = useSettingsStore((s) => s.fontSize) !== 'large';
   const unseenCount = useUnseenNotificationsCount();
 
   const styles = StyleSheet.create({
@@ -74,6 +78,8 @@ export function DockTabBar({ state, navigation }: BottomTabBarProps) {
         return (
           <Pressable
             key={tab.name}
+            accessibilityRole="tab"
+            accessibilityLabel={t(tab.labelKey)}
             style={styles.tab}
             onPress={() => {
               const event = navigation.emit({
@@ -95,7 +101,7 @@ export function DockTabBar({ state, navigation }: BottomTabBarProps) {
                 </View>
               )}
             </View>
-            <Text numberOfLines={1} style={[styles.label, { color }]}>{t(tab.labelKey)}</Text>
+            {showLabels ? <Text numberOfLines={1} style={[styles.label, { color }]}>{t(tab.labelKey)}</Text> : null}
           </Pressable>
         );
       })}

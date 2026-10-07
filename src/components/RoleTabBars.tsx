@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/src/theme/useThemeColors';
+import { useSettingsStore } from '@/src/store/useSettingsStore';
 import { useNotificationsStore, useUnseenNotificationsCount } from '@/src/store/useNotificationsStore';
 import { t, useLanguage } from '@/src/i18n';
 import { useScale } from '@/src/theme/typography';
@@ -33,6 +34,9 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
   const insets = useSafeAreaInsets();
+  // With large text the labels no longer fit under the icons: icons only (each tab
+  // still has its name as accessibility label).
+  const showLabels = useSettingsStore((s) => s.fontSize) !== 'large';
   const unseenCount = useUnseenNotificationsCount();
   // Pending requests come from the same polled notification feed (one owner_request per
   // PENDING_OWNER_APPROVAL booking across every spot).
@@ -83,6 +87,8 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
         return (
           <Pressable
             key={tab.name}
+            accessibilityRole="tab"
+            accessibilityLabel={t(tab.labelKey as any)}
             style={styles.tab}
             onPress={() => {
               const event = navigation.emit({
@@ -107,7 +113,7 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
                 ) : null;
               })()}
             </View>
-            <Text numberOfLines={1} style={[styles.label, { color }]}>{t(tab.labelKey as any)}</Text>
+            {showLabels ? <Text numberOfLines={1} style={[styles.label, { color }]}>{t(tab.labelKey as any)}</Text> : null}
           </Pressable>
         );
       })}
