@@ -1,9 +1,10 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, TextInput, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { ModalKeyboardAvoider } from '@/src/components/ModalKeyboardAvoider';
+import { CodeInput } from '@/src/components/AccountForm';
 import { verifyBookingCodeApi } from '@/src/api/booking';
 import { ApiError } from '@/src/api/client';
 import { verificationWindowState, verificationAvailableFromLabel } from '@/src/services/verificationWindow';
@@ -77,17 +78,6 @@ export function VerifyArrivalCode({ bookingId, startAt, endAt, onVerified }: Ver
     modalCard: { backgroundColor: colors.surface, borderRadius: 12, padding: 20, gap: 14 },
     modalTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
     modalSubtitle: { fontSize: 13, color: colors.textSecondary },
-    codeInput: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      paddingVertical: 12,
-      fontSize: 24,
-      fontWeight: '700',
-      letterSpacing: 8,
-      textAlign: 'center',
-      color: colors.text,
-    },
     errorText: { fontSize: 13, color: '#C62828', textAlign: 'center' },
     modalActionsRow: { flexDirection: 'row', gap: 8 },
     modalCancelBtn: {
@@ -127,16 +117,7 @@ export function VerifyArrivalCode({ bookingId, startAt, endAt, onVerified }: Ver
               <View style={styles.modalCard}>
                 <Text style={styles.modalTitle}>{t('owner.spot.requests.verifyCodeModalTitle')}</Text>
                 <Text style={styles.modalSubtitle}>{t('owner.spot.requests.verifyCodeModalSubtitle')}</Text>
-                <TextInput
-                  style={styles.codeInput}
-                  value={code}
-                  onChangeText={(text) => setCode(text.replace(/[^0-9]/g, '').slice(0, 4))}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  placeholder="0000"
-                  placeholderTextColor={colors.textSecondary}
-                  autoFocus
-                />
+                <CodeInput value={code} onChange={setCode} length={4} autoFocus />
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}
                 <View style={styles.modalActionsRow}>
                   <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setModalVisible(false)}>

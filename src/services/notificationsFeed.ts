@@ -17,6 +17,8 @@ export type NotificationKind =
   | 'owner_new_booking'
   | 'driver_confirmed'
   | 'driver_rejected'
+  // The owner's account was closed or suspended, so the booking was cancelled and refunded.
+  | 'driver_spot_unavailable'
   | 'driver_review_prompt'
   | 'owner_review_prompt'
   | 'driver_verified'
@@ -242,7 +244,13 @@ async function getDriverNotifications(userId: string, bookings: BookingApiRespon
     const title = titleById[b.parking_spot_id] ?? b.parking_spot_id;
     if (b.status === 'CONFIRMED') {
       notifications.push(fmt(b, title, 'driver_confirmed'));
-    } else if (b.status === 'CANCELLED' && b.cancellation_reason !== 'DRIVER_CANCELLED') {
+    } else if (b.status === 'CANCELLED' && b.cancellation_reason === 'OWNER_ACCOUNT_CLOSED') {
+      notifications.push(fmt(b, title, 'driver_spot_unavailable'));
+    } else if (
+      b.status === 'CANCELLED' &&
+      b.cancellation_reason !== 'DRIVER_CANCELLED' &&
+      b.cancellation_reason !== 'DRIVER_ACCOUNT_CLOSED'
+    ) {
       notifications.push(fmt(b, title, 'driver_rejected'));
     }
   }

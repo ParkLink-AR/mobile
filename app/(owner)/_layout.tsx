@@ -9,6 +9,9 @@ export default function OwnerLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.deepNavy },
         headerTintColor: colors.white,
+        // Just the arrow: iOS would otherwise spell out the previous screen's name
+        // next to it ("login", "(tabs)"...).
+        headerBackButtonDisplayMode: 'minimal',
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -39,6 +42,7 @@ export default function OwnerLayout() {
       <Stack.Screen name="legal" options={{ title: t('legal.title') }} />
       <Stack.Screen name="payout-info" options={{ title: t('owner.payoutInfo.title') }} />
       <Stack.Screen name="vehicles" options={{ title: t('vehicles.title') }} />
+      <Stack.Screen name="account-deletion" options={{ title: t('account.deletion.title') }} />
     </Stack>
   );
 }

@@ -1,6 +1,6 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useState } from 'react';
-import { Text, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
+import { Text, TextInput, StyleSheet, ActivityIndicator, View } from 'react-native';
 import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
@@ -10,6 +10,7 @@ import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { verifyCurrentPassword, changePassword } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
+import { FormError, FormIntro, useAccountFormStyles } from '@/src/components/AccountForm';
 
 export default function ChangePasswordScreen() {
   useLanguage();
@@ -27,21 +28,13 @@ export default function ChangePasswordScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const form = useAccountFormStyles();
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.surface, padding: 24, gap: 12, justifyContent: 'center' },
-    hint: { fontSize: sc(13), color: colors.textSecondary },
-    input: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
-      fontSize: sc(15),
-      color: colors.text,
-    },
-    error: { color: '#C62828', fontSize: sc(13), textAlign: 'center' },
-    successContainer: { flex: 1, backgroundColor: colors.surface, padding: 24, gap: 12, alignItems: 'center', justifyContent: 'center' },
-    successMessage: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center' },
+    success: { ...form.container, alignItems: 'center', paddingTop: sc(56) },
+    successMessage: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(21) },
+    successButton: { alignSelf: 'stretch', marginTop: 8 },
   });
+
 
   function handleBackFromSuccess() {
     // A full page reload mid-flow (or opening this screen directly, e.g. on
@@ -92,37 +85,42 @@ export default function ChangePasswordScreen() {
 
   if (step === 'success') {
     return (
-      <Screen style={styles.successContainer} edges={['left', 'right', 'bottom']}>
-        <Ionicons name="checkmark-circle" size={sc(44)} color={colors.teal} />
+      <Screen style={styles.success} edges={['left', 'right', 'bottom']}>
+        <Ionicons name="checkmark-circle" size={sc(56)} color={colors.teal} />
         <Text style={typography.h1}>{t('changePassword.success.title')}</Text>
         <Text style={styles.successMessage}>{t('changePassword.success.message')}</Text>
-        <Button title={t('common.continue')} onPress={handleBackFromSuccess} />
+        <Button title={t('common.continue')} onPress={handleBackFromSuccess} style={styles.successButton} />
       </Screen>
     );
   }
 
   if (step === 'new') {
     return (
-      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-        <Text style={typography.h1}>{t('changePassword.title')}</Text>
-        <Text style={styles.hint}>{t('changePassword.new.hint')}</Text>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <TextInput
-          style={styles.input}
-          placeholder={t('changePassword.new.newPassword')}
-          placeholderTextColor={colors.textSecondary}
-          secureTextEntry
-          value={newPassword}
-          onChangeText={setNewPassword}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder={t('changePassword.new.confirmPassword')}
-          placeholderTextColor={colors.textSecondary}
-          secureTextEntry
-          value={confirmNewPassword}
-          onChangeText={setConfirmNewPassword}
-        />
+      <Screen form style={form.container} edges={['left', 'right', 'bottom']}>
+        <FormIntro icon="key-outline" text={t('changePassword.new.hint')} />
+        <FormError message={error} />
+        <View style={form.field}>
+          <Text style={form.label}>{t('changePassword.new.newPassword')}</Text>
+          <TextInput
+            style={form.input}
+            placeholder="••••••••"
+            placeholderTextColor={colors.textSecondary}
+            secureTextEntry
+            value={newPassword}
+            onChangeText={setNewPassword}
+          />
+        </View>
+        <View style={form.field}>
+          <Text style={form.label}>{t('changePassword.new.confirmPassword')}</Text>
+          <TextInput
+            style={form.input}
+            placeholder="••••••••"
+            placeholderTextColor={colors.textSecondary}
+            secureTextEntry
+            value={confirmNewPassword}
+            onChangeText={setConfirmNewPassword}
+          />
+        </View>
         {loading ? (
           <ActivityIndicator color={colors.teal} />
         ) : (
@@ -133,18 +131,20 @@ export default function ChangePasswordScreen() {
   }
 
   return (
-    <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
-      <Text style={typography.h1}>{t('changePassword.title')}</Text>
-      <Text style={styles.hint}>{t('changePassword.current.hint')}</Text>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <TextInput
-        style={styles.input}
-        placeholder={t('changePassword.current.placeholder')}
-        placeholderTextColor={colors.textSecondary}
-        secureTextEntry
-        value={currentPassword}
-        onChangeText={setCurrentPassword}
-      />
+    <Screen form style={form.container} edges={['left', 'right', 'bottom']}>
+      <FormIntro icon="lock-closed-outline" text={t('changePassword.current.hint')} />
+      <FormError message={error} />
+      <View style={form.field}>
+        <Text style={form.label}>{t('changePassword.current.placeholder')}</Text>
+        <TextInput
+          style={form.input}
+          placeholder="••••••••"
+          placeholderTextColor={colors.textSecondary}
+          secureTextEntry
+          value={currentPassword}
+          onChangeText={setCurrentPassword}
+        />
+      </View>
       {loading ? (
         <ActivityIndicator color={colors.teal} />
       ) : (

@@ -45,7 +45,6 @@ export default function Settlements() {
 
   return (
     <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-      <Text style={typography.h1}>{t('settlements.title')}</Text>
       <FlatList
         data={settlements}
         keyExtractor={(item) => item.id}

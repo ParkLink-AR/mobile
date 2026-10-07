@@ -9,6 +9,9 @@ export default function DriverLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.deepNavy },
         headerTintColor: colors.white,
+        // Just the arrow: iOS would otherwise spell out the previous screen's name
+        // next to it ("login", "(tabs)"...).
+        headerBackButtonDisplayMode: 'minimal',
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -39,6 +42,7 @@ export default function DriverLayout() {
       <Stack.Screen name="settlements" options={{ title: t('layout.owner.settlements') }} />
       <Stack.Screen name="settlements/[id]" options={{ title: t('layout.owner.settlementDetail') }} />
       <Stack.Screen name="vehicles" options={{ title: t('vehicles.title') }} />
+      <Stack.Screen name="account-deletion" options={{ title: t('account.deletion.title') }} />
       {/* Profile */}
       <Stack.Screen name="profile-edit" options={{ title: t('driver.profile.edit') }} />
       <Stack.Screen name="change-email" options={{ title: t('changeEmail.title') }} />

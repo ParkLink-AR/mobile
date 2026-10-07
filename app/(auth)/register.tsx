@@ -3,7 +3,7 @@ import { createElement, useEffect, useState } from 'react';
 import {
   Text,
   TextInput,
-  Image,
+  Pressable,
   StyleSheet,
   ActivityIndicator,
   View,
@@ -11,12 +11,14 @@ import {
   FlatList,
   TouchableOpacity,
   Platform,
+  Keyboard,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
-import { StatusIcon } from '@/src/components/StatusIcon';
+import { CodeInput, ConfirmedRow, FormError, FormIntro, useAccountFormStyles } from '@/src/components/AccountForm';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import {
@@ -32,13 +34,20 @@ import { ApiError } from '@/src/api/client';
 import { COUNTRIES, DEFAULT_COUNTRY, Country } from '@/src/data/countries';
 
 type Step = 'email' | 'email-code' | 'phone' | 'phone-code' | 'personal';
+
+// The progress bar groups the steps in three stages: email, phone, personal data.
+const STAGE_COUNT = 3;
+const STAGE_OF_STEP: Record<Step, number> = {
+  email: 1,
+  'email-code': 1,
+  phone: 2,
+  'phone-code': 2,
+  personal: 3,
+};
 // El backend puede no tener Twilio configurado (ver mobile/.env) -- en ese
 // caso el código de SMS nunca llega, así que el wizard salta directo de
 // 'phone' a 'personal' sin pasar por 'phone-code'.
 const SKIP_PHONE_VERIFICATION = process.env.EXPO_PUBLIC_SKIP_PHONE_VERIFICATION === 'true';
-const STEP_ORDER: Step[] = SKIP_PHONE_VERIFICATION
-  ? ['email', 'email-code', 'phone', 'personal']
-  : ['email', 'email-code', 'phone', 'phone-code', 'personal'];
 const RESEND_COOLDOWN_SECONDS = 60;
 
 function formatDate(d: Date): string {
@@ -54,7 +63,9 @@ export default function Register() {
   const setSession = useSessionStore((s) => s.setSession);
 
   const [step, setStep] = useState<Step>('email');
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // Which code was just accepted: its boxes turn green with a tick for a moment, then
+  // the wizard moves on (see confirmThenGo).
+  const [confirmedCode, setConfirmedCode] = useState<'email' | 'phone' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -93,18 +104,30 @@ export default function Register() {
     setError(err instanceof ApiError ? err.detail : fallback);
   }
 
-  function goBack() {
+  // No generic "back" in this wizard: from a code step, the only way back is to fix the
+  // email/phone it was sent to (what's typed is kept) and ask for a new code. Starting over
+  // is the header's back arrow, to the login.
+  function editEmail() {
     setError(null);
-    const index = STEP_ORDER.indexOf(step);
-    if (index > 0) setStep(STEP_ORDER[index - 1]);
+    setEmailCode('');
+    setStep('email');
   }
 
-  function flashSuccessThenGo(message: string, nextStep: Step) {
-    setSuccessMessage(message);
+  function editPhone() {
+    setError(null);
+    setPhoneCode('');
+    setStep('phone');
+  }
+
+  // How long the accepted code stays on screen (green, with its tick) before moving on.
+  const CONFIRMED_PAUSE_MS = 900;
+
+  function confirmThenGo(which: 'email' | 'phone', nextStep: Step) {
+    setConfirmedCode(which);
     setTimeout(() => {
-      setSuccessMessage(null);
+      setConfirmedCode(null);
       setStep(nextStep);
-    }, 1100);
+    }, CONFIRMED_PAUSE_MS);
   }
 
   async function handleSendEmailCode() {
@@ -116,8 +139,14 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      await requestEmailRegistration(normalized);
+      const alreadyVerified = await requestEmailRegistration(normalized);
       setEmail(normalized);
+      if (alreadyVerified) {
+        // Verified a moment ago (coming back to an unfinished signup): no new code -- the
+        // same green "verified" moment as after entering it, right on this step.
+        confirmThenGo('email', 'phone');
+        return;
+      }
       setStep('email-code');
       setEmailCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err) {
@@ -136,7 +165,7 @@ export default function Register() {
     setLoading(true);
     try {
       await confirmEmailRegistration(email, emailCode);
-      flashSuccessThenGo(t('auth.register.emailCode.success'), 'phone');
+      confirmThenGo('email', 'phone');
     } catch (err) {
       handleApiError(err, t('auth.error.confirmCode'));
     } finally {
@@ -167,7 +196,10 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      await requestPhoneRegistration(fullPhone);
+      if (await requestPhoneRegistration(fullPhone)) {
+        confirmThenGo('phone', 'personal');
+        return;
+      }
       setStep('phone-code');
       setPhoneCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err) {
@@ -186,7 +218,7 @@ export default function Register() {
     setLoading(true);
     try {
       await confirmPhoneRegistration(fullPhone, phoneCode);
-      flashSuccessThenGo(t('auth.register.phoneCode.success'), 'personal');
+      confirmThenGo('phone', 'personal');
     } catch (err) {
       handleApiError(err, t('auth.error.confirmCode'));
     } finally {
@@ -235,40 +267,20 @@ export default function Register() {
     }
   }
 
+  const form = useAccountFormStyles();
   const styles = StyleSheet.create({
-    container: { backgroundColor: colors.surface, padding: 24, gap: 12 },
-    logo: { width: 120, height: 90, alignSelf: 'center', marginBottom: 4 },
-    input: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
-      fontSize: sc(15),
-      color: colors.text,
-    },
-    codeInput: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
-      fontSize: sc(24),
-      letterSpacing: 8,
-      textAlign: 'center',
-      color: colors.text,
-    },
-    error: { color: '#C62828', fontSize: sc(13) },
-    link: { color: colors.teal, textAlign: 'center', marginTop: 4 },
-    linkDisabled: { color: colors.textSecondary },
+    progress: { gap: 8 },
+    progressText: { fontSize: sc(12), fontWeight: '700', color: colors.teal, textTransform: 'uppercase', letterSpacing: 0.6 },
+    progressBar: { flexDirection: 'row', gap: 6 },
+    progressSegment: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.border },
+    progressSegmentDone: { backgroundColor: colors.teal },
+    footer: { flexDirection: 'row', justifyContent: 'center', gap: 4, marginTop: 4 },
+    footerText: { fontSize: sc(14), color: colors.textSecondary },
+    nameRow: { flexDirection: 'row', gap: 10 },
+    nameCol: { flex: 1 },
     phoneRow: { flexDirection: 'row', gap: 8 },
-    countryButton: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      justifyContent: 'center',
-      minWidth: 100,
-    },
-    countryButtonText: { fontSize: sc(15), color: colors.text },
+    countryButton: { ...form.input, justifyContent: 'center', minWidth: sc(100) },
+    countryButtonText: { fontSize: sc(15), color: colors.text, fontWeight: '600' },
     phoneInput: { flex: 1 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(4, 35, 71, 0.4)', justifyContent: 'flex-end' },
     modalContent: {
@@ -282,108 +294,115 @@ export default function Register() {
     countryRowFlag: { fontSize: sc(22) },
     countryRowName: { flex: 1, fontSize: sc(15), color: colors.text },
     countryRowDial: { fontSize: sc(14), color: colors.textSecondary },
-    successWrap: { alignItems: 'center', gap: 12, paddingVertical: 40 },
-    successText: { fontSize: sc(16), fontWeight: '600', color: colors.text },
-    successButton: { alignSelf: 'stretch', marginTop: 12 },
-    successCenteredText: { textAlign: 'center' },
-    dateButton: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
-    },
+    dateButton: { ...form.input, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     dateButtonText: { fontSize: sc(15), color: birthDate ? colors.text : colors.textSecondary },
   });
 
-  if (successMessage) {
-    return (
-      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-        <View style={styles.successWrap}>
-          <StatusIcon variant="success" />
-          <Text style={styles.successText}>{successMessage}</Text>
-        </View>
-      </Screen>
-    );
-  }
+
+  const stage = STAGE_OF_STEP[step];
 
   return (
-    <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
-      <Image
-        source={require('@/assets/logo-parklink.png')}
-        style={styles.logo}
-        resizeMode="contain"
-      />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+    <Screen form style={form.container} edges={['left', 'right', 'bottom']}>
+      <View style={styles.progress}>
+        <Text style={styles.progressText}>
+          {t('auth.register.progress', { current: stage, total: STAGE_COUNT })}
+        </Text>
+        <View style={styles.progressBar}>
+          {Array.from({ length: STAGE_COUNT }, (_, index) => (
+            <View key={index} style={[styles.progressSegment, index < stage && styles.progressSegmentDone]} />
+          ))}
+        </View>
+      </View>
+
 
       {step === 'email' && (
         <>
-          <Text style={typography.h1}>{t('auth.register.email.title')}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={t('auth.emailPlaceholder')}
-            placeholderTextColor={colors.textSecondary}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-          {loading ? (
+          <FormIntro icon="mail-outline" title={t('auth.register.email.title')} text={t('auth.register.email.subtitle')} />
+          <FormError message={error} />
+          <View style={form.field}>
+            <Text style={form.label}>{t('auth.login.emailPlaceholder')}</Text>
+            <TextInput
+              style={form.input}
+              placeholder={t('auth.login.emailExample')}
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+            />
+          </View>
+          {confirmedCode === 'email' ? (
+            <ConfirmedRow text={t('auth.register.verified.email')} />
+          ) : loading ? (
             <ActivityIndicator color={colors.teal} />
           ) : (
             <Button title={t('auth.sendCodeButton')} onPress={handleSendEmailCode} />
           )}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>{t('auth.register.haveAccount')}</Text>
+            <Text style={form.link} onPress={() => router.back()}>
+              {t('auth.register.login')}
+            </Text>
+          </View>
         </>
       )}
 
       {step === 'email-code' && (
         <>
-          <Text style={typography.h1}>{t('auth.register.emailCode.title')}</Text>
-          <Text style={typography.body}>{t('auth.register.emailCode.helper', { email })}</Text>
-          <TextInput
-            style={styles.codeInput}
-            placeholder="000000"
-            placeholderTextColor={colors.textSecondary}
-            keyboardType="number-pad"
-            maxLength={6}
-            value={emailCode}
-            onChangeText={(v) => setEmailCode(v.replace(/[^0-9]/g, ''))}
+          <FormIntro
+            icon="mail-unread-outline"
+            title={t('auth.register.emailCode.title')}
+            text={t('auth.register.emailCode.helper', { email })}
           />
-          {loading ? (
+          <FormError message={error} />
+          <CodeInput value={emailCode} onChange={setEmailCode} autoFocus confirmed={confirmedCode === 'email'} />
+          {confirmedCode === 'email' ? (
+            <ConfirmedRow text={t('auth.register.verified.email')} />
+          ) : loading ? (
             <ActivityIndicator color={colors.teal} />
           ) : (
             <Button title={t('common.confirm')} onPress={handleConfirmEmailCode} />
           )}
-          <Text
-            style={[styles.link, emailCooldown > 0 && styles.linkDisabled]}
-            onPress={handleResendEmailCode}
-          >
-            {emailCooldown > 0 ? t('auth.resendCodeCooldown', { seconds: String(emailCooldown) }) : t('auth.resendCode')}
-          </Text>
-          <Text style={styles.link} onPress={goBack}>
-            {t('common.back')}
-          </Text>
+          {confirmedCode !== 'email' ? (
+            <>
+              <Text style={[form.link, emailCooldown > 0 && form.linkDisabled]} onPress={handleResendEmailCode}>
+                {emailCooldown > 0 ? t('auth.resendCodeCooldown', { seconds: String(emailCooldown) }) : t('auth.resendCode')}
+              </Text>
+              <SecondaryLink icon="create-outline" label={t('auth.register.changeEmail')} onPress={editEmail} />
+            </>
+          ) : null}
         </>
       )}
 
       {step === 'phone' && (
         <>
-          <Text style={typography.h1}>{t('auth.register.phone.title')}</Text>
-          <View style={styles.phoneRow}>
-            <TouchableOpacity style={styles.countryButton} onPress={() => setCountryPickerOpen(true)}>
-              <Text style={styles.countryButtonText}>
-                {country.flag} {country.dialCode}
-              </Text>
-            </TouchableOpacity>
-            <TextInput
-              style={[styles.input, styles.phoneInput]}
-              placeholder={t('auth.register.phone.placeholder')}
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="phone-pad"
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-            />
+          <FormIntro icon="call-outline" title={t('auth.register.phone.title')} text={t('auth.register.phone.subtitle')} />
+          <FormError message={error} />
+          <View style={form.field}>
+            <Text style={form.label}>{t('auth.register.phone.label')}</Text>
+            <View style={styles.phoneRow}>
+              <TouchableOpacity style={styles.countryButton} onPress={() => {
+                  Keyboard.dismiss();
+                  setCountryPickerOpen(true);
+                }}>
+                <Text style={styles.countryButtonText}>
+                  {country.flag} {country.dialCode}
+                </Text>
+              </TouchableOpacity>
+              <TextInput
+                style={[form.input, styles.phoneInput]}
+                placeholder={t('auth.register.phone.placeholder')}
+                placeholderTextColor={colors.textSecondary}
+                keyboardType="phone-pad"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+              />
+            </View>
           </View>
-          {loading ? (
+          {confirmedCode === 'phone' ? (
+            <ConfirmedRow text={t('auth.register.verified.phone')} />
+          ) : loading ? (
             <ActivityIndicator color={colors.teal} />
           ) : (
             <Button
@@ -391,9 +410,6 @@ export default function Register() {
               onPress={handleSendPhoneCode}
             />
           )}
-          <Text style={styles.link} onPress={goBack}>
-            {t('common.back')}
-          </Text>
 
           <Modal
             visible={countryPickerOpen}
@@ -429,118 +445,155 @@ export default function Register() {
 
       {step === 'phone-code' && (
         <>
-          <Text style={typography.h1}>{t('auth.register.phoneCode.title')}</Text>
-          <Text style={typography.body}>{t('auth.register.phoneCode.helper', { phone: fullPhone })}</Text>
-          <TextInput
-            style={styles.codeInput}
-            placeholder="000000"
-            placeholderTextColor={colors.textSecondary}
-            keyboardType="number-pad"
-            maxLength={6}
-            value={phoneCode}
-            onChangeText={(v) => setPhoneCode(v.replace(/[^0-9]/g, ''))}
+          <FormIntro
+            icon="chatbubble-ellipses-outline"
+            title={t('auth.register.phoneCode.title')}
+            text={t('auth.register.phoneCode.helper', { phone: fullPhone })}
           />
-          {loading ? (
+          <FormError message={error} />
+          <CodeInput value={phoneCode} onChange={setPhoneCode} autoFocus confirmed={confirmedCode === 'phone'} />
+          {confirmedCode === 'phone' ? (
+            <ConfirmedRow text={t('auth.register.verified.phone')} />
+          ) : loading ? (
             <ActivityIndicator color={colors.teal} />
           ) : (
             <Button title={t('common.confirm')} onPress={handleConfirmPhoneCode} />
           )}
-          <Text
-            style={[styles.link, phoneCooldown > 0 && styles.linkDisabled]}
-            onPress={handleResendPhoneCode}
-          >
-            {phoneCooldown > 0 ? t('auth.resendCodeCooldown', { seconds: String(phoneCooldown) }) : t('auth.resendCode')}
-          </Text>
-          <Text style={styles.link} onPress={goBack}>
-            {t('common.back')}
-          </Text>
+          {confirmedCode !== 'phone' ? (
+            <>
+              <Text style={[form.link, phoneCooldown > 0 && form.linkDisabled]} onPress={handleResendPhoneCode}>
+                {phoneCooldown > 0 ? t('auth.resendCodeCooldown', { seconds: String(phoneCooldown) }) : t('auth.resendCode')}
+              </Text>
+              <SecondaryLink icon="create-outline" label={t('auth.register.changePhone')} onPress={editPhone} />
+            </>
+          ) : null}
         </>
       )}
 
       {step === 'personal' && (
         <>
-          <Text style={typography.h1}>{t('auth.register.personal.title')}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={t('auth.register.personal.firstName')}
-            placeholderTextColor={colors.textSecondary}
-            value={firstName}
-            onChangeText={setFirstName}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder={t('auth.register.personal.lastName')}
-            placeholderTextColor={colors.textSecondary}
-            value={lastName}
-            onChangeText={setLastName}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder={t('auth.register.personal.dni')}
-            placeholderTextColor={colors.textSecondary}
-            keyboardType="number-pad"
-            value={dni}
-            onChangeText={(v) => setDni(v.replace(/[^0-9]/g, ''))}
-          />
-          {Platform.OS === 'web' ? (
-            // @react-native-community/datetimepicker doesn't support web at
-            // all (silently no-ops) -- fall back to the browser's native
-            // date input there.
-            createElement('input', {
-              type: 'date',
-              value: birthDate ? birthDate.toISOString().slice(0, 10) : '',
-              max: new Date().toISOString().slice(0, 10),
-              onChange: (e: { target: { value: string } }) =>
-                setBirthDate(e.target.value ? new Date(`${e.target.value}T00:00:00`) : null),
-              style: {
-                ...styles.dateButton,
-                fontSize: sc(15),
-                color: colors.text,
-                fontFamily: 'inherit',
-              },
-            })
-          ) : (
-            <>
-              <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
-                <Text style={styles.dateButtonText}>
-                  {birthDate ? formatDate(birthDate) : t('auth.register.personal.birthDate')}
-                </Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={birthDate ?? new Date(2000, 0, 1)}
-                  mode="date"
-                  display="spinner"
-                  maximumDate={new Date()}
-                  onChange={(_, date) => {
-                    setShowDatePicker(false);
-                    if (date) setBirthDate(date);
-                  }}
-                />
-              )}
-            </>
-          )}
-          <TextInput
-            style={styles.input}
-            placeholder={t('auth.login.placeholder.password')}
-            placeholderTextColor={colors.textSecondary}
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-          <Text style={typography.caption}>
-            {t('auth.register.personal.passwordHint')}
-          </Text>
+          <FormIntro icon="person-outline" title={t('auth.register.personal.title')} text={t('auth.register.personal.subtitle')} />
+          <FormError message={error} />
+          <View style={styles.nameRow}>
+            <View style={[form.field, styles.nameCol]}>
+              <Text style={form.label}>{t('auth.register.personal.firstName')}</Text>
+              <TextInput
+                style={form.input}
+                placeholderTextColor={colors.textSecondary}
+                autoComplete="given-name"
+                value={firstName}
+                onChangeText={setFirstName}
+              />
+            </View>
+            <View style={[form.field, styles.nameCol]}>
+              <Text style={form.label}>{t('auth.register.personal.lastName')}</Text>
+              <TextInput
+                style={form.input}
+                placeholderTextColor={colors.textSecondary}
+                autoComplete="family-name"
+                value={lastName}
+                onChangeText={setLastName}
+              />
+            </View>
+          </View>
+          <View style={form.field}>
+            <Text style={form.label}>{t('auth.register.personal.dni')}</Text>
+            <TextInput
+              style={form.input}
+              placeholder="30123456"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="number-pad"
+              value={dni}
+              onChangeText={(v) => setDni(v.replace(/[^0-9]/g, ''))}
+            />
+          </View>
+          <View style={form.field}>
+            <Text style={form.label}>{t('auth.register.personal.birthDate')}</Text>
+            {Platform.OS === 'web' ? (
+              // @react-native-community/datetimepicker doesn't support web at
+              // all (silently no-ops) -- fall back to the browser's native
+              // date input there.
+              createElement('input', {
+                type: 'date',
+                value: birthDate ? birthDate.toISOString().slice(0, 10) : '',
+                max: new Date().toISOString().slice(0, 10),
+                onChange: (e: { target: { value: string } }) =>
+                  setBirthDate(e.target.value ? new Date(`${e.target.value}T00:00:00`) : null),
+                // Plain CSS: a DOM input doesn't understand RN's style shorthands.
+                style: {
+                  border: `1.5px solid ${colors.border}`,
+                  borderRadius: 12,
+                  padding: `${sc(13)}px 14px`,
+                  backgroundColor: colors.background,
+                  fontSize: sc(15),
+                  color: colors.text,
+                  fontFamily: 'inherit',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                },
+              })
+            ) : (
+              <>
+                <TouchableOpacity style={styles.dateButton} onPress={() => {
+                    // Close the DNI keyboard first, or it stays on top of the date picker.
+                    Keyboard.dismiss();
+                    setShowDatePicker(true);
+                  }}>
+                  <Text style={styles.dateButtonText}>
+                    {birthDate ? formatDate(birthDate) : t('auth.register.personal.birthDatePlaceholder')}
+                  </Text>
+                  <Ionicons name="calendar-outline" size={sc(18)} color={colors.textSecondary} />
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={birthDate ?? new Date(2000, 0, 1)}
+                    mode="date"
+                    display="spinner"
+                    maximumDate={new Date()}
+                    onChange={(_, date) => {
+                      setShowDatePicker(false);
+                      if (date) setBirthDate(date);
+                    }}
+                  />
+                )}
+              </>
+            )}
+          </View>
+          <View style={form.field}>
+            <Text style={form.label}>{t('auth.login.placeholder.password')}</Text>
+            <TextInput
+              style={form.input}
+              placeholder="••••••••"
+              placeholderTextColor={colors.textSecondary}
+              secureTextEntry
+              autoComplete="new-password"
+              value={password}
+              onChangeText={setPassword}
+            />
+            <Text style={form.helper}>{t('auth.register.personal.passwordHint')}</Text>
+          </View>
           {loading ? (
             <ActivityIndicator color={colors.teal} />
           ) : (
             <Button title={t('auth.register.button')} onPress={handleFinishRegistration} />
           )}
-          <Text style={styles.link} onPress={goBack}>
-            {t('common.back')}
-          </Text>
         </>
       )}
     </Screen>
+  );
+}
+
+function SecondaryLink({ icon, label, onPress }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string; onPress: () => void }) {
+  const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, opacity: pressed ? 0.6 : 1 }]}
+    >
+      <Ionicons name={icon} size={sc(16)} color={colors.textSecondary} />
+      <Text style={{ fontSize: sc(14), fontWeight: '600', color: colors.textSecondary }}>{label}</Text>
+    </Pressable>
   );
 }

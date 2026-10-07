@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
@@ -15,10 +16,16 @@ import {
   unregisterPush,
 } from '@/src/services/pushNotifications';
 import { preloadPlateAssets } from '@/src/components/VehiclePlate';
+import { onAccountBlocked, request } from '@/src/api/client';
 
 // Required for expo-web-browser to intercept deep-link redirects from
 // MercadoPago and close the in-app browser automatically.
 WebBrowser.maybeCompleteAuthSession();
+
+// How often a logged-in app checks its account is still usable, so a suspension (or a
+// deletion) reaches an open app within a minute instead of whenever the access token
+// happens to expire. Also checked every time the app comes back to the foreground.
+const ACCOUNT_CHECK_INTERVAL_MS = 60 * 1000;
 
 // Start loading the license-plate images and fonts right away, so plates render whole
 // the first time a screen shows one (see VehiclePlate).
@@ -45,6 +52,39 @@ export default function RootLayout() {
       unregisterPush();
     }
     prevUserId.current = userId;
+  }, [userId]);
+
+  // The account was suspended or is being deleted while logged in: back to the login,
+  // which says why and clears the session once this session's screens are gone (they
+  // assume a logged-in user). Only once per session, however many requests hit it.
+  const loggingOut = useRef(false);
+  useEffect(() => {
+    if (userId) loggingOut.current = false;
+  }, [userId]);
+  useEffect(() => {
+    onAccountBlocked((error) => {
+      if (loggingOut.current) return;
+      loggingOut.current = true;
+      router.replace({ pathname: '/(auth)/login', params: { accountNotice: error.detail } });
+    });
+    return () => onAccountBlocked(null);
+  }, []);
+
+  // Asks auth-service about the account every so often and on returning to the app --
+  // a blocked account answers with its reason, which the listener above acts on.
+  useEffect(() => {
+    if (!userId) return;
+    const check = () => {
+      request(`/users/${userId}`).catch(() => {});
+    };
+    const interval = setInterval(check, ACCOUNT_CHECK_INTERVAL_MS);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') check();
+    });
+    return () => {
+      clearInterval(interval);
+      subscription.remove();
+    };
   }, [userId]);
 
   // Notification taps -> deep-link into the relevant screen. Covers taps on

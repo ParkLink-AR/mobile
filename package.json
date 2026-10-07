@@ -10,6 +10,7 @@
     "@react-native-firebase/messaging": "^26.3.3",
     "@types/jest": "29.5.14",
     "expo": "~57.0.20",
+    "expo-asset": "~57.0.19",
     "expo-blur": "~57.0.2",
     "expo-build-properties": "~57.0.17",
     "expo-constants": "~57.0.12",

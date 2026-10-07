@@ -13,13 +13,13 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { router, useSegments, Stack } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography, useScale } from '@/src/theme/typography';
+import { useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { updateUserProfile, uploadAvatar, AvatarAsset } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
@@ -31,7 +31,6 @@ export default function DriverProfileEdit() {
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
-  const typography = useTypography();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
   const user = useSessionStore((s) => s.user)!;
@@ -142,22 +141,11 @@ export default function DriverProfileEdit() {
     verifiedRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: sc(6) },
     readOnlyValueInline: { fontSize: sc(15), color: colors.text, flexShrink: 1 },
     changeLink: { fontSize: sc(13), fontWeight: '600', color: colors.teal },
+    deleteAccountLink: { alignSelf: 'center', marginTop: sc(8), padding: 8 },
+    deleteAccountLinkText: { fontSize: sc(13), fontWeight: '600', color: '#C62828' },
   });
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerLeft: () => (
-            <Pressable onPress={() => router.back()} hitSlop={8}>
-              {/* El header del Stack padre siempre es deepNavy (fijo, no cambia con el
-                  tema) -- colors.white matchea su headerTintColor, no colors.text, que
-                  en modo claro es el mismo #042347 que el fondo (invisible). */}
-              <Ionicons name="arrow-back" size={24} color={colors.white} />
-            </Pressable>
-          ),
-        }}
-      />
     <Screen style={styles.outer} edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView
@@ -166,7 +154,6 @@ export default function DriverProfileEdit() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         >
-          <Text style={typography.h1}>{t('profile.edit.title')}</Text>
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           {/* Avatar */}
@@ -272,9 +259,17 @@ export default function DriverProfileEdit() {
           ) : (
             <Button title={t('common.save')} onPress={save} />
           )}
+
+          {/* Last, set apart and low-key: what it does is explained on its own screen
+              before anything happens. */}
+          <Pressable
+            style={({ pressed }) => [styles.deleteAccountLink, { opacity: pressed ? 0.6 : 1 }]}
+            onPress={() => router.push(`${group}/account-deletion`)}
+          >
+            <Text style={styles.deleteAccountLinkText}>{t('account.deletion.link')}</Text>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
-    </>
   );
 }

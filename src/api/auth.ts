@@ -1,4 +1,4 @@
-import { AccountType, AuthTokens, AuthUser, Vehicle } from '@/src/types';
+import { AccountDeletionSummary, AccountStatus, AccountType, AuthTokens, AuthUser, Vehicle } from '@/src/types';
 import { request, requestMultipart } from './client';
 import { appendLocalFile } from './formDataFile';
 
@@ -35,6 +35,8 @@ interface UserOutResponse {
   email_verified: boolean;
   phone_verified: boolean;
   account_type?: string | null;
+  status?: string | null;
+  deletion_scheduled_at?: string | null;
 }
 
 function toAccountType(raw?: string | null): AccountType {
@@ -58,6 +60,8 @@ function toAuthUser(u: UserOutResponse): AuthUser {
     emailVerified: u.email_verified,
     phoneVerified: u.phone_verified,
     accountType: toAccountType(u.account_type),
+    status: (u.status as AccountStatus | null) ?? 'ACTIVE',
+    deletionScheduledAt: u.deletion_scheduled_at ?? undefined,
   };
 }
 
@@ -111,11 +115,14 @@ export async function register(input: RegisterInput): Promise<void> {
 // Registration wizard: verify email, then phone, before the account exists
 // -------------------------
 
-export async function requestEmailRegistration(email: string): Promise<void> {
-  await request('/auth/registration/email/request', {
+/** Sends the signup code. Returns true when there's nothing to send because this email
+ * was verified a moment ago (coming back to an unfinished signup) -- skip its code step. */
+export async function requestEmailRegistration(email: string): Promise<boolean> {
+  const response = await request<{ already_verified?: boolean }>('/auth/registration/email/request', {
     method: 'POST',
     body: JSON.stringify({ email }),
   });
+  return response?.already_verified === true;
 }
 
 export async function confirmEmailRegistration(email: string, code: string): Promise<void> {
@@ -125,11 +132,14 @@ export async function confirmEmailRegistration(email: string, code: string): Pro
   });
 }
 
-export async function requestPhoneRegistration(phone: string): Promise<void> {
-  await request('/auth/registration/phone/request', {
+/** Sends the signup code. Returns true when there's nothing to send because this phone
+ * was verified a moment ago (coming back to an unfinished signup) -- skip its code step. */
+export async function requestPhoneRegistration(phone: string): Promise<boolean> {
+  const response = await request<{ already_verified?: boolean }>('/auth/registration/phone/request', {
     method: 'POST',
     body: JSON.stringify({ phone }),
   });
+  return response?.already_verified === true;
 }
 
 export async function confirmPhoneRegistration(phone: string, code: string): Promise<void> {
@@ -141,6 +151,19 @@ export async function confirmPhoneRegistration(phone: string, code: string): Pro
 
 export async function login(input: LoginInput): Promise<{ user: AuthUser; tokens: AuthTokens }> {
   const tokenResponse = await request<TokenResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  const tokens = toAuthTokens(tokenResponse);
+  const { sub } = decodeJwtPayload(tokens.accessToken);
+  const userResponse = await request<UserOutResponse>(`/users/${sub}`, {}, tokens.accessToken);
+  return { user: toAuthUser(userResponse), tokens };
+}
+
+/** The "yes, reactivate it" answer when logging in to an account whose deletion is
+ * scheduled (ACCOUNT_DELETION_SCHEDULED): cancels the deletion and logs in. */
+export async function reactivateAccount(input: LoginInput): Promise<{ user: AuthUser; tokens: AuthTokens }> {
+  const tokenResponse = await request<TokenResponse>('/auth/reactivate', {
     method: 'POST',
     body: JSON.stringify(input),
   });
@@ -287,12 +310,47 @@ export async function changePassword(
 // Permanent: hard-deletes the user row plus every parking spot they own
 // (and all the R2 photos on both) -- see auth-service's delete_user. There's
 // no undo, unlike logout.
-export async function deleteAccount(userId: string, password: string): Promise<void> {
-  await request(`/users/${userId}`, {
-    method: 'DELETE',
+interface AccountDeletionSummaryResponse {
+  blocked: boolean;
+  blocked_reason?: string | null;
+  in_progress_count: number;
+  driver_bookings_to_cancel: number;
+  owner_bookings_to_cancel: number;
+  owner_requests_to_reject: number;
+  pending_payout_count: number;
+  pending_payout_amount: number;
+  spot_count: number;
+  deletion_date: string;
+}
+
+/** What deleting the account would do: bookings cancelled, money still owed, and whether
+ * a booking in progress blocks it right now. */
+export async function getAccountDeletionSummary(userId: string): Promise<AccountDeletionSummary> {
+  const r = await request<AccountDeletionSummaryResponse>(`/users/${userId}/deletion`);
+  return {
+    blocked: r.blocked,
+    blockedReason: r.blocked_reason ?? undefined,
+    inProgressCount: r.in_progress_count,
+    driverBookingsToCancel: r.driver_bookings_to_cancel,
+    ownerBookingsToCancel: r.owner_bookings_to_cancel,
+    ownerRequestsToReject: r.owner_requests_to_reject,
+    pendingPayoutCount: r.pending_payout_count,
+    pendingPayoutAmount: r.pending_payout_amount / 100,
+    spotCount: r.spot_count,
+    deletionDate: r.deletion_date,
+  };
+}
+
+/** Schedules the account's deletion (7 days from now) -- every session is closed. Until
+ * then, logging in offers to reactivate it (reactivateAccount). */
+export async function requestAccountDeletion(userId: string, password: string): Promise<AuthUser> {
+  const user = await request<UserOutResponse>(`/users/${userId}/deletion`, {
+    method: 'POST',
     body: JSON.stringify({ password }),
   });
+  return toAuthUser(user);
 }
+
 
 // -------------------------
 // Payout info (owner's CBU/titular/CUIL) -- see auth-service's

@@ -1,5 +1,5 @@
 import { createElement, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform, StyleProp, ViewStyle, Keyboard } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
@@ -72,7 +72,11 @@ export function DatePickerField({ value, onChange, placeholder, minimumDate, sty
 
   return (
     <View style={[style, styles.box]}>
-      <Pressable style={{ flex: 1 }} onPress={() => setShowPicker(true)}>
+      <Pressable style={{ flex: 1 }} onPress={() => {
+        // Close any open keyboard first, or it stays on top of the picker.
+        Keyboard.dismiss();
+        setShowPicker(true);
+      }}>
         <Text style={styles.text}>{value ? formatDisplay(value) : placeholder}</Text>
       </Pressable>
       {!!value && (

@@ -5,23 +5,35 @@ export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080
 // Paths that either don't require a session or that a session-refresh retry
 // would make no sense for (retrying a failed login/register with a rotated
 // token is meaningless, and /auth/refresh retrying itself would loop).
-const NO_RETRY_PATHS = ['/auth/register', '/auth/login', '/auth/refresh'];
+const NO_RETRY_PATHS = ['/auth/register', '/auth/login', '/auth/reactivate', '/auth/refresh'];
 
 export class ApiError extends Error {
   status: number;
   detail: string;
+  // Machine-readable reason when the backend sends one (e.g. auth-service's
+  // ACCOUNT_SUSPENDED, booking-service's error codes).
+  code?: string;
+  // The whole error body, for the few errors that carry more than a message (e.g.
+  // ACCOUNT_DELETION_SCHEDULED's deletion_scheduled_at).
+  data: Record<string, unknown>;
 
-  constructor(status: number, detail: string) {
+  constructor(status: number, detail: string, code?: string, data: Record<string, unknown> = {}) {
     super(detail);
     this.status = status;
     this.detail = detail;
+    this.code = code;
+    this.data = data;
   }
 }
 
 async function toApiError(response: Response): Promise<ApiError> {
   let detail = `Error ${response.status}`;
+  let code: string | undefined;
+  let data: Record<string, unknown> = {};
   try {
     const body = await response.json();
+    if (body && typeof body === 'object') data = body;
+    if (typeof body.code === 'string') code = body.code;
     // Each backend puts its real human-readable text in a different field --
     // `detail` first: auth-service (FastAPI problem-details: {title, detail})
     //   and payment-service (Express, when both `message` and `detail` are
@@ -38,7 +50,7 @@ async function toApiError(response: Response): Promise<ApiError> {
   } catch {
     // Not a JSON body -- keep the generic message.
   }
-  return new ApiError(response.status, detail);
+  return new ApiError(response.status, detail, code, data);
 }
 
 async function rawFetch(
@@ -70,6 +82,31 @@ async function rawFetch(
 // 401 awaits the same single refresh instead of racing each other.
 let refreshInFlight: Promise<string | null> | null = null;
 
+// Codes the backend uses when the account itself can't be used anymore (suspended, or
+// being deleted) -- any request of a logged-in user getting one of these means the
+// session is over, and the user is told why.
+const ACCOUNT_BLOCKED_CODES = new Set([
+  'ACCOUNT_SUSPENDED',
+  'ACCOUNT_DELETION_SCHEDULED',
+  'ACCOUNT_DELETION_IN_PROGRESS',
+]);
+
+type AccountBlockedListener = (error: ApiError) => void;
+let accountBlockedListener: AccountBlockedListener | null = null;
+
+/** Registered once by the root layout: logs the user out and shows them why. */
+export function onAccountBlocked(listener: AccountBlockedListener | null) {
+  accountBlockedListener = listener;
+}
+
+// True (and the user notified) when `error` means the account can't be used anymore.
+function reportIfAccountBlocked(error: ApiError): boolean {
+  if (!error.code || !ACCOUNT_BLOCKED_CODES.has(error.code)) return false;
+  if (!useSessionStore.getState().user) return false;
+  accountBlockedListener?.(error);
+  return true;
+}
+
 async function refreshSession(): Promise<string | null> {
   if (refreshInFlight) return refreshInFlight;
 
@@ -82,7 +119,12 @@ async function refreshSession(): Promise<string | null> {
       { method: 'POST', body: JSON.stringify({ refresh_token: refreshToken }) },
       null
     );
-    if (!response.ok) return null;
+    if (!response.ok) {
+      // Suspended or closing meanwhile: hand it to the account-blocked flow (it says why
+      // and logs out) instead of the silent session wipe below.
+      if (reportIfAccountBlocked(await toApiError(response))) throw new AccountBlockedSignal();
+      return null;
+    }
 
     const data = await response.json();
     setTokens({
@@ -118,7 +160,13 @@ export async function request<T>(
   let response = await rawFetch(path, options, accessToken);
 
   if (response.status === 401 && accessToken && !NO_RETRY_PATHS.includes(path)) {
-    const newToken = await refreshSession();
+    let newToken: string | null;
+    try {
+      newToken = await refreshSession();
+    } catch (err) {
+      if (err instanceof AccountBlockedSignal) return undefined as T; // being logged out
+      throw err;
+    }
     if (newToken) {
       response = await rawFetch(path, options, newToken);
     } else {
@@ -130,12 +178,20 @@ export async function request<T>(
   }
 
   if (!response.ok) {
-    throw await toApiError(response);
+    const error = await toApiError(response);
+    // The account was suspended or is closing: the user is being logged out (and told
+    // why), so the screen that asked shouldn't show an error of its own.
+    if (reportIfAccountBlocked(error)) return undefined as T;
+    throw error;
   }
 
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
+
+// Thrown by refreshSession when the refresh failed because the account itself is blocked
+// (already reported), so request() can bail out quietly.
+class AccountBlockedSignal extends Error {}
 
 // Multipart uploads (e.g. avatar) can't go through `request()`: it always
 // forces `Content-Type: application/json`, but FormData needs fetch to set
@@ -155,7 +211,13 @@ export async function requestMultipart<T>(path: string, formData: FormData): Pro
   let response = await rawMultipartFetch(path, formData, accessToken);
 
   if (response.status === 401 && accessToken) {
-    const newToken = await refreshSession();
+    let newToken: string | null;
+    try {
+      newToken = await refreshSession();
+    } catch (err) {
+      if (err instanceof AccountBlockedSignal) return undefined as T; // being logged out
+      throw err;
+    }
     if (newToken) {
       response = await rawMultipartFetch(path, formData, newToken);
     } else {
@@ -165,7 +227,9 @@ export async function requestMultipart<T>(path: string, formData: FormData): Pro
   }
 
   if (!response.ok) {
-    throw await toApiError(response);
+    const error = await toApiError(response);
+    if (reportIfAccountBlocked(error)) return undefined as T;
+    throw error;
   }
   return (await response.json()) as T;
 }

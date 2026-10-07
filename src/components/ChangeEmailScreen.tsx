@@ -1,23 +1,20 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
-import { Text, TextInput, StyleSheet, ActivityIndicator, View } from 'react-native';
+import { Text, TextInput, ActivityIndicator, View } from 'react-native';
 import { router } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { requestEmailChange, confirmEmailChange } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
+import { CodeInput, CurrentValue, FormError, FormIntro, useAccountFormStyles } from '@/src/components/AccountForm';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function ChangeEmailScreen() {
   useLanguage();
   const colors = useThemeColors();
-  const scale = useScale();
-  const sc = (n: number) => Math.round(n * scale);
-  const typography = useTypography();
   const user = useSessionStore((s) => s.user)!;
   const setUser = useSessionStore((s) => s.setUser);
 
@@ -34,32 +31,8 @@ export default function ChangeEmailScreen() {
     return () => clearInterval(id);
   }, [cooldown]);
 
-  const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.surface, padding: 24, gap: 12, justifyContent: 'center' },
-    current: { fontSize: sc(14), color: colors.textSecondary, marginBottom: 4 },
-    input: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
-      fontSize: sc(15),
-      color: colors.text,
-    },
-    codeInput: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
-      fontSize: sc(24),
-      letterSpacing: 8,
-      textAlign: 'center',
-      color: colors.text,
-    },
-    error: { color: '#C62828', fontSize: sc(13), textAlign: 'center' },
-    success: { color: colors.teal, fontSize: sc(15), fontWeight: '600', textAlign: 'center' },
-    link: { color: colors.teal, textAlign: 'center', marginTop: 8 },
-    linkDisabled: { color: colors.textSecondary },
-  });
+  const form = useAccountFormStyles();
+
 
   async function handleSendCode() {
     setError(null);
@@ -112,47 +85,43 @@ export default function ChangeEmailScreen() {
 
   if (step === 'code') {
     return (
-      <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-        <Text style={typography.h1}>{t('changeEmail.code.title')}</Text>
-        <Text style={typography.body}>{t('changeEmail.code.helper', { email: newEmail })}</Text>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <TextInput
-          style={styles.codeInput}
-          placeholder="000000"
-          placeholderTextColor={colors.textSecondary}
-          keyboardType="number-pad"
-          maxLength={6}
-          value={code}
-          onChangeText={(v) => setCode(v.replace(/[^0-9]/g, ''))}
+      <Screen form style={form.container} edges={['left', 'right', 'bottom']}>
+        <FormIntro
+          icon="mail-unread-outline"
+          title={t('changeEmail.code.title')}
+          text={t('changeEmail.code.helper', { email: newEmail })}
         />
+        <FormError message={error} />
+        <CodeInput value={code} onChange={setCode} autoFocus />
         {loading ? (
           <ActivityIndicator color={colors.teal} />
         ) : (
           <Button title={t('changeEmail.code.button')} onPress={handleConfirm} />
         )}
-        <Text style={[styles.link, cooldown > 0 && styles.linkDisabled]} onPress={handleResend}>
-          {cooldown > 0 ? `Reenviar código (${cooldown}s)` : 'Reenviar código'}
+        <Text style={[form.link, cooldown > 0 && form.linkDisabled]} onPress={handleResend}>
+          {cooldown > 0 ? t('auth.resendCodeCooldown', { seconds: String(cooldown) }) : t('auth.resendCode')}
         </Text>
       </Screen>
     );
   }
 
   return (
-    <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
-      <Text style={typography.h1}>{t('changeEmail.title')}</Text>
-      <View>
-        <Text style={styles.current}>{user.email}</Text>
+    <Screen form style={form.container} edges={['left', 'right', 'bottom']}>
+      <CurrentValue icon="mail-outline" label={t('changeEmail.current')} value={user.email} />
+      <FormError message={error} />
+      <View style={form.field}>
+        <Text style={form.label}>{t('changeEmail.newEmail.label')}</Text>
+        <TextInput
+          style={form.input}
+          placeholder={t('changeEmail.newEmail.placeholder')}
+          placeholderTextColor={colors.textSecondary}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={newEmail}
+          onChangeText={setNewEmail}
+        />
+        <Text style={form.helper}>{t('changeEmail.newEmail.helper')}</Text>
       </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <TextInput
-        style={styles.input}
-        placeholder={t('changeEmail.newEmail.placeholder')}
-        placeholderTextColor={colors.textSecondary}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={newEmail}
-        onChangeText={setNewEmail}
-      />
       {loading ? (
         <ActivityIndicator color={colors.teal} />
       ) : (

@@ -235,6 +235,11 @@ function routeFor(data: Record<string, string> | undefined): string | null {
     case 'booking.pending_approval':
       if (!data.bookingId) return null;
       return `${group}/bookings/${data.bookingId}?view=owner`;
+    // Sent to whichever side of a booking is still around when the other side's account
+    // was closed or suspended and the booking got cancelled.
+    case 'booking.cancelled':
+      if (!data.bookingId) return null;
+      return `${group}/bookings/${data.bookingId}`;
     // Sent to the driver once the owner enters their arrival code.
     case 'booking.verified':
       if (!data.bookingId) return null;

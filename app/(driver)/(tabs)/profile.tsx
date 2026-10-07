@@ -1,13 +1,11 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useState } from 'react';
 import {
-  Text, View, ScrollView, StyleSheet, Pressable, Image, TextInput, ActivityIndicator,
+  Text, View, ScrollView, StyleSheet, Pressable, Image,
   Modal, TouchableWithoutFeedback,
-  Keyboard,
 } from 'react-native';
 import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ModalKeyboardAvoider } from '@/src/components/ModalKeyboardAvoider';
 import { Screen } from '@/src/components/Screen';
 import { VerifiedBadge } from '@/src/components/VerifiedBadge';
 import { RoleBadge } from '@/src/components/RoleBadge';
@@ -16,8 +14,7 @@ import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useSettingsStore, Language, FontSize } from '@/src/store/useSettingsStore';
 import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
-import { logout as logoutRequest, deleteAccount } from '@/src/api/auth';
-import { ApiError } from '@/src/api/client';
+import { logout as logoutRequest } from '@/src/api/auth';
 
 const LANGS: { key: Language; label: string }[] = [
   { key: 'es', label: 'Español' },
@@ -46,11 +43,6 @@ export default function Profile() {
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [fontSizeModalVisible, setFontSizeModalVisible] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [deletePassword, setDeletePassword] = useState('');
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [deleteSuccess, setDeleteSuccess] = useState(false);
 
   if (!user) return null;
 
@@ -63,39 +55,6 @@ export default function Profile() {
   async function handleLogout() {
     setLogoutModalVisible(false);
     if (refreshToken) await logoutRequest(refreshToken).catch(() => {});
-    clearSession();
-    router.replace('/(auth)/login');
-  }
-
-  function closeDeleteModal() {
-    if (deleteSuccess) return; // force going through the "Entendido" button, not the backdrop
-    setDeleteModalVisible(false);
-    setDeletePassword('');
-    setDeleteError(null);
-  }
-
-  async function handleDeleteAccount() {
-    if (!deletePassword.trim()) {
-      setDeleteError(t('account.deleteAccount.passwordRequired'));
-      return;
-    }
-    setDeleting(true);
-    setDeleteError(null);
-    try {
-      await deleteAccount(user!.id, deletePassword);
-      // Don't clearSession() yet -- this screen has `if (!user) return null`
-      // above, so wiping the session here would unmount the whole component
-      // (modal included) before the success message ever gets to render.
-      // It happens in handleDeleteSuccessAcknowledge instead, at the same
-      // time as the navigation away from this screen.
-      setDeleteSuccess(true);
-    } catch (err) {
-      setDeleteError(err instanceof ApiError ? err.detail : t('account.deleteAccount.error'));
-      setDeleting(false);
-    }
-  }
-
-  function handleDeleteSuccessAcknowledge() {
     clearSession();
     router.replace('/(auth)/login');
   }
@@ -144,9 +103,6 @@ export default function Profile() {
     editBtnText: { color: colors.white },
     logoutBtnText: { color: '#EF4444' },
 
-    deleteAccountLink: { alignSelf: 'center', marginTop: 2, padding: 8 },
-    deleteAccountLinkText: { fontSize: sc(13), fontWeight: '600', color: colors.textSecondary },
-
     prefCard: {
       backgroundColor: colors.surface, borderRadius: 14,
       borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
@@ -188,11 +144,6 @@ export default function Profile() {
       fontSize: sc(13), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(18),
       marginBottom: 16,
     },
-    deleteInput: {
-      width: '100%', borderWidth: 1, borderColor: colors.border, borderRadius: 10,
-      padding: sc(12), fontSize: sc(15), color: colors.text, marginBottom: 4,
-    },
-    deleteErrorText: { color: '#EF4444', fontSize: sc(13), marginBottom: 8, textAlign: 'center' },
     deleteActions: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 8 },
     deleteCancelBtn: {
       flex: 1, borderRadius: 10, paddingVertical: sc(12), alignItems: 'center',
@@ -203,7 +154,6 @@ export default function Profile() {
       flex: 1, borderRadius: 10, paddingVertical: sc(12), alignItems: 'center',
       backgroundColor: '#EF4444',
     },
-    deleteConfirmBtnDisabled: { opacity: 0.6 },
     deleteConfirmBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.white },
   });
 
@@ -394,13 +344,6 @@ export default function Profile() {
           <Ionicons name="log-out-outline" size={sc(20)} color="#EF4444" />
           <Text style={[styles.actionBtnText, styles.logoutBtnText]}>{t('account.logout')}</Text>
         </Pressable>
-
-        <Pressable
-          style={({ pressed }) => [styles.deleteAccountLink, { opacity: pressed ? 0.6 : 1 }]}
-          onPress={() => setDeleteModalVisible(true)}
-        >
-          <Text style={styles.deleteAccountLinkText}>{t('account.deleteAccount')}</Text>
-        </Pressable>
       </ScrollView>
 
       {/* Logout confirmation modal */}
@@ -434,77 +377,6 @@ export default function Profile() {
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
-      </Modal>
-
-      {/* Delete account confirmation modal */}
-      <Modal
-        visible={deleteModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeDeleteModal}
-      >
-        <ModalKeyboardAvoider>
-          <TouchableWithoutFeedback onPress={closeDeleteModal}>
-            <View style={styles.modalOverlay}>
-              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View style={styles.modalSheet}>
-                  {deleteSuccess ? (
-                    <>
-                      <Ionicons name="checkmark-circle" size={44} color={colors.teal} />
-                      <Text style={styles.modalTitle}>{t('account.deleteAccount.successTitle')}</Text>
-                      <Text style={styles.deleteWarning}>{t('account.deleteAccount.successMessage')}</Text>
-                      <Pressable
-                        style={({ pressed }) => [styles.deleteConfirmBtn, { width: '100%', backgroundColor: colors.teal, opacity: pressed ? 0.85 : 1 }]}
-                        onPress={handleDeleteSuccessAcknowledge}
-                      >
-                        <Text style={[styles.deleteConfirmBtnText, { color: colors.white }]}>{t('account.deleteAccount.successAck')}</Text>
-                      </Pressable>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={styles.modalTitle}>{t('account.deleteAccount.title')}</Text>
-                      <Text style={styles.deleteWarning}>{t('account.deleteAccount.warning')}</Text>
-                      <TextInput
-                        style={styles.deleteInput}
-                        value={deletePassword}
-                        onChangeText={setDeletePassword}
-                        placeholder={t('account.deleteAccount.passwordPlaceholder')}
-                        placeholderTextColor={colors.textSecondary}
-                        secureTextEntry
-                        editable={!deleting}
-                      />
-                      {deleteError && <Text style={styles.deleteErrorText}>{deleteError}</Text>}
-                      <View style={styles.deleteActions}>
-                        <Pressable
-                          style={({ pressed }) => [styles.deleteCancelBtn, { opacity: pressed ? 0.7 : 1 }]}
-                          onPress={closeDeleteModal}
-                          disabled={deleting}
-                        >
-                          <Text style={styles.deleteCancelBtnText}>{t('common.cancel')}</Text>
-                        </Pressable>
-                        <Pressable
-                          style={({ pressed }) => [
-                            styles.deleteConfirmBtn,
-                            deleting && styles.deleteConfirmBtnDisabled,
-                            { opacity: pressed && !deleting ? 0.85 : 1 },
-                          ]}
-                          onPress={handleDeleteAccount}
-                          disabled={deleting}
-                        >
-                          {deleting ? (
-                            <ActivityIndicator color={colors.white} size="small" />
-                          ) : (
-                            <Text style={styles.deleteConfirmBtnText}>{t('account.deleteAccount.confirm')}</Text>
-                          )}
-                        </Pressable>
-                      </View>
-                    </>
-                  )}
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </TouchableWithoutFeedback>
-        </ModalKeyboardAvoider>
       </Modal>
 
       {/* Language selection modal */}

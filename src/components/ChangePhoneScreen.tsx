@@ -9,6 +9,7 @@ import {
   Modal,
   FlatList,
   TouchableOpacity,
+  Keyboard,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Button } from '@/src/components/Button';
@@ -18,6 +19,7 @@ import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { requestPhoneChange, confirmPhoneChange } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
+import { CodeInput, CurrentValue, FormError, FormIntro, useAccountFormStyles } from '@/src/components/AccountForm';
 import { COUNTRIES, DEFAULT_COUNTRY, Country } from '@/src/data/countries';
 
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -48,40 +50,11 @@ export default function ChangePhoneScreen() {
     return () => clearInterval(id);
   }, [cooldown]);
 
+  const form = useAccountFormStyles();
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.surface, padding: 24, gap: 12, justifyContent: 'center' },
-    current: { fontSize: sc(14), color: colors.textSecondary, marginBottom: 4 },
-    input: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
-      fontSize: sc(15),
-      color: colors.text,
-    },
-    codeInput: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
-      fontSize: sc(24),
-      letterSpacing: 8,
-      textAlign: 'center',
-      color: colors.text,
-    },
-    error: { color: '#C62828', fontSize: sc(13), textAlign: 'center' },
-    link: { color: colors.teal, textAlign: 'center', marginTop: 8 },
-    linkDisabled: { color: colors.textSecondary },
     phoneRow: { flexDirection: 'row', gap: 8 },
-    countryButton: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      justifyContent: 'center',
-      minWidth: 100,
-    },
-    countryButtonText: { fontSize: sc(15), color: colors.text },
+    countryButton: { ...form.input, justifyContent: 'center', minWidth: sc(100) },
+    countryButtonText: { fontSize: sc(15), color: colors.text, fontWeight: '600' },
     phoneInput: { flex: 1 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(4, 35, 71, 0.4)', justifyContent: 'flex-end' },
     modalContent: {
@@ -96,6 +69,7 @@ export default function ChangePhoneScreen() {
     countryRowName: { flex: 1, fontSize: sc(15), color: colors.text },
     countryRowDial: { fontSize: sc(14), color: colors.textSecondary },
   });
+
 
   async function handleSendCode() {
     setError(null);
@@ -146,59 +120,57 @@ export default function ChangePhoneScreen() {
 
   if (step === 'code') {
     return (
-      <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
-        <Text style={typography.h1}>{t('changePhone.code.title')}</Text>
-        <Text style={typography.body}>{t('changePhone.code.helper', { phone: fullPhone })}</Text>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <TextInput
-          style={styles.codeInput}
-          placeholder="000000"
-          placeholderTextColor={colors.textSecondary}
-          keyboardType="number-pad"
-          maxLength={6}
-          value={code}
-          onChangeText={(v) => setCode(v.replace(/[^0-9]/g, ''))}
+      <Screen form style={form.container} edges={['left', 'right', 'bottom']}>
+        <FormIntro
+          icon="chatbubble-ellipses-outline"
+          title={t('changePhone.code.title')}
+          text={t('changePhone.code.helper', { phone: fullPhone })}
         />
+        <FormError message={error} />
+        <CodeInput value={code} onChange={setCode} autoFocus />
         {loading ? (
           <ActivityIndicator color={colors.teal} />
         ) : (
           <Button title={t('changePhone.code.button')} onPress={handleConfirm} />
         )}
-        <Text style={[styles.link, cooldown > 0 && styles.linkDisabled]} onPress={handleResend}>
-          {cooldown > 0 ? `Reenviar código (${cooldown}s)` : 'Reenviar código'}
+        <Text style={[form.link, cooldown > 0 && form.linkDisabled]} onPress={handleResend}>
+          {cooldown > 0 ? t('auth.resendCodeCooldown', { seconds: String(cooldown) }) : t('auth.resendCode')}
         </Text>
       </Screen>
     );
   }
 
   return (
-    <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
-      <Text style={typography.h1}>{t('changePhone.title')}</Text>
-      <View>
-        <Text style={styles.current}>{user.phone}</Text>
-      </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <View style={styles.phoneRow}>
-        <TouchableOpacity style={styles.countryButton} onPress={() => setCountryPickerOpen(true)}>
-          <Text style={styles.countryButtonText}>
-            {country.flag} {country.dialCode}
-          </Text>
-        </TouchableOpacity>
-        <TextInput
-          style={[styles.input, styles.phoneInput]}
-          placeholder="11 2345 6789"
-          placeholderTextColor={colors.textSecondary}
-          keyboardType="phone-pad"
-          value={phoneNumber}
-          onChangeText={setPhoneNumber}
-        />
+    <Screen form style={form.container} edges={['left', 'right', 'bottom']}>
+      <CurrentValue icon="call-outline" label={t('changePhone.current')} value={user.phone} />
+      <FormError message={error} />
+      <View style={form.field}>
+        <Text style={form.label}>{t('changePhone.newPhone.label')}</Text>
+        <View style={styles.phoneRow}>
+          <TouchableOpacity style={styles.countryButton} onPress={() => {
+            Keyboard.dismiss();
+            setCountryPickerOpen(true);
+          }}>
+            <Text style={styles.countryButtonText}>
+              {country.flag} {country.dialCode}
+            </Text>
+          </TouchableOpacity>
+          <TextInput
+            style={[form.input, styles.phoneInput]}
+            placeholder="11 2345 6789"
+            placeholderTextColor={colors.textSecondary}
+            keyboardType="phone-pad"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+          />
+        </View>
+        <Text style={form.helper}>{t('changePhone.newPhone.helper')}</Text>
       </View>
       {loading ? (
         <ActivityIndicator color={colors.teal} />
       ) : (
         <Button title={t('changePhone.newPhone.button')} onPress={handleSendCode} />
       )}
-
       <Modal
         visible={countryPickerOpen}
         animationType="slide"

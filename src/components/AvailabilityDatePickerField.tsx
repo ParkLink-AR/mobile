@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal, ActivityIndicator, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Modal, ActivityIndicator, StyleProp, ViewStyle, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { getAvailability, getStayAvailability } from '@/src/api/parking';
@@ -183,6 +183,8 @@ export function AvailabilityDatePickerField({
     const [y, m] = (value || today).split('-').map(Number);
     setVisibleYear(y);
     setVisibleMonth(m - 1);
+    // Close any open keyboard first, or it stays on top of the calendar.
+    Keyboard.dismiss();
     setModalVisible(true);
   }
 

@@ -9,11 +9,15 @@ export default function AuthLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.deepNavy },
         headerTintColor: colors.white,
+        // Just the arrow: iOS would otherwise spell out the previous screen's name
+        // next to it ("login", "(tabs)"...).
+        headerBackButtonDisplayMode: 'minimal',
       }}
     >
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="register" options={{ title: t('layout.auth.register') }} />
-      <Stack.Screen name="account-type" options={{ title: t('accountType.change'), headerBackVisible: false }} />
+      {/* A welcome screen of its own, no header bar (there's nowhere to go back to). */}
+      <Stack.Screen name="account-type" options={{ headerShown: false }} />
       <Stack.Screen name="verify-code" options={{ title: t('layout.auth.verifyEmail') }} />
       <Stack.Screen name="forgot-password" options={{ title: t('auth.forgotPassword.title') }} />
     </Stack>

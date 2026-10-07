@@ -6,7 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker, Region, PROVIDER_DEFAULT } from 'react-native-maps';
 import { Screen } from '@/src/components/Screen';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
-import { Button } from '@/src/components/Button';
 import { RoleBadge } from '@/src/components/RoleBadge';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
@@ -75,7 +74,19 @@ export default function OwnerSpots() {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       padding: 16, paddingBottom: 8,
     },
-    toggleRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, paddingBottom: 8 },
+    // "Añadir cochera" on the left, list/map switch on the right.
+    toggleRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+      paddingHorizontal: 16, paddingBottom: 8,
+    },
+    // Outlined button sized like the list/map switch next to it: same 1.5 border, and its
+    // padding (8) is the switch's own padding (2) plus a segment's (6).
+    addButton: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
+      borderWidth: 1.5, borderColor: colors.teal, backgroundColor: colors.surface,
+    },
+    addButtonText: { fontSize: sc(13), fontWeight: '600', color: colors.teal },
     segmentedControl: {
       flexDirection: 'row', backgroundColor: colors.background,
       borderRadius: 10, borderWidth: 1.5, borderColor: colors.border, padding: 2,
@@ -110,14 +121,6 @@ export default function OwnerSpots() {
       }),
     },
     pinText: { color: colors.white, fontSize: sc(12), fontWeight: '700' },
-    // Franja fija arriba del tab bar -- el botón de agregar vive acá para
-    // todas las variantes (lista vacía o con cocheras), así el header de
-    // arriba queda siempre igual (título + RoleBadge) en vez de competir por
-    // espacio con este botón.
-    footer: {
-      paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
-      borderTopWidth: 1, borderTopColor: colors.border,
-    },
   });
 
   return (
@@ -127,8 +130,12 @@ export default function OwnerSpots() {
         <RoleBadge />
       </View>
 
-      {spots.length > 0 && (
-        <View style={styles.toggleRow}>
+      <View style={styles.toggleRow}>
+        <Pressable style={styles.addButton} onPress={() => router.push(`${group}/spots/new`)}>
+          <Ionicons name="add" size={sc(14)} color={colors.teal} />
+          <Text style={styles.addButtonText}>{t('profile.mySpots.add')}</Text>
+        </Pressable>
+        {spots.length > 0 && (
           <View style={styles.segmentedControl}>
             <Pressable
               style={[styles.segmentButton, viewMode === 'list' && styles.segmentActive]}
@@ -154,8 +161,8 @@ export default function OwnerSpots() {
               </Pressable>
             )}
           </View>
-        </View>
-      )}
+        )}
+      </View>
 
       <View style={styles.body}>
         {loading ? (
@@ -200,10 +207,6 @@ export default function OwnerSpots() {
             </MapView>
           </View>
         )}
-      </View>
-
-      <View style={styles.footer}>
-        <Button title={t('profile.mySpots.add')} onPress={() => router.push(`${group}/spots/new`)} />
       </View>
     </Screen>
   );

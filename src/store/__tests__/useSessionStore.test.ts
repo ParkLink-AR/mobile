@@ -10,6 +10,7 @@ const mockAuthUser: AuthUser = {
   emailVerified: true,
   phoneVerified: true,
   accountType: 'driver',
+  status: 'ACTIVE',
 };
 
 const mockTokens: AuthTokens = {

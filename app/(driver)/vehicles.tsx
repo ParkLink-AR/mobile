@@ -20,7 +20,6 @@ import { ModalKeyboardAvoider } from '@/src/components/ModalKeyboardAvoider';
 import { Screen } from '@/src/components/Screen';
 import { VehiclePlate, isValidArgentinePlate, usePlateAssetsReady } from '@/src/components/VehiclePlate';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getVehicles, createVehicle, deleteVehicle } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
@@ -29,7 +28,6 @@ import { Vehicle } from '@/src/types';
 export default function VehiclesScreen() {
   useLanguage();
   const colors = useThemeColors();
-  const typography = useTypography();
   const user = useSessionStore((s) => s.user)!;
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -114,7 +112,6 @@ export default function VehiclesScreen() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 8, gap: 12 },
-    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
     vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -137,10 +134,6 @@ export default function VehiclesScreen() {
 
   return (
     <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-      <View style={styles.headerRow}>
-        <Text style={typography.h1}>{t('vehicles.title')}</Text>
-      </View>
-
       {loading || !platesReady ? (
         <ActivityIndicator color={colors.teal} />
       ) : loadFailed ? (

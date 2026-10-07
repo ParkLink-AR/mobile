@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, Image, ImageBackground, ImageSourcePropType, NativeSyntheticEvent, TextLayoutEventData,
+  View, Text, StyleSheet, Image, ImageBackground, ImageSourcePropType, NativeSyntheticEvent, Platform, TextLayoutEventData,
 } from 'react-native';
 import * as Font from 'expo-font';
+import { Asset } from 'expo-asset';
 
 // datacar.com.ar's own plate graphics (resources/images/modern-plate.png / legacy-plate.png)
 // -- used directly, by the user's own explicit call after being told these are a
@@ -77,8 +78,17 @@ export function preloadPlateAssets(): Promise<void> {
       [LEGACY_PLATE_FONT]: require('../../assets/fonts/PlateLegacy.ttf'),
     }).catch((err) => console.warn('[plates] font load failed:', err));
     const images = PLATE_IMAGES.map((source) => {
-      const uri = Image.resolveAssetSource(source)?.uri;
-      return uri && /^https?:/.test(uri) ? Image.prefetch(uri).catch(() => false) : Promise.resolve(true);
+      // expo-asset resolves the URI on every platform (Image.resolveAssetSource doesn't
+      // exist on web). Only a network URI needs fetching ahead: Metro's in development, or
+      // the site's own path on web; a release build's images are already on the device.
+      let uri: string | undefined;
+      try {
+        uri = Asset.fromModule(source).uri;
+      } catch {
+        return Promise.resolve(true);
+      }
+      const remote = Platform.OS === 'web' || /^https?:/.test(uri ?? '');
+      return uri && remote ? Image.prefetch(uri).catch(() => false) : Promise.resolve(true);
     });
     plateAssetsPromise = Promise.all([fonts, ...images]).then(() => {
       plateAssetsReady = true;

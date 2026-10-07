@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography, useScale } from '@/src/theme/typography';
+import { useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getPayoutInfo, updatePayoutInfo } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
@@ -31,7 +31,6 @@ export default function PayoutInfoScreen() {
   const colors = useThemeColors();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
-  const typography = useTypography();
   const user = useSessionStore((s) => s.user)!;
 
   const [cbu, setCbu] = useState('');
@@ -142,7 +141,6 @@ export default function PayoutInfoScreen() {
 
   return (
     <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
-      <Text style={typography.h1}>{t('owner.payoutInfo.title')}</Text>
       <Text style={styles.helper}>{t('owner.payoutInfo.helper')}</Text>
 
       {!hasPayoutInfo && (

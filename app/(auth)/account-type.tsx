@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/Screen';
 import { Button } from '@/src/components/Button';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography, useScale } from '@/src/theme/typography';
+import { useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useAccountTypeStore, tabRouteFor } from '@/src/store/useAccountTypeStore';
 import { updateAccountType } from '@/src/api/auth';
@@ -52,7 +52,6 @@ export default function AccountTypeScreen() {
   const colors = useThemeColors();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
-  const typography = useTypography();
 
   const user = useSessionStore((s) => s.user);
   const setUser = useSessionStore((s) => s.setUser);
@@ -86,18 +85,26 @@ export default function AccountTypeScreen() {
   }
 
   const styles = StyleSheet.create({
+    // A welcome screen (no header bar, see app/(auth)/_layout.tsx): white, starting near
+    // the top -- not centered, which left a gap above.
     container: {
       flex: 1,
-      backgroundColor: colors.background,
-      padding: 24,
-      gap: 16,
-      justifyContent: 'center',
+      backgroundColor: colors.surface,
+      paddingHorizontal: 24,
+      paddingTop: sc(48),
+      gap: 14,
     },
+    heroIcon: {
+      alignSelf: 'center', width: sc(64), height: sc(64), borderRadius: sc(32),
+      backgroundColor: colors.teal + '1F', alignItems: 'center', justifyContent: 'center',
+    },
+    title: { fontSize: sc(26), fontWeight: '800', color: colors.text, textAlign: 'center' },
     subtitle: {
       fontSize: sc(14),
       color: colors.textSecondary,
       textAlign: 'center',
-      marginBottom: 8,
+      lineHeight: sc(20),
+      marginBottom: 6,
     },
     card: {
       borderRadius: 16,
@@ -137,12 +144,15 @@ export default function AccountTypeScreen() {
     cardDescSelected: { color: colors.teal + 'CC' },
     checkWrap: { width: 24, alignItems: 'center' },
     errorText: { color: '#C62828', fontSize: sc(13), textAlign: 'center' },
-    btnWrap: { marginTop: 8 },
+    btnWrap: { marginTop: 4 },
   });
 
   return (
     <Screen style={styles.container} edges={['left', 'right', 'bottom', 'top']}>
-      <Text style={[typography.h1, { textAlign: 'center' }]}>{t('accountType.title')}</Text>
+      <View style={styles.heroIcon}>
+        <Ionicons name="options-outline" size={sc(30)} color={colors.teal} />
+      </View>
+      <Text style={styles.title}>{t('accountType.title')}</Text>
       <Text style={styles.subtitle}>{t('accountType.subtitle')}</Text>
 
       {OPTIONS.map((opt) => {

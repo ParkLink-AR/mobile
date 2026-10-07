@@ -1,22 +1,19 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
-import { Text, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
+import { Text, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography, useScale } from '@/src/theme/typography';
 import { confirmEmailCode, resendVerificationCode } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
+import { CodeInput, FormError, FormIntro, useAccountFormStyles } from '@/src/components/AccountForm';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function VerifyCode() {
   useLanguage();
   const colors = useThemeColors();
-  const scale = useScale();
-  const sc = (n: number) => Math.round(n * scale);
-  const typography = useTypography();
   const { email } = useLocalSearchParams<{ email: string }>();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -31,23 +28,8 @@ export default function VerifyCode() {
     return () => clearInterval(id);
   }, [cooldown]);
 
-  const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.surface, padding: 24, gap: 12, justifyContent: 'center' },
-    input: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
-      fontSize: sc(24),
-      letterSpacing: 8,
-      textAlign: 'center',
-      color: colors.text,
-    },
-    error: { color: '#C62828', fontSize: sc(13), textAlign: 'center' },
-    info: { color: colors.teal, fontSize: sc(13), textAlign: 'center' },
-    link: { color: colors.teal, textAlign: 'center', marginTop: 8 },
-    linkDisabled: { color: colors.textSecondary },
-  });
+  const form = useAccountFormStyles();
+
 
   async function handleConfirm() {
     if (!email) return;
@@ -86,31 +68,21 @@ export default function VerifyCode() {
   }
 
   return (
-    <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
-      <Text style={typography.h1}>{t('auth.verifyCode.title')}</Text>
-      <Text style={typography.body}>
-        {t('auth.verifyCode.helper', { email })}
-      </Text>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {info ? <Text style={styles.info}>{info}</Text> : null}
-      <TextInput
-        style={styles.input}
-        placeholder="000000"
-        placeholderTextColor={colors.textSecondary}
-        keyboardType="number-pad"
-        maxLength={6}
-        value={code}
-        onChangeText={(v) => setCode(v.replace(/[^0-9]/g, ''))}
+    <Screen form style={form.container} edges={['left', 'right', 'bottom']}>
+      <FormIntro
+        icon="mail-unread-outline"
+        title={t('auth.verifyCode.title')}
+        text={t('auth.verifyCode.helper', { email })}
       />
+      <FormError message={error} />
+      {info ? <Text style={form.info}>{info}</Text> : null}
+      <CodeInput value={code} onChange={setCode} autoFocus />
       {loading ? (
         <ActivityIndicator color={colors.teal} />
       ) : (
         <Button title={t('common.confirm')} onPress={handleConfirm} />
       )}
-      <Text
-        style={[styles.link, (cooldown > 0 || resending) && styles.linkDisabled]}
-        onPress={handleResend}
-      >
+      <Text style={[form.link, (cooldown > 0 || resending) && form.linkDisabled]} onPress={handleResend}>
         {cooldown > 0 ? t('auth.resendCodeCooldown', { seconds: String(cooldown) }) : t('auth.resendCode')}
       </Text>
     </Screen>

@@ -20,6 +20,7 @@ const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
   owner_new_booking: 'checkmark-circle',
   driver_confirmed: 'checkmark-circle',
   driver_rejected: 'close-circle',
+  driver_spot_unavailable: 'close-circle',
   driver_review_prompt: 'star-outline',
   owner_review_prompt: 'star-outline',
   driver_verified: 'shield-checkmark-outline',
@@ -102,7 +103,7 @@ export default function Notifications() {
     if (kind === 'driver_confirmed' || kind === 'owner_new_booking' || kind === 'driver_verified' || kind === 'owner_settlement_paid') {
       return colors.success;
     }
-    if (kind === 'driver_rejected') return '#C62828';
+    if (kind === 'driver_rejected' || kind === 'driver_spot_unavailable') return '#C62828';
     if (kind === 'message_received' || kind === 'ticket_replied') return colors.teal;
     return colors.warning;
   }
@@ -180,6 +181,7 @@ export default function Notifications() {
                   {item.kind === 'owner_new_booking' && t('notifications.ownerNewBooking.body', { when: formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut')) })}
                   {item.kind === 'driver_confirmed' && t('notifications.driverConfirmed.body', { when: formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut')) })}
                   {item.kind === 'driver_rejected' && t('notifications.driverRejected.body')}
+                  {item.kind === 'driver_spot_unavailable' && t('notifications.driverSpotUnavailable.body')}
                   {item.kind === 'driver_review_prompt' && t('notifications.driverReviewPrompt.body')}
                   {item.kind === 'owner_review_prompt' && (item.counterpartName
                     ? t('notifications.ownerReviewPrompt.bodyNamed', { name: item.counterpartName })

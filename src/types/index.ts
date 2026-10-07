@@ -33,6 +33,26 @@ export interface AuthUser {
   emailVerified: boolean;
   phoneVerified: boolean;
   accountType: AccountType;
+  // 'PENDING_DELETION' while the account waits out the deletion the user asked for; the
+  // app then shows a banner with deletionScheduledAt and a button to cancel it.
+  status: AccountStatus;
+  deletionScheduledAt?: string;
+}
+
+export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'PENDING_DELETION' | 'DELETED';
+
+// What deleting the account would do (GET /users/{id}/deletion).
+export interface AccountDeletionSummary {
+  blocked: boolean;
+  blockedReason?: string;
+  inProgressCount: number;
+  driverBookingsToCancel: number;
+  ownerBookingsToCancel: number;
+  ownerRequestsToReject: number;
+  pendingPayoutCount: number;
+  pendingPayoutAmount: number; // pesos
+  spotCount: number;
+  deletionDate: string;
 }
 
 export interface AuthTokens {
