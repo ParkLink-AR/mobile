@@ -14,10 +14,15 @@ import {
   subscribeNotificationTaps,
   unregisterPush,
 } from '@/src/services/pushNotifications';
+import { preloadPlateAssets } from '@/src/components/VehiclePlate';
 
 // Required for expo-web-browser to intercept deep-link redirects from
 // MercadoPago and close the in-app browser automatically.
 WebBrowser.maybeCompleteAuthSession();
+
+// Start loading the license-plate images and fonts right away, so plates render whole
+// the first time a screen shows one (see VehiclePlate).
+preloadPlateAssets();
 
 export default function RootLayout() {
   const userId = useSessionStore((s) => s.user?.id ?? null);

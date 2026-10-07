@@ -18,7 +18,7 @@ import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { ModalKeyboardAvoider } from '@/src/components/ModalKeyboardAvoider';
 import { Screen } from '@/src/components/Screen';
-import { VehiclePlate, isValidArgentinePlate } from '@/src/components/VehiclePlate';
+import { VehiclePlate, isValidArgentinePlate, usePlateAssetsReady } from '@/src/components/VehiclePlate';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
@@ -34,6 +34,8 @@ export default function VehiclesScreen() {
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
+  // Keep the spinner until the plate images are in too, so the list shows up complete.
+  const platesReady = usePlateAssetsReady();
 
   const [formVisible, setFormVisible] = useState(false);
   const [plate, setPlate] = useState('');
@@ -139,7 +141,7 @@ export default function VehiclesScreen() {
         <Text style={typography.h1}>{t('vehicles.title')}</Text>
       </View>
 
-      {loading ? (
+      {loading || !platesReady ? (
         <ActivityIndicator color={colors.teal} />
       ) : loadFailed ? (
         <View style={styles.emptyContainer}>

@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ImageBackground, NativeSyntheticEvent, TextLayoutEventData } from 'react-native';
-import { useFonts } from 'expo-font';
+import { useEffect, useState } from 'react';
+import {
+  View, Text, StyleSheet, Image, ImageBackground, ImageSourcePropType, NativeSyntheticEvent, TextLayoutEventData,
+} from 'react-native';
+import * as Font from 'expo-font';
 
 // datacar.com.ar's own plate graphics (resources/images/modern-plate.png / legacy-plate.png)
 // -- used directly, by the user's own explicit call after being told these are a
@@ -58,6 +60,74 @@ const LEGACY_BIKE_BAND_TOP = 51 / 216;
 const LEGACY_BIKE_BAND_HEIGHT = 142 / 216;
 const LEGACY_BIKE_CAP_FILL = 0.4;
 const LEGACY_BIKE_LINE_CENTERS = [0.26, 0.75];
+
+// The plate images and fonts, loaded once for the whole app. Until they are, a plate keeps
+// its place but shows nothing -- otherwise the lettering pops in first and the plate image
+// a moment later, which is very visible in development, where Metro serves the images over
+// the network (a release build has them on disk). preloadPlateAssets() is kicked off at app
+// start (app/_layout.tsx) so by the time a plate is on screen it's usually all there.
+const PLATE_IMAGES = [MODERN_PLATE_BG, LEGACY_PLATE_BG, MODERN_BIKE_PLATE_BG, LEGACY_BIKE_PLATE_BG];
+let plateAssetsReady = false;
+let plateAssetsPromise: Promise<void> | null = null;
+
+export function preloadPlateAssets(): Promise<void> {
+  if (!plateAssetsPromise) {
+    const fonts = Font.loadAsync({
+      [PLATE_FONT]: require('../../assets/fonts/PlateNumber.ttf'),
+      [LEGACY_PLATE_FONT]: require('../../assets/fonts/PlateLegacy.ttf'),
+    }).catch((err) => console.warn('[plates] font load failed:', err));
+    const images = PLATE_IMAGES.map((source) => {
+      const uri = Image.resolveAssetSource(source)?.uri;
+      return uri && /^https?:/.test(uri) ? Image.prefetch(uri).catch(() => false) : Promise.resolve(true);
+    });
+    plateAssetsPromise = Promise.all([fonts, ...images]).then(() => {
+      plateAssetsReady = true;
+    });
+  }
+  return plateAssetsPromise;
+}
+
+/** Whether the plate images and fonts have finished loading (see preloadPlateAssets). */
+export function usePlateAssetsReady(): boolean {
+  const [ready, setReady] = useState(plateAssetsReady);
+  useEffect(() => {
+    if (ready) return;
+    let cancelled = false;
+    preloadPlateAssets().then(() => !cancelled && setReady(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [ready]);
+  return ready;
+}
+
+/** A plate's image with its lettering on top, both hidden until the image has actually
+ * been drawn and the fonts are in, so they appear together. */
+function PlateBackground({ source, style, children }: {
+  source: ImageSourcePropType;
+  style: object;
+  children: React.ReactNode;
+}) {
+  const assetsReady = usePlateAssetsReady();
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const visible = assetsReady && imageLoaded;
+  return (
+    <ImageBackground
+      source={source}
+      style={[style, !visible && backgroundStyles.hidden]}
+      resizeMode="stretch"
+      onLoad={() => setImageLoaded(true)}
+      // A broken image shouldn't hide the plate number forever.
+      onError={() => setImageLoaded(true)}
+    >
+      {children}
+    </ImageBackground>
+  );
+}
+
+const backgroundStyles = StyleSheet.create({
+  hidden: { opacity: 0 },
+});
 // An en space rather than two spaces: the web collapses consecutive spaces into one.
 const LEGACY_GROUP_GAP = '\u2002';
 
@@ -133,10 +203,9 @@ const SLOT_ALIGN: Record<PlateAlign, 'center' | 'flex-start' | 'flex-end'> = {
  * See isValidArgentinePlate for the four patterns Argentina actually issues.
  */
 export function VehiclePlate({ plate, size = 'large', align = 'center' }: VehiclePlateProps) {
-  const [fontLoaded] = useFonts({
-    [PLATE_FONT]: require('../../assets/fonts/PlateNumber.ttf'),
-    [LEGACY_PLATE_FONT]: require('../../assets/fonts/PlateLegacy.ttf'),
-  });
+  usePlateAssetsReady();
+  // Only name the custom fonts once they're registered -- an unknown fontFamily is an error on iOS.
+  const fontLoaded = Font.isLoaded(PLATE_FONT) && Font.isLoaded(LEGACY_PLATE_FONT);
   const clean = cleanPlate(plate);
   if (MOTO_MERCOSUR_FORMAT.test(clean)) {
     return <MercosurBikePlate clean={clean} size={size} align={align} fontLoaded={fontLoaded} />;
@@ -186,10 +255,9 @@ export function VehiclePlate({ plate, size = 'large', align = 'center' }: Vehicl
 
   return (
     <View style={styles.slot}>
-      <ImageBackground
+      <PlateBackground
         source={isOldFormat ? LEGACY_PLATE_BG : MODERN_PLATE_BG}
         style={styles.container}
-        resizeMode="stretch"
       >
         {isOldFormat ? (
           <LegacyPlateText
@@ -207,7 +275,7 @@ export function VehiclePlate({ plate, size = 'large', align = 'center' }: Vehicl
             </Text>
           </View>
         )}
-      </ImageBackground>
+      </PlateBackground>
     </View>
   );
 }
@@ -263,7 +331,7 @@ function MercosurBikePlate({
 
   return (
     <View style={styles.slot}>
-      <ImageBackground source={MODERN_BIKE_PLATE_BG} style={styles.container} resizeMode="stretch">
+      <PlateBackground source={MODERN_BIKE_PLATE_BG} style={styles.container}>
         <View style={styles.textWindow}>
           <Text style={styles.line} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
             {clean.slice(0, 4)}
@@ -272,7 +340,7 @@ function MercosurBikePlate({
             {clean.slice(4)}
           </Text>
         </View>
-      </ImageBackground>
+      </PlateBackground>
     </View>
   );
 }
@@ -364,7 +432,7 @@ function LegacyBikePlate({
 
   return (
     <View style={styles.slot}>
-      <ImageBackground source={LEGACY_BIKE_PLATE_BG} style={styles.container} resizeMode="stretch">
+      <PlateBackground source={LEGACY_BIKE_PLATE_BG} style={styles.container}>
         {[clean.slice(0, 3), clean.slice(3)].map((line, index) => (
           <LegacyPlateText
             key={line + index}
@@ -376,7 +444,7 @@ function LegacyBikePlate({
             fontLoaded={fontLoaded}
           />
         ))}
-      </ImageBackground>
+      </PlateBackground>
     </View>
   );
 }
