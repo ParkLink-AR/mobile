@@ -638,7 +638,7 @@
   "driver.payment.result.pendingTitle": "お支払いを確認しています",
   "driver.payment.result.pendingBody": "Mercado Pagoの確認を待っています。通常は数秒で完了します。",
   "driver.payment.result.pendingHint": "お支払いを完了しない場合は、この画面を離れても大丈夫です。予約は数分で自動的に解放されます。",
-  "driver.payment.result.stepSent": "支払いを送信",
+  "driver.payment.result.stepMercadoPagoWaiting": "Mercado Pagoの承認待ち",
   "driver.payment.result.stepMercadoPago": "Mercado Pagoの承認",
   "driver.payment.result.stepOwner": "オーナーの承認",
   "driver.payment.result.stepReserved": "駐車スペースを予約",

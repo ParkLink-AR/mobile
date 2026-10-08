@@ -638,7 +638,7 @@
   "driver.payment.result.pendingTitle": "Confirming your payment",
   "driver.payment.result.pendingBody": "We're waiting for Mercado Pago to confirm it. It usually takes a few seconds.",
   "driver.payment.result.pendingHint": "If you're not going to finish paying, you can leave: the booking is released on its own in a few minutes.",
-  "driver.payment.result.stepSent": "Payment sent",
+  "driver.payment.result.stepMercadoPagoWaiting": "Waiting for Mercado Pago approval",
   "driver.payment.result.stepMercadoPago": "Mercado Pago approval",
   "driver.payment.result.stepOwner": "Owner's acceptance",
   "driver.payment.result.stepReserved": "Spot reserved",

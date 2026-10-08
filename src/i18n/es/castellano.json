@@ -638,7 +638,7 @@
   "driver.payment.result.pendingTitle": "Confirmando tu pago",
   "driver.payment.result.pendingBody": "Estamos esperando la confirmación de Mercado Pago. Suele tardar unos segundos.",
   "driver.payment.result.pendingHint": "Si no vas a completar el pago, podés salir: la reserva se libera sola en unos minutos.",
-  "driver.payment.result.stepSent": "Pago enviado",
+  "driver.payment.result.stepMercadoPagoWaiting": "Esperando aprobación de Mercado Pago",
   "driver.payment.result.stepMercadoPago": "Aprobación de Mercado Pago",
   "driver.payment.result.stepOwner": "Aceptación del propietario",
   "driver.payment.result.stepReserved": "Cochera reservada",
