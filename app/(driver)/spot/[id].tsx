@@ -1,11 +1,10 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Pressable, Image } from 'react-native';
 import { useLocalSearchParams, router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Chip } from '@/src/components/Chip';
-import { TAG_LABEL_KEYS, FAVORITE_RED } from '@/src/components/ParkingSpotCard';
-import { RatingStars } from '@/src/components/RatingStars';
+import { FAVORITE_RED } from '@/src/components/ParkingSpotCard';
+import { formatShortDate } from '@/src/services/bookingDates';
 import { PhotoGallery } from '@/src/components/PhotoGallery';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -17,7 +16,7 @@ import {
 import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
 import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography, useScale } from '@/src/theme/typography';
+import { useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
 import { getParkingSpotDetail, formatScheduleForDisplay, getSpotPricePerHour, getMinPricePerHour } from '@/src/services/parkingService';
@@ -28,6 +27,30 @@ import { getStayQuote, type FreeWindow, type StayQuote } from '@/src/api/parking
 import { ApiError } from '@/src/api/client';
 import { VehicleType, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { ParkingSpot } from '@/src/types';
+
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
+
+// What each amenity means for the driver, beyond its one-word label.
+// Spots store "covered" as the Spanish word (see parkingService's mapping), the rest as keys.
+const FEATURES: Record<string, { icon: IconName; labelKey: string; detailKey: string }> = {
+  covered: { icon: 'home-outline', labelKey: 'spot.tag.covered', detailKey: 'spot.feature.covered' },
+  Cubierta: { icon: 'home-outline', labelKey: 'spot.tag.covered', detailKey: 'spot.feature.covered' },
+  uncovered: { icon: 'sunny-outline', labelKey: 'spot.tag.uncovered', detailKey: 'spot.feature.uncovered' },
+  Descubierta: { icon: 'sunny-outline', labelKey: 'spot.tag.uncovered', detailKey: 'spot.feature.uncovered' },
+  access247: { icon: 'time-outline', labelKey: 'spot.tag.access247', detailKey: 'spot.feature.access247' },
+  secure: { icon: 'shield-checkmark-outline', labelKey: 'spot.tag.secure', detailKey: 'spot.feature.secure' },
+};
+
+/** "$9.180" */
+function formatPesos(amount: number): string {
+  return `$${Math.round(amount).toLocaleString('es-AR')}`;
+}
+
+/** 0 = Monday ... 6 = Sunday, on the Buenos Aires calendar (same as the schedule). */
+function todayScheduleDay(): number {
+  const art = new Date(Date.now() - 3 * 3600_000);
+  return (art.getUTCDay() + 6) % 7;
+}
 
 /**
  * Extracts the Buenos Aires hour-of-day from an ISO datetime string.
@@ -110,13 +133,12 @@ export default function SpotDetail() {
   const colors = useThemeColors();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
-  const typography = useTypography();
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const { id } = useLocalSearchParams<{ id: string }>();
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
-  const [ownerName, setOwnerName] = useState<string | null>(null);
+  const [owner, setOwner] = useState<{ name: string; avatarUrl: string | null } | null>(null);
   const [selectedStartHour, setSelectedStartHour] = useState<number | null>(null);
   const [selectedEndHour, setSelectedEndHour] = useState<number | null>(null);
   // Sólo importa para el precio cuando la cochera cobra distinto por
@@ -145,7 +167,9 @@ export default function SpotDetail() {
 
   useEffect(() => {
     if (!spot) return;
-    getPublicProfileApi(spot.ownerId).then((profile) => setOwnerName(profile.name)).catch(() => {});
+    getPublicProfileApi(spot.ownerId)
+      .then((profile) => setOwner({ name: profile.name, avatarUrl: profile.avatar_url }))
+      .catch(() => {});
   }, [spot?.ownerId]);
 
   // Auto-refreshing availability: refetches on day change and every 30 s. The
@@ -283,448 +307,536 @@ export default function SpotDetail() {
   const total = (visiblePricePerHour ?? 0) * durationHours;
   const canBook = effectiveStartHour !== null && effectiveEndHour !== null;
 
+  const showHourly = spot.hourlyEnabled && (!spot.stayEnabled || bookingMode === 'hourly');
+  const showStay = spot.stayEnabled && (!spot.hourlyEnabled || bookingMode === 'stay');
+  const stayTotal = stayQuote ? getDriverVisiblePrice(stayQuote.amount / 100, commissionRatePercent) : null;
+  const vehiclesLabel = spot.vehicleTypes.map((vt) => t(VEHICLE_TYPE_LABEL_KEYS[vt]).toLowerCase()).join(', ');
+  const neighborhood = spot.address.split(',').map((part) => part.trim())[1];
+  const scheduleLines = spot.hourlyEnabled ? formatScheduleForDisplay(spot.schedule) : [];
+  const today = todayScheduleDay();
+  const description = spot.descriptionKey ? t(spot.descriptionKey) : spot.description;
+  const pad = (h: number) => `${String(h % 24).padStart(2, '0')}:00`;
+
   const styles = StyleSheet.create({
     screen: { backgroundColor: colors.background },
-    container: { flex: 1, backgroundColor: colors.background },
-    photoWrapper: { position: 'relative' },
+    scroll: { flex: 1, backgroundColor: colors.background },
+    photoWrapper: { position: 'relative', backgroundColor: colors.background },
     favoriteBtn: {
       position: 'absolute', top: 14, right: 14,
-      width: 36, height: 36, borderRadius: 18,
+      width: 38, height: 38, borderRadius: 19,
       alignItems: 'center', justifyContent: 'center',
-      backgroundColor: 'rgba(0,0,0,0.35)',
-    },
-    photo: { width: '100%', height: 200 },
-    body: { padding: 16, gap: 14 },
-    infoCard: {
       backgroundColor: colors.surface,
-      borderRadius: 14, borderWidth: 1, borderColor: colors.border,
-      padding: 16, gap: 6,
+      shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 3,
     },
-    tagRow: { flexDirection: 'row', flexWrap: 'wrap', marginVertical: 4 },
-    ownerRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
-    ownerRowText: { flex: 1, fontSize: sc(13), color: colors.textSecondary },
-    row: { marginTop: 6 },
-    total: { ...typography.h2, color: colors.teal, marginVertical: 4 },
-    ownerBanner: {
-      flexDirection: 'row', alignItems: 'center', gap: 8,
-      backgroundColor: colors.teal + '18',
-      borderRadius: 10, padding: 12,
-      borderWidth: 1, borderColor: colors.teal + '44',
+    body: { paddingHorizontal: 22, paddingTop: 22, paddingBottom: 32 },
+
+    title: { fontSize: sc(22), fontWeight: '700', color: colors.text, letterSpacing: -0.2, lineHeight: sc(27) },
+    metaRow: { marginTop: 8 },
+    metaText: { fontSize: sc(13), color: colors.text },
+    metaMuted: { fontSize: sc(13), color: colors.textSecondary },
+    metaLink: { fontSize: sc(13), color: colors.teal, fontWeight: '600' },
+    address: { fontSize: sc(13), color: colors.textSecondary, marginTop: 4, lineHeight: sc(17) },
+    rates: { marginTop: 16, gap: 12 },
+    rate: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+    rateIcon: {
+      width: sc(34), height: sc(34), borderRadius: sc(17),
+      alignItems: 'center', justifyContent: 'center', backgroundColor: colors.teal + '1A',
     },
-    ownerBannerText: { fontSize: sc(14), fontWeight: '600', color: colors.teal, flex: 1 },
+    rateText: { flex: 1 },
+    rateHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
+    rateLabel: { fontSize: sc(14), fontWeight: '600', color: colors.text },
+    rateValue: { fontSize: sc(18), fontWeight: '700', color: colors.teal },
+    rateUnit: { fontSize: sc(13), fontWeight: '400', color: colors.textSecondary },
+    rateDetail: { fontSize: sc(13), color: colors.textSecondary, marginTop: 2, lineHeight: sc(18) },
+
+    // colors.border barely shows on the gray background -- a translucent textSecondary
+    // reads as a clear line in both themes.
+    divider: { height: 1, backgroundColor: colors.textSecondary + '40', marginVertical: 22 },
+
+    ownedNote: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+    ownedNoteText: { fontSize: sc(14), fontWeight: '600', color: colors.teal },
+
+    hostRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+    avatar: { width: sc(48), height: sc(48), borderRadius: sc(24), backgroundColor: colors.border },
+    avatarFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.teal + '1F' },
+    avatarInitial: { fontSize: sc(18), fontWeight: '700', color: colors.teal },
+    hostText: { flex: 1 },
+    hostLabel: { fontSize: sc(13), color: colors.textSecondary },
+    hostName: { fontSize: sc(17), fontWeight: '600', color: colors.text, marginTop: 1 },
+
+    sectionTitle: { fontSize: sc(17), fontWeight: '600', color: colors.text, marginBottom: 14 },
+    feature: { flexDirection: 'row', alignItems: 'flex-start', gap: 16, marginBottom: 16 },
+    featureText: { flex: 1 },
+    featureTitle: { fontSize: sc(14), fontWeight: '600', color: colors.text },
+    featureDetail: { fontSize: sc(13), color: colors.textSecondary, marginTop: 2, lineHeight: sc(18) },
+    paragraph: { fontSize: sc(15), color: colors.text, lineHeight: sc(22) },
+
+    scheduleLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 7 },
+    scheduleDays: { fontSize: sc(14), color: colors.text },
+    scheduleHours: { fontSize: sc(14), color: colors.text, fontVariant: ['tabular-nums'] },
+    scheduleClosed: { color: colors.textSecondary },
+    scheduleToday: { fontWeight: '600' },
+    todayTag: { fontSize: sc(12), fontWeight: '600', color: colors.teal },
+
+    segment: { flexDirection: 'row', backgroundColor: colors.border, borderRadius: 12, padding: 4, marginBottom: 20 },
+    segmentItem: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: 'center' },
+    segmentItemActive: {
+      backgroundColor: colors.surface,
+      shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1,
+    },
+    segmentText: { fontSize: sc(14), fontWeight: '600', color: colors.textSecondary },
+    segmentTextActive: { color: colors.text },
+
+    field: { marginBottom: 18 },
+    fieldLabel: { fontSize: sc(14), fontWeight: '600', color: colors.text, marginBottom: 8 },
+    dateInput: { borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 13, backgroundColor: colors.surface },
+    hint: { fontSize: sc(13), color: colors.textSecondary, marginTop: 8, lineHeight: sc(18) },
+    warn: { fontSize: sc(14), color: colors.warning },
+    retry: { fontSize: sc(14), fontWeight: '600', color: colors.teal, textDecorationLine: 'underline' },
+
+    chipRow: { flexDirection: 'row', gap: 8, paddingRight: 22 },
+    chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    chip: {
+      paddingVertical: 9, paddingHorizontal: 15, borderRadius: 999,
+      borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
+    },
+    chipSelected: { backgroundColor: colors.teal, borderColor: colors.teal },
+    chipText: { fontSize: sc(14), fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+    chipTextSelected: { color: colors.white },
+
+    priceLine: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+    priceLineText: { fontSize: sc(14), color: colors.text },
+    breakdown: { fontSize: sc(13), color: colors.textSecondary, marginTop: 6 },
+
+    footer: {
+      flexDirection: 'row', alignItems: 'center', gap: 16,
+      paddingHorizontal: 22, paddingTop: 12, paddingBottom: 12,
+      borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    footerInfo: { flex: 1 },
+    footerTotal: { fontSize: sc(18), fontWeight: '700', color: colors.teal },
+    footerWhen: { fontSize: sc(13), color: colors.textSecondary, marginTop: 2 },
+    footerButton: { minWidth: 150 },
     editBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      backgroundColor: colors.teal, borderRadius: 10,
-      paddingVertical: 13, paddingHorizontal: 16, justifyContent: 'center',
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      backgroundColor: colors.teal, borderRadius: 12, paddingVertical: 14,
     },
-    editBtnText: { fontSize: sc(15), fontWeight: '700', color: colors.white },
-
-    sectionLabel: {
-      fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
-      letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4,
-    },
-    fieldLabel: { fontSize: sc(13), fontWeight: '600', color: colors.text, marginBottom: 4 },
-
-    // Mode switch (por hora / estadía)
-    modeToggleRow: { flexDirection: 'row', gap: 8 },
-    modeToggle: {
-      flex: 1, borderWidth: 1.5, borderColor: colors.border,
-      borderRadius: 10, paddingVertical: 10, alignItems: 'center',
-    },
-    modeToggleActive: { backgroundColor: colors.teal, borderColor: colors.teal },
-    modeToggleText: { fontSize: sc(14), fontWeight: '600', color: colors.textSecondary },
-    modeToggleTextActive: { color: colors.surface, fontWeight: '700' },
-    card: {
-      backgroundColor: colors.surface,
-      borderRadius: 14, borderWidth: 1, borderColor: colors.border,
-      padding: 16, gap: 10,
-    },
-
-    // Calendar date field (same box style as the publish/edit forms)
-    dateInput: {
-      borderWidth: 1, borderColor: colors.border, borderRadius: 10,
-      padding: 12,
-    },
-
-    // Slot picker
-    slotRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    // Same chips as slotRow, but for hour pickers with many options (up to 24 for a
-    // stay) -- a single horizontally-scrollable row instead of wrapping across several
-    // lines, which used to push the rest of the screen (price, book button) way down.
-    hourSlotRow: { flexDirection: 'row', gap: 8 },
-    slotChip: {
-      paddingVertical: 8, paddingHorizontal: 14,
-      borderRadius: 20, borderWidth: 1,
-      borderColor: colors.teal,
-      backgroundColor: colors.surface,
-    },
-    slotChipSelected: { backgroundColor: colors.teal },
-    slotChipText: { fontSize: sc(14), fontWeight: '500', color: colors.teal },
-    slotChipTextSelected: { color: colors.white },
-    noSlotsText: { ...typography.body, color: colors.warning },
-
-    // Estadía
-    stayHourHint: { ...typography.caption, color: colors.textSecondary },
-    stayBreakdownText: { ...typography.body, color: colors.textSecondary },
+    editBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.white },
   });
+
+  function hourChips(hours: number[], selected: number | null, onSelect: (h: number) => void) {
+    return (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+        {hours.map((h) => {
+          const isSelected = h === selected;
+          return (
+            <TouchableOpacity
+              key={h}
+              style={[styles.chip, isSelected && styles.chipSelected]}
+              onPress={() => onSelect(h)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>{pad(h)}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    );
+  }
+
+  const leadPrice = spot.hourlyEnabled
+    ? spot.pricePerHourByVehicleType
+      ? t('spot.pricePerHour.from', { price: formatPesos(getDriverVisiblePrice(getMinPricePerHour(spot)!, commissionRatePercent)) })
+      : formatPesos(visiblePricePerHour ?? 0)
+    : null;
+
+  // "$60.000 por semana · $200.000 por mes · Del 10/10/2026 al 20/10/2026 · Hasta 7 días"
+  const stayDetail = [
+    spot.pricePerWeek !== null
+      ? t('spot.mode.perWeek', { price: formatPesos(getDriverVisiblePrice(spot.pricePerWeek, commissionRatePercent)) })
+      : null,
+    spot.pricePerMonth !== null
+      ? t('spot.mode.perMonth', { price: formatPesos(getDriverVisiblePrice(spot.pricePerMonth, commissionRatePercent)) })
+      : null,
+    spot.stayAvailableUntil
+      ? t('spot.mode.window', { from: formatShortDate(minStayStartDate), to: formatShortDate(spot.stayAvailableUntil) })
+      : spot.stayAvailableFrom && spot.stayAvailableFrom > todayArtDateISO()
+        ? t('spot.mode.from', { from: formatShortDate(spot.stayAvailableFrom) })
+        : null,
+    spot.maxStayDays ? t('spot.mode.maxDays', { days: String(spot.maxStayDays) }) : null,
+  ].filter(Boolean).join(' · ');
 
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
-      <ScrollView style={styles.container}>
-      <View style={styles.photoWrapper}>
-        <PhotoGallery photos={spot.photos} fallbackUri={spot.photoUrl} />
-        <TouchableOpacity style={styles.favoriteBtn} onPress={() => toggleFavorite(spot.id)}>
-          <Ionicons
-            name={isFavorite ? 'heart' : 'heart-outline'}
-            size={sc(20)}
-            color={isFavorite ? FAVORITE_RED : colors.white}
-          />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.body}>
-        {/* The owner can browse their own spot from the driver side, but never rent it
-            (booking-service rejects it too) -- the booking options below are replaced
-            by an edit button. */}
-        {isOwner && (
-          <View style={styles.ownerBanner}>
-            <Ionicons name="home-outline" size={18} color={colors.teal} />
-            <Text style={styles.ownerBannerText}>{t('spot.ownedByYou')}</Text>
-          </View>
-        )}
-        <View style={styles.infoCard}>
-          <Text style={typography.h1}>{spot.title}</Text>
-          <TouchableOpacity onPress={() => router.push(`${group}/spot/${spot.id}/reviews`)}>
-            <RatingStars rating={spot.rating} count={spot.reviewCount} />
+      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.photoWrapper}>
+          <PhotoGallery photos={spot.photos} fallbackUri={spot.photoUrl} />
+          <TouchableOpacity
+            style={styles.favoriteBtn}
+            onPress={() => toggleFavorite(spot.id)}
+            accessibilityLabel={t(isFavorite ? 'favorites.remove' : 'favorites.add')}
+          >
+            <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={sc(20)} color={isFavorite ? FAVORITE_RED : colors.text} />
           </TouchableOpacity>
-          {!!ownerName && (
-            <TouchableOpacity
-              style={styles.ownerRow}
-              onPress={() => router.push(`${group}/profile/${spot.ownerId}?as=owner`)}
-            >
-              <Ionicons name="person-circle-outline" size={sc(16)} color={colors.textSecondary} />
-              <Text style={styles.ownerRowText}>{t('spot.postedBy', { name: ownerName })}</Text>
-              <Ionicons name="chevron-forward" size={sc(13)} color={colors.textSecondary} />
-            </TouchableOpacity>
-          )}
-          <View style={styles.tagRow}>
-            {spot.tags.map((tag) => (
-              <Chip key={tag} label={TAG_LABEL_KEYS[tag] ? t(TAG_LABEL_KEYS[tag]) : tag} />
-            ))}
-            {spot.vehicleTypes.map((vt) => (
-              <Chip key={vt} label={t(VEHICLE_TYPE_LABEL_KEYS[vt])} />
-            ))}
-          </View>
         </View>
 
-        <View style={styles.card}>
-          {(spot.descriptionKey || spot.description) ? (
-            <Row
-              label={t('spot.description')}
-              value={spot.descriptionKey ? t(spot.descriptionKey) : spot.description}
-            />
-          ) : null}
-          <Row label={t('spot.address')} value={spot.address} />
-          {spot.hourlyEnabled && (
+        <View style={styles.body}>
+          {/* The owner can browse their own spot from the driver side, but never rent it
+              (booking-service rejects it too) -- the booking part is replaced by an edit
+              button in the footer. */}
+          {isOwner && (
+            <View style={styles.ownedNote}>
+              <Ionicons name="home" size={sc(16)} color={colors.teal} />
+              <Text style={styles.ownedNoteText}>{t('spot.ownedByYou')}</Text>
+            </View>
+          )}
+
+          <Text style={styles.title}>{spot.title}</Text>
+          <Text style={styles.metaRow}>
+            {spot.reviewCount > 0 ? (
+              <>
+                <Text style={styles.metaText}>★ {spot.rating.toLocaleString('es-AR', { maximumFractionDigits: 1 })}</Text>
+                <Text style={styles.metaMuted}>{'  ·  '}</Text>
+                <Text style={styles.metaLink} onPress={() => router.push(`${group}/spot/${spot.id}/reviews`)}>
+                  {t('spot.reviews.count', { count: String(spot.reviewCount) })}
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.metaMuted}>{t('spot.reviews.none')}</Text>
+            )}
+            {neighborhood ? (
+              <>
+                <Text style={styles.metaMuted}>{'  ·  '}</Text>
+                <Text style={styles.metaText}>{neighborhood}</Text>
+              </>
+            ) : null}
+          </Text>
+          <Text style={styles.address}>{spot.address}</Text>
+          {/* How this spot can be booked -- by the hour, as a stay, or both -- with what each
+              costs, before anything else. */}
+          <View style={styles.rates}>
+            {leadPrice && (
+              <View style={styles.rate}>
+                <View style={styles.rateIcon}>
+                  <Ionicons name="time-outline" size={sc(18)} color={colors.teal} />
+                </View>
+                <View style={styles.rateText}>
+                  <View style={styles.rateHead}>
+                    <Text style={styles.rateLabel}>{t(spot.stayEnabled ? 'spot.mode.hourly' : 'spot.mode.hourlyOnly')}</Text>
+                    <Text style={styles.rateValue}>
+                      {leadPrice}<Text style={styles.rateUnit}>{` ${t('spot.unit.hour')}`}</Text>
+                    </Text>
+                  </View>
+                  <Text style={styles.rateDetail}>{t('spot.mode.hourlyDetail')}</Text>
+                </View>
+              </View>
+            )}
+            {spot.stayEnabled && spot.pricePerDay !== null && (
+              <View style={styles.rate}>
+                <View style={styles.rateIcon}>
+                  <Ionicons name="calendar-outline" size={sc(18)} color={colors.teal} />
+                </View>
+                <View style={styles.rateText}>
+                  <View style={styles.rateHead}>
+                    <Text style={styles.rateLabel}>{t(spot.hourlyEnabled ? 'spot.mode.stay' : 'spot.mode.stayOnly')}</Text>
+                    <Text style={styles.rateValue}>
+                      {formatPesos(getDriverVisiblePrice(spot.pricePerDay, commissionRatePercent))}
+                      <Text style={styles.rateUnit}>{` ${t('spot.unit.day')}`}</Text>
+                    </Text>
+                  </View>
+                  <Text style={styles.rateDetail}>{stayDetail}</Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {owner && (
             <>
-              <ScheduleRow label={t('spot.available')} schedule={spot.schedule} />
-              <Row
-                label={t('spot.pricePerHour')}
-                value={
-                  spot.pricePerHourByVehicleType
-                    ? t('spot.pricePerHour.variesByVehicle', {
-                        price: String(getDriverVisiblePrice(getMinPricePerHour(spot)!, commissionRatePercent)),
+              <View style={styles.divider} />
+              <Pressable style={styles.hostRow} onPress={() => router.push(`${group}/profile/${spot.ownerId}?as=owner`)}>
+                {owner.avatarUrl ? (
+                  <Image source={{ uri: owner.avatarUrl }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarFallback]}>
+                    <Text style={styles.avatarInitial}>{owner.name.trim().charAt(0).toUpperCase()}</Text>
+                  </View>
+                )}
+                <View style={styles.hostText}>
+                  <Text style={styles.hostLabel}>{t('spot.host.label')}</Text>
+                  <Text style={styles.hostName}>{owner.name}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={sc(18)} color={colors.textSecondary} />
+              </Pressable>
+            </>
+          )}
+
+          <View style={styles.divider} />
+          <Text style={styles.sectionTitle}>{t('spot.section.features')}</Text>
+          {spot.tags.filter((tag) => FEATURES[tag]).map((tag) => (
+            <View key={tag} style={styles.feature}>
+              <Ionicons name={FEATURES[tag].icon} size={sc(24)} color={colors.text} />
+              <View style={styles.featureText}>
+                <Text style={styles.featureTitle}>{t(FEATURES[tag].labelKey)}</Text>
+                <Text style={styles.featureDetail}>{t(FEATURES[tag].detailKey)}</Text>
+              </View>
+            </View>
+          ))}
+          {spot.vehicleTypes.length > 0 && (
+            <View style={styles.feature}>
+              <Ionicons name="car-sport-outline" size={sc(24)} color={colors.text} />
+              <View style={styles.featureText}>
+                <Text style={styles.featureTitle}>{t('spot.feature.vehicles')}</Text>
+                <Text style={styles.featureDetail}>{vehiclesLabel.charAt(0).toUpperCase() + vehiclesLabel.slice(1)}</Text>
+              </View>
+            </View>
+          )}
+
+          {description ? (
+            <>
+              <View style={styles.divider} />
+              <Text style={styles.sectionTitle}>{t('spot.section.about')}</Text>
+              <Text style={styles.paragraph}>{description}</Text>
+            </>
+          ) : null}
+
+          {scheduleLines.length > 0 && (
+            <>
+              <View style={styles.divider} />
+              <Text style={styles.sectionTitle}>{t('spot.section.schedule')}</Text>
+              {scheduleLines.map((line) => {
+                const isToday = today >= line.firstDay && today <= line.lastDay;
+                const closed = line.hours === 'Cerrado';
+                return (
+                  <View key={line.dayRange} style={styles.scheduleLine}>
+                    <Text style={[styles.scheduleDays, isToday && styles.scheduleToday]}>
+                      {line.dayRange}
+                      {isToday ? <Text style={styles.todayTag}>{`  ${t('spot.schedule.today')}`}</Text> : null}
+                    </Text>
+                    <Text style={[styles.scheduleHours, closed && styles.scheduleClosed, isToday && styles.scheduleToday]}>
+                      {closed ? t('spot.schedule.closed') : line.hours}
+                    </Text>
+                  </View>
+                );
+              })}
+            </>
+          )}
+
+          {!isOwner && (
+            <>
+              <View style={styles.divider} />
+              <Text style={styles.sectionTitle}>{t('spot.section.book')}</Text>
+
+              {spot.hourlyEnabled && spot.stayEnabled && (
+                <View style={styles.segment}>
+                  {(['hourly', 'stay'] as const).map((mode) => (
+                    <Pressable
+                      key={mode}
+                      style={[styles.segmentItem, bookingMode === mode && styles.segmentItemActive]}
+                      onPress={() => setBookingMode(mode)}
+                    >
+                      <Text style={[styles.segmentText, bookingMode === mode && styles.segmentTextActive]}>
+                        {t(mode === 'hourly' ? 'owner.spot.hourly.enable' : 'owner.spot.stay.enable')}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+
+              {showHourly && (
+                <>
+                  {/* Vehicle type picker -- sólo si el precio depende de cuál elijas */}
+                  {spot.pricePerHourByVehicleType && spot.vehicleTypes.length > 1 && (
+                    <View style={styles.field}>
+                      <Text style={styles.fieldLabel}>{t('spot.selectVehicleType')}</Text>
+                      <View style={styles.chipWrap}>
+                        {spot.vehicleTypes.map((vt) => {
+                          const isSelected = vt === effectiveVehicleType;
+                          return (
+                            <TouchableOpacity
+                              key={vt}
+                              style={[styles.chip, isSelected && styles.chipSelected]}
+                              onPress={() => setSelectedVehicleType(vt)}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                                {t(VEHICLE_TYPE_LABEL_KEYS[vt])}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Date picker (calendar, coloreado por disponibilidad real) */}
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>{t('spot.field.day')}</Text>
+                    <AvailabilityDatePickerField
+                      fetchAvailability={hourlyAvailabilityFetcher(spot.id)}
+                      value={selectedDateISO}
+                      onChange={setSelectedDateOverride}
+                      placeholder={t('spot.datePlaceholder')}
+                      minimumDate={new Date(`${todayArtDateISO()}T00:00:00`)}
+                      style={styles.dateInput}
+                    />
+                  </View>
+
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>{t('spot.field.from')}</Text>
+                    {availabilityLoading && freeWindows === null ? (
+                      <ActivityIndicator size="small" color={colors.teal} style={{ alignSelf: 'flex-start' }} />
+                    ) : availabilityError && freeWindows === null ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Text style={styles.warn}>{t('spot.availabilityError')}</Text>
+                        <TouchableOpacity onPress={refreshAvailability}>
+                          <Text style={styles.retry}>{t('spot.availabilityRetry')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : bookableStartHours.length === 0 ? (
+                      <Text style={styles.warn}>{t('spot.noSlotsToday')}</Text>
+                    ) : (
+                      hourChips(bookableStartHours, effectiveStartHour, (h) => {
+                        setSelectedStartHour(h);
+                        // Cambiar el inicio invalida el fin elegido si ya no entra en la
+                        // misma ventana libre -- se limpia la selección manual para que
+                        // caiga en el primer horario de fin válido.
+                        setSelectedEndHour(null);
                       })
-                    : t('spot.pricePerHour.withUnit', { price: String(visiblePricePerHour) })
-                }
-              />
+                    )}
+                  </View>
+
+                  {effectiveStartHour !== null && (
+                    <View style={styles.field}>
+                      <Text style={styles.fieldLabel}>{t('spot.field.to')}</Text>
+                      {hourChips(bookableEndHours, effectiveEndHour, setSelectedEndHour)}
+                    </View>
+                  )}
+
+                  {canBook && visiblePricePerHour !== null && (
+                    <View style={styles.priceLine}>
+                      <Text style={styles.priceLineText}>
+                        {t('spot.priceLine', { price: formatPesos(visiblePricePerHour), hours: String(durationHours) })}
+                      </Text>
+                      <Text style={styles.priceLineText}>{formatPesos(total)}</Text>
+                    </View>
+                  )}
+                </>
+              )}
+
+              {showStay && (
+                <>
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>{t('spot.stay.startDate')}</Text>
+                    <AvailabilityDatePickerField
+                      fetchAvailability={stayAvailabilityFetcher(spot.id)}
+                      value={stayStartDate}
+                      onChange={setStayStartDateOverride}
+                      placeholder={t('spot.datePlaceholder')}
+                      minimumDate={new Date(`${minStayStartDate}T00:00:00`)}
+                      style={styles.dateInput}
+                    />
+                  </View>
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>{t('spot.stay.endDate')}</Text>
+                    <AvailabilityDatePickerField
+                      fetchAvailability={stayAvailabilityFetcher(spot.id)}
+                      value={stayEndDate}
+                      onChange={setStayEndDateOverride}
+                      placeholder={t('spot.datePlaceholder')}
+                      minimumDate={new Date(`${minStayEndDate}T00:00:00`)}
+                      style={styles.dateInput}
+                    />
+                  </View>
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>{t('spot.stay.startHour')}</Text>
+                    {hourChips(STAY_HOUR_OPTIONS, stayStartHour, setStayStartHour)}
+                    <Text style={styles.hint}>{t('spot.stay.startHour.hint')}</Text>
+                  </View>
+                  {stayQuoteLoading ? (
+                    <ActivityIndicator size="small" color={colors.teal} style={{ alignSelf: 'flex-start' }} />
+                  ) : stayQuoteError ? (
+                    <Text style={styles.warn}>{stayQuoteError}</Text>
+                  ) : stayQuote && stayTotal !== null ? (
+                    <View style={styles.priceLine}>
+                      <Text style={styles.priceLineText}>{formatStayBreakdown(stayQuote.breakdown)}</Text>
+                      <Text style={styles.priceLineText}>{formatPesos(stayTotal)}</Text>
+                    </View>
+                  ) : null}
+                </>
+              )}
             </>
           )}
         </View>
-
-        {isOwner ? (
-          <>
-            <TouchableOpacity
-              style={styles.editBtn}
-              onPress={() => router.push(`${group}/spots/${spot.id}/edit`)}
-            >
-              <Ionicons name="pencil-outline" size={sc(16)} color={colors.white} />
-              <Text style={styles.editBtnText}>{t('spot.editSpot')}</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            {spot.hourlyEnabled && spot.stayEnabled && (
-              <View style={styles.modeToggleRow}>
-                <Pressable
-                  style={[styles.modeToggle, bookingMode === 'hourly' && styles.modeToggleActive]}
-                  onPress={() => setBookingMode('hourly')}
-                >
-                  <Text style={bookingMode === 'hourly' ? styles.modeToggleTextActive : styles.modeToggleText}>
-                    {t('owner.spot.hourly.enable')}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.modeToggle, bookingMode === 'stay' && styles.modeToggleActive]}
-                  onPress={() => setBookingMode('stay')}
-                >
-                  <Text style={bookingMode === 'stay' ? styles.modeToggleTextActive : styles.modeToggleText}>
-                    {t('owner.spot.stay.enable')}
-                  </Text>
-                </Pressable>
-              </View>
-            )}
-
-            {spot.hourlyEnabled && (!spot.stayEnabled || bookingMode === 'hourly') && (
-              <>
-                {/* Vehicle type picker -- sólo si el precio depende de cuál elijas */}
-                {spot.pricePerHourByVehicleType && spot.vehicleTypes.length > 1 && (
-                  <View style={styles.card}>
-                    <Text style={styles.sectionLabel}>{t('spot.selectVehicleType')}</Text>
-                    <View style={styles.slotRow}>
-                      {spot.vehicleTypes.map((vt) => {
-                        const isSelected = vt === effectiveVehicleType;
-                        return (
-                          <TouchableOpacity
-                            key={vt}
-                            style={[styles.slotChip, isSelected && styles.slotChipSelected]}
-                            onPress={() => setSelectedVehicleType(vt)}
-                            activeOpacity={0.7}
-                          >
-                            <Text style={[styles.slotChipText, isSelected && styles.slotChipTextSelected]}>
-                              {t(VEHICLE_TYPE_LABEL_KEYS[vt])}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-                )}
-
-                {/* Date picker (calendar, coloreado por disponibilidad real) */}
-                <View style={styles.card}>
-                  <Text style={styles.sectionLabel}>{t('spot.selectDay')}</Text>
-                  <AvailabilityDatePickerField
-                    fetchAvailability={hourlyAvailabilityFetcher(spot.id)}
-                    value={selectedDateISO}
-                    onChange={setSelectedDateOverride}
-                    placeholder={t('spot.datePlaceholder')}
-                    minimumDate={new Date(`${todayArtDateISO()}T00:00:00`)}
-                    style={styles.dateInput}
-                  />
-                </View>
-
-                {/* Start time slot picker */}
-                <View style={styles.card}>
-                  <Text style={styles.sectionLabel}>{t('spot.selectStartTime')}</Text>
-                  {availabilityLoading && freeWindows === null ? (
-                    <ActivityIndicator size="small" color={colors.teal} />
-                  ) : availabilityError && freeWindows === null ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Text style={styles.noSlotsText}>{t('spot.availabilityError')}</Text>
-                      <TouchableOpacity onPress={refreshAvailability}>
-                        <Text style={[styles.slotChipText, { textDecorationLine: 'underline' }]}>
-                          {t('spot.availabilityRetry')}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : bookableStartHours.length === 0 ? (
-                    <Text style={styles.noSlotsText}>{t('spot.noSlotsToday')}</Text>
-                  ) : (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourSlotRow}>
-                      {bookableStartHours.map((h) => {
-                        const isSelected = h === effectiveStartHour;
-                        return (
-                          <TouchableOpacity
-                            key={h}
-                            style={[styles.slotChip, isSelected && styles.slotChipSelected]}
-                            onPress={() => {
-                              setSelectedStartHour(h);
-                              // Cambiar el inicio invalida el fin elegido si
-                              // ya no entra en la misma ventana libre -- se
-                              // recalcula solo (effectiveEndHour), pero
-                              // limpiamos la selección manual para que caiga
-                              // en el primer horario de fin válido en vez de
-                              // en uno que por casualidad coincide en valor
-                              // pero pertenece a otra ventana.
-                              setSelectedEndHour(null);
-                            }}
-                            activeOpacity={0.7}
-                          >
-                            <Text style={[
-                              styles.slotChipText,
-                              isSelected && styles.slotChipTextSelected,
-                            ]}>
-                              {String(h).padStart(2, '0')}:00
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </ScrollView>
-                  )}
-                </View>
-
-                {/* End time slot picker */}
-                <View style={styles.card}>
-                  <Text style={styles.sectionLabel}>{t('spot.selectEndTime')}</Text>
-                  {effectiveStartHour === null ? (
-                    <Text style={styles.noSlotsText}>{t('spot.selectStartTimeFirst')}</Text>
-                  ) : (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourSlotRow}>
-                      {bookableEndHours.map((h) => {
-                        const isSelected = h === effectiveEndHour;
-                        return (
-                          <TouchableOpacity
-                            key={h}
-                            style={[styles.slotChip, isSelected && styles.slotChipSelected]}
-                            onPress={() => setSelectedEndHour(h)}
-                            activeOpacity={0.7}
-                          >
-                            <Text style={[
-                              styles.slotChipText,
-                              isSelected && styles.slotChipTextSelected,
-                            ]}>
-                              {String(h % 24).padStart(2, '0')}:00
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </ScrollView>
-                  )}
-                </View>
-
-                <Text style={styles.total}>{t('spot.total', { hours: String(durationHours), total: String(total) })}</Text>
-                <Button
-                  title={t('spot.bookNow')}
-                  onPress={() =>
-                    router.push({
-                      pathname: `${group}/booking/confirm`,
-                      params: {
-                        spotId: spot.id,
-                        hours: String(durationHours),
-                        startHour: String(effectiveStartHour),
-                        endHour: String(effectiveEndHour),
-                        bookingDate: selectedDateISO,
-                        ...(effectiveVehicleType ? { vehicleType: effectiveVehicleType } : {}),
-                      },
-                    })
-                  }
-                  disabled={!canBook}
-                />
-              </>
-            )}
-
-            {spot.stayEnabled && (!spot.hourlyEnabled || bookingMode === 'stay') && (
-              <View style={styles.card}>
-                <Text style={styles.sectionLabel}>{t('spot.stay.section')}</Text>
-
-                <Text style={styles.fieldLabel}>{t('spot.stay.startDate')}</Text>
-                <AvailabilityDatePickerField
-                  fetchAvailability={stayAvailabilityFetcher(spot.id)}
-                  value={stayStartDate}
-                  onChange={setStayStartDateOverride}
-                  placeholder={t('spot.datePlaceholder')}
-                  minimumDate={new Date(`${minStayStartDate}T00:00:00`)}
-                  style={styles.dateInput}
-                />
-
-                <Text style={styles.fieldLabel}>{t('spot.stay.endDate')}</Text>
-                <AvailabilityDatePickerField
-                  fetchAvailability={stayAvailabilityFetcher(spot.id)}
-                  value={stayEndDate}
-                  onChange={setStayEndDateOverride}
-                  placeholder={t('spot.datePlaceholder')}
-                  minimumDate={new Date(`${minStayEndDate}T00:00:00`)}
-                  style={styles.dateInput}
-                />
-
-                <Text style={styles.fieldLabel}>{t('spot.stay.startHour')}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourSlotRow}>
-                  {STAY_HOUR_OPTIONS.map((hour) => {
-                    const isSelected = hour === stayStartHour;
-                    return (
-                      <TouchableOpacity
-                        key={hour}
-                        style={[styles.slotChip, isSelected && styles.slotChipSelected]}
-                        onPress={() => setStayStartHour(hour)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.slotChipText, isSelected && styles.slotChipTextSelected]}>
-                          {String(hour).padStart(2, '0')}:00
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-                <Text style={styles.stayHourHint}>{t('spot.stay.startHour.hint')}</Text>
-
-                {stayQuoteLoading ? (
-                  <ActivityIndicator size="small" color={colors.teal} />
-                ) : stayQuoteError ? (
-                  <Text style={styles.noSlotsText}>{stayQuoteError}</Text>
-                ) : stayQuote ? (
-                  <>
-                    <Text style={styles.stayBreakdownText}>{formatStayBreakdown(stayQuote.breakdown)}</Text>
-                    <Text style={styles.total}>
-                      {t('spot.stay.total', { total: String(Math.round(getDriverVisiblePrice(stayQuote.amount / 100, commissionRatePercent))) })}
-                    </Text>
-                  </>
-                ) : null}
-
-                <Button
-                  title={t('spot.stay.bookNow')}
-                  onPress={() =>
-                    router.push({
-                      pathname: `${group}/booking/confirm-stay`,
-                      params: {
-                        spotId: spot.id,
-                        startDate: stayStartDate,
-                        endDate: stayEndDate,
-                        startHour: String(stayStartHour),
-                      },
-                    })
-                  }
-                  disabled={!stayQuote || stayQuoteLoading}
-                />
-              </View>
-            )}
-          </>
-        )}
-      </View>
       </ScrollView>
+
+      {/* Sticky footer: what it costs and the one action, always in reach. */}
+      <View style={styles.footer}>
+        {isOwner ? (
+          <TouchableOpacity style={styles.editBtn} onPress={() => router.push(`${group}/spots/${spot.id}/edit`)}>
+            <Ionicons name="pencil-outline" size={sc(16)} color={colors.white} />
+            <Text style={styles.editBtnText}>{t('spot.editSpot')}</Text>
+          </TouchableOpacity>
+        ) : showHourly ? (
+          <>
+            <View style={styles.footerInfo}>
+              <Text style={styles.footerTotal}>{canBook ? formatPesos(total) : '—'}</Text>
+              {canBook && (
+                <Text style={styles.footerWhen}>
+                  {t('spot.footer.when', {
+                    date: formatShortDate(selectedDateISO),
+                    from: pad(effectiveStartHour!),
+                    to: pad(effectiveEndHour!),
+                  })}
+                </Text>
+              )}
+            </View>
+            <Button
+              title={t('spot.book')}
+              style={styles.footerButton}
+              onPress={() =>
+                router.push({
+                  pathname: `${group}/booking/confirm`,
+                  params: {
+                    spotId: spot.id,
+                    hours: String(durationHours),
+                    startHour: String(effectiveStartHour),
+                    endHour: String(effectiveEndHour),
+                    bookingDate: selectedDateISO,
+                    ...(effectiveVehicleType ? { vehicleType: effectiveVehicleType } : {}),
+                  },
+                })
+              }
+              disabled={!canBook}
+            />
+          </>
+        ) : showStay ? (
+          <>
+            <View style={styles.footerInfo}>
+              <Text style={styles.footerTotal}>{stayTotal !== null && !stayQuoteLoading ? formatPesos(stayTotal) : '—'}</Text>
+              <Text style={styles.footerWhen}>
+                {t('spot.footer.stay', { from: formatShortDate(stayStartDate), to: formatShortDate(stayEndDate) })}
+              </Text>
+            </View>
+            <Button
+              title={t('spot.book')}
+              style={styles.footerButton}
+              onPress={() =>
+                router.push({
+                  pathname: `${group}/booking/confirm-stay`,
+                  params: {
+                    spotId: spot.id,
+                    startDate: stayStartDate,
+                    endDate: stayEndDate,
+                    startHour: String(stayStartHour),
+                  },
+                })
+              }
+              disabled={!stayQuote || stayQuoteLoading}
+            />
+          </>
+        ) : null}
+      </View>
     </Screen>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  const typography = useTypography();
-  const styles = StyleSheet.create({ row: { marginTop: 6 } });
-  return (
-    <View style={styles.row}>
-      <Text style={typography.caption}>{label}</Text>
-      <Text style={typography.body}>{value}</Text>
-    </View>
-  );
-}
-
-function ScheduleRow({ label, schedule }: { label: string; schedule: ParkingSpot['schedule'] }) {
-  const typography = useTypography();
-  const colors = useThemeColors();
-  const styles = StyleSheet.create({
-    row: { marginTop: 6 },
-    line: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 },
-    dayRange: { ...typography.body, minWidth: 90 },
-    closed: { color: colors.textSecondary },
-  });
-  const lines = formatScheduleForDisplay(schedule);
-  return (
-    <View style={styles.row}>
-      <Text style={typography.caption}>{label}</Text>
-      {lines.map((line) => (
-        <View key={line.dayRange} style={styles.line}>
-          <Text style={styles.dayRange}>{line.dayRange}</Text>
-          <Text style={[typography.body, line.hours === 'Cerrado' && styles.closed]}>{line.hours}</Text>
-        </View>
-      ))}
-    </View>
   );
 }

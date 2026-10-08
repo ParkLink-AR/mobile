@@ -103,7 +103,7 @@ export default function ReviewScreen() {
   }, [bookingId, role, user?.id]);
 
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.surface, padding: 16, gap: 16 },
+    container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 16 },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
   });
 
@@ -159,7 +159,7 @@ function ReviewForm({
   const [submitting, setSubmitting] = useState(false);
 
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.surface, padding: 16, gap: 16 },
+    container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 16 },
     card: { gap: 10 },
     blockTitle: { fontSize: sc(15), fontWeight: '700', color: colors.text },
     bookingSummary: { gap: 8 },
@@ -185,6 +185,7 @@ function ReviewForm({
       fontSize: sc(15),
       textAlignVertical: 'top',
       color: colors.text,
+      backgroundColor: colors.surface,
     },
   });
 

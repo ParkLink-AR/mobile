@@ -124,8 +124,8 @@ describe('parkingService', () => {
 describe('formatScheduleForDisplay', () => {
   it('groups consecutive days with identical hours into one line', () => {
     expect(formatScheduleForDisplay(MON_FRI_8_22)).toEqual([
-      { dayRange: 'Lun – Vie', hours: '08:00–22:00' },
-      { dayRange: 'Sáb – Dom', hours: 'Cerrado' },
+      { dayRange: 'Lun – Vie', hours: '08:00–22:00', firstDay: 0, lastDay: 4 },
+      { dayRange: 'Sáb – Dom', hours: 'Cerrado', firstDay: 5, lastDay: 6 },
     ]);
   });
 
@@ -136,12 +136,12 @@ describe('formatScheduleForDisplay', () => {
     ];
 
     expect(formatScheduleForDisplay(schedule)).toEqual([
-      { dayRange: 'Lun', hours: '08:00–14:00, 16:00–22:00' },
-      { dayRange: 'Mar – Dom', hours: 'Cerrado' },
+      { dayRange: 'Lun', hours: '08:00–14:00, 16:00–22:00', firstDay: 0, lastDay: 0 },
+      { dayRange: 'Mar – Dom', hours: 'Cerrado', firstDay: 1, lastDay: 6 },
     ]);
   });
 
   it('reports every day closed for an empty schedule', () => {
-    expect(formatScheduleForDisplay([])).toEqual([{ dayRange: 'Lun – Dom', hours: 'Cerrado' }]);
+    expect(formatScheduleForDisplay([])).toEqual([{ dayRange: 'Lun – Dom', hours: 'Cerrado', firstDay: 0, lastDay: 6 }]);
   });
 });

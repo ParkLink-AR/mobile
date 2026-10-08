@@ -138,7 +138,7 @@ export default function PaymentPendingScreen() {
   }, [bookingId]);
 
   const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: colors.surface },
+    screen: { flex: 1, backgroundColor: colors.background },
     scroll: { paddingHorizontal: 24, paddingTop: sc(40), paddingBottom: 24, gap: sc(20) },
     heading: { alignItems: 'center', gap: 8 },
     title: { fontSize: sc(24), fontWeight: '800', color: colors.text, textAlign: 'center' },

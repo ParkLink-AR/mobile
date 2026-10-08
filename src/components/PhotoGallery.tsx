@@ -30,7 +30,8 @@ interface PhotoGalleryProps {
  * photo area -- it never resizes per photo. Each photo uses resizeMode="contain" inside
  * it, so a portrait photo is letterboxed left/right and a landscape one top/bottom, but
  * the whole photo is always visible -- never cropped down to a strip the way a fixed
- * *landscape* box + resizeMode="cover" used to crop tall photos.
+ * *landscape* box + resizeMode="cover" used to crop tall photos. The letterbox isn't
+ * left empty: a blurred copy of the same photo fills it.
  */
 export function PhotoGallery({ photos, fallbackUri }: PhotoGalleryProps) {
   const { width } = useWindowDimensions();
@@ -103,6 +104,11 @@ export function PhotoGallery({ photos, fallbackUri }: PhotoGalleryProps) {
     // second rounded+shadowed edge on the photo itself right behind it just
     // doubled up into a messy seam. That card already owns the transition.
     container: { position: 'relative', backgroundColor: colors.background },
+    slide: { width: boxSize, height: boxSize, overflow: 'hidden', backgroundColor: '#1f2937' },
+    // The same photo, blurred and darkened, fills whatever the contained photo leaves
+    // empty -- the whole photo stays visible without flat grey bands around it.
+    backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transform: [{ scale: 1.15 }] },
+    backdropShade: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.18)' },
     photo: { width: boxSize, height: boxSize },
     placeholder: {
       width: boxSize, height: boxSize,
@@ -136,7 +142,11 @@ export function PhotoGallery({ photos, fallbackUri }: PhotoGalleryProps) {
         scrollEventThrottle={16}
       >
         {uris.map((uri, i) => (
-          <Image key={`${uri}-${i}`} source={{ uri }} style={styles.photo} resizeMode="contain" />
+          <View key={`${uri}-${i}`} style={styles.slide}>
+            <Image source={{ uri }} style={styles.backdrop} resizeMode="cover" blurRadius={24} />
+            <View style={styles.backdropShade} />
+            <Image source={{ uri }} style={styles.photo} resizeMode="contain" />
+          </View>
         ))}
       </ScrollView>
       {uris.length > 1 && (

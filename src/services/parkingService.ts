@@ -107,6 +107,9 @@ function windowsLabel(entries: ScheduleEntry[]): string {
 export interface ScheduleDisplayLine {
   dayRange: string;
   hours: string;
+  /** The days this line covers, 0 = Monday ... 6 = Sunday (inclusive). */
+  firstDay: number;
+  lastDay: number;
 }
 
 /**
@@ -133,7 +136,7 @@ export function formatScheduleForDisplay(schedule: ScheduleEntry[]): ScheduleDis
     if (day < 7 && perDayLabel[day] === perDayLabel[rangeStart]) continue;
     const rangeEnd = day - 1;
     const dayRange = rangeStart === rangeEnd ? DAY_LABELS[rangeStart] : `${DAY_LABELS[rangeStart]} – ${DAY_LABELS[rangeEnd]}`;
-    lines.push({ dayRange, hours: perDayLabel[rangeStart] });
+    lines.push({ dayRange, hours: perDayLabel[rangeStart], firstDay: rangeStart, lastDay: rangeEnd });
     rangeStart = day;
   }
   return lines;
