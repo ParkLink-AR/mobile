@@ -103,6 +103,12 @@ export default function OwnerToday() {
     },
     statValue: { fontSize: sc(22), fontWeight: '700', color: colors.text },
     statLabel: { fontSize: sc(12), color: colors.textSecondary },
+    financesShortcut: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      backgroundColor: colors.teal + '14', borderRadius: 12,
+      paddingVertical: 10, paddingHorizontal: 12,
+    },
+    financesShortcutText: { flex: 1, fontSize: sc(13), fontWeight: '600', color: colors.teal },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
     sectionTitle: {
       fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
@@ -245,6 +251,15 @@ export default function OwnerToday() {
                 <Text style={styles.statLabel}>{t('owner.today.earnings')}</Text>
               </View>
             </View>
+
+            <Pressable
+              style={({ pressed }) => [styles.financesShortcut, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={() => router.push(`${group}/finances`)}
+            >
+              <Ionicons name="trending-up-outline" size={sc(16)} color={colors.teal} />
+              <Text style={styles.financesShortcutText}>{t('owner.today.financesShortcut')}</Text>
+              <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
+            </Pressable>
 
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{t('owner.today.bookingsSection')}</Text>
