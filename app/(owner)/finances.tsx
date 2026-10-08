@@ -115,7 +115,7 @@ export default function OwnerFinances() {
       flex: 1, backgroundColor: colors.surface, borderRadius: 14,
       borderWidth: 1, borderColor: colors.border, padding: 12, gap: 4,
     },
-    statValue: { fontSize: sc(17), fontWeight: '700', color: colors.text },
+    statValue: { fontSize: sc(15), fontWeight: '700', color: colors.text },
     statLabel: { fontSize: sc(11), color: colors.textSecondary },
     sectionTitle: {
       fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
@@ -223,7 +223,7 @@ export default function OwnerFinances() {
             style={({ pressed }) => [styles.settlementCta, { opacity: pressed ? 0.7 : 1 }]}
             onPress={() => router.push(`${group}/settlements`)}
           >
-            <Text style={styles.settlementCtaText}>{t('owner.view.settlements')}</Text>
+            <Text style={styles.settlementCtaText}>{t('settlements.title')}</Text>
             <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
           </Pressable>
         </Card>

@@ -95,7 +95,7 @@ export default function OwnerToday() {
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     content: { paddingHorizontal: 16, paddingTop: 8, gap: 16 },
-    dateLabel: { fontSize: sc(13), color: colors.textSecondary, textTransform: 'capitalize' },
+    dateLabel: { fontSize: sc(13), color: colors.textSecondary },
     statsRow: { flexDirection: 'row', gap: 12 },
     statCard: {
       flex: 1, backgroundColor: colors.surface, borderRadius: 14,
