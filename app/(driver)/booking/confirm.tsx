@@ -60,12 +60,18 @@ function artMidnightForDate(dateISO: string): number {
   return Date.UTC(year, month - 1, day, 3, 0, 0, 0); // ART midnight = UTC 03:00
 }
 
+/** "$17.280" -- whole pesos with thousands separators, like the rest of the app. */
+function formatPesos(amount: number): string {
+  return `$${Math.round(amount).toLocaleString('es-AR')}`;
+}
+
 export default function ConfirmBooking() {
   useLanguage();
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
+  const largeText = scale > 1;
   const typography = useTypography();
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   const { spotId, hours, startHour, endHour, bookingDate, vehicleType } = useLocalSearchParams<{
@@ -295,9 +301,14 @@ export default function ConfirmBooking() {
       fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase',
     },
-    detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    detailLabel: { flex: 1, fontSize: sc(14), color: colors.textSecondary },
-    detailValue: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
+    // The value never squeezes the label: it wraps on its own side instead. With the large
+    // text size a long value ("14 de octubre de 2026, 15:00") doesn't fit beside the label
+    // at all, so it drops to its own line under it.
+    detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: largeText ? 'wrap' : 'nowrap', rowGap: 2 },
+    detailLabel: { flexGrow: 1, flexShrink: 0, fontSize: sc(14), color: colors.textSecondary },
+    detailValue: largeText
+      ? { width: '100%', paddingLeft: sc(16) + 8, fontSize: sc(14), color: colors.text, fontWeight: '600' }
+      : { flexShrink: 1, textAlign: 'right', fontSize: sc(14), color: colors.text, fontWeight: '600' },
     divider: { height: 1, backgroundColor: colors.border },
     totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     totalLabel: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
@@ -371,7 +382,7 @@ export default function ConfirmBooking() {
               <View style={styles.detailRow}>
                 <Ionicons name="pricetag-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('driver.booking.pricePerHour')}</Text>
-                <Text style={styles.detailValue}>${visiblePricePerHour}</Text>
+                <Text style={styles.detailValue}>{formatPesos(visiblePricePerHour)}</Text>
               </View>
               <View style={styles.detailRow}>
                 <Ionicons name="hourglass-outline" size={sc(16)} color={colors.textSecondary} />
@@ -383,7 +394,7 @@ export default function ConfirmBooking() {
 
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>{t('driver.booking.total')}</Text>
-                <Text style={styles.totalValue}>${visibleTotal}</Text>
+                <Text style={styles.totalValue}>{formatPesos(visibleTotal)}</Text>
               </View>
             </View>
           </Card>
