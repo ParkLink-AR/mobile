@@ -15,8 +15,8 @@ import { approveBookingApi, rejectBookingApi } from '@/src/api/booking';
 import { ApiError } from '@/src/api/client';
 import { useNotificationsStore } from '@/src/store/useNotificationsStore';
 import { getPublicProfileApi } from '@/src/api/auth';
-import { todayArtDateISO } from '@/src/services/dateUtils';
-import { formatBookingWhen, formatShortDate } from '@/src/services/bookingDates';
+import { artDateFromISO, todayArtDateISO } from '@/src/services/dateUtils';
+import { formatBookingWhen, formatLongDate, formatShortDate, formatShortDateFromISO, formatTime } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 export default function OwnerToday() {
@@ -34,7 +34,7 @@ export default function OwnerToday() {
   // they're auto-cancelled if left unanswered, so they lead the screen.
   const [requests, setRequests] = useState<Booking[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const refreshNotifications = useNotificationsStore((s) => s.refresh);
+  const markAnswered = useNotificationsStore((s) => s.markAnswered);
 
   const load = useCallback(() => {
     if (!user) return;
@@ -69,7 +69,7 @@ export default function OwnerToday() {
     try {
       await (approve ? approveBookingApi(bookingId) : rejectBookingApi(bookingId));
       load();
-      if (user) refreshNotifications(user.id);
+      markAnswered(bookingId);
     } catch (err) {
       alert(err instanceof ApiError ? err.detail : t(approve ? 'owner.spot.requests.errorApprove' : 'owner.spot.requests.errorReject'));
     } finally {
@@ -77,28 +77,20 @@ export default function OwnerToday() {
     }
   }
 
-  /** "hoy a las 14:00" / "el 07/10 a las 14:00" */
+  /** "hoy a las 14:00" / "el 07/10/2026 a las 14:00" */
   function respondByLabel(deadline: string): string {
-    const date = new Date(deadline);
-    const time = date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-    if (date.toDateString() === new Date().toDateString()) {
+    const time = formatTime(deadline);
+    if (artDateFromISO(deadline) === todayArtDateISO()) {
       return t('owner.requests.respondByToday', { time });
     }
-    return t('owner.requests.respondByDate', {
-      date: date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
-      time,
-    });
+    return t('owner.requests.respondByDate', { date: formatShortDateFromISO(deadline), time });
   }
 
   if (!user) return null;
 
   // What the owner earns, not what drivers paid (that includes ParkLink's commission).
   const totalToday = bookings.reduce((sum, b) => sum + (b.ownerEarnings ?? b.total), 0);
-  const todayLabel = new Date().toLocaleDateString('es-AR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
+  const todayLabel = formatLongDate(todayArtDateISO());
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
@@ -295,12 +287,12 @@ export default function OwnerToday() {
                   <View style={styles.stayRow}>
                     <Ionicons name="log-in-outline" size={sc(15)} color={colors.textSecondary} />
                     <Text style={styles.stayLabel}>{t('spot.stay.checkIn')}</Text>
-                    <Text style={styles.stayValue}>{formatShortDate(item.date)} · {item.startTime}</Text>
+                    <Text style={styles.stayValue}>{formatShortDate(item.date)} {item.startTime}</Text>
                   </View>
                   <View style={styles.stayRow}>
                     <Ionicons name="log-out-outline" size={sc(15)} color={colors.textSecondary} />
                     <Text style={styles.stayLabel}>{t('spot.stay.checkOut')}</Text>
-                    <Text style={styles.stayValue}>{formatShortDate(item.endDate)} · {item.endTime}</Text>
+                    <Text style={styles.stayValue}>{formatShortDate(item.endDate)} {item.endTime}</Text>
                   </View>
                 </>
               )}

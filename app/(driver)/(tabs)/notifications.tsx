@@ -8,19 +8,19 @@ import { RoleIcon } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
-import { useSessionStore } from '@/src/store/useSessionStore';
-import { useNotificationsStore } from '@/src/store/useNotificationsStore';
+import { isOpenRequest, useNotificationsStore } from '@/src/store/useNotificationsStore';
 import { AppNotification, notificationRole } from '@/src/services/notificationsFeed';
-import { formatBookingWhen } from '@/src/services/bookingDates';
+import { formatBookingWhen, formatShortDateFromISO } from '@/src/services/bookingDates';
 import { approveBookingApi, rejectBookingApi } from '@/src/api/booking';
 import { ApiError } from '@/src/api/client';
 
 const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
   owner_request: 'time-outline',
-  owner_new_booking: 'checkmark-circle',
   driver_confirmed: 'checkmark-circle',
   driver_rejected: 'close-circle',
+  driver_request_expired: 'hourglass-outline',
   driver_spot_unavailable: 'close-circle',
+  owner_booking_cancelled: 'close-circle',
   driver_review_prompt: 'star-outline',
   owner_review_prompt: 'star-outline',
   driver_verified: 'shield-checkmark-outline',
@@ -29,49 +29,65 @@ const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
   owner_settlement_paid: 'cash-outline',
 };
 
+const DANGER = '#C62828';
+
+/** "Ahora", "Hace 5 min", "Hace 3 h", "Ayer", or the date. */
+function formatAgo(iso: string): string {
+  const then = new Date(iso);
+  const minutes = Math.floor((Date.now() - then.getTime()) / 60_000);
+  if (minutes < 1) return t('notifications.time.now');
+  if (minutes < 60) return t('notifications.time.minutes', { n: minutes });
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return t('notifications.time.hours', { n: hours });
+  if (hours < 48) return t('notifications.time.yesterday');
+  return formatShortDateFromISO(iso);
+}
+
 export default function Notifications() {
   useLanguage();
   const colors = useThemeColors();
   const typography = useTypography();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
-  const user = useSessionStore((s) => s.user);
   const items = useNotificationsStore((s) => s.items);
   const loading = useNotificationsStore((s) => s.loading);
+  const loadingMore = useNotificationsStore((s) => s.loadingMore);
   const hasLoadedOnce = useNotificationsStore((s) => s.hasLoadedOnce);
+  const answeredBookingIds = useNotificationsStore((s) => s.answeredBookingIds);
   const refresh = useNotificationsStore((s) => s.refresh);
-  const markSeen = useNotificationsStore((s) => s.markSeen);
+  const loadMore = useNotificationsStore((s) => s.loadMore);
+  const markAllRead = useNotificationsStore((s) => s.markAllRead);
+  const markAnswered = useNotificationsStore((s) => s.markAnswered);
+  const startVisit = useNotificationsStore((s) => s.startVisit);
+  const freshIds = useNotificationsStore((s) => s.freshIds);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Tabs stay mounted in the background, so notifications only count as read while this
+  // tab is actually on screen.
+  const [focused, setFocused] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      if (user) refresh(user.id);
-    }, [user?.id, refresh]),
+      setFocused(true);
+      startVisit();
+      refresh();
+      return () => setFocused(false);
+    }, [refresh, startVisit]),
   );
 
+  // Whatever is unread while the tab is on screen (what was there on arrival, and anything
+  // the live socket brings in meanwhile) is shown as new and marked read.
   useEffect(() => {
-    if (items.length > 0) markSeen(items.map((item) => item.id));
-  }, [items]);
+    if (focused && items.some((item) => !item.readAt)) markAllRead();
+  }, [items, focused, markAllRead]);
 
-  async function handleApprove(bookingId: string) {
+  async function answer(bookingId: string, approve: boolean) {
     setBusyId(bookingId);
     try {
-      await approveBookingApi(bookingId);
-      if (user) refresh(user.id);
+      await (approve ? approveBookingApi(bookingId) : rejectBookingApi(bookingId));
+      markAnswered(bookingId);
+      refresh();
     } catch (err) {
-      alert(err instanceof ApiError ? err.detail : t('owner.spot.requests.errorApprove'));
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleReject(bookingId: string) {
-    setBusyId(bookingId);
-    try {
-      await rejectBookingApi(bookingId);
-      if (user) refresh(user.id);
-    } catch (err) {
-      alert(err instanceof ApiError ? err.detail : t('owner.spot.requests.errorReject'));
+      alert(err instanceof ApiError ? err.detail : t(approve ? 'owner.spot.requests.errorApprove' : 'owner.spot.requests.errorReject'));
     } finally {
       setBusyId(null);
     }
@@ -79,6 +95,7 @@ export default function Notifications() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 8, gap: 8 },
+    freshCard: { borderColor: `${colors.teal}66`, backgroundColor: `${colors.teal}0D` },
     row: { flexDirection: 'row', gap: sc(10), alignItems: 'flex-start' },
     iconBadge: {
       width: sc(34), height: sc(34), borderRadius: sc(17), alignItems: 'center', justifyContent: 'center',
@@ -86,26 +103,71 @@ export default function Notifications() {
     textBlock: { flex: 1, gap: sc(2) },
     itemTitle: { fontSize: sc(14.5), fontWeight: '700', color: colors.text },
     itemBody: { fontSize: sc(13), color: colors.textSecondary, lineHeight: sc(18) },
+    itemTime: { fontSize: sc(12), color: colors.textSecondary, marginTop: sc(2) },
+    side: { alignItems: 'center', gap: sc(8) },
+    freshDot: { width: sc(9), height: sc(9), borderRadius: sc(5), backgroundColor: colors.teal },
     actionsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
     actionBtn: {
       flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: sc(6),
       paddingVertical: 9, borderRadius: 10,
     },
     approveBtn: { backgroundColor: colors.teal },
-    rejectBtn: { borderWidth: 1.5, borderColor: '#C62828' },
+    rejectBtn: { borderWidth: 1.5, borderColor: DANGER },
     approveBtnText: { color: colors.white, fontWeight: '700', fontSize: sc(14) },
-    rejectBtnText: { color: '#C62828', fontWeight: '700', fontSize: sc(14) },
+    rejectBtnText: { color: DANGER, fontWeight: '700', fontSize: sc(14) },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     emptyText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
+    footer: { paddingVertical: 16 },
   });
 
   function iconColorFor(kind: AppNotification['kind']) {
-    if (kind === 'driver_confirmed' || kind === 'owner_new_booking' || kind === 'driver_verified' || kind === 'owner_settlement_paid') {
+    if (kind === 'driver_confirmed' || kind === 'driver_verified' || kind === 'owner_settlement_paid') {
       return colors.success;
     }
-    if (kind === 'driver_rejected' || kind === 'driver_spot_unavailable') return '#C62828';
+    if (
+      kind === 'driver_rejected' ||
+      kind === 'driver_request_expired' ||
+      kind === 'driver_spot_unavailable' ||
+      kind === 'owner_booking_cancelled'
+    ) {
+      return DANGER;
+    }
     if (kind === 'message_received' || kind === 'ticket_replied') return colors.teal;
     return colors.warning;
+  }
+
+  function bodyFor(item: AppNotification): string {
+    const when = formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'));
+    switch (item.kind) {
+      case 'owner_request':
+        return isOpenRequest(item, answeredBookingIds)
+          ? t('notifications.ownerRequest.body', { when })
+          : `${t('notifications.ownerRequest.body', { when })} · ${t('notifications.ownerRequest.resolved')}`;
+      case 'driver_confirmed':
+        return t('notifications.driverConfirmed.body', { when });
+      case 'driver_rejected':
+        return t('notifications.driverRejected.body');
+      case 'driver_request_expired':
+        return t('notifications.driverRequestExpired.body', { when });
+      case 'driver_spot_unavailable':
+        return t('notifications.driverSpotUnavailable.body');
+      case 'owner_booking_cancelled':
+        return t('notifications.ownerBookingCancelled.body', { when });
+      case 'driver_review_prompt':
+        return t('notifications.driverReviewPrompt.body');
+      case 'owner_review_prompt':
+        return item.counterpartName
+          ? t('notifications.ownerReviewPrompt.bodyNamed', { name: item.counterpartName })
+          : t('notifications.ownerReviewPrompt.body');
+      case 'driver_verified':
+        return t('notifications.driverVerified.body');
+      case 'message_received':
+        return item.preview ? `“${item.preview}”` : t('notifications.messageReceived.body', { spot: item.spotTitle });
+      case 'ticket_replied':
+        return item.preview ? `“${item.preview}”` : t('notifications.ticketReplied.body');
+      case 'owner_settlement_paid':
+        return t('notifications.settlementPaid.body', { amount: item.total.toLocaleString('es-AR') });
+    }
   }
 
   // Every notification shows its own side (owner or driver) whichever mode the user is in,
@@ -117,7 +179,11 @@ export default function Notifications() {
     const role = notificationRole(item);
     switch (item.kind) {
       case 'owner_request':
-        router.push(`${group}/spots/${item.parkingSpotId}/requests`);
+        if (isOpenRequest(item, answeredBookingIds) && item.parkingSpotId) {
+          router.push(`${group}/spots/${item.parkingSpotId}/requests`);
+        } else {
+          router.push(`${group}/bookings/${item.bookingId}?view=owner`);
+        }
         break;
       case 'driver_review_prompt':
         router.push(`${group}/review/${item.bookingId}?role=driver`);
@@ -135,7 +201,8 @@ export default function Notifications() {
         if (item.settlementId) router.push(`${group}/settlements/${item.settlementId}`);
         break;
       default:
-        // owner_new_booking, driver_confirmed, driver_rejected, driver_verified
+        // driver_confirmed, driver_rejected, driver_request_expired, driver_spot_unavailable,
+        // owner_booking_cancelled, driver_verified
         router.push(`${group}/bookings/${item.bookingId}?view=${role}`);
     }
   }
@@ -158,77 +225,77 @@ export default function Notifications() {
         data={items}
         keyExtractor={(item) => item.id}
         contentContainerStyle={items.length === 0 ? { gap: 10, flexGrow: 1 } : { gap: 10 }}
-        refreshing={loading}
-        onRefresh={() => user && refresh(user.id)}
+        refreshing={loading && hasLoadedOnce}
+        onRefresh={refresh}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} color={colors.teal} /> : null}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="notifications-outline" size={sc(40)} color={colors.textSecondary} />
             <Text style={styles.emptyText}>{t('notifications.empty')}</Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <Card>
-            <TouchableOpacity style={styles.row} onPress={() => handlePress(item)}>
-              <View style={[styles.iconBadge, { backgroundColor: iconColorFor(item.kind) + '20' }]}>
-                <Ionicons name={ICONS[item.kind]} size={sc(18)} color={iconColorFor(item.kind)} />
-              </View>
-              <View style={styles.textBlock}>
-                <Text style={styles.itemTitle}>
-                  {item.kind === 'owner_settlement_paid' ? t('notifications.settlementPaid.title') : item.spotTitle}
-                </Text>
-                <Text style={styles.itemBody}>
-                  {item.kind === 'owner_request' && t('notifications.ownerRequest.body', { when: formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut')) })}
-                  {item.kind === 'owner_new_booking' && t('notifications.ownerNewBooking.body', { when: formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut')) })}
-                  {item.kind === 'driver_confirmed' && t('notifications.driverConfirmed.body', { when: formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut')) })}
-                  {item.kind === 'driver_rejected' && t('notifications.driverRejected.body')}
-                  {item.kind === 'driver_spot_unavailable' && t('notifications.driverSpotUnavailable.body')}
-                  {item.kind === 'driver_review_prompt' && t('notifications.driverReviewPrompt.body')}
-                  {item.kind === 'owner_review_prompt' && (item.counterpartName
-                    ? t('notifications.ownerReviewPrompt.bodyNamed', { name: item.counterpartName })
-                    : t('notifications.ownerReviewPrompt.body'))}
-                  {item.kind === 'driver_verified' && t('notifications.driverVerified.body')}
-                  {item.kind === 'message_received' && t('notifications.messageReceived.body', { spot: item.spotTitle })}
-                  {item.kind === 'ticket_replied' && t('notifications.ticketReplied.body')}
-                  {item.kind === 'owner_settlement_paid' && t('notifications.settlementPaid.body', { amount: item.total.toLocaleString('es-AR') })}
-                </Text>
-              </View>
-              <RoleIcon role={notificationRole(item)} />
-            </TouchableOpacity>
+        renderItem={({ item }) => {
+          const fresh = !item.readAt || freshIds.includes(item.id);
+          return (
+            <Card style={fresh ? styles.freshCard : undefined}>
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => handlePress(item)}
+                accessibilityLabel={fresh ? t('notifications.new') : undefined}
+              >
+                <View style={[styles.iconBadge, { backgroundColor: iconColorFor(item.kind) + '20' }]}>
+                  <Ionicons name={ICONS[item.kind]} size={sc(18)} color={iconColorFor(item.kind)} />
+                </View>
+                <View style={styles.textBlock}>
+                  <Text style={styles.itemTitle}>
+                    {item.kind === 'owner_settlement_paid' ? t('notifications.settlementPaid.title') : item.spotTitle}
+                  </Text>
+                  <Text style={styles.itemBody}>{bodyFor(item)}</Text>
+                  <Text style={styles.itemTime}>{formatAgo(item.at)}</Text>
+                </View>
+                <View style={styles.side}>
+                  <RoleIcon role={notificationRole(item)} />
+                  {fresh && <View style={styles.freshDot} />}
+                </View>
+              </TouchableOpacity>
 
-            {item.kind === 'owner_request' && (
-              <View style={styles.actionsRow}>
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.rejectBtn]}
-                  onPress={() => handleReject(item.bookingId)}
-                  disabled={busyId === item.bookingId}
-                >
-                  {busyId === item.bookingId ? (
-                    <ActivityIndicator color="#C62828" size="small" />
-                  ) : (
-                    <>
-                      <Ionicons name="close" size={sc(16)} color="#C62828" />
-                      <Text style={styles.rejectBtnText}>{t('owner.spot.requests.reject')}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.approveBtn]}
-                  onPress={() => handleApprove(item.bookingId)}
-                  disabled={busyId === item.bookingId}
-                >
-                  {busyId === item.bookingId ? (
-                    <ActivityIndicator color={colors.white} size="small" />
-                  ) : (
-                    <>
-                      <Ionicons name="checkmark" size={sc(16)} color={colors.white} />
-                      <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
-          </Card>
-        )}
+              {isOpenRequest(item, answeredBookingIds) && (
+                <View style={styles.actionsRow}>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.rejectBtn]}
+                    onPress={() => answer(item.bookingId, false)}
+                    disabled={busyId === item.bookingId}
+                  >
+                    {busyId === item.bookingId ? (
+                      <ActivityIndicator color={DANGER} size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="close" size={sc(16)} color={DANGER} />
+                        <Text style={styles.rejectBtnText}>{t('owner.spot.requests.reject')}</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.approveBtn]}
+                    onPress={() => answer(item.bookingId, true)}
+                    disabled={busyId === item.bookingId}
+                  >
+                    {busyId === item.bookingId ? (
+                      <ActivityIndicator color={colors.white} size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark" size={sc(16)} color={colors.white} />
+                        <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+            </Card>
+          );
+        }}
       />
     </Screen>
   );

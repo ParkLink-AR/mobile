@@ -21,8 +21,8 @@ export default function DriverLayout() {
       {/* Booking flow */}
       <Stack.Screen name="booking/confirm" options={{ title: t('driver.booking.confirm.title') }} />
       <Stack.Screen name="booking/confirm-stay" options={{ title: t('driver.booking.confirm.title') }} />
-      <Stack.Screen name="booking/success" options={{ title: '', headerBackVisible: false }} />
-      <Stack.Screen name="payment/pending" options={{ title: t('driver.payment.pending.title'), headerBackVisible: false }} />
+      {/* Its own full-screen result design, no header bar (and nowhere to go back to). */}
+      <Stack.Screen name="payment/pending" options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen name="payment/success" options={{ title: '', headerBackVisible: false }} />
       <Stack.Screen name="payment/failure" options={{ title: '', headerBackVisible: false }} />
       <Stack.Screen name="bookings/[id]" options={{ title: t('layout.driver.bookingDetail') }} />

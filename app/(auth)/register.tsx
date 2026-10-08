@@ -32,6 +32,7 @@ import {
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { ApiError } from '@/src/api/client';
 import { COUNTRIES, DEFAULT_COUNTRY, Country } from '@/src/data/countries';
+import { formatShortDate } from '@/src/services/bookingDates';
 
 type Step = 'email' | 'email-code' | 'phone' | 'phone-code' | 'personal';
 
@@ -50,8 +51,9 @@ const STAGE_OF_STEP: Record<Step, number> = {
 const SKIP_PHONE_VERIFICATION = process.env.EXPO_PUBLIC_SKIP_PHONE_VERIFICATION === 'true';
 const RESEND_COOLDOWN_SECONDS = 60;
 
+// The picked birth date, as a calendar day of the phone's own clock.
 function formatDate(d: Date): string {
-  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return formatShortDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
 }
 
 export default function Register() {

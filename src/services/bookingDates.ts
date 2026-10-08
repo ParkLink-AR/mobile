@@ -1,3 +1,4 @@
+import { getLanguage } from '@/src/i18n';
 import { artDateFromISO } from './dateUtils';
 import { VehicleSnapshot } from '@/src/types';
 
@@ -26,8 +27,8 @@ export function mapBookingDateRange(start: string, end: string): BookingDateRang
   const startDate = new Date(start);
   const endDate = new Date(end);
   const hours = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / 3_600_000));
-  const startTime = startDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-  const endTime = endDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const startTime = formatTime(start);
+  const endTime = formatTime(end);
 
   return {
     date: artDateFromISO(start),
@@ -50,56 +51,87 @@ export function toVehicleSnapshot(
   return { plate: v.plate, brand: v.brand, model: v.model, country: v.country as VehicleSnapshot['country'] };
 }
 
-/** "10/09" -- mismo formato corto usado en el resto de la app para fechas. */
+// Every date the app shows goes through the helpers below, in one of two formats:
+//   long  -- "14 de septiembre de 2026" / "14 de septiembre de 2026, 14:30"
+//   short -- "14/09/2026" / "14/09/2026 14:30", where space is tight (lists, cards)
+// Always on the Buenos Aires calendar and clock (ART, UTC-3, no DST), like the rest of
+// the platform, whatever the phone's own time zone. The long format follows the app's
+// language; the short one is the same everywhere.
+
+const MONTHS: Record<string, string[]> = {
+  es: ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
+  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+};
+
+function ymd(dateISO: string): [number, number, number] {
+  const [year, month, day] = dateISO.slice(0, 10).split('-').map(Number);
+  return [year, month, day];
+}
+
+/** "14:30" -- the ART time of a timestamp. */
+export function formatTime(dateTimeISO: string): string {
+  const art = new Date(new Date(dateTimeISO).getTime() - 3 * 3600_000);
+  return `${String(art.getUTCHours()).padStart(2, '0')}:${String(art.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+/** "14/09/2026" from a YYYY-MM-DD. */
 export function formatShortDate(dateISO: string): string {
-  return new Date(`${dateISO}T12:00:00`).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+  const [year, month, day] = ymd(dateISO);
+  return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
 }
 
-/** "10/09/2026" -- igual que formatShortDate pero con el año, para pantallas de
- * detalle (check-in/check-out) donde ambigüedad de año importa más que en una lista. */
-export function formatFullDate(dateISO: string): string {
-  return new Date(`${dateISO}T12:00:00`).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+/** "14 de septiembre de 2026" from a YYYY-MM-DD. */
+export function formatLongDate(dateISO: string): string {
+  const [year, month, day] = ymd(dateISO);
+  const lang = getLanguage();
+  if (lang === 'ja') return `${year}年${month}月${day}日`;
+  if (lang === 'en') return `${MONTHS.en[month - 1]} ${day}, ${year}`;
+  return `${day} de ${MONTHS.es[month - 1]} de ${year}`;
+}
+
+/** "14/09/2026" from a full timestamp (e.g. a Settlement's paidAt). */
+export function formatShortDateFromISO(dateTimeISO: string): string {
+  return formatShortDate(artDateFromISO(dateTimeISO));
+}
+
+/** "14 de septiembre de 2026" from a full timestamp. */
+export function formatLongDateFromISO(dateTimeISO: string): string {
+  return formatLongDate(artDateFromISO(dateTimeISO));
+}
+
+/** "14/09/2026 14:30" */
+export function formatShortDateTime(dateTimeISO: string): string {
+  return `${formatShortDateFromISO(dateTimeISO)} ${formatTime(dateTimeISO)}`;
+}
+
+/** "14 de septiembre de 2026, 14:30" */
+export function formatLongDateTime(dateTimeISO: string): string {
+  const separator = getLanguage() === 'ja' ? ' ' : ', ';
+  return `${formatLongDateFromISO(dateTimeISO)}${separator}${formatTime(dateTimeISO)}`;
 }
 
 /**
- * Línea "cuándo" de una reserva para listas/detalle. Cuando `date` y
- * `endDate` coinciden (HOURLY, o una estadía de un solo día) muestra la
- * fecha una sola vez -- "2026-09-10 · 14:00 a 16:00", igual que siempre. Si
- * difieren (estadía multi-día, check-out al mismo horario que el check-in,
- * no medianoche) son días distintos, así que se etiquetan como check-in/
- * check-out en vez del ambiguo "14:00 a 14:00" -- "Check-in 10/09 · 14:00 —
- * Check-out 14/09 · 14:00".
+ * Línea "cuándo" de una reserva. Cuando `date` y `endDate` coinciden (HOURLY, o una
+ * estadía de un solo día) muestra la fecha una sola vez -- "14/09/2026 14:00 a 16:00"
+ * (short, para listas) o "14 de septiembre de 2026, 14:00 a 16:00" (long). Si difieren
+ * (estadía multi-día, check-out al mismo horario que el check-in) son días distintos,
+ * así que se etiquetan en vez del ambiguo "14:00 a 14:00" -- "Check-in 14/09/2026 14:00
+ * — Check-out 16/09/2026 14:00".
  */
-/**
- * "10/09/2026" from a full ISO timestamp (e.g. a Settlement's `paidAt`).
- * Unlike formatFullDate, this doesn't need the T12:00:00 noon hack -- that one
- * exists only because its input is a bare YYYY-MM-DD with no real time of its
- * own; a timestamp like paidAt already carries one.
- */
-export function formatFullDateFromISO(dateTimeISO: string): string {
-  return new Date(dateTimeISO).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
-/**
- * "10/09/2026 · 14:30" -- same date format as formatFullDateFromISO, plus the
- * time, same pattern bookings/[id].tsx already uses inline for a booking's
- * paidAt.
- */
-export function formatFullDateTime(dateTimeISO: string): string {
-  const time = new Date(dateTimeISO).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-  return `${formatFullDateFromISO(dateTimeISO)} · ${time}`;
-}
-
 export function formatBookingWhen(
   item: { date: string; endDate: string; startTime: string; endTime: string },
   timeToLabel: string,
   checkInLabel: string,
   checkOutLabel: string,
+  style: 'short' | 'long' = 'short',
 ): string {
+  if (!item.date) return '';
+  const format = style === 'long' ? formatLongDate : formatShortDate;
+  const separator = style === 'long' && getLanguage() !== 'ja' ? ', ' : ' ';
   if (item.date === item.endDate) {
-    return `${item.date} · ${item.startTime} ${timeToLabel} ${item.endTime}`;
+    return `${format(item.date)}${separator}${item.startTime} ${timeToLabel} ${item.endTime}`;
   }
-  return `${checkInLabel} ${formatShortDate(item.date)} · ${item.startTime} — ${checkOutLabel} ${formatShortDate(item.endDate)} · ${item.endTime}`;
+  return `${checkInLabel} ${format(item.date)}${separator}${item.startTime} — ${checkOutLabel} ${format(item.endDate)}${separator}${item.endTime}`;
 }
 
 /** What the owner earns from a booking, in pesos: owner_amount when the API sent it, else

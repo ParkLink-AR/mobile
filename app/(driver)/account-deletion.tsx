@@ -10,7 +10,7 @@ import { useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getAccountDeletionSummary, requestAccountDeletion } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
-import { formatFullDateFromISO } from '@/src/services/bookingDates';
+import { formatLongDateFromISO } from '@/src/services/bookingDates';
 import { AccountDeletionSummary } from '@/src/types';
 
 const DANGER = '#C62828';
@@ -112,7 +112,7 @@ export default function AccountDeletion() {
 
   const ownerCount = summary.ownerBookingsToCancel + summary.ownerRequestsToReject;
   const items: { icon: React.ComponentProps<typeof Ionicons>['name']; text: string }[] = [
-    { icon: 'calendar-outline', text: t('account.deletion.when', { date: formatFullDateFromISO(summary.deletionDate) }) },
+    { icon: 'calendar-outline', text: t('account.deletion.when', { date: formatLongDateFromISO(summary.deletionDate) }) },
     { icon: 'log-out-outline', text: t('account.deletion.sessions') },
   ];
   if (summary.spotCount > 0) items.push({ icon: 'eye-off-outline', text: t('account.deletion.spots') });

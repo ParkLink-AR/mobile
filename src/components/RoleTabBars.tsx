@@ -4,7 +4,7 @@ import { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tab
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSettingsStore } from '@/src/store/useSettingsStore';
-import { useNotificationsStore, useUnseenNotificationsCount } from '@/src/store/useNotificationsStore';
+import { usePendingRequestsCount, useUnreadNotificationsCount } from '@/src/store/useNotificationsStore';
 import { t, useLanguage } from '@/src/i18n';
 import { useScale } from '@/src/theme/typography';
 
@@ -37,12 +37,9 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
   // With large text the labels no longer fit under the icons: icons only (each tab
   // still has its name as accessibility label).
   const showLabels = useSettingsStore((s) => s.fontSize) !== 'large';
-  const unseenCount = useUnseenNotificationsCount();
-  // Pending requests come from the same polled notification feed (one owner_request per
-  // PENDING_OWNER_APPROVAL booking across every spot).
-  const pendingRequestsCount = useNotificationsStore(
-    (s) => s.items.filter((item) => item.kind === 'owner_request').length,
-  );
+  const unseenCount = useUnreadNotificationsCount();
+  // Booking requests in the inbox still waiting for the owner's answer.
+  const pendingRequestsCount = usePendingRequestsCount();
 
   const styles = StyleSheet.create({
     bar: {
@@ -59,7 +56,6 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
       justifyContent: 'center',
       gap: 3,
       paddingVertical: 4,
-      paddingHorizontal: 2,
     },
     iconWrapper: { position: 'relative' },
     badge: {
@@ -70,10 +66,9 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
       paddingHorizontal: 3,
     },
     badgeText: { color: '#fff', fontSize: sc(10), fontWeight: '700' },
-    // Todas las etiquetas comparten el mismo tamaño y no crecen con "Texto: Grande": cinco
-    // pestañas en ~80pt c/u no alcanzan para "Notificaciones" más grande que esto. Lo que
-    // sí escala es el ícono.
-    label: { fontSize: Math.round(10 * Math.min(scale, 1)), fontWeight: '600', textAlign: 'center' },
+    // Tamaño fijo, sin cortar con "…" ("Notificaciones" entra justo en 11). Con
+    // "Texto: Grande" las etiquetas se ocultan (showLabels); lo que sí escala es el ícono.
+    label: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
   });
 
   return (
@@ -113,7 +108,7 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
                 ) : null;
               })()}
             </View>
-            {showLabels ? <Text numberOfLines={1} style={[styles.label, { color }]}>{t(tab.labelKey as any)}</Text> : null}
+            {showLabels ? <Text style={[styles.label, { color }]}>{t(tab.labelKey as any)}</Text> : null}
           </Pressable>
         );
       })}

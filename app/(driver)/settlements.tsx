@@ -10,7 +10,7 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getSettlementsForOwner } from '@/src/services/paymentService';
-import { formatFullDateFromISO } from '@/src/services/bookingDates';
+import { formatShortDateFromISO } from '@/src/services/bookingDates';
 import { Settlement } from '@/src/types';
 
 export default function Settlements() {
@@ -61,9 +61,9 @@ export default function Settlements() {
               <View style={styles.headerRow}>
                 <Text style={typography.h2}>
                   {item.status === 'PENDING'
-                    ? formatFullDateFromISO(item.createdAt)
+                    ? formatShortDateFromISO(item.createdAt)
                     : item.paidAt
-                      ? formatFullDateFromISO(item.paidAt)
+                      ? formatShortDateFromISO(item.paidAt)
                       : t('settlements.unknownDate')}
                 </Text>
                 <SettlementStatusBadge status={item.status} />

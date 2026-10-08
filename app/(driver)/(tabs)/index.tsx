@@ -30,6 +30,7 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
 import { searchParkingSpots, getMinPricePerHour, SearchParkingSpotsFilters } from '@/src/services/parkingService';
 import { todayArtDateISO } from '@/src/services/dateUtils';
+import { formatShortDate } from '@/src/services/bookingDates';
 import { geocodeAddress, reverseGeocode, GeocodeCandidate } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { ParkingSpot } from '@/src/types';
@@ -323,11 +324,6 @@ export function SearchScreen() {
   function clearFilters() {
     setFilters({});
     setModalVisible(false);
-  }
-
-  /** "10/09" -- mismo formato corto que el resto de la app usa para fechas. */
-  function formatShortDate(dateISO: string): string {
-    return new Date(`${dateISO}T12:00:00`).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
   }
 
   const activeChips: { label: string; onRemove: () => void }[] = [];

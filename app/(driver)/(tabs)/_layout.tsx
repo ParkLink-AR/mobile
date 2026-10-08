@@ -4,34 +4,17 @@ import { Tabs } from 'expo-router';
 import { DockTabBar } from '@/src/components/DockTabBar';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
-import { useNotificationsStore } from '@/src/store/useNotificationsStore';
 
-// How often the notifications badge refreshes while any tab is open. There's
-// no push infrastructure behind this (see notificationsFeed.ts) -- it's a
-// plain poll, frequent enough to feel live without hammering the backend.
-const NOTIFICATIONS_POLL_MS = 30_000;
-
+// The notifications badge is kept live by useNotificationsSync (root layout), not here.
 export default function TabsLayout() {
   useLanguage();
   const user = useSessionStore((s) => s.user);
   const hydrateFavorites = useFavoritesStore((s) => s.hydrate);
   const clearFavorites = useFavoritesStore((s) => s.clear);
-  const refreshNotifications = useNotificationsStore((s) => s.refresh);
-  const clearNotifications = useNotificationsStore((s) => s.clear);
 
   useEffect(() => {
     if (user) hydrateFavorites();
     else clearFavorites();
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (!user) {
-      clearNotifications();
-      return;
-    }
-    refreshNotifications(user.id);
-    const interval = setInterval(() => refreshNotifications(user.id), NOTIFICATIONS_POLL_MS);
-    return () => clearInterval(interval);
   }, [user?.id]);
 
   return (

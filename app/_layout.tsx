@@ -15,6 +15,7 @@ import {
   subscribeNotificationTaps,
   unregisterPush,
 } from '@/src/services/pushNotifications';
+import { useNotificationsSync } from '@/src/services/notificationsLive';
 import { preloadPlateAssets } from '@/src/components/VehiclePlate';
 import { onAccountBlocked, request } from '@/src/api/client';
 
@@ -35,6 +36,9 @@ export default function RootLayout() {
   const userId = useSessionStore((s) => s.user?.id ?? null);
   const prevUserId = useRef<string | null>(null);
   const fetchCommissionRate = useCommissionStore((s) => s.fetchRate);
+
+  // The notifications inbox and its badge, kept live while the app is open.
+  useNotificationsSync(userId);
 
   // The platform commission rate for price-breakdown displays (create-spot preview,
   // spot details) -- fetched once per session, since it rarely changes and every screen

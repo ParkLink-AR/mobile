@@ -10,7 +10,7 @@ import { useAccountTypeStore, tabRouteFor } from '@/src/store/useAccountTypeStor
 import { login, reactivateAccount } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
 import { useScale } from '@/src/theme/typography';
-import { formatFullDateFromISO } from '@/src/services/bookingDates';
+import { formatLongDateFromISO } from '@/src/services/bookingDates';
 import { FormError, useAccountFormStyles } from '@/src/components/AccountForm';
 
 export default function Login() {
@@ -141,7 +141,7 @@ export default function Login() {
       {accountDeletionDate ? (
         <View style={styles.notice}>
           <Text style={styles.noticeTitle}>
-            {t('account.deletion.successTitle', { date: formatFullDateFromISO(accountDeletionDate) })}
+            {t('account.deletion.successTitle', { date: formatLongDateFromISO(accountDeletionDate) })}
           </Text>
           <Text style={styles.noticeBody}>{t('account.deletion.successMessage')}</Text>
         </View>
@@ -200,7 +200,7 @@ export default function Login() {
             <Text style={styles.sheetTitle}>{t('account.reactivate.title')}</Text>
             <Text style={styles.sheetBody}>
               {reactivatePrompt
-                ? t('account.reactivate.body', { date: formatFullDateFromISO(reactivatePrompt) })
+                ? t('account.reactivate.body', { date: formatLongDateFromISO(reactivatePrompt) })
                 : t('account.reactivate.bodyNoDate')}
             </Text>
             <Button title={t('account.reactivate.confirm')} onPress={reactivate} disabled={reactivating} />

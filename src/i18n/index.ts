@@ -13,9 +13,18 @@ const languages: Record<string, LangMap> = {
 export const availableLanguages = Object.keys(languages);
 
 let current = languages.es;
+let currentCode = 'es';
 
 export function setLanguage(lang: string) {
-  if (languages[lang]) current = languages[lang];
+  if (languages[lang]) {
+    current = languages[lang];
+    currentCode = lang;
+  }
+}
+
+/** The active language's code ('es' | 'en' | 'ja'), e.g. for formatting dates. */
+export function getLanguage(): string {
+  return currentCode;
 }
 
 export function t(key: string, vars?: Record<string, string | number>) {
@@ -40,4 +49,4 @@ export function useLanguage() {
   useSettingsStore((s: { language: string }) => s.language);
 }
 
-export default { t, setLanguage, availableLanguages };
+export default { t, setLanguage, getLanguage, availableLanguages };

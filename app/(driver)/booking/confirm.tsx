@@ -21,6 +21,8 @@ import { createBookingApi, createPaymentPreference, type ScheduleEntryBody } fro
 import { getVehicles } from '@/src/api/auth';
 import { PaymentMethodDisplay } from '@/src/components/PaymentMethodDisplay';
 import { VehiclePicker } from '@/src/components/VehiclePicker';
+import { formatLongDate } from '@/src/services/bookingDates';
+import { todayArtDateISO } from '@/src/services/dateUtils';
 
 // ── Helpers for availability pre-check ───────────────────────────────────────
 
@@ -349,9 +351,7 @@ export default function ConfirmBooking() {
                 <Ionicons name="calendar-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('driver.booking.date')}</Text>
                 <Text style={styles.detailValue}>
-                  {bookingDate
-                    ? new Date(bookingDate + 'T12:00:00').toLocaleDateString('es-AR')
-                    : new Date().toLocaleDateString('es-AR')}
+                  {formatLongDate(bookingDate || todayArtDateISO())}
                 </Text>
               </View>
               <View style={styles.detailRow}>

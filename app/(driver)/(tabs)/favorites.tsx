@@ -61,7 +61,10 @@ export default function Favorites() {
 
   return (
     <Screen style={styles.container}>
-      <Text style={typography.h1}>{t('driver.favorites.title')}</Text>
+      <View style={styles.headerRow}>
+        <Text style={typography.h1}>{t('driver.favorites.title')}</Text>
+        <RoleBadge />
+      </View>
       <FlatList
         data={spots}
         keyExtractor={(item) => item.id}

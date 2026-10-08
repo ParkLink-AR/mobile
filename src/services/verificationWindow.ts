@@ -1,4 +1,6 @@
 import { t } from '@/src/i18n';
+import { formatShortDateFromISO, formatTime } from '@/src/services/bookingDates';
+import { artDateFromISO } from '@/src/services/dateUtils';
 
 // Mirrors booking-service's VerificationOpensBeforeStart: the owner can enter the driver's
 // arrival code from 30 minutes before the booking starts until it ends.
@@ -16,13 +18,12 @@ export function verificationWindowState(startAt: string, endAt: string, now: Dat
   return 'open';
 }
 
-/** "Disponible desde las 14:30" (hoy) or "Disponible el 12/10 desde las 14:30". */
+/** "Disponible desde las 14:30" (hoy) or "Disponible el 12/10/2026 desde las 14:30". */
 export function verificationAvailableFromLabel(startAt: string, now: Date = new Date()): string {
-  const opensAt = verificationOpensAt(startAt);
-  const time = opensAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-  if (opensAt.toDateString() === now.toDateString()) {
+  const opensAt = verificationOpensAt(startAt).toISOString();
+  const time = formatTime(opensAt);
+  if (artDateFromISO(opensAt) === artDateFromISO(now.toISOString())) {
     return t('owner.verify.availableFromTime', { time });
   }
-  const date = opensAt.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
-  return t('owner.verify.availableFromDate', { date, time });
+  return t('owner.verify.availableFromDate', { date: formatShortDateFromISO(opensAt), time });
 }

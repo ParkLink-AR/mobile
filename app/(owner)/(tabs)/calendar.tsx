@@ -13,7 +13,7 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { getOwnerBookings } from '@/src/services/ownerBookings';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { todayArtDateISO } from '@/src/services/dateUtils';
-import { formatBookingWhen, formatShortDate } from '@/src/services/bookingDates';
+import { formatBookingWhen, formatLongDate, formatShortDate } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 // Mismo criterio que spot/[id].tsx: 0=Lunes … 6=Domingo.
@@ -191,11 +191,7 @@ export default function OwnerCalendar() {
     stayValue: { fontSize: Math.round(13 * scale), fontWeight: '600', color: colors.text },
   });
 
-  const selectedDateLabel = new Date(selectedDate + 'T12:00:00Z').toLocaleDateString('es-AR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
+  const selectedDateLabel = formatLongDate(selectedDate);
 
   return (
     <Screen style={styles.container}>
@@ -300,12 +296,12 @@ export default function OwnerCalendar() {
                   <View style={styles.stayRow}>
                     <Ionicons name="log-in-outline" size={Math.round(15 * scale)} color={colors.textSecondary} />
                     <Text style={styles.stayLabel}>{t('spot.stay.checkIn')}</Text>
-                    <Text style={styles.stayValue}>{formatShortDate(item.date)} · {item.startTime}</Text>
+                    <Text style={styles.stayValue}>{formatShortDate(item.date)} {item.startTime}</Text>
                   </View>
                   <View style={styles.stayRow}>
                     <Ionicons name="log-out-outline" size={Math.round(15 * scale)} color={colors.textSecondary} />
                     <Text style={styles.stayLabel}>{t('spot.stay.checkOut')}</Text>
-                    <Text style={styles.stayValue}>{formatShortDate(item.endDate)} · {item.endTime}</Text>
+                    <Text style={styles.stayValue}>{formatShortDate(item.endDate)} {item.endTime}</Text>
                   </View>
                 </>
               )}

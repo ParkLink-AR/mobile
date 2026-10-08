@@ -8,6 +8,7 @@ import { Card } from '@/src/components/Card';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { getMyTicketsApi, TicketApiResponse, TicketStatus } from '@/src/api/booking';
 import { useScale } from '@/src/theme/typography';
+import { formatShortDateFromISO } from '@/src/services/bookingDates';
 
 const STATUS_LABELS: Record<TicketStatus, string> = {
   OPEN: 'ABIERTO',
@@ -17,7 +18,7 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
 };
 
 function formatTicketDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return formatShortDateFromISO(iso);
 }
 
 export default function BookingTickets() {

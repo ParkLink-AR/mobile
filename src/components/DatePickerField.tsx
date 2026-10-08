@@ -4,6 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useScale } from '@/src/theme/typography';
+import { formatShortDate } from '@/src/services/bookingDates';
 
 interface DatePickerFieldProps {
   /** YYYY-MM-DD, o '' si no hay fecha elegida. */
@@ -23,14 +24,7 @@ function toISODate(d: Date): string {
 }
 
 function formatDisplay(iso: string): string {
-  // T00:00:00 ancla en horario local -- si no, new Date('YYYY-MM-DD') lo
-  // interpreta como UTC medianoche y puede mostrar el día anterior según
-  // el huso horario del dispositivo.
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+  return formatShortDate(iso);
 }
 
 /**

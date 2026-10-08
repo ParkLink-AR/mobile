@@ -5,11 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useFocusEffect, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { StatusBadge } from '@/src/components/StatusBadge';
-import { VehiclePlate } from '@/src/components/VehiclePlate';
 import { VerifyArrivalCode } from '@/src/components/VerifyArrivalCode';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
-import { useTypography, useScale } from '@/src/theme/typography';
+import { useScale } from '@/src/theme/typography';
 import {
   getBookingsForSpotApi,
   approveBookingApi,
@@ -18,7 +17,7 @@ import {
 } from '@/src/api/booking';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
-import { mapBookingDateRange, formatBookingWhen, toVehicleSnapshot, ownerEarningsFrom } from '@/src/services/bookingDates';
+import { mapBookingDateRange, formatShortDate, toVehicleSnapshot, ownerEarningsFrom } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 
 function mapApiBooking(b: BookingApiResponse): Booking {
@@ -50,7 +49,6 @@ export default function SpotBookingRequests() {
   const colors = useThemeColors();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
-  const typography = useTypography();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [driverNames, setDriverNames] = useState<Record<string, string>>({});
@@ -127,12 +125,13 @@ export default function SpotBookingRequests() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 16, gap: 12 },
-    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
-    driverRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
-    driverRowText: { flex: 1, fontSize: sc(13), fontWeight: '600', color: colors.textSecondary },
-    vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-    vehicleText: { fontSize: sc(13), color: colors.textSecondary },
-    total: { color: colors.teal, fontWeight: '700', marginTop: 4 },
+    headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+    driverRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5 },
+    driverRowText: { flexShrink: 1, fontSize: sc(14), fontWeight: '700', color: colors.text },
+    infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+    infoLabel: { flex: 1, fontSize: sc(13), color: colors.textSecondary },
+    infoValue: { fontSize: sc(13), fontWeight: '600', color: colors.text },
+    total: { color: colors.teal, fontWeight: '700', marginTop: 8 },
     actionsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
     actionBtn: {
       flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -192,27 +191,35 @@ export default function SpotBookingRequests() {
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => router.push(`${group}/bookings/${item.id}`)} activeOpacity={0.7}>
               <Card>
-                <TouchableOpacity
-                  style={styles.driverRow}
-                  onPress={() => router.push(`${group}/profile/${item.driverId}?as=driver`)}
-                  disabled={!driverNames[item.driverId]}
-                >
-                  <Ionicons name="person-circle-outline" size={sc(16)} color={colors.textSecondary} />
-                  <Text style={styles.driverRowText}>{driverNames[item.driverId] ?? item.driverId}</Text>
-                  {!!driverNames[item.driverId] && <Ionicons name="chevron-forward" size={sc(13)} color={colors.textSecondary} />}
-                </TouchableOpacity>
-                {item.vehicle && (
-                  <View style={styles.vehicleRow}>
-                    <VehiclePlate plate={item.vehicle.plate} size="small" />
-                    <Text style={styles.vehicleText}>{item.vehicle.brand} {item.vehicle.model}</Text>
-                  </View>
-                )}
-                <View style={styles.row}>
-                  <Text style={[typography.body, { flex: 1 }]}>
-                    {formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}
-                  </Text>
+                <View style={styles.headerRow}>
+                  <TouchableOpacity
+                    style={styles.driverRow}
+                    onPress={() => router.push(`${group}/profile/${item.driverId}?as=driver`)}
+                    disabled={!driverNames[item.driverId]}
+                  >
+                    <Ionicons name="person-circle-outline" size={sc(18)} color={colors.textSecondary} />
+                    <Text style={styles.driverRowText} numberOfLines={1}>{driverNames[item.driverId] ?? item.driverId}</Text>
+                    {!!driverNames[item.driverId] && <Ionicons name="chevron-forward" size={sc(13)} color={colors.textSecondary} />}
+                  </TouchableOpacity>
                   <StatusBadge status={item.status} />
                 </View>
+                <View style={styles.infoRow}>
+                  <Ionicons name="log-in-outline" size={sc(15)} color={colors.textSecondary} />
+                  <Text style={styles.infoLabel}>{t('spot.stay.checkIn')}</Text>
+                  <Text style={styles.infoValue}>{formatShortDate(item.date)} {item.startTime}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Ionicons name="log-out-outline" size={sc(15)} color={colors.textSecondary} />
+                  <Text style={styles.infoLabel}>{t('spot.stay.checkOut')}</Text>
+                  <Text style={styles.infoValue}>{formatShortDate(item.endDate)} {item.endTime}</Text>
+                </View>
+                {item.vehicle && (
+                  <View style={styles.infoRow}>
+                    <Ionicons name="car-outline" size={sc(15)} color={colors.textSecondary} />
+                    <Text style={styles.infoLabel}>{t('driver.booking.detail.vehicle')}</Text>
+                    <Text style={styles.infoValue}>{item.vehicle.brand} {item.vehicle.model}</Text>
+                  </View>
+                )}
                 <Text style={styles.total}>
                   {t('owner.booking.youEarn', { amount: (item.ownerEarnings ?? item.total).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) })}
                 </Text>

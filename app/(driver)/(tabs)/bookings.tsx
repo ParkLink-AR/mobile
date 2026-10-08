@@ -93,7 +93,10 @@ export default function DriverBookings() {
   if (loading) {
     return (
       <Screen style={styles.container}>
-        <Text style={typography.h1}>{t('driver.bookings.title')}</Text>
+        <View style={styles.headerRow}>
+          <Text style={typography.h1}>{t('driver.bookings.title')}</Text>
+          <RoleBadge />
+        </View>
         <View style={styles.emptyContainer}>
           <ActivityIndicator color={colors.teal} />
         </View>

@@ -1,24 +1,22 @@
-import { getParkingSpotsForOwner } from '@/src/services/parkingService';
-import {
-  getBookingsForSpotApi,
-  getUserBookingsApi,
-  getBookingReviewsApi,
-  getMessagesApi,
-  getUserTicketsApi,
-  BookingApiResponse,
-} from '@/src/api/booking';
-import { getParkingSpotDetail } from '@/src/api/parking';
+import { InboxNotificationApi, listNotificationsApi } from '@/src/api/notifications';
 import { getPublicProfileApi } from '@/src/api/auth';
-import { getSettlementsForOwner } from '@/src/services/paymentService';
 import { mapBookingDateRange } from '@/src/services/bookingDates';
+
+// The notifications tab is the user's inbox on notifications-service: one entry per thing
+// that happened to them (a booking confirmed, a request to answer, a message...), saved
+// when it happened and read/unread on the server. This file only turns those entries into
+// what the screen renders.
 
 export type NotificationKind =
   | 'owner_request'
-  | 'owner_new_booking'
   | 'driver_confirmed'
   | 'driver_rejected'
+  // The owner never answered the request in time; the driver was refunded.
+  | 'driver_request_expired'
   // The owner's account was closed or suspended, so the booking was cancelled and refunded.
   | 'driver_spot_unavailable'
+  // The driver cancelled, or their account was closed: the slot is free again.
+  | 'owner_booking_cancelled'
   | 'driver_review_prompt'
   | 'owner_review_prompt'
   | 'driver_verified'
@@ -26,77 +24,108 @@ export type NotificationKind =
   | 'ticket_replied'
   | 'owner_settlement_paid';
 
-// Bookings whose chat is still realistically "live" -- messaging is about coordinating an
-// upcoming/current stay, not something that keeps happening on a booking that's long over.
-const MESSAGE_ACTIVE_STATUSES = new Set(['CONFIRMED', 'PENDING_OWNER_APPROVAL', 'IN_PROGRESS']);
+const KNOWN_KINDS = new Set<NotificationKind>([
+  'owner_request',
+  'driver_confirmed',
+  'driver_rejected',
+  'driver_request_expired',
+  'driver_spot_unavailable',
+  'owner_booking_cancelled',
+  'driver_review_prompt',
+  'owner_review_prompt',
+  'driver_verified',
+  'message_received',
+  'ticket_replied',
+  'owner_settlement_paid',
+]);
 
 /** Which side of the app a notification belongs to -- shown as the car/building icon on
- * each one, and decides which route group (driver or owner) tapping it opens, regardless
- * of the mode the user happens to be in. */
+ * each one, and decides which side of a booking tapping it opens, regardless of the mode
+ * the user happens to be in. */
 export type NotificationRole = 'driver' | 'owner';
 
-const OWNER_KINDS = new Set<NotificationKind>(['owner_request', 'owner_new_booking', 'owner_review_prompt', 'owner_settlement_paid']);
+const OWNER_KINDS = new Set<NotificationKind>([
+  'owner_request',
+  'owner_booking_cancelled',
+  'owner_review_prompt',
+  'owner_settlement_paid',
+]);
 
-/** item.role, falling back by kind for a notification cached (see useNotificationsStore's
- * persisted items) before role existed -- refreshed with the real one on the next poll. */
-export function notificationRole(item: Pick<AppNotification, 'kind'> & { role?: NotificationRole }): NotificationRole {
+/** item.role, falling back by kind for an entry the server saved without one. */
+export function notificationRole(item: Pick<AppNotification, 'kind'> & { role?: NotificationRole | null }): NotificationRole {
   return item.role ?? (OWNER_KINDS.has(item.kind) ? 'owner' : 'driver');
 }
 
 export interface AppNotification {
-  /** Unique per notification. For the booking-centric kinds this is
-   * `${bookingId}-${kind}`; for message_received it's the message's own id (a booking can
-   * have several); for ticket_replied it's the last admin reply's message id (so a NEW
-   * reply produces a new unread notification instead of staying permanently "seen"); for
-   * owner_settlement_paid it's the settlement's id. */
   id: string;
   kind: NotificationKind;
-  role: NotificationRole;
+  role: NotificationRole | null;
   bookingId: string;
   parkingSpotId: string;
-  /** Rendered as the notification's title. For ticket_replied this is the ticket's own
-   * subject (there's no "spot" to name); for owner_settlement_paid it's left blank and the
-   * screen substitutes a fixed, translated title instead (see app/(driver)/(tabs)/notifications.tsx). */
+  /** Rendered as the notification's title. For ticket_replied it's the ticket's subject;
+   * for owner_settlement_paid it's blank and the screen shows a fixed, translated title. */
   spotTitle: string;
   date: string;
   endDate: string;
   startTime: string;
   endTime: string;
+  /** Pesos: the booking's total, or the settlement's deposited amount. */
   total: number;
-  at: string; // ISO timestamp, for sorting (most recent first)
-  /** The other person on the booking, by name -- e.g. "Calificá a Juan Pérez" instead of
+  /** When it happened (ISO), newest first. */
+  at: string;
+  readAt: string | null;
+  /** owner_request only: true once it no longer waits for the owner's answer. */
+  resolved: boolean;
+  /** message_received / ticket_replied: the start of the message. */
+  preview?: string;
+  /** The other person on the booking, by name -- "Calificá a Juan Pérez" instead of
    * "Calificá al conductor". Best-effort: absent if their profile couldn't be loaded. */
   counterpartName?: string;
-  /** Extra navigation targets for kinds that don't map onto a single booking/spot. */
+  /** owner_review_prompt: who to review. */
+  driverId?: string;
   settlementId?: string;
   ticketId?: string;
 }
 
-function fmt(b: BookingApiResponse, spotTitle: string, kind: NotificationKind): AppNotification {
+const str = (value: unknown): string => (typeof value === 'string' ? value : '');
+const num = (value: unknown): number => (typeof value === 'number' ? value : 0);
+
+/** One inbox entry as the screen renders it, or null for a kind this version of the app
+ * doesn't know yet (sent by a newer backend). */
+export function toAppNotification(entry: InboxNotificationApi): AppNotification | null {
+  if (!KNOWN_KINDS.has(entry.kind as NotificationKind)) return null;
+  const kind = entry.kind as NotificationKind;
+  const data = entry.data ?? {};
+  const start = str(data.start);
+  const end = str(data.end);
+  const dates = start && end
+    ? mapBookingDateRange(start, end)
+    : { date: '', endDate: '', startTime: '', endTime: '' };
+
   return {
-    id: `${b.id}-${kind}`,
+    id: entry.id,
     kind,
-    role: OWNER_KINDS.has(kind) ? 'owner' : 'driver',
-    bookingId: b.id,
-    parkingSpotId: b.parking_spot_id,
-    spotTitle,
-    ...mapBookingDateRange(b.start, b.end),
-    total: typeof b.amount === 'number' ? b.amount / 100 : 0,
-    at: b.updated_at,
+    role: entry.role,
+    bookingId: str(data.booking_id),
+    parkingSpotId: str(data.parking_spot_id),
+    spotTitle: kind === 'ticket_replied' ? str(data.subject) : str(data.spot_title),
+    date: dates.date,
+    endDate: dates.endDate,
+    startTime: dates.startTime,
+    endTime: dates.endTime,
+    total: kind === 'owner_settlement_paid' ? num(data.net_amount) / 100 : num(data.amount) / 100,
+    at: entry.created_at,
+    readAt: entry.read_at,
+    resolved: !!entry.resolved_at,
+    preview: str(data.preview) || undefined,
+    driverId: str(data.driver_user_id) || undefined,
+    settlementId: str(data.settlement_id) || undefined,
+    ticketId: str(data.ticket_id) || undefined,
   };
 }
 
-// getNotifications() polls every 30s and re-scans every COMPLETED booking a user has ever
-// had to see if a review is still pending -- unbounded over an account's lifetime, and the
-// single biggest source of request volume (confirmed against real gateway logs, where this
-// fan-out alone was enough to trip the rate limiter during completely normal use). A review,
-// once submitted, is never revoked, so once a booking comes back with nothing pending there's
-// no reason to ever ask again -- caching that fact turns this fan-out from "every completed
-// booking, forever" into "only the still-unreviewed ones", every poll cycle.
-const noPendingReviewCache = new Set<string>();
-
-// Display names barely ever change, and the feed re-polls every 30s -- cache them for the
-// session instead of refetching each driver's profile on every poll.
+// Display names barely ever change -- cached for the session instead of refetched each
+// time the inbox reloads.
 const nameCache = new Map<string, string>();
 
 async function displayName(userId: string): Promise<string | undefined> {
@@ -111,250 +140,31 @@ async function displayName(userId: string): Promise<string | undefined> {
   }
 }
 
-/** Whether userId still has a review left to submit on a COMPLETED booking, given the
- * target types their role is responsible for (driver: spot + owner, owner: driver). */
-async function hasPendingReview(bookingId: string, userId: string, targetTypes: string[]): Promise<boolean> {
-  const cacheKey = `${bookingId}:${userId}`;
-  if (noPendingReviewCache.has(cacheKey)) return false;
-
-  try {
-    const existing = await getBookingReviewsApi(bookingId);
-    const reviewed = new Set(existing.filter((r) => r.reviewer_id === userId).map((r) => r.target_type));
-    const pending = targetTypes.some((target) => !reviewed.has(target as never));
-    if (!pending) noPendingReviewCache.add(cacheKey);
-    return pending;
-  } catch {
-    return false;
-  }
-}
-
-/** One notification per message the OTHER party sent on a still-active booking -- covers
- * `booking.message_sent` for either side. Best-effort: a booking whose messages fail to
- * load just contributes nothing, same as every other per-booking fan-out in this file. */
-async function getMessageNotifications(
-  bookings: BookingApiResponse[],
-  userId: string,
-  spotTitle: string,
-  role: NotificationRole,
-): Promise<AppNotification[]> {
-  const active = bookings.filter((b) => MESSAGE_ACTIVE_STATUSES.has(b.status));
-  const perBooking = await Promise.all(
-    active.map((b) =>
-      getMessagesApi(b.id)
-        .then((messages) =>
-          messages
-            .filter((m) => m.sender_id !== userId)
-            .map((m) => ({
-              id: `${m.id}-message_received`,
-              kind: 'message_received' as const,
-              role,
-              bookingId: b.id,
-              parkingSpotId: b.parking_spot_id,
-              spotTitle,
-              date: '',
-              endDate: '',
-              startTime: '',
-              endTime: '',
-              total: 0,
-              at: m.created_at,
-            })),
-        )
-        .catch(() => []),
-    ),
+/** "Calificá a Juan Pérez": puts the driver's name on the owner's review prompts. */
+async function withCounterpartNames(items: AppNotification[]): Promise<AppNotification[]> {
+  const ids = [...new Set(items.filter((i) => i.kind === 'owner_review_prompt' && i.driverId).map((i) => i.driverId!))];
+  const names = new Map<string, string | undefined>();
+  await Promise.all(ids.map(async (id) => names.set(id, await displayName(id))));
+  return items.map((item) =>
+    item.driverId && names.get(item.driverId) ? { ...item, counterpartName: names.get(item.driverId) } : item,
   );
-  return perBooking.flat();
 }
 
-/** Pending rental requests and unreviewed-driver prompts across every spot the user
- * owns -- there's no single endpoint for "all my spots' bookings", so this fans out one
- * call per owned spot (owners realistically have a handful, not hundreds). */
-async function getOwnerNotifications(ownerId: string): Promise<AppNotification[]> {
-  const spots = await getParkingSpotsForOwner(ownerId);
-  const perSpot = await Promise.all(
-    spots.map((spot) =>
-      getBookingsForSpotApi(spot.id)
-        .then(async (bookings) => {
-          const requests = bookings
-            .filter((b) => b.status === 'PENDING_OWNER_APPROVAL')
-            .map((b) => fmt(b, spot.title, 'owner_request'));
-
-          // Reserva ya confirmada (instantánea, o aprobada por el dueño hace
-          // rato) -- sin esto, un dueño con reserva instantánea prendida
-          // nunca se entera de que le reservaron la cochera hasta que la
-          // busca a mano. No hace falta distinguir instantánea de "recién
-          // la aprobé yo": deja de ser CONFIRMED en cuanto termina (pasa a
-          // COMPLETED), así que esto nunca convive con el recordatorio de
-          // reseña de abajo para la misma reserva.
-          const newBookings = bookings
-            .filter((b) => b.status === 'CONFIRMED')
-            .map((b) => fmt(b, spot.title, 'owner_new_booking'));
-
-          const completed = bookings.filter((b) => b.status === 'COMPLETED');
-          const reviewPrompts = (
-            await Promise.all(
-              completed.map(async (b) =>
-                (await hasPendingReview(b.id, ownerId, ['driver']))
-                  ? ({ ...fmt(b, spot.title, 'owner_review_prompt'), counterpartName: await displayName(b.user_id) } as AppNotification)
-                  : null,
-              ),
-            )
-          ).filter((n): n is AppNotification => n !== null);
-
-          // Best-effort: a failure fetching messages must never take down requests/
-          // newBookings/reviewPrompts above, which are already-working, more important
-          // signals -- caught here instead of letting it reject this whole .then() (which
-          // would fall through to the outer .catch(() => []) and silently lose everything
-          // for this spot, not just the messages).
-          const messages = await getMessageNotifications(bookings, ownerId, spot.title, 'owner').catch(() => []);
-
-          return [...requests, ...newBookings, ...reviewPrompts, ...messages];
-        })
-        .catch(() => []),
-    ),
-  );
-  return perSpot.flat();
+export interface NotificationsPage {
+  items: AppNotification[];
+  unreadCount: number;
+  nextBefore: string | null;
 }
 
-/** Confirmations, rejections, review prompts, and arrival-verification notices on bookings
- * the user made as a driver. A CANCELLED booking only becomes a "rejected" notification when
- * cancellation_reason says the *owner* did it (rejected, or never answered in time) -- not
- * when the driver cancelled their own booking themselves, since they already know that
- * happened. Absent cancellation_reason (a cancelled booking that predates that field) is
- * still treated as a rejection, matching this feed's original behavior from before drivers
- * could cancel. */
-async function getDriverNotifications(userId: string, bookings: BookingApiResponse[]): Promise<AppNotification[]> {
-  const relevant = bookings.filter(
-    (b) => b.status === 'CONFIRMED' || b.status === 'CANCELLED' || b.status === 'COMPLETED',
-  );
-
-  const spotIds = [...new Set(bookings.map((b) => b.parking_spot_id))];
-  const titleById: Record<string, string> = {};
-  await Promise.allSettled(
-    spotIds.map((id) =>
-      getParkingSpotDetail(id).then((spot) => {
-        titleById[id] = spot.title;
-      }).catch(() => {
-        titleById[id] = id;
-      }),
-    ),
-  );
-
-  const notifications: AppNotification[] = [];
-  for (const b of relevant) {
-    const title = titleById[b.parking_spot_id] ?? b.parking_spot_id;
-    if (b.status === 'CONFIRMED') {
-      notifications.push(fmt(b, title, 'driver_confirmed'));
-    } else if (b.status === 'CANCELLED' && b.cancellation_reason === 'OWNER_ACCOUNT_CLOSED') {
-      notifications.push(fmt(b, title, 'driver_spot_unavailable'));
-    } else if (
-      b.status === 'CANCELLED' &&
-      b.cancellation_reason !== 'DRIVER_CANCELLED' &&
-      b.cancellation_reason !== 'DRIVER_ACCOUNT_CLOSED'
-    ) {
-      notifications.push(fmt(b, title, 'driver_rejected'));
-    }
-  }
-
-  const completed = relevant.filter((b) => b.status === 'COMPLETED');
-  const reviewPrompts = (
-    await Promise.all(
-      completed.map(async (b) =>
-        (await hasPendingReview(b.id, userId, ['spot', 'owner']))
-          ? fmt(b, titleById[b.parking_spot_id] ?? b.parking_spot_id, 'driver_review_prompt')
-          : null,
-      ),
-    )
-  ).filter((n): n is AppNotification => n !== null);
-
-  // `booking.verified` -- the driver arrived and the owner entered their code. verified_at
-  // is set once and never unset, so this is a permanent fact about the booking regardless
-  // of its current status (it may since have gone to COMPLETED).
-  const verifiedNotifications = bookings
-    .filter((b) => !!b.verified_at)
-    .map((b) => ({
-      ...fmt(b, titleById[b.parking_spot_id] ?? b.parking_spot_id, 'driver_verified'),
-      at: b.verified_at!,
-    }));
-
-  // Same reasoning as getOwnerNotifications: a failure here must not take down
-  // notifications/reviewPrompts/verifiedNotifications above.
-  const messages = await getMessageNotifications(bookings, userId, '', 'driver')
-    .then((msgs) => msgs.map((m) => ({ ...m, spotTitle: titleById[m.parkingSpotId] ?? m.parkingSpotId })))
-    .catch(() => []);
-
-  return [...notifications, ...reviewPrompts, ...verifiedNotifications, ...messages];
-}
-
-/** `settlement.paid` -- every settlement ParkLink has confirmed paying this owner. Filtered
- * to PAID only: getSettlementsForOwner also returns a still-PENDING draft (so the owner can
- * see "being prepared" on the settlements screen itself), but it must NOT show up here as a
- * "your payment was deposited" notification before the admin actually confirms it. There's
- * no concept of "recent" here (a Settlement's status never reverts once PAID), but that's
- * fine: useNotificationsStore's seenIds already makes an old, already-opened one stop
- * counting toward the unread badge without it ever disappearing from the list. */
-async function getSettlementNotifications(ownerId: string): Promise<AppNotification[]> {
-  const settlements = await getSettlementsForOwner(ownerId);
-  return settlements
-    .filter((s) => s.status === 'PAID')
-    .map((s) => ({
-      id: `${s.id}-owner_settlement_paid`,
-      kind: 'owner_settlement_paid' as const,
-      role: 'owner' as const,
-      bookingId: '',
-      parkingSpotId: '',
-      spotTitle: '',
-      date: '',
-      endDate: '',
-      startTime: '',
-      endTime: '',
-      total: s.netAmount / 100,
-      at: s.paidAt ?? s.createdAt,
-      settlementId: s.id,
-    }));
-}
-
-/** `support.ticket_replied` -- every ticket this user opened (as driver or owner, on any
- * booking) that has at least one staff reply. Keyed by the last reply's own message id
- * (not the ticket id) so a brand-new reply on a ticket the user already saw produces a
- * fresh, genuinely-unread notification instead of staying marked seen forever. */
-async function getTicketReplyNotifications(userId: string, driverBookingIds: Set<string>): Promise<AppNotification[]> {
-  const tickets = await getUserTicketsApi(userId);
-  return tickets
-    .filter((t) => !!t.last_admin_reply_id)
-    .map((t) => ({
-      id: `${t.last_admin_reply_id}-ticket_replied`,
-      kind: 'ticket_replied' as const,
-      // A ticket on one of the user's own bookings was opened as the driver; any other
-      // ticket they can see is on a booking at one of their spots.
-      role: driverBookingIds.has(t.booking_id) ? ('driver' as const) : ('owner' as const),
-      bookingId: t.booking_id,
-      parkingSpotId: '',
-      spotTitle: t.subject,
-      date: '',
-      endDate: '',
-      startTime: '',
-      endTime: '',
-      total: 0,
-      at: t.last_admin_reply_at ?? t.updated_at,
-      ticketId: t.id,
-    }));
-}
-
-/** Combines every role's and every source's notifications -- the same account can own
- * spots, also book other people's, and has exactly one ticket history regardless of which
- * "mode" the app is currently showing. */
-export async function getNotifications(userId: string): Promise<AppNotification[]> {
-  // The user's own bookings as a driver feed both the driver notifications and the
-  // tickets' driver/owner split -- fetched once for both.
-  const driverBookings = getUserBookingsApi(userId);
-  const [owner, driver, settlements, tickets] = await Promise.all([
-    getOwnerNotifications(userId).catch(() => []),
-    driverBookings.then((bookings) => getDriverNotifications(userId, bookings)).catch(() => []),
-    getSettlementNotifications(userId).catch(() => []),
-    driverBookings
-      .catch(() => [] as BookingApiResponse[])
-      .then((bookings) => getTicketReplyNotifications(userId, new Set(bookings.map((b) => b.id))))
-      .catch(() => []),
-  ]);
-  return [...owner, ...driver, ...settlements, ...tickets].sort((a, b) => (a.at < b.at ? 1 : -1));
+/** One page of the inbox (the newest one without `before`), or null when the session
+ * ended meanwhile (request() resolves undefined while logging the user out). */
+export async function getNotificationsPage(before?: string): Promise<NotificationsPage | null> {
+  const page = await listNotificationsApi(before);
+  if (!page) return null;
+  const items = page.items.map(toAppNotification).filter((n): n is AppNotification => n !== null);
+  return {
+    items: await withCounterpartNames(items),
+    unreadCount: page.unread_count,
+    nextBefore: page.next_before,
+  };
 }

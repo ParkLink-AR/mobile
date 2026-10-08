@@ -4,7 +4,7 @@ import { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tab
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSettingsStore } from '@/src/store/useSettingsStore';
-import { useUnseenNotificationsCount } from '@/src/store/useNotificationsStore';
+import { useUnreadNotificationsCount } from '@/src/store/useNotificationsStore';
 import { t, useLanguage } from '@/src/i18n';
 import { useScale } from '@/src/theme/typography';
 
@@ -30,7 +30,7 @@ export function DockTabBar({ state, navigation }: BottomTabBarProps) {
   // With large text the labels no longer fit under the icons: icons only (each tab
   // still has its name as accessibility label).
   const showLabels = useSettingsStore((s) => s.fontSize) !== 'large';
-  const unseenCount = useUnseenNotificationsCount();
+  const unseenCount = useUnreadNotificationsCount();
 
   const styles = StyleSheet.create({
     bar: {
@@ -47,7 +47,6 @@ export function DockTabBar({ state, navigation }: BottomTabBarProps) {
       justifyContent: 'center',
       gap: 3,
       paddingVertical: 4,
-      paddingHorizontal: 2,
     },
     iconWrapper: { position: 'relative' },
     badge: {
@@ -58,10 +57,10 @@ export function DockTabBar({ state, navigation }: BottomTabBarProps) {
       paddingHorizontal: 3,
     },
     badgeText: { color: '#fff', fontSize: sc(10), fontWeight: '700' },
-    // Mismo tamaño para las cinco etiquetas; no crece con "Texto: Grande" (no entra
-    // "Notificaciones" en ~80pt). El ícono sí escala.
+    // Tamaño fijo, sin cortar con "…". Con "Texto: Grande" las etiquetas se ocultan
+    // (showLabels); el ícono sí escala.
     label: {
-      fontSize: Math.round(10 * Math.min(scale, 1)),
+      fontSize: 11,
       fontWeight: '600',
       textAlign: 'center',
     },
@@ -101,7 +100,7 @@ export function DockTabBar({ state, navigation }: BottomTabBarProps) {
                 </View>
               )}
             </View>
-            {showLabels ? <Text numberOfLines={1} style={[styles.label, { color }]}>{t(tab.labelKey)}</Text> : null}
+            {showLabels ? <Text style={[styles.label, { color }]}>{t(tab.labelKey)}</Text> : null}
           </Pressable>
         );
       })}

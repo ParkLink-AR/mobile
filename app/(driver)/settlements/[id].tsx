@@ -12,7 +12,7 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import { getSettlementById } from '@/src/services/paymentService';
 import { getBookingApi } from '@/src/api/booking';
-import { formatFullDateTime, mapBookingDateRange, formatBookingWhen } from '@/src/services/bookingDates';
+import { formatLongDateTime, mapBookingDateRange, formatBookingWhen } from '@/src/services/bookingDates';
 import { Settlement, SettlementPayout } from '@/src/types';
 
 function money(centavos: number): string {
@@ -115,8 +115,8 @@ export default function SettlementDetail() {
         </View>
         <Text style={typography.caption}>
           {settlement.status === 'PAID'
-            ? `${t('settlements.paidAt')} ${settlement.paidAt ? formatFullDateTime(settlement.paidAt) : '—'}`
-            : `${t('settlements.preparedAt')} ${formatFullDateTime(settlement.createdAt)}`}
+            ? `${t('settlements.paidAt')} ${settlement.paidAt ? formatLongDateTime(settlement.paidAt) : '—'}`
+            : `${t('settlements.preparedAt')} ${formatLongDateTime(settlement.createdAt)}`}
         </Text>
         {settlement.status === 'PENDING' && (
           <Text style={[typography.caption, styles.preparingNote]}>{t('settlements.preparingNote')}</Text>

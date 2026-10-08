@@ -26,7 +26,7 @@ import { useNotificationsStore } from '@/src/store/useNotificationsStore';
 import { ApiError } from '@/src/api/client';
 import { getParkingSpotDetail } from '@/src/api/parking';
 import { getPublicProfileApi } from '@/src/api/auth';
-import { mapBookingDateRange, formatBookingWhen, formatFullDate, toVehicleSnapshot, ownerEarningsFrom } from '@/src/services/bookingDates';
+import { mapBookingDateRange, formatBookingWhen, formatLongDate, formatLongDateFromISO, formatLongDateTime, toVehicleSnapshot, ownerEarningsFrom } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 import { useScale } from '@/src/theme/typography';
 
@@ -176,7 +176,8 @@ export default function DriverBookingDetail() {
     try {
       await (approve ? approveBookingApi(booking.id) : rejectBookingApi(booking.id));
       load();
-      if (userId) useNotificationsStore.getState().refresh(userId);
+      // The request's accept/reject buttons in the notifications tab go away right away.
+      useNotificationsStore.getState().markAnswered(booking.id);
     } catch (err) {
       alert(err instanceof ApiError ? err.detail : t(approve ? 'owner.spot.requests.errorApprove' : 'owner.spot.requests.errorReject'));
     } finally {
@@ -360,6 +361,10 @@ export default function DriverBookingDetail() {
   const isPaidAndConfirmed = booking.paidAt != null &&
     (booking.status === 'CONFIRMED' || booking.status === 'IN_PROGRESS' || booking.status === 'COMPLETED');
   const paidDate = isPaidAndConfirmed && booking.paidAt ? new Date(booking.paidAt) : null;
+  // Directions only help the driver, and only while they still have to get there -- the
+  // owner knows where their own spot is.
+  const showDirections = !isOwnerView && !!spotLocation &&
+    (booking.status === 'PENDING_OWNER_APPROVAL' || booking.status === 'CONFIRMED' || booking.status === 'IN_PROGRESS');
 
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
@@ -433,18 +438,18 @@ export default function DriverBookingDetail() {
                 <View style={styles.detailRow}>
                   <Ionicons name="log-in-outline" size={sc(16)} color={colors.textSecondary} />
                   <Text style={styles.detailLabel}>{t('spot.stay.checkIn')}</Text>
-                  <Text style={styles.detailValue}>{formatFullDate(booking.date)} · {booking.startTime}</Text>
+                  <Text style={styles.detailValue}>{formatLongDate(booking.date)}, {booking.startTime}</Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Ionicons name="log-out-outline" size={sc(16)} color={colors.textSecondary} />
                   <Text style={styles.detailLabel}>{t('spot.stay.checkOut')}</Text>
-                  <Text style={styles.detailValue}>{formatFullDate(booking.endDate)} · {booking.endTime}</Text>
+                  <Text style={styles.detailValue}>{formatLongDate(booking.endDate)}, {booking.endTime}</Text>
                 </View>
               </>
             ) : (
               <View style={styles.detailRow}>
                 <Ionicons name="calendar-outline" size={sc(16)} color={colors.textSecondary} />
-                <Text style={styles.whenValue}>{formatBookingWhen(booking, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}</Text>
+                <Text style={styles.whenValue}>{formatBookingWhen(booking, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'), 'long')}</Text>
               </View>
             )}
             <View style={styles.detailRow}>
@@ -472,7 +477,8 @@ export default function DriverBookingDetail() {
             )}
           </View>
 
-          {booking.status === 'CONFIRMED' && booking.verificationCode && (
+          {/* The driver's arrival code: they tell it to the owner, who types it in below. */}
+          {!isOwnerView && booking.status === 'CONFIRMED' && booking.verificationCode && (
             <View style={styles.codeCard}>
               <Text style={styles.codeLabel}>{t('driver.booking.codeLabel')}</Text>
               <Text style={styles.codeValue}>{booking.verificationCode}</Text>
@@ -535,7 +541,7 @@ export default function DriverBookingDetail() {
                         {refund?.status === 'refunded'
                           ? t('booking.refund.done', {
                               amount: formatPesos(refund.amount ?? booking.total),
-                              date: refund.refundedAt ? new Date(refund.refundedAt).toLocaleDateString('es-AR') : '',
+                              date: refund.refundedAt ? formatLongDateFromISO(refund.refundedAt) : '',
                             })
                           : refund?.status === 'delayed'
                             ? t('booking.refund.delayed', { amount: formatPesos(refund.amount ?? booking.total) })
@@ -556,8 +562,9 @@ export default function DriverBookingDetail() {
               cancele, así que mostrarlos siempre haría ver como "pagado" algo que no lo
               está (ver isPaidAndConfirmed más arriba). Es el dato menos urgente de la
               pantalla -- un comprobante, no la razón por la que alguien entra acá -- así
-              que queda después del resumen y el código, no compitiendo con ellos. */}
-          {isPaidAndConfirmed && (
+              que queda después del resumen y el código, no compitiendo con ellos. Es el
+              comprobante del conductor: el propietario ya ve lo que gana en el resumen. */}
+          {!isOwnerView && isPaidAndConfirmed && (
             <Card>
               <View style={styles.cardContent}>
                 <View style={styles.sectionHeader}>
@@ -570,7 +577,7 @@ export default function DriverBookingDetail() {
                     <Ionicons name="checkmark-circle-outline" size={sc(16)} color={colors.textSecondary} />
                     <Text style={styles.detailLabel}>{t('driver.booking.detail.paidAt')}</Text>
                     <Text style={styles.detailValue}>
-                      {paidDate.toLocaleDateString('es-AR')} · {paidDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                      {formatLongDateTime(paidDate.toISOString())}
                     </Text>
                   </View>
                 )}
@@ -591,7 +598,7 @@ export default function DriverBookingDetail() {
               en el perfil. Va al final, después de los datos de la reserva. */}
           <Card>
             <View style={styles.cardContent}>
-              {spotLocation && (
+              {showDirections && spotLocation && (
                 <>
                   <Pressable
                     style={styles.sectionHeader}

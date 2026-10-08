@@ -1,65 +1,131 @@
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppNotification, getNotifications } from '@/src/services/notificationsFeed';
+import { markNotificationsReadApi } from '@/src/api/notifications';
+import { AppNotification, getNotificationsPage } from '@/src/services/notificationsFeed';
 
 interface NotificationsState {
+  /** Newest first: the first page, plus any older pages loaded by scrolling. */
   items: AppNotification[];
-  seenIds: string[];
+  /** From the server -- the badge on the notifications tab. */
+  unreadCount: number;
+  nextBefore: string | null;
   loading: boolean;
+  loadingMore: boolean;
   /** True once the first refresh() has resolved -- lets the screen show a full-screen
    *  spinner instead of flashing the "no notifications" empty state before the first
    *  fetch completes. Reset on clear() so a new session gets its own first-load spinner. */
   hasLoadedOnce: boolean;
-  refresh: (userId: string) => Promise<void>;
-  markSeen: (ids: string[]) => void;
+  /** Booking requests the owner just accepted or rejected from this device -- hidden right
+   *  away, before the server's own "answered" mark comes back with the next refresh. */
+  answeredBookingIds: string[];
+  /** The notifications that were unread during the current visit to the notifications
+   *  tab: they keep their "new" look for the rest of the visit, even though they're marked
+   *  read on the server as soon as they're shown. */
+  freshIds: string[];
+  /** The user opened the notifications tab: a new visit starts. */
+  startVisit: () => void;
+  /** Reloads the newest page and the unread count. */
+  refresh: () => Promise<void>;
+  /** Appends the next older page, if any. */
+  loadMore: () => Promise<void>;
+  /** Marks everything read (the notifications tab is on screen), remembering what was
+   *  unread in freshIds. */
+  markAllRead: () => Promise<void>;
+  markAnswered: (bookingId: string) => void;
   clear: () => void;
 }
 
-export const useNotificationsStore = create(
-  persist<NotificationsState>(
-    (set, get) => ({
-      items: [],
-      seenIds: [],
-      loading: false,
-      hasLoadedOnce: false,
-      refresh: async (userId: string) => {
-        set({ loading: true });
-        try {
-          const items = await getNotifications(userId);
-          set({ items });
-        } catch (err) {
-          console.warn('[Notifications] refresh error:', err);
-        } finally {
-          set({ loading: false, hasLoadedOnce: true });
-        }
-      },
-      markSeen: (ids: string[]) => {
-        const seen = new Set(get().seenIds);
-        ids.forEach((id) => seen.add(id));
-        set({ seenIds: [...seen] });
-      },
-      // Sólo borra la lista en memoria (se vuelve a pedir sola en el
-      // próximo login, vía refresh()) -- seenIds NO se toca acá: es el
-      // registro persistente de qué notificaciones ya se vieron, y tiene
-      // que sobrevivir a un logout/login para que el badge de "no leídas"
-      // no vuelva a contar como nuevo algo que el usuario ya abrió antes de
-      // cerrar sesión. Los ids son `${bookingId}-${kind}` con bookingId un
-      // UUID único global, así que conservarlos entre cuentas en el mismo
-      // dispositivo no arrastra el estado de "visto" de un usuario a otro.
-      clear: () => set({ items: [], hasLoadedOnce: false }),
-    }),
-    {
-      name: 'notifications-storage',
-      storage: createJSONStorage(() => AsyncStorage),
-    },
-  ),
-);
+// Each refresh() gets a number; only the latest one to start may apply its result, so a
+// slow response can never overwrite a newer one (refreshes come from the live socket, the
+// tab, pull-to-refresh and returning to the app, and can overlap).
+let latestRefresh = 0;
 
-/** Reactive unread count -- re-renders whenever items or seenIds change. */
-export function useUnseenNotificationsCount(): number {
-  const items = useNotificationsStore((s) => s.items);
-  const seenIds = useNotificationsStore((s) => s.seenIds);
-  const seen = new Set(seenIds);
-  return items.filter((item) => !seen.has(item.id)).length;
+export const useNotificationsStore = create<NotificationsState>()((set, get) => ({
+  items: [],
+  unreadCount: 0,
+  nextBefore: null,
+  loading: false,
+  loadingMore: false,
+  hasLoadedOnce: false,
+  answeredBookingIds: [],
+  freshIds: [],
+  startVisit: () => set({ freshIds: [] }),
+  refresh: async () => {
+    const ticket = ++latestRefresh;
+    set({ loading: true });
+    try {
+      const page = await getNotificationsPage();
+      if (ticket !== latestRefresh || !page) return;
+      set({ items: page.items, unreadCount: page.unreadCount, nextBefore: page.nextBefore });
+    } catch (err) {
+      console.warn('[Notifications] refresh error:', err);
+    } finally {
+      if (ticket === latestRefresh) set({ loading: false, hasLoadedOnce: true });
+    }
+  },
+  loadMore: async () => {
+    const { nextBefore, loadingMore } = get();
+    if (!nextBefore || loadingMore) return;
+    set({ loadingMore: true });
+    try {
+      const page = await getNotificationsPage(nextBefore);
+      if (!page || get().nextBefore !== nextBefore) return;
+      const known = new Set(get().items.map((item) => item.id));
+      set({
+        items: [...get().items, ...page.items.filter((item) => !known.has(item.id))],
+        nextBefore: page.nextBefore,
+      });
+    } catch (err) {
+      console.warn('[Notifications] loadMore error:', err);
+    } finally {
+      set({ loadingMore: false });
+    }
+  },
+  markAllRead: async () => {
+    if (get().unreadCount === 0 && get().items.every((item) => item.readAt)) return;
+    const now = new Date().toISOString();
+    const unread = get().items.filter((item) => !item.readAt).map((item) => item.id);
+    // Optimistic: the badge clears the moment the tab opens.
+    set({
+      unreadCount: 0,
+      items: get().items.map((item) => (item.readAt ? item : { ...item, readAt: now })),
+      freshIds: [...new Set([...get().freshIds, ...unread])],
+    });
+    try {
+      const result = await markNotificationsReadApi();
+      if (result) set({ unreadCount: result.unread_count });
+    } catch (err) {
+      console.warn('[Notifications] markAllRead error:', err);
+    }
+  },
+  markAnswered: (bookingId: string) => {
+    set({ answeredBookingIds: [...new Set([...get().answeredBookingIds, bookingId])] });
+  },
+  clear: () => {
+    latestRefresh++;
+    set({
+      items: [],
+      unreadCount: 0,
+      nextBefore: null,
+      loading: false,
+      loadingMore: false,
+      hasLoadedOnce: false,
+      answeredBookingIds: [],
+      freshIds: [],
+    });
+  },
+}));
+
+/** The notifications tab's badge. */
+export function useUnreadNotificationsCount(): number {
+  return useNotificationsStore((s) => s.unreadCount);
+}
+
+/** Whether an owner_request still waits for the owner's answer (accept/reject shown). */
+export function isOpenRequest(item: AppNotification, answeredBookingIds: string[]): boolean {
+  return item.kind === 'owner_request' && !item.resolved && !answeredBookingIds.includes(item.bookingId);
+}
+
+/** The owner's "Hoy" tab badge: booking requests still waiting for an answer. */
+export function usePendingRequestsCount(): number {
+  return useNotificationsStore((s) => s.items.filter((item) => isOpenRequest(item, s.answeredBookingIds)).length);
 }

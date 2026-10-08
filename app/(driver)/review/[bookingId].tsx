@@ -10,7 +10,6 @@ import { StatusIcon } from '@/src/components/StatusIcon';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { useNotificationsStore } from '@/src/store/useNotificationsStore';
 import { VehiclePlate } from '@/src/components/VehiclePlate';
 import { getBookingApi, getBookingReviewsApi, submitReviewApi, ReviewTargetType } from '@/src/api/booking';
 import { getParkingSpotDetail } from '@/src/api/parking';
@@ -59,6 +58,7 @@ async function loadReviewContext(bookingId: string, role: 'driver' | 'owner'): P
         t('driver.booking.timeTo'),
         t('spot.stay.checkIn'),
         t('spot.stay.checkOut'),
+        'long',
       ),
       vehicle: booking.vehicle ? { plate: booking.vehicle.plate, brand: booking.vehicle.brand, model: booking.vehicle.model } : null,
       subjects,
@@ -134,8 +134,6 @@ export default function ReviewScreen() {
       context={context}
       onSubmitted={(targetTypes) => {
         setSubmittedTargets((prev) => [...prev, ...targetTypes]);
-        // Drop the "calificá…" notification right away instead of on the next poll.
-        if (user) useNotificationsStore.getState().refresh(user.id);
       }}
     />
   );

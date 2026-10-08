@@ -6,6 +6,7 @@ import { getAvailability, getStayAvailability } from '@/src/api/parking';
 import { todayArtDateISO } from '@/src/services/dateUtils';
 import { t } from '@/src/i18n';
 import { useScale } from '@/src/theme/typography';
+import { formatShortDate } from '@/src/services/bookingDates';
 
 const UNAVAILABLE_RED = '#C62828';
 const DAY_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']; // 0=Lunes … 6=Domingo, igual que el resto de la app
@@ -101,7 +102,7 @@ function buildMonthGrid(year: number, month: number): DayCell[] {
 }
 
 function formatDisplay(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return formatShortDate(iso);
 }
 
 interface AvailabilityDatePickerFieldProps {
