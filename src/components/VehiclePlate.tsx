@@ -18,12 +18,13 @@ const BIKE_IMAGE_HEIGHT = 679;
 const BIKE_TEXT_TOP = 138 / BIKE_IMAGE_HEIGHT;
 const BIKE_TEXT_HEIGHT = (658 - 138) / BIKE_IMAGE_HEIGHT;
 // The modern plate PNG is 322x104 (Mercosur plates are 400x130 mm, same proportion). The
-// legacy one is 237x104: real pre-2016 plates are 294x129 mm, so datacar's original
-// 322px-wide graphic was narrowed to that proportion by removing plain strips between its
-// details (shield, bolt slots and "ARGENTINA" kept intact). Both are 104px tall, so the
+// legacy one is 221x104: datacar's original 322px-wide graphic was narrowed by removing
+// plain strips between its details (shield, bolt slots and "ARGENTINA" kept intact) --
+// first to the real pre-2016 plate's proportion (294x129 mm, 237px), then a bit more,
+// because at that length it read too long in the app. Both are 104px tall, so the
 // text-window offsets below apply to either.
 const PLATE_IMAGE_WIDTH = 322;
-const LEGACY_PLATE_IMAGE_WIDTH = 237;
+const LEGACY_PLATE_IMAGE_WIDTH = 221;
 const PLATE_IMAGE_HEIGHT = 104;
 
 // GL-Nummernschild-Mtl ("FE-Mittelschrift", the real German/European plate typeface
@@ -43,9 +44,9 @@ const LEGACY_CAP_FILL = 0.7;
 // of trusting each platform's text centering the capitals are placed by these numbers.
 const LEGACY_ASCENT_PER_EM = 1.135;
 const LEGACY_CAP_HEIGHT_PER_EM = 0.688;
-// The legacy plate's black band, measured on the 237x104 image: columns 4..231, rows
+// The legacy plate's black band, measured on the 221x104 image: columns 4..215, rows
 // 24..86 -- its center is where the capitals' center goes.
-const LEGACY_BAND_CENTER_X = 118 / 237;
+const LEGACY_BAND_CENTER_X = 109.5 / 221;
 const LEGACY_BAND_CENTER_Y = 55.5 / 104;
 const LEGACY_BAND_HEIGHT = 62 / 104;
 // Pre-2016 motorcycle plate (237x216): built from the legacy car plate's own pieces -- its
@@ -56,11 +57,19 @@ const LEGACY_BAND_HEIGHT = 62 / 104;
 // 51..192. The domain goes on two lines -- digits on top, letters below -- each line's
 // capitals ~40% of the band's height, centered at 26% and 75% of it, as on the real plate.
 const LEGACY_BIKE_PLATE_BG = require('../../assets/plates/ar-legacy-bike-plate.png');
+const LEGACY_BIKE_IMAGE_WIDTH = 237;
 const LEGACY_BIKE_IMAGE_HEIGHT = 216;
+// Its black band spans columns 10..226.
+const LEGACY_BIKE_BAND_CENTER_X = 118 / 237;
 const LEGACY_BIKE_BAND_TOP = 51 / 216;
 const LEGACY_BIKE_BAND_HEIGHT = 142 / 216;
 const LEGACY_BIKE_CAP_FILL = 0.4;
 const LEGACY_BIKE_LINE_CENTERS = [0.26, 0.75];
+// The pre-2016 plates (car and motorcycle) are drawn this much bigger than the size they'd
+// otherwise share with the modern ones: being narrower, they read small next to them.
+// Everything on them (lettering, spacing) scales with their height, so the domain grows
+// in proportion. They still fit inside a car plate's width.
+const LEGACY_SCALE = 1.2;
 
 // The plate images and fonts, loaded once for the whole app. Until they are, a plate keeps
 // its place but shows nothing -- otherwise the lettering pops in first and the plate image
@@ -138,8 +147,9 @@ function PlateBackground({ source, style, children }: {
 const backgroundStyles = StyleSheet.create({
   hidden: { opacity: 0 },
 });
-// An en space rather than two spaces: the web collapses consecutive spaces into one.
-const LEGACY_GROUP_GAP = '\u2002';
+// An en space plus a thin space rather than plain spaces (the web collapses consecutive
+// spaces into one): a wider gap between the letters and the digits, as on the real plate.
+const LEGACY_GROUP_GAP = '\u2002\u2009';
 
 // Cars: ABC123 (pre-2016) / AB123CD (Mercosur, since 2016). Motorcycles use their own two
 // formats, same two eras, one digit/letter shorter on one side: 123ABC (pre-2016) /
@@ -227,8 +237,8 @@ export function VehiclePlate({ plate, size = 'large', align = 'center' }: Vehicl
   // Every plate is laid out in the modern plate's footprint (slotWidth), so whatever sits
   // next to it in a list starts at the same place; the narrower legacy plate is centered.
   const slotWidth = large ? 220 : 140;
-  const height = Math.round(slotWidth * (PLATE_IMAGE_HEIGHT / PLATE_IMAGE_WIDTH));
   const isOldFormat = isOldFormatPlate(clean);
+  const height = Math.round(slotWidth * (PLATE_IMAGE_HEIGHT / PLATE_IMAGE_WIDTH) * (isOldFormat ? LEGACY_SCALE : 1));
   const plateWidth = isOldFormat ? Math.round(height * (LEGACY_PLATE_IMAGE_WIDTH / PLATE_IMAGE_HEIGHT)) : slotWidth;
 
   // Modern plate: the text window is its white lettering area, measured on the 322x104
@@ -273,9 +283,10 @@ export function VehiclePlate({ plate, size = 'large', align = 'center' }: Vehicl
           <LegacyPlateText
             text={formatPlate(plate).replace(GROUP_GAP, LEGACY_GROUP_GAP)}
             plateWidth={plateWidth}
+            bandCenterX={LEGACY_BAND_CENTER_X}
             centerY={height * LEGACY_BAND_CENTER_Y}
             capHeight={height * LEGACY_BAND_HEIGHT * LEGACY_CAP_FILL}
-            letterSpacing={Math.round(height * 0.03)}
+            letterSpacing={height * 0.012}
             fontLoaded={fontLoaded}
           />
         ) : (
@@ -371,6 +382,7 @@ function MercosurBikePlate({
 function LegacyPlateText({
   text,
   plateWidth,
+  bandCenterX,
   centerY,
   capHeight,
   letterSpacing,
@@ -378,6 +390,8 @@ function LegacyPlateText({
 }: {
   text: string;
   plateWidth: number;
+  /** The black band's horizontal center, as a fraction of the plate's width. */
+  bandCenterX: number;
   centerY: number;
   capHeight: number;
   letterSpacing: number;
@@ -403,7 +417,7 @@ function LegacyPlateText({
       top: centerY - capCenterOffset,
       // Centered on the band's own center (not the image's), and letterSpacing is also
       // added after the last character, so the text is shifted right by half of it.
-      left: plateWidth * LEGACY_BAND_CENTER_X * 2 - plateWidth + letterSpacing,
+      left: plateWidth * bandCenterX * 2 - plateWidth + letterSpacing,
       right: 0,
       textAlign: 'center',
       color: '#fafafa',
@@ -437,8 +451,8 @@ function LegacyBikePlate({
 }) {
   const carWidth = size === 'large' ? 220 : 140;
   const carHeight = Math.round(carWidth * (PLATE_IMAGE_HEIGHT / PLATE_IMAGE_WIDTH));
-  const height = Math.round(carHeight * 1.35);
-  const width = Math.round(height * (LEGACY_PLATE_IMAGE_WIDTH / LEGACY_BIKE_IMAGE_HEIGHT));
+  const height = Math.round(carHeight * 1.35 * LEGACY_SCALE);
+  const width = Math.round(height * (LEGACY_BIKE_IMAGE_WIDTH / LEGACY_BIKE_IMAGE_HEIGHT));
   const bandTop = height * LEGACY_BIKE_BAND_TOP;
   const bandHeight = height * LEGACY_BIKE_BAND_HEIGHT;
   const letterSpacing = Math.round(height * 0.02);
@@ -456,6 +470,7 @@ function LegacyBikePlate({
             key={line + index}
             text={line}
             plateWidth={width}
+            bandCenterX={LEGACY_BIKE_BAND_CENTER_X}
             centerY={bandTop + bandHeight * LEGACY_BIKE_LINE_CENTERS[index]}
             capHeight={bandHeight * LEGACY_BIKE_CAP_FILL}
             letterSpacing={letterSpacing}
