@@ -11,6 +11,7 @@ import { useScale } from '@/src/theme/typography';
 import { request } from '@/src/api/client';
 import { BookingApiResponse, getBookingApi } from '@/src/api/booking';
 import { getParkingSpotDetail } from '@/src/services/parkingService';
+import { usePaymentApprovedSound } from '@/src/services/paymentSound';
 import { formatBookingWhen, formatLongDateFromISO, formatShortDate, formatTime, mapBookingDateRange } from '@/src/services/bookingDates';
 
 // 'refunded': Mercado Pago approved the payment, but the booking couldn't take it (its
@@ -77,6 +78,13 @@ export default function PaymentPendingScreen() {
   const [booking, setBooking] = useState<BookingApiResponse | null>(null);
   const [spotTitle, setSpotTitle] = useState<string | null>(null);
   const pollCount = useRef(0);
+  // Loaded with the screen so it plays the instant the payment is approved; through a ref
+  // because the polling effect below only restarts for a new booking.
+  const playApproved = usePaymentApprovedSound();
+  const playApprovedRef = useRef(playApproved);
+  useEffect(() => {
+    playApprovedRef.current = playApproved;
+  }, [playApproved]);
 
   // The receipt: what was booked, when, and for how much.
   useEffect(() => {
@@ -92,7 +100,14 @@ export default function PaymentPendingScreen() {
   useEffect(() => {
     if (!bookingId) return;
 
+    // One check at a time, and none once it's settled: a check (verify-status, then the
+    // booking) can take longer than the interval, and two overlapping ones that both saw
+    // the approval played the chime twice.
+    let checking = false;
+    let settled = false;
     const timer = setInterval(async () => {
+      if (checking || settled) return;
+      checking = true;
       pollCount.current += 1;
       try {
         // verify-status checks our DB first, then falls back to querying
@@ -109,14 +124,18 @@ export default function PaymentPendingScreen() {
           const latest = await getBookingApi(bookingId);
           setBooking(latest);
           if (PAID_BOOKING_STATUSES.has(latest.status)) {
+            settled = true;
             clearInterval(timer);
             setAwaitingOwner(latest.status === 'PENDING_OWNER_APPROVAL');
+            // The chime first, in the same moment the check mark appears.
+            playApprovedRef.current();
             setApprovedAt(res?.transaction?.approved_at ?? latest.paid_at ?? null);
             setStatus('approved');
             return;
           }
           if (latest.status !== 'PENDING_PAYMENT') {
             // EXPIRED (the hold ran out before the payment landed) -- refunded.
+            settled = true;
             clearInterval(timer);
             setStatus('refunded');
             return;
@@ -124,6 +143,7 @@ export default function PaymentPendingScreen() {
           // Still PENDING_PAYMENT: the confirmation hit a transient error and the next
           // verify-status retries it -- keep polling (MAX_POLLS still bounds this).
         } else if (mpStatus === 'rejected' || mpStatus === 'cancelled' || mpStatus === 'refunded') {
+          settled = true;
           clearInterval(timer);
           setStatus('rejected');
         }
@@ -132,13 +152,18 @@ export default function PaymentPendingScreen() {
         // Log so we can diagnose issues (404 = not found yet, 401 = auth issue, etc.)
         console.warn('[PaymentPending] poll error:', err);
       }
-      if (pollCount.current >= MAX_POLLS) {
+      checking = false;
+      if (!settled && pollCount.current >= MAX_POLLS) {
+        settled = true;
         clearInterval(timer);
         setStatus('unknown');
       }
     }, POLL_INTERVAL_MS);
 
-    return () => clearInterval(timer);
+    return () => {
+      settled = true;
+      clearInterval(timer);
+    };
   }, [bookingId]);
 
   const styles = StyleSheet.create({

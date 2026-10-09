@@ -31,6 +31,14 @@
       "expo-status-bar",
       "@react-native-community/datetimepicker",
       "expo-secure-store",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
       "@react-native-firebase/app",
       [
         "expo-build-properties",
