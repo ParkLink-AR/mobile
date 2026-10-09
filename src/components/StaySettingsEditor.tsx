@@ -5,6 +5,15 @@ import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { t } from '@/src/i18n';
 import { useScale } from '@/src/theme/typography';
+import { VehicleType, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
+import { StayRates } from '@/src/types';
+
+/** The three stay prices of one vehicle type, as typed (strings). */
+export interface StayRatesForm {
+  day: string;
+  week: string;
+  month: string;
+}
 
 // Todo en string (no number) porque son valores de TextInput controlados --
 // mismo criterio que `price`/`capacity` en spots/new.tsx y edit.tsx. El
@@ -21,6 +30,11 @@ export interface StaySettingsFormValue {
   // queda ofrecida indefinidamente. Cargarla es lo que permite publicar la
   // cochera por una ventana acotada (p.ej. sólo un fin de semana).
   stayAvailableUntil: string;
+  // Tarifas distintas según el tipo de vehículo -- en vez de pricePerDay/Week/Month, una
+  // terna por cada tipo que acepta la cochera (`vehicleTypes`, prop: lo elige otra
+  // sección del formulario). Ver ParkingSpot.stayPricesByVehicleType en parking-service.
+  pricePerVehicleType: boolean;
+  pricesByVehicleType: Partial<Record<VehicleType, StayRatesForm>>;
 }
 
 export const EMPTY_STAY_SETTINGS: StaySettingsFormValue = {
@@ -31,11 +45,63 @@ export const EMPTY_STAY_SETTINGS: StaySettingsFormValue = {
   maxStayDays: '',
   stayAvailableFrom: '',
   stayAvailableUntil: '',
+  pricePerVehicleType: false,
+  pricesByVehicleType: {},
 };
+
+function isPositiveNumber(raw: string | undefined): boolean {
+  const n = Number(raw);
+  return !!raw?.trim() && !isNaN(n) && n > 0;
+}
+
+/**
+ * Si la estadía está prendida, valida que tenga sus tarifas -- las mismas para todos, o
+ * una terna completa por cada tipo de vehículo aceptado -- y la duración máxima.
+ * Compartido por spots/new.tsx y spots/[id]/edit.tsx.
+ */
+export function isStayPricingValid(value: StaySettingsFormValue, vehicleTypes: VehicleType[]): boolean {
+  if (!value.stayEnabled) return true;
+  if (!isPositiveNumber(value.maxStayDays)) return false;
+  if (value.pricePerVehicleType) {
+    return vehicleTypes.length > 0 && vehicleTypes.every((vt) => {
+      const rates = value.pricesByVehicleType[vt];
+      return !!rates && isPositiveNumber(rates.day) && isPositiveNumber(rates.week) && isPositiveNumber(rates.month);
+    });
+  }
+  return isPositiveNumber(value.pricePerDay) && isPositiveNumber(value.pricePerWeek) && isPositiveNumber(value.pricePerMonth);
+}
+
+/** Las tarifas por vehículo como números, sólo para los tipos que la cochera acepta --
+ * para el body del request. Llamar sólo después de isStayPricingValid. */
+export function stayPricesByVehicleTypeToNumbers(
+  value: StaySettingsFormValue,
+  vehicleTypes: VehicleType[],
+): Partial<Record<VehicleType, StayRates>> {
+  const result: Partial<Record<VehicleType, StayRates>> = {};
+  for (const vt of vehicleTypes) {
+    const rates = value.pricesByVehicleType[vt]!;
+    result[vt] = { day: Number(rates.day), week: Number(rates.week), month: Number(rates.month) };
+  }
+  return result;
+}
+
+/** El mapa guardado como strings de formulario (para editar una cochera existente). */
+export function stayPricesByVehicleTypeToForm(
+  prices: Partial<Record<VehicleType, StayRates>> | null,
+): Partial<Record<VehicleType, StayRatesForm>> {
+  const result: Partial<Record<VehicleType, StayRatesForm>> = {};
+  for (const [vt, rates] of Object.entries(prices ?? {}) as [VehicleType, StayRates][]) {
+    result[vt] = { day: String(rates.day), week: String(rates.week), month: String(rates.month) };
+  }
+  return result;
+}
 
 interface StaySettingsEditorProps {
   value: StaySettingsFormValue;
   onChange: (patch: Partial<StaySettingsFormValue>) => void;
+  // Qué tipos de vehículo acepta la cochera -- las tarifas por vehículo piden una terna
+  // por cada uno.
+  vehicleTypes: VehicleType[];
 }
 
 /**
@@ -47,7 +113,7 @@ interface StaySettingsEditorProps {
  * también evita que el dueño llegue hasta "Publicar"/"Guardar" para
  * enterarse.
  */
-export function StaySettingsEditor({ value, onChange }: StaySettingsEditorProps) {
+export function StaySettingsEditor({ value, onChange, vehicleTypes }: StaySettingsEditorProps) {
   const colors = useThemeColors();
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   const scale = useScale();
@@ -64,7 +130,23 @@ export function StaySettingsEditor({ value, onChange }: StaySettingsEditorProps)
     },
     fieldLabel: { fontSize: sc(13), fontWeight: '600', color: colors.text, marginBottom: 4 },
     priceBreakdown: { fontSize: sc(12), color: colors.textSecondary, marginTop: 4 },
+    warning: { fontSize: sc(12), color: colors.warning },
+    vehicleGroup: { gap: 6 },
+    vehicleGroupTitle: { fontSize: sc(14), fontWeight: '700', color: colors.text },
+    rateRow: { flexDirection: 'row', gap: 8 },
+    rateCell: { flex: 1 },
+    rateLabel: { fontSize: sc(12), color: colors.textSecondary, marginBottom: 4 },
   });
+
+  function setVehicleRate(vehicleType: VehicleType, unit: keyof StayRatesForm, text: string) {
+    const current = value.pricesByVehicleType[vehicleType] ?? { day: '', week: '', month: '' };
+    onChange({
+      pricesByVehicleType: {
+        ...value.pricesByVehicleType,
+        [vehicleType]: { ...current, [unit]: text.replace(/[^0-9.]/g, '') },
+      },
+    });
+  }
 
   function numericField(text: string, onChangeText: (v: string) => void) {
     // Sólo dígitos y un punto decimal -- mismo saneo que capacity ya hace para enteros.
@@ -100,54 +182,98 @@ export function StaySettingsEditor({ value, onChange }: StaySettingsEditorProps)
 
       {value.stayEnabled && (
         <View style={styles.fields}>
-          <View>
-            <Text style={styles.fieldLabel}>{t('owner.spot.stay.pricePerDay')}</Text>
-            <TextInput
-              style={styles.input}
-              value={value.pricePerDay}
-              onChangeText={(text) => numericField(text, (v) => onChange({ pricePerDay: v }))}
-              keyboardType="numeric"
-              placeholder="$8.000"
-              placeholderTextColor={colors.textSecondary}
+          <View style={styles.row}>
+            <View style={styles.labelBlock}>
+              <Text style={styles.fieldLabel}>{t('owner.spot.stay.pricePerVehicleType')}</Text>
+              <Text style={styles.hint}>{t('owner.spot.stay.pricePerVehicleTypeHint')}</Text>
+            </View>
+            <Switch
+              value={value.pricePerVehicleType}
+              onValueChange={(v) => onChange({ pricePerVehicleType: v })}
+              trackColor={{ true: colors.teal }}
             />
-            {priceBreakdown(value.pricePerDay, 'owner.spot.stay.priceBreakdownDay') && (
-              <Text style={styles.priceBreakdown}>
-                {priceBreakdown(value.pricePerDay, 'owner.spot.stay.priceBreakdownDay')}
-              </Text>
-            )}
           </View>
-          <View>
-            <Text style={styles.fieldLabel}>{t('owner.spot.stay.pricePerWeek')}</Text>
-            <TextInput
-              style={styles.input}
-              value={value.pricePerWeek}
-              onChangeText={(text) => numericField(text, (v) => onChange({ pricePerWeek: v }))}
-              keyboardType="numeric"
-              placeholder="$45.000"
-              placeholderTextColor={colors.textSecondary}
-            />
-            {priceBreakdown(value.pricePerWeek, 'owner.spot.stay.priceBreakdownWeek') && (
-              <Text style={styles.priceBreakdown}>
-                {priceBreakdown(value.pricePerWeek, 'owner.spot.stay.priceBreakdownWeek')}
-              </Text>
-            )}
-          </View>
-          <View>
-            <Text style={styles.fieldLabel}>{t('owner.spot.stay.pricePerMonth')}</Text>
-            <TextInput
-              style={styles.input}
-              value={value.pricePerMonth}
-              onChangeText={(text) => numericField(text, (v) => onChange({ pricePerMonth: v }))}
-              keyboardType="numeric"
-              placeholder="$150.000"
-              placeholderTextColor={colors.textSecondary}
-            />
-            {priceBreakdown(value.pricePerMonth, 'owner.spot.stay.priceBreakdownMonth') && (
-              <Text style={styles.priceBreakdown}>
-                {priceBreakdown(value.pricePerMonth, 'owner.spot.stay.priceBreakdownMonth')}
-              </Text>
-            )}
-          </View>
+
+          {value.pricePerVehicleType ? (
+            vehicleTypes.length === 0 ? (
+              <Text style={styles.warning}>{t('owner.spot.hourly.selectVehicleTypesFirst')}</Text>
+            ) : (
+              vehicleTypes.map((vehicleType) => {
+                const rates = value.pricesByVehicleType[vehicleType] ?? { day: '', week: '', month: '' };
+                return (
+                  <View key={vehicleType} style={styles.vehicleGroup}>
+                    <Text style={styles.vehicleGroupTitle}>{t(VEHICLE_TYPE_LABEL_KEYS[vehicleType])}</Text>
+                    <View style={styles.rateRow}>
+                      {(['day', 'week', 'month'] as const).map((unit) => (
+                        <View key={unit} style={styles.rateCell}>
+                          <Text style={styles.rateLabel}>{t(`owner.spot.stay.unit.${unit}`)}</Text>
+                          <TextInput
+                            style={styles.input}
+                            value={rates[unit]}
+                            onChangeText={(text) => setVehicleRate(vehicleType, unit, text)}
+                            keyboardType="numeric"
+                            placeholder="$"
+                            placeholderTextColor={colors.textSecondary}
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                );
+              })
+            )
+          ) : (
+            <>
+              <View>
+                <Text style={styles.fieldLabel}>{t('owner.spot.stay.pricePerDay')}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={value.pricePerDay}
+                  onChangeText={(text) => numericField(text, (v) => onChange({ pricePerDay: v }))}
+                  keyboardType="numeric"
+                  placeholder="$8.000"
+                  placeholderTextColor={colors.textSecondary}
+                />
+                {priceBreakdown(value.pricePerDay, 'owner.spot.stay.priceBreakdownDay') && (
+                  <Text style={styles.priceBreakdown}>
+                    {priceBreakdown(value.pricePerDay, 'owner.spot.stay.priceBreakdownDay')}
+                  </Text>
+                )}
+              </View>
+              <View>
+                <Text style={styles.fieldLabel}>{t('owner.spot.stay.pricePerWeek')}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={value.pricePerWeek}
+                  onChangeText={(text) => numericField(text, (v) => onChange({ pricePerWeek: v }))}
+                  keyboardType="numeric"
+                  placeholder="$45.000"
+                  placeholderTextColor={colors.textSecondary}
+                />
+                {priceBreakdown(value.pricePerWeek, 'owner.spot.stay.priceBreakdownWeek') && (
+                  <Text style={styles.priceBreakdown}>
+                    {priceBreakdown(value.pricePerWeek, 'owner.spot.stay.priceBreakdownWeek')}
+                  </Text>
+                )}
+              </View>
+              <View>
+                <Text style={styles.fieldLabel}>{t('owner.spot.stay.pricePerMonth')}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={value.pricePerMonth}
+                  onChangeText={(text) => numericField(text, (v) => onChange({ pricePerMonth: v }))}
+                  keyboardType="numeric"
+                  placeholder="$150.000"
+                  placeholderTextColor={colors.textSecondary}
+                />
+                {priceBreakdown(value.pricePerMonth, 'owner.spot.stay.priceBreakdownMonth') && (
+                  <Text style={styles.priceBreakdown}>
+                    {priceBreakdown(value.pricePerMonth, 'owner.spot.stay.priceBreakdownMonth')}
+                  </Text>
+                )}
+              </View>
+            </>
+          )}
           <View>
             <Text style={styles.fieldLabel}>{t('owner.spot.stay.maxStayDays')}</Text>
             <TextInput

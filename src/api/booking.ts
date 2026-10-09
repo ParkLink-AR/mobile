@@ -42,10 +42,13 @@ export interface BookingApiResponse {
 }
 
 export interface BookingVehicleApiResponse {
-  plate: string;
-  brand: string;
-  model: string;
-  country: string;
+  // Absent on a booking made before vehicles had a type.
+  type?: string | null;
+  // Absent for a bicycle.
+  plate?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  country?: string | null;
 }
 
 export type ReviewTargetType = 'spot' | 'owner' | 'driver';
@@ -133,8 +136,8 @@ export interface CreateBookingBody {
     // Omitted/0 is treated as 1.
     capacity?: number;
   };
-  // Entirely optional -- the driver may not have picked (or saved) a vehicle. Omit the
-  // whole object rather than sending partial fields.
+  // The saved vehicle the driver picked -- required when the spot asks for it or prices by
+  // vehicle type (booking-service refuses the booking otherwise), optional otherwise.
   vehicle?: BookingVehicleApiResponse;
 }
 

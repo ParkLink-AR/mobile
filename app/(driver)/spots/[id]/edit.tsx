@@ -11,7 +11,15 @@ import { Screen, FORM_SCROLL_PROPS, useScrollToFocusedInput } from '@/src/compon
 import { RatingStars } from '@/src/components/RatingStars';
 import { dayGroupsToEntries, entriesToDayGroups } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
-import { StaySettingsEditor, StaySettingsFormValue, EMPTY_STAY_SETTINGS } from '@/src/components/StaySettingsEditor';
+import {
+  StaySettingsEditor,
+  StaySettingsFormValue,
+  EMPTY_STAY_SETTINGS,
+  isStayPricingValid,
+  stayPricesByVehicleTypeToForm,
+  stayPricesByVehicleTypeToNumbers,
+} from '@/src/components/StaySettingsEditor';
+import { RequireVehicleSetting } from '@/src/components/RequireVehicleSetting';
 import {
   HourlySettingsEditor,
   HourlySettingsFormValue,
@@ -69,6 +77,7 @@ export default function EditSpot() {
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [hourlySettings, setHourlySettings] = useState<HourlySettingsFormValue>(EMPTY_HOURLY_SETTINGS);
   const [staySettings, setStaySettings] = useState<StaySettingsFormValue>(EMPTY_STAY_SETTINGS);
+  const [requireVehicle, setRequireVehicle] = useState(false);
   const [saving, setSaving] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -113,7 +122,10 @@ export default function EditSpot() {
           maxStayDays: s.maxStayDays !== null ? String(s.maxStayDays) : '',
           stayAvailableFrom: s.stayAvailableFrom ?? '',
           stayAvailableUntil: s.stayAvailableUntil ?? '',
+          pricePerVehicleType: s.stayPricesByVehicleType !== null,
+          pricesByVehicleType: stayPricesByVehicleTypeToForm(s.stayPricesByVehicleType),
         });
+        setRequireVehicle(s.requireVehicle);
       })
       .catch((err) => {
         console.warn('[EditSpot] fetch error:', err);
@@ -270,13 +282,7 @@ export default function EditSpot() {
       alert(t('owner.spot.new.requiredFields'));
       return;
     }
-    if (
-      staySettings.stayEnabled &&
-      (!staySettings.pricePerDay.trim() ||
-        !staySettings.pricePerWeek.trim() ||
-        !staySettings.pricePerMonth.trim() ||
-        !staySettings.maxStayDays.trim())
-    ) {
+    if (!isStayPricingValid(staySettings, vehicleTypes)) {
       alert(t('owner.spot.stay.requiredFields'));
       return;
     }
@@ -304,9 +310,17 @@ export default function EditSpot() {
         lat: coordinates.lat,
         lng: coordinates.lng,
         stayEnabled: staySettings.stayEnabled,
-        pricePerDay: staySettings.stayEnabled ? Number(staySettings.pricePerDay) : undefined,
-        pricePerWeek: staySettings.stayEnabled ? Number(staySettings.pricePerWeek) : undefined,
-        pricePerMonth: staySettings.stayEnabled ? Number(staySettings.pricePerMonth) : undefined,
+        // Same as pricePerHourByVehicleType above: `null` clears a previous per-vehicle map
+        // when the owner went back to the same prices for everyone.
+        ...(staySettings.stayEnabled && staySettings.pricePerVehicleType
+          ? { stayPricesByVehicleType: stayPricesByVehicleTypeToNumbers(staySettings, vehicleTypes) }
+          : {
+              stayPricesByVehicleType: staySettings.stayEnabled ? null : undefined,
+              pricePerDay: staySettings.stayEnabled ? Number(staySettings.pricePerDay) : undefined,
+              pricePerWeek: staySettings.stayEnabled ? Number(staySettings.pricePerWeek) : undefined,
+              pricePerMonth: staySettings.stayEnabled ? Number(staySettings.pricePerMonth) : undefined,
+            }),
+        requireVehicle,
         maxStayDays: staySettings.stayEnabled ? Number(staySettings.maxStayDays) : undefined,
         stayAvailableFrom: staySettings.stayEnabled ? (staySettings.stayAvailableFrom.trim() || undefined) : undefined,
         stayAvailableUntil: staySettings.stayEnabled ? (staySettings.stayAvailableUntil.trim() || undefined) : undefined,
@@ -630,6 +644,14 @@ export default function EditSpot() {
           <View style={styles.card}>
             <Text style={styles.sectionLabel}>{t('owner.spot.new.vehicleTypes')}</Text>
             <VehicleTypePicker value={vehicleTypes} onChange={setVehicleTypes} />
+            <RequireVehicleSetting
+              value={requireVehicle}
+              onChange={setRequireVehicle}
+              pricedPerVehicle={
+                (hourlySettings.hourlyEnabled && hourlySettings.pricePerVehicleType) ||
+                (staySettings.stayEnabled && staySettings.pricePerVehicleType)
+              }
+            />
           </View>
 
           {/* Alquiler por hora */}
@@ -646,6 +668,7 @@ export default function EditSpot() {
             <StaySettingsEditor
               value={staySettings}
               onChange={(patch) => setStaySettings((prev) => ({ ...prev, ...patch }))}
+              vehicleTypes={vehicleTypes}
             />
           </View>
 

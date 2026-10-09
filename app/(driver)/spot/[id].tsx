@@ -270,12 +270,20 @@ export default function SpotDetail() {
   const stayEndDate =
     stayEndDateOverride && stayEndDateOverride >= minStayEndDate ? stayEndDateOverride : minStayEndDate;
 
+  // A spot that prices stays per vehicle type quotes by the type picked below (the first
+  // one it accepts until the driver picks).
+  const stayQuoteVehicleType: VehicleType | null = spot?.stayPricesByVehicleType
+    ? spot.vehicleTypes.includes(selectedVehicleType as VehicleType)
+      ? selectedVehicleType
+      : spot.vehicleTypes[0] ?? null
+    : null;
+
   useEffect(() => {
     if (!spot?.stayEnabled) return;
     let cancelled = false;
     setStayQuoteLoading(true);
     setStayQuoteError(null);
-    getStayQuote(spot.id, stayStartDate, stayEndDate, stayStartHour)
+    getStayQuote(spot.id, stayStartDate, stayEndDate, stayStartHour, stayQuoteVehicleType)
       .then((quote) => {
         if (cancelled) return;
         setStayQuote(quote);
@@ -291,7 +299,7 @@ export default function SpotDetail() {
     return () => {
       cancelled = true;
     };
-  }, [spot?.id, spot?.stayEnabled, stayStartDate, stayEndDate, stayStartHour]);
+  }, [spot?.id, spot?.stayEnabled, stayStartDate, stayEndDate, stayStartHour, stayQuoteVehicleType]);
 
   if (!spot) return null;
 
@@ -425,6 +433,35 @@ export default function SpotDetail() {
     editBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.white },
   });
 
+  // "¿Con qué vehículo vas?" -- for a spot that prices by vehicle type, the type decides the
+  // rate shown (and carries over to the confirm screen). A render function, not a component,
+  // for the same reason as hourChips below.
+  function vehicleTypeChips() {
+    if (spot!.vehicleTypes.length <= 1) return null;
+    return (
+      <View style={styles.field}>
+        <Text style={styles.fieldLabel}>{t('spot.selectVehicleType')}</Text>
+        <View style={styles.chipWrap}>
+          {spot!.vehicleTypes.map((vt) => {
+            const isSelected = vt === effectiveVehicleType;
+            return (
+              <TouchableOpacity
+                key={vt}
+                style={[styles.chip, isSelected && styles.chipSelected]}
+                onPress={() => setSelectedVehicleType(vt)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                  {t(VEHICLE_TYPE_LABEL_KEYS[vt])}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
+
   function hourChips(hours: number[], selected: number | null, onSelect: (h: number) => void) {
     return (
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
@@ -451,12 +488,27 @@ export default function SpotDetail() {
       : formatPesos(visiblePricePerHour ?? 0)
     : null;
 
-  // "$60.000 por semana · $200.000 por mes · Del 10/10/2026 al 20/10/2026 · Hasta 7 días"
+  const visible = (price: number) => formatPesos(getDriverVisiblePrice(price, commissionRatePercent));
+  // "Auto $9.180 · Moto $4.000" -- each accepted type's own rate, for a spot priced per vehicle.
+  const perVehicle = (priceOf: (vt: VehicleType) => number | undefined) =>
+    spot.vehicleTypes
+      .flatMap((vt) => {
+        const price = priceOf(vt);
+        return price ? [`${t(VEHICLE_TYPE_LABEL_KEYS[vt])} ${visible(price)}`] : [];
+      })
+      .join(' · ');
+  const minStayDay = spot.stayPricesByVehicleType
+    ? Math.min(...spot.vehicleTypes.map((vt) => spot.stayPricesByVehicleType?.[vt]?.day ?? Infinity))
+    : spot.pricePerDay;
+
+  // "$60.000 por semana · $200.000 por mes · Del 10/10/2026 al 20/10/2026 · Hasta 7 días" --
+  // or, priced per vehicle, each type's daily rate first.
   const stayDetail = [
-    spot.pricePerWeek !== null
+    spot.stayPricesByVehicleType ? perVehicle((vt) => spot.stayPricesByVehicleType?.[vt]?.day) : null,
+    !spot.stayPricesByVehicleType && spot.pricePerWeek !== null
       ? t('spot.mode.perWeek', { price: formatPesos(getDriverVisiblePrice(spot.pricePerWeek, commissionRatePercent)) })
       : null,
-    spot.pricePerMonth !== null
+    !spot.stayPricesByVehicleType && spot.pricePerMonth !== null
       ? t('spot.mode.perMonth', { price: formatPesos(getDriverVisiblePrice(spot.pricePerMonth, commissionRatePercent)) })
       : null,
     spot.stayAvailableUntil
@@ -528,11 +580,15 @@ export default function SpotDetail() {
                       {leadPrice}<Text style={styles.rateUnit}>{` ${t('spot.unit.hour')}`}</Text>
                     </Text>
                   </View>
-                  <Text style={styles.rateDetail}>{t('spot.mode.hourlyDetail')}</Text>
+                  <Text style={styles.rateDetail}>
+                    {spot.pricePerHourByVehicleType
+                      ? perVehicle((vt) => spot.pricePerHourByVehicleType?.[vt])
+                      : t('spot.mode.hourlyDetail')}
+                  </Text>
                 </View>
               </View>
             )}
-            {spot.stayEnabled && spot.pricePerDay !== null && (
+            {spot.stayEnabled && minStayDay !== null && Number.isFinite(minStayDay) && (
               <View style={styles.rate}>
                 <View style={styles.rateIcon}>
                   <Ionicons name="calendar-outline" size={sc(18)} color={colors.teal} />
@@ -541,7 +597,9 @@ export default function SpotDetail() {
                   <View style={styles.rateHead}>
                     <Text style={styles.rateLabel}>{t(spot.hourlyEnabled ? 'spot.mode.stay' : 'spot.mode.stayOnly')}</Text>
                     <Text style={styles.rateValue}>
-                      {formatPesos(getDriverVisiblePrice(spot.pricePerDay, commissionRatePercent))}
+                      {spot.stayPricesByVehicleType
+                        ? t('spot.pricePerHour.from', { price: visible(minStayDay) })
+                        : visible(minStayDay)}
                       <Text style={styles.rateUnit}>{` ${t('spot.unit.day')}`}</Text>
                     </Text>
                   </View>
@@ -588,6 +646,17 @@ export default function SpotDetail() {
               <View style={styles.featureText}>
                 <Text style={styles.featureTitle}>{t('spot.feature.vehicles')}</Text>
                 <Text style={styles.featureDetail}>{vehiclesLabel.charAt(0).toUpperCase() + vehiclesLabel.slice(1)}</Text>
+              </View>
+            </View>
+          )}
+          {(spot.requireVehicle || spot.pricePerHourByVehicleType || spot.stayPricesByVehicleType) && (
+            <View style={styles.feature}>
+              <Ionicons name="id-card-outline" size={sc(24)} color={colors.text} />
+              <View style={styles.featureText}>
+                <Text style={styles.featureTitle}>{t('spot.feature.requiresVehicle')}</Text>
+                <Text style={styles.featureDetail}>
+                  {t(spot.requireVehicle ? 'spot.feature.requiresVehicle.detail' : 'spot.feature.requiresVehicle.pricedDetail')}
+                </Text>
               </View>
             </View>
           )}
@@ -646,28 +715,7 @@ export default function SpotDetail() {
               {showHourly && (
                 <>
                   {/* Vehicle type picker -- sólo si el precio depende de cuál elijas */}
-                  {spot.pricePerHourByVehicleType && spot.vehicleTypes.length > 1 && (
-                    <View style={styles.field}>
-                      <Text style={styles.fieldLabel}>{t('spot.selectVehicleType')}</Text>
-                      <View style={styles.chipWrap}>
-                        {spot.vehicleTypes.map((vt) => {
-                          const isSelected = vt === effectiveVehicleType;
-                          return (
-                            <TouchableOpacity
-                              key={vt}
-                              style={[styles.chip, isSelected && styles.chipSelected]}
-                              onPress={() => setSelectedVehicleType(vt)}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                                {t(VEHICLE_TYPE_LABEL_KEYS[vt])}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-                    </View>
-                  )}
+                  {spot.pricePerHourByVehicleType && vehicleTypeChips()}
 
                   {/* Date picker (calendar, coloreado por disponibilidad real) */}
                   <View style={styles.field}>
@@ -726,6 +774,7 @@ export default function SpotDetail() {
 
               {showStay && (
                 <>
+                  {spot.stayPricesByVehicleType && vehicleTypeChips()}
                   <View style={styles.field}>
                     <Text style={styles.fieldLabel}>{t('spot.stay.startDate')}</Text>
                     <AvailabilityDatePickerField
@@ -829,6 +878,7 @@ export default function SpotDetail() {
                     startDate: stayStartDate,
                     endDate: stayEndDate,
                     startHour: String(stayStartHour),
+                    ...(stayQuoteVehicleType ? { vehicleType: stayQuoteVehicleType } : {}),
                   },
                 })
               }

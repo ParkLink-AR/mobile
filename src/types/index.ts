@@ -1,5 +1,12 @@
 import { VehicleType } from '@/src/constants/vehicleTypes';
 
+/** Tarifas de estadía de un tipo de vehículo (pesos). */
+export interface StayRates {
+  day: number;
+  week: number;
+  month: number;
+}
+
 // El backend no tiene un rol fijo por usuario: cualquiera puede operar como
 // conductor o propietario. `ActiveMode` (useSessionStore) es el modo in-app
 // que decide qué stack se muestra, no un campo del usuario.
@@ -103,6 +110,13 @@ export interface ParkingSpot {
   // sin fecha límite.
   stayAvailableUntil: string | null; // YYYY-MM-DD
   maxStayDays: number | null;
+  // Tarifas de estadía distintas por tipo de vehículo -- null es "las mismas para todos".
+  // Si está seteado, pricePerDay/Week/Month de arriba son las más bajas (el "desde").
+  stayPricesByVehicleType: Partial<Record<VehicleType, StayRates>> | null;
+  // "Pedir el vehículo al reservar": el conductor elige uno de sus vehículos (con patente,
+  // salvo una bici). Una cochera que cobra por vehículo lo pide siempre -- ver
+  // spotNeedsVehicle en parkingService.ts.
+  requireVehicle: boolean;
   rating: number;
   reviewCount: number;
   tags: string[];
@@ -188,9 +202,12 @@ export interface Booking {
 export type VehicleCountry = 'AR' | 'BR' | 'UY' | 'PY' | 'CL' | 'BO';
 
 export interface VehicleSnapshot {
-  plate: string;
-  brand: string;
-  model: string;
+  // null only for a vehicle saved (or a booking made) before vehicles had a type.
+  type: VehicleType | null;
+  // A bicycle has no plate, and maybe no brand/model.
+  plate: string | null;
+  brand: string | null;
+  model: string | null;
   country: VehicleCountry;
 }
 

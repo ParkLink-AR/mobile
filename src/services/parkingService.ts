@@ -1,5 +1,5 @@
-import { ParkingSpot, ScheduleEntry } from '@/src/types';
-import { VehicleType } from '@/src/constants/vehicleTypes';
+import { ParkingSpot, ScheduleEntry, StayRates, Vehicle } from '@/src/types';
+import { BICYCLE, VEHICLE_TYPES, VehicleType } from '@/src/constants/vehicleTypes';
 import {
   ParkingSpotApiResponse,
   ParkingSpotPhotoAsset,
@@ -37,7 +37,8 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     photoUrl: raw.photos[0] ?? '',
     photos: raw.photos,
     covered: raw.covered,
-    vehicleTypes: raw.vehicleTypes,
+    // Always in the same order (car first), whatever order the owner ticked them in.
+    vehicleTypes: VEHICLE_TYPES.filter((vt) => raw.vehicleTypes.includes(vt)),
     capacity: raw.capacity ?? 1,
     stayEnabled: raw.stayEnabled,
     pricePerDay: raw.pricePerDay,
@@ -46,6 +47,8 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     stayAvailableFrom: raw.stayAvailableFrom,
     stayAvailableUntil: raw.stayAvailableUntil,
     maxStayDays: raw.maxStayDays,
+    stayPricesByVehicleType: raw.stayPricesByVehicleType ?? null,
+    requireVehicle: raw.requireVehicle ?? false,
     rating: raw.rating,
     reviewCount: raw.reviewCount,
     tags: raw.covered ? ['Cubierta'] : ['Descubierta'],
@@ -87,6 +90,35 @@ export function getMinPricePerHour(spot: ParkingSpot): number | null {
     return values.length > 0 ? Math.min(...values) : null;
   }
   return spot.pricePerHour;
+}
+
+/**
+ * Si una reserva de este modo tiene que decir con qué vehículo va el conductor: cuando el
+ * dueño lo pide ("Pedir el vehículo al reservar") o cuando el precio de ese modo depende
+ * del tipo de vehículo -- es como se sabe qué tarifa cobrar. Misma regla que
+ * booking-service (Service.checkVehicle), que la vuelve a exigir al crear la reserva.
+ */
+export function spotNeedsVehicle(spot: ParkingSpot, mode: 'hourly' | 'stay'): boolean {
+  if (spot.requireVehicle) return true;
+  return mode === 'stay' ? !!spot.stayPricesByVehicleType : !!spot.pricePerHourByVehicleType;
+}
+
+/** Las tarifas de estadía para un tipo de vehículo -- las suyas si la cochera cobra por
+ * vehículo, si no las mismas para todos. null si no tiene estadía para ese tipo. */
+export function getStayRates(spot: ParkingSpot, vehicleType: VehicleType | null): StayRates | null {
+  if (spot.stayPricesByVehicleType) {
+    return vehicleType ? spot.stayPricesByVehicleType[vehicleType] ?? null : null;
+  }
+  if (spot.pricePerDay === null || spot.pricePerWeek === null || spot.pricePerMonth === null) return null;
+  return { day: spot.pricePerDay, week: spot.pricePerWeek, month: spot.pricePerMonth };
+}
+
+/** Si un vehículo guardado sirve para reservar esta cochera: que la cochera acepte su tipo,
+ * y -- si la cochera pide el vehículo -- que tenga patente (salvo una bici). Un vehículo
+ * guardado antes de que existieran los tipos no sirve hasta que se le complete el tipo. */
+export function vehicleFitsSpot(vehicle: Vehicle, spot: ParkingSpot, needsVehicle: boolean): boolean {
+  if (!vehicle.type || !spot.vehicleTypes.includes(vehicle.type)) return false;
+  return !needsVehicle || vehicle.type === BICYCLE || !!vehicle.plate;
 }
 
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -258,6 +290,10 @@ export interface CreateParkingSpotInput {
   maxStayDays?: number;
   stayAvailableFrom?: string;
   stayAvailableUntil?: string;
+  // Tarifas de estadía por tipo de vehículo, en vez de las tres de arriba.
+  stayPricesByVehicleType?: Partial<Record<VehicleType, StayRates>>;
+  // "Pedir el vehículo al reservar".
+  requireVehicle?: boolean;
 }
 
 export async function createParkingSpot(input: CreateParkingSpotInput): Promise<ParkingSpot> {
@@ -281,6 +317,8 @@ export async function createParkingSpot(input: CreateParkingSpotInput): Promise<
     maxStayDays: input.maxStayDays,
     stayAvailableFrom: input.stayAvailableFrom,
     stayAvailableUntil: input.stayAvailableUntil,
+    stayPricesByVehicleType: input.stayPricesByVehicleType,
+    requireVehicle: input.requireVehicle,
   });
   return toParkingSpot(raw);
 }
@@ -325,6 +363,9 @@ export interface UpdateParkingSpotInput {
   maxStayDays?: number;
   stayAvailableFrom?: string;
   stayAvailableUntil?: string;
+  // `null` explícito vuelve a las mismas tarifas de estadía para todos.
+  stayPricesByVehicleType?: Partial<Record<VehicleType, StayRates>> | null;
+  requireVehicle?: boolean;
 }
 
 export async function updateParkingSpot(
@@ -351,6 +392,8 @@ export async function updateParkingSpot(
     maxStayDays: updates.maxStayDays,
     stayAvailableFrom: updates.stayAvailableFrom,
     stayAvailableUntil: updates.stayAvailableUntil,
+    stayPricesByVehicleType: updates.stayPricesByVehicleType,
+    requireVehicle: updates.requireVehicle,
   });
   return toParkingSpot(raw);
 }

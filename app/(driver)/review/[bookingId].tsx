@@ -10,11 +10,12 @@ import { StatusIcon } from '@/src/components/StatusIcon';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { VehiclePlate } from '@/src/components/VehiclePlate';
+import { VehicleIdentity, vehicleDescription } from '@/src/components/VehicleIdentity';
 import { getBookingApi, getBookingReviewsApi, submitReviewApi, ReviewTargetType } from '@/src/api/booking';
 import { getParkingSpotDetail } from '@/src/api/parking';
 import { getPublicProfileApi } from '@/src/api/auth';
-import { formatBookingWhen, mapBookingDateRange } from '@/src/services/bookingDates';
+import { formatBookingWhen, mapBookingDateRange, toVehicleSnapshot } from '@/src/services/bookingDates';
+import { VehicleSnapshot } from '@/src/types';
 
 interface PendingTarget {
   targetType: ReviewTargetType;
@@ -30,7 +31,7 @@ interface ReviewSubject {
 /** The booking being reviewed -- shown once above the rating cards. */
 interface ReviewContext {
   when: string;
-  vehicle: { plate: string; brand: string; model: string } | null;
+  vehicle: VehicleSnapshot | null;
   subjects: Partial<Record<ReviewTargetType, ReviewSubject>>;
 }
 
@@ -60,7 +61,7 @@ async function loadReviewContext(bookingId: string, role: 'driver' | 'owner'): P
         t('spot.stay.checkOut'),
         'long',
       ),
-      vehicle: booking.vehicle ? { plate: booking.vehicle.plate, brand: booking.vehicle.brand, model: booking.vehicle.model } : null,
+      vehicle: toVehicleSnapshot(booking.vehicle) ?? null,
       subjects,
     };
   } catch {
@@ -229,8 +230,8 @@ function ReviewForm({
           </View>
           {context.vehicle && (
             <View style={styles.summaryRow}>
-              <VehiclePlate plate={context.vehicle.plate} size="small" />
-              <Text style={styles.vehicleText}>{context.vehicle.brand} {context.vehicle.model}</Text>
+              <VehicleIdentity vehicle={context.vehicle} />
+              <Text style={styles.vehicleText}>{vehicleDescription(context.vehicle)}</Text>
             </View>
           )}
         </Card>

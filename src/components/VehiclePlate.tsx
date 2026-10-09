@@ -183,7 +183,7 @@ function formatPlate(plate: string): string {
   return groups ? groups.join(GROUP_GAP) : clean;
 }
 
-type PlateAlign = 'center' | 'start' | 'end';
+export type PlateAlign = 'center' | 'start' | 'end';
 
 interface VehiclePlateProps {
   plate: string;

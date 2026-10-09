@@ -7,6 +7,7 @@ import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { VehiclePlate } from '@/src/components/VehiclePlate';
+import { vehicleDescription } from '@/src/components/VehicleIdentity';
 import { VerifyArrivalCode } from '@/src/components/VerifyArrivalCode';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
@@ -416,13 +417,16 @@ export default function DriverBookingDetail() {
                 <View style={styles.detailRow}>
                   <Ionicons name="car-outline" size={sc(16)} color={colors.textSecondary} />
                   <Text style={styles.detailLabel}>{t('driver.booking.detail.vehicle')}</Text>
-                  <Text style={styles.detailValue}>{booking.vehicle.brand} {booking.vehicle.model}</Text>
+                  <Text style={styles.detailValue}>{vehicleDescription(booking.vehicle)}</Text>
                 </View>
-                <View style={styles.detailRow}>
-                  <MaterialCommunityIcons name="card-text-outline" size={sc(16)} color={colors.textSecondary} />
-                  <Text style={styles.detailLabel}>{t('driver.booking.detail.plate')}</Text>
-                  <VehiclePlate plate={booking.vehicle.plate} size="small" align="end" />
-                </View>
+                {/* A bicycle has no plate. */}
+                {booking.vehicle.plate ? (
+                  <View style={styles.detailRow}>
+                    <MaterialCommunityIcons name="card-text-outline" size={sc(16)} color={colors.textSecondary} />
+                    <Text style={styles.detailLabel}>{t('driver.booking.detail.plate')}</Text>
+                    <VehiclePlate plate={booking.vehicle.plate} size="small" align="end" />
+                  </View>
+                ) : null}
               </>
             )}
 

@@ -262,6 +262,10 @@ function routeFor(data: Record<string, string> | undefined): string | null {
     case 'settlement.paid':
       if (!data.settlementId) return null;
       return `${group}/settlements/${data.settlementId}`;
+    // Sent to the owner once an admin approves or rejects their new parking spot.
+    case 'parking_spot.reviewed':
+      if (!data.parkingSpotId) return null;
+      return `${group}/spots/${data.parkingSpotId}`;
     default:
       return null;
   }

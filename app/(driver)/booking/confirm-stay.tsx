@@ -15,9 +15,9 @@ import { getParkingSpotDetail } from '@/src/services/parkingService';
 import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
 import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { getStayQuote, type StayQuote } from '@/src/api/parking';
-import { ParkingSpot, Vehicle } from '@/src/types';
+import { ParkingSpot } from '@/src/types';
 import { createBookingApi, createPaymentPreference } from '@/src/api/booking';
-import { getVehicles } from '@/src/api/auth';
+import { bookingVehicleBody, useBookingVehicle, vehicleErrorMessage } from '@/src/services/bookingVehicle';
 import { PaymentMethodDisplay } from '@/src/components/PaymentMethodDisplay';
 import { VehiclePicker } from '@/src/components/VehiclePicker';
 import { formatLongDateTime, formatShortDate } from '@/src/services/bookingDates';
@@ -48,20 +48,27 @@ export default function ConfirmStayBooking() {
   const largeText = scale > 1;
   const typography = useTypography();
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
-  const { spotId, startDate, endDate, startHour } = useLocalSearchParams<{
+  const { spotId, startDate, endDate, startHour, vehicleType } = useLocalSearchParams<{
     spotId: string;
     startDate: string; // YYYY-MM-DD
     endDate: string; // YYYY-MM-DD
     startHour: string;
+    vehicleType?: string; // elegido en spot/[id].tsx -- decide la tarifa si la cochera cobra distinto por vehículo
   }>();
   const stayStartHour = Number(startHour) || 0;
   const user = useSessionStore((s) => s.user);
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
-  const [quote, setQuote] = useState<StayQuote | null>(null);
+  // The quote, with the vehicle type it was priced for -- a spot that prices stays per
+  // vehicle is re-quoted when the picked vehicle changes.
+  const [quoted, setQuoted] = useState<{ vehicleType: string; quote: StayQuote } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const {
+    vehicles, selectedVehicle, setSelectedVehicle, onVehicleSaved, needsVehicle, vehicleType: pricingVehicleType,
+  } = useBookingVehicle(user?.id, spot, 'stay', vehicleType);
+  // Only a spot that prices stays per vehicle is quoted by type.
+  const quoteVehicleType = spot?.stayPricesByVehicleType ? pricingVehicleType : null;
+  const quote = quoted && quoted.vehicleType === (quoteVehicleType ?? '') ? quoted.quote : null;
   // Alert.alert with a buttons array is a no-op on web -- see bookings/[id].tsx's
   // handleCancel for the same fix applied to the cancel-booking confirmation.
   const [conflictModalVisible, setConflictModalVisible] = useState(false);
@@ -74,15 +81,17 @@ export default function ConfirmStayBooking() {
       if (!s) setLoadError(t('driver.booking.spotNotFound'));
       else setSpot(s);
     });
-    getStayQuote(spotId, startDate, endDate, stayStartHour)
-      .then(setQuote)
-      .catch((err) => setLoadError(err instanceof ApiError ? err.detail : t('spot.stay.quoteError')));
-  }, [spotId, startDate, endDate, stayStartHour]);
+  }, [spotId]);
 
-  // Entirely optional -- see the same effect in booking/confirm.tsx.
+  const pricedPerVehicle = !!spot?.stayPricesByVehicleType;
   useEffect(() => {
-    if (user) getVehicles(user.id).then(setVehicles).catch(() => {});
-  }, [user?.id]);
+    if (!spot) return;
+    // Priced per vehicle and no vehicle yet: nothing to quote until one is picked.
+    if (pricedPerVehicle && !quoteVehicleType) return;
+    getStayQuote(spotId, startDate, endDate, stayStartHour, quoteVehicleType)
+      .then((result) => setQuoted({ vehicleType: quoteVehicleType ?? '', quote: result }))
+      .catch((err) => setLoadError(err instanceof ApiError ? err.detail : t('spot.stay.quoteError')));
+  }, [spot, pricedPerVehicle, spotId, startDate, endDate, stayStartHour, quoteVehicleType]);
 
   // Mismo flujo que booking/confirm.tsx (POST /bookings -> POST
   // /payments/create-preference -> WebBrowser -> pending.tsx), sin el
@@ -90,6 +99,11 @@ export default function ConfirmStayBooking() {
   // stay_end_date en vez de horas -- ver CreateBookingBody.
   async function reserve() {
     if (!spot || !quote || !user || processing) return;
+    // The spot asks for the vehicle, or prices by it -- booking-service refuses it too.
+    if (needsVehicle && !selectedVehicle) {
+      Alert.alert(t('driver.booking.vehicle.missingTitle'), t('driver.booking.vehicle.error.required'));
+      return;
+    }
     setProcessing(true);
 
     let bookingId: string;
@@ -105,9 +119,7 @@ export default function ConfirmStayBooking() {
         kind: 'STAY',
         stay_end_date: quote.endDate,
         parking_spot: { id: spotId, schedule: [], capacity: spot.capacity },
-        vehicle: selectedVehicle
-          ? { plate: selectedVehicle.plate, brand: selectedVehicle.brand, model: selectedVehicle.model, country: selectedVehicle.country }
-          : undefined,
+        vehicle: bookingVehicleBody(selectedVehicle),
       });
       bookingId = created.id;
       // No amount travels to the checkout: payment-service charges the booking's own
@@ -117,7 +129,7 @@ export default function ConfirmStayBooking() {
       if (isConflict) {
         setConflictModalVisible(true);
       } else {
-        const msg = err?.detail ?? err?.message ?? t('driver.booking.errorCreating');
+        const msg = vehicleErrorMessage(err) ?? err?.detail ?? err?.message ?? t('driver.booking.errorCreating');
         Alert.alert(t('driver.payment.errorTitle'), msg);
       }
       setProcessing(false);
@@ -173,9 +185,12 @@ export default function ConfirmStayBooking() {
     );
   }
 
-  if (!user || !spot || !quote) return <ActivityIndicator style={{ marginTop: 40 }} />;
+  // Priced per vehicle with no vehicle picked yet: the screen shows, asking for the vehicle
+  // before the price.
+  const awaitingVehicle = pricedPerVehicle && !quoteVehicleType;
+  if (!user || !spot || (!quote && !awaitingVehicle)) return <ActivityIndicator style={{ marginTop: 40 }} />;
 
-  const visibleTotal = getDriverVisiblePrice(quote.amount / 100, commissionRatePercent);
+  const visibleTotal = quote ? getDriverVisiblePrice(quote.amount / 100, commissionRatePercent) : null;
 
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
@@ -199,6 +214,7 @@ export default function ConfirmStayBooking() {
       fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase',
     },
+    vehicleHint: { fontSize: sc(13), color: colors.textSecondary, lineHeight: sc(18) },
     // The value never squeezes the label: it wraps on its own side instead. With the large
     // text size a long value ("14 de octubre de 2026, 15:00") doesn't fit beside the label
     // at all, so it drops to its own line under it.
@@ -256,28 +272,34 @@ export default function ConfirmStayBooking() {
                 <Text style={styles.sectionLabel}>{t('driver.booking.summary')}</Text>
               </View>
 
-              <View style={styles.detailRow}>
-                <Ionicons name="log-in-outline" size={sc(16)} color={colors.textSecondary} />
-                <Text style={styles.detailLabel}>{t('spot.stay.checkIn')}</Text>
-                <Text style={styles.detailValue}>{formatLongDateTime(quote.startDateTime)}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Ionicons name="log-out-outline" size={sc(16)} color={colors.textSecondary} />
-                <Text style={styles.detailLabel}>{t('spot.stay.checkOut')}</Text>
-                <Text style={styles.detailValue}>{formatLongDateTime(quote.endDateTime)}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Ionicons name="hourglass-outline" size={sc(16)} color={colors.textSecondary} />
-                <Text style={styles.detailLabel}>{t('spot.stay.duration')}</Text>
-                <Text style={styles.detailValue}>{formatStayBreakdown(quote.breakdown)}</Text>
-              </View>
+              {!quote ? (
+                <Text style={styles.vehicleHint}>{t('driver.booking.vehicle.pickToPrice')}</Text>
+              ) : (
+                <>
+                  <View style={styles.detailRow}>
+                    <Ionicons name="log-in-outline" size={sc(16)} color={colors.textSecondary} />
+                    <Text style={styles.detailLabel}>{t('spot.stay.checkIn')}</Text>
+                    <Text style={styles.detailValue}>{formatLongDateTime(quote.startDateTime)}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Ionicons name="log-out-outline" size={sc(16)} color={colors.textSecondary} />
+                    <Text style={styles.detailLabel}>{t('spot.stay.checkOut')}</Text>
+                    <Text style={styles.detailValue}>{formatLongDateTime(quote.endDateTime)}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Ionicons name="hourglass-outline" size={sc(16)} color={colors.textSecondary} />
+                    <Text style={styles.detailLabel}>{t('spot.stay.duration')}</Text>
+                    <Text style={styles.detailValue}>{formatStayBreakdown(quote.breakdown)}</Text>
+                  </View>
 
-              <View style={styles.divider} />
+                  <View style={styles.divider} />
 
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>{t('driver.booking.total')}</Text>
-                <Text style={styles.totalValue}>{formatPesos(visibleTotal)}</Text>
-              </View>
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>{t('driver.booking.total')}</Text>
+                    <Text style={styles.totalValue}>{visibleTotal !== null ? formatPesos(visibleTotal) : '—'}</Text>
+                  </View>
+                </>
+              )}
             </View>
           </Card>
 
@@ -285,13 +307,23 @@ export default function ConfirmStayBooking() {
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="car-sport-outline" size={sc(15)} color={colors.textSecondary} />
-                <Text style={styles.sectionLabel}>{t('driver.booking.vehicle.sectionTitle')}</Text>
+                <Text style={styles.sectionLabel}>
+                  {t(needsVehicle ? 'driver.booking.vehicle.sectionTitleRequired' : 'driver.booking.vehicle.sectionTitle')}
+                </Text>
               </View>
+              {needsVehicle ? (
+                <Text style={styles.vehicleHint}>
+                  {t(spot.stayPricesByVehicleType ? 'driver.booking.vehicle.pricedHint' : 'driver.booking.vehicle.requiredHint')}
+                </Text>
+              ) : null}
               <VehiclePicker
+                userId={user.id}
                 vehicles={vehicles}
                 selected={selectedVehicle}
                 onSelect={setSelectedVehicle}
-                vehiclesScreenPath={`${group}/vehicles`}
+                onVehicleSaved={onVehicleSaved}
+                acceptedTypes={spot.vehicleTypes}
+                required={needsVehicle}
               />
             </View>
           </Card>
@@ -310,10 +342,10 @@ export default function ConfirmStayBooking() {
             title={
               processing
                 ? t('driver.booking.processing')
-                : t('driver.booking.confirmPay').replace('%{total}', String(visibleTotal))
+                : t('driver.booking.confirmPay').replace('$%{total}', visibleTotal !== null ? formatPesos(visibleTotal) : '—')
             }
             onPress={reserve}
-            disabled={processing}
+            disabled={processing || !quote}
             style={styles.button}
           />
         </View>

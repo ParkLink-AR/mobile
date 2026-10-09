@@ -15,10 +15,10 @@ import { getParkingSpotDetail, getSpotPricePerHour, toISOToday } from '@/src/ser
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { getAvailability } from '@/src/api/parking';
-import { ParkingSpot, Vehicle } from '@/src/types';
-import { VehicleType, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
+import { ParkingSpot } from '@/src/types';
+import { VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { createBookingApi, createPaymentPreference, type ScheduleEntryBody } from '@/src/api/booking';
-import { getVehicles } from '@/src/api/auth';
+import { bookingVehicleBody, useBookingVehicle, vehicleErrorMessage } from '@/src/services/bookingVehicle';
 import { PaymentMethodDisplay } from '@/src/components/PaymentMethodDisplay';
 import { VehiclePicker } from '@/src/components/VehiclePicker';
 import { formatLongDate } from '@/src/services/bookingDates';
@@ -86,8 +86,9 @@ export default function ConfirmBooking() {
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const {
+    vehicles, selectedVehicle, setSelectedVehicle, onVehicleSaved, needsVehicle, vehicleType: pricingVehicleType,
+  } = useBookingVehicle(user?.id, spot, 'hourly', vehicleType);
   // Alert.alert with a buttons array is a no-op on web -- see bookings/[id].tsx's
   // handleCancel for the same fix applied to the cancel-booking confirmation.
   const [conflictModalVisible, setConflictModalVisible] = useState(false);
@@ -121,12 +122,6 @@ export default function ConfirmBooking() {
     });
   }, [spotId]);
 
-  // Entirely optional -- an empty list just means the "Seleccionar vehículo" picker
-  // shows its empty state (see VehiclePicker's "vehicles.pickerEmpty").
-  useEffect(() => {
-    if (user) getVehicles(user.id).then(setVehicles).catch(() => {});
-  }, [user?.id]);
-
   // Full booking + MercadoPago payment flow:
   //   0. GET /availability        → pre-check: confirm slot is still free
   //   1. POST /bookings          → creates PENDING_PAYMENT booking (15-min hold)
@@ -141,7 +136,12 @@ export default function ConfirmBooking() {
     // Esta pantalla sólo se llega desde el flujo de reserva por hora (ver
     // spot/[id].tsx, que lo esconde si !spot.hourlyEnabled) -- null acá
     // sería un estado inesperado, no algo que el usuario pueda causar.
-    const effectiveVehicleType = (vehicleType as VehicleType) ?? spot.vehicleTypes[0] ?? null;
+    // The spot asks for the vehicle, or prices by it -- booking-service refuses it too.
+    if (needsVehicle && !selectedVehicle) {
+      Alert.alert(t('driver.booking.vehicle.missingTitle'), t('driver.booking.vehicle.error.required'));
+      return;
+    }
+    const effectiveVehicleType = pricingVehicleType ?? spot.vehicleTypes[0] ?? null;
     const pricePerHour = effectiveVehicleType ? getSpotPricePerHour(spot, effectiveVehicleType) : spot.pricePerHour;
     if (pricePerHour === null) {
       Alert.alert(t('driver.payment.errorTitle'), t('driver.booking.errorCreating'));
@@ -184,9 +184,7 @@ export default function ConfirmBooking() {
         end: endISO,
         amount: Math.round(pricePerHour * reservedHours * 100), // centavos -- booking-service recomputes this itself and ignores whatever's sent here
         parking_spot: { id: spotId, schedule, capacity: spot.capacity },
-        vehicle: selectedVehicle
-          ? { plate: selectedVehicle.plate, brand: selectedVehicle.brand, model: selectedVehicle.model, country: selectedVehicle.country }
-          : undefined,
+        vehicle: bookingVehicleBody(selectedVehicle),
       });
       bookingId = created.id;
       // No amount travels to the checkout: payment-service charges the booking's own
@@ -196,7 +194,7 @@ export default function ConfirmBooking() {
       if (isConflict) {
         setConflictModalVisible(true);
       } else {
-        const msg = err?.detail ?? err?.message ?? t('driver.booking.errorCreating');
+        const msg = vehicleErrorMessage(err) ?? err?.detail ?? err?.message ?? t('driver.booking.errorCreating');
         Alert.alert(t('driver.payment.errorTitle'), msg);
       }
       setProcessing(false);
@@ -270,7 +268,7 @@ export default function ConfirmBooking() {
   }
 
   if (!user || !spot) return <ActivityIndicator style={{ marginTop: 40 }} />;
-  const effectiveVehicleType = (vehicleType as VehicleType) ?? spot.vehicleTypes[0] ?? null;
+  const effectiveVehicleType = pricingVehicleType ?? spot.vehicleTypes[0] ?? null;
   const pricePerHour = effectiveVehicleType ? getSpotPricePerHour(spot, effectiveVehicleType) : spot.pricePerHour;
   // Ver el comentario en reserve(): esta pantalla sólo se llega desde el
   // flujo de reserva por hora, así que esto no debería pasar en la práctica.
@@ -301,6 +299,7 @@ export default function ConfirmBooking() {
       fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
       letterSpacing: 0.8, textTransform: 'uppercase',
     },
+    vehicleHint: { fontSize: sc(13), color: colors.textSecondary, lineHeight: sc(18) },
     // The value never squeezes the label: it wraps on its own side instead. With the large
     // text size a long value ("14 de octubre de 2026, 15:00") doesn't fit beside the label
     // at all, so it drops to its own line under it.
@@ -403,13 +402,23 @@ export default function ConfirmBooking() {
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="car-sport-outline" size={sc(15)} color={colors.textSecondary} />
-                <Text style={styles.sectionLabel}>{t('driver.booking.vehicle.sectionTitle')}</Text>
+                <Text style={styles.sectionLabel}>
+                  {t(needsVehicle ? 'driver.booking.vehicle.sectionTitleRequired' : 'driver.booking.vehicle.sectionTitle')}
+                </Text>
               </View>
+              {needsVehicle ? (
+                <Text style={styles.vehicleHint}>
+                  {t(spot.pricePerHourByVehicleType ? 'driver.booking.vehicle.pricedHint' : 'driver.booking.vehicle.requiredHint')}
+                </Text>
+              ) : null}
               <VehiclePicker
+                userId={user.id}
                 vehicles={vehicles}
                 selected={selectedVehicle}
                 onSelect={setSelectedVehicle}
-                vehiclesScreenPath={`${group}/vehicles`}
+                onVehicleSaved={onVehicleSaved}
+                acceptedTypes={spot.vehicleTypes}
+                required={needsVehicle}
               />
             </View>
           </Card>
@@ -428,7 +437,7 @@ export default function ConfirmBooking() {
             title={
               processing
                 ? t('driver.booking.processing')
-                : t('driver.booking.confirmPay').replace('%{total}', String(visibleTotal))
+                : t('driver.booking.confirmPay').replace('$%{total}', formatPesos(visibleTotal))
             }
             onPress={reserve}
             disabled={processing}

@@ -1,6 +1,6 @@
 import { request, requestMultipart } from './client';
 import { appendLocalFile } from './formDataFile';
-import { ScheduleEntry } from '@/src/types';
+import { ScheduleEntry, StayRates } from '@/src/types';
 import { ReviewListApiResponse } from './booking';
 import { VehicleType } from '@/src/constants/vehicleTypes';
 
@@ -34,6 +34,9 @@ export interface ParkingSpotApiResponse {
   stayAvailableFrom: string | null; // YYYY-MM-DD
   stayAvailableUntil: string | null; // YYYY-MM-DD
   maxStayDays: number | null;
+  // Ver ParkingSpot.stayPricesByVehicleType / requireVehicle en parking-service.
+  stayPricesByVehicleType?: Partial<Record<VehicleType, StayRates>> | null;
+  requireVehicle?: boolean;
   covered: boolean;
   vehicleTypes: VehicleType[];
   capacity: number;
@@ -117,6 +120,11 @@ interface StayFields {
   maxStayDays?: number;
   stayAvailableFrom?: string; // YYYY-MM-DD
   stayAvailableUntil?: string; // YYYY-MM-DD
+  // Tarifas de estadía por tipo de vehículo -- alternativa a pricePerDay/Week/Month. En
+  // update, `null` vuelve a las mismas para todos.
+  stayPricesByVehicleType?: Partial<Record<VehicleType, StayRates>> | null;
+  // "Pedir el vehículo al reservar".
+  requireVehicle?: boolean;
 }
 
 export interface CreateParkingSpotInput extends StayFields {
@@ -362,8 +370,12 @@ export async function getStayQuote(
   startDate: string,
   endDate: string,
   startHour: number,
+  // El tipo del vehículo del conductor -- lo necesita una cochera que cobra la estadía
+  // distinto por vehículo.
+  vehicleType?: VehicleType | null,
 ): Promise<StayQuote> {
   const query = new URLSearchParams({ startDate, endDate, startHour: String(startHour) });
+  if (vehicleType) query.set('vehicleType', vehicleType);
   return request(`/parking-spots/${parkingSpotId}/stays/quote?${query.toString()}`);
 }
 

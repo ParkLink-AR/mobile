@@ -1,6 +1,8 @@
 import { getLanguage } from '@/src/i18n';
 import { artDateFromISO } from './dateUtils';
 import { VehicleSnapshot } from '@/src/types';
+import type { BookingVehicleApiResponse } from '@/src/api/booking';
+import { isVehicleType } from '@/src/constants/vehicleTypes';
 
 // Rango de fecha/hora de una reserva, derivado de sus timestamps `start`/`end`
 // crudos -- misma lógica para las 4 pantallas que mapean BookingApiResponse a
@@ -44,11 +46,15 @@ export function mapBookingDateRange(start: string, end: string): BookingDateRang
 /** Same shared-mapping reasoning as mapBookingDateRange above, for
  * BookingApiResponse.vehicle -- auth-service only ever hands out a country from its own
  * fixed allowlist, so the cast is safe (never arbitrary user input). */
-export function toVehicleSnapshot(
-  v?: { plate: string; brand: string; model: string; country: string }
-): VehicleSnapshot | undefined {
+export function toVehicleSnapshot(v?: BookingVehicleApiResponse): VehicleSnapshot | undefined {
   if (!v) return undefined;
-  return { plate: v.plate, brand: v.brand, model: v.model, country: v.country as VehicleSnapshot['country'] };
+  return {
+    type: isVehicleType(v.type) ? v.type : null,
+    plate: v.plate ?? null,
+    brand: v.brand ?? null,
+    model: v.model ?? null,
+    country: (v.country ?? 'AR') as VehicleSnapshot['country'],
+  };
 }
 
 // Every date the app shows goes through the helpers below, in one of two formats:

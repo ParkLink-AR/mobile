@@ -19,6 +19,7 @@ import { getPublicProfileApi } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
 import { mapBookingDateRange, formatShortDate, toVehicleSnapshot, ownerEarningsFrom } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
+import { vehicleSummary } from '@/src/components/VehicleIdentity';
 
 function mapApiBooking(b: BookingApiResponse): Booking {
   const amount = typeof b.amount === 'number' ? b.amount / 100 : 0;
@@ -217,7 +218,7 @@ export default function SpotBookingRequests() {
                   <View style={styles.infoRow}>
                     <Ionicons name="car-outline" size={sc(15)} color={colors.textSecondary} />
                     <Text style={styles.infoLabel}>{t('driver.booking.detail.vehicle')}</Text>
-                    <Text style={styles.infoValue}>{item.vehicle.brand} {item.vehicle.model}</Text>
+                    <Text style={styles.infoValue}>{vehicleSummary(item.vehicle)}</Text>
                   </View>
                 )}
                 <Text style={styles.total}>

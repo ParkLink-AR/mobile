@@ -1,4 +1,5 @@
 import { AccountDeletionSummary, AccountStatus, AccountType, AuthTokens, AuthUser, Vehicle } from '@/src/types';
+import { isVehicleType, VehicleType } from '@/src/constants/vehicleTypes';
 import { request, requestMultipart } from './client';
 import { appendLocalFile } from './formDataFile';
 
@@ -393,16 +394,18 @@ export async function updatePayoutInfo(
 }
 
 // -------------------------
-// Vehicles (a driver's own saved cars -- entirely optional, picked when booking a spot so
-// the owner knows which plate to expect). See auth-service's
-// GET/POST /users/{id}/vehicles and DELETE /users/{id}/vehicles/{vehicleId}.
+// Vehicles (a driver's own saved vehicles, picked when booking a spot: required when the
+// spot asks for it or charges per vehicle type). See auth-service's
+// GET/POST /users/{id}/vehicles, PATCH (fill in a missing type) and DELETE
+// /users/{id}/vehicles/{vehicleId}.
 // -------------------------
 
 export interface VehicleApiResponse {
   id: string;
-  plate: string;
-  brand: string;
-  model: string;
+  type: string | null;
+  plate: string | null;
+  brand: string | null;
+  model: string | null;
   country: string;
   created_at: string;
 }
@@ -410,7 +413,14 @@ export interface VehicleApiResponse {
 function toVehicle(r: VehicleApiResponse): Vehicle {
   // auth-service only ever accepts a country from its own fixed allowlist (see
   // schemas.VEHICLE_COUNTRIES), so this cast is safe -- it's never arbitrary user input.
-  return { id: r.id, plate: r.plate, brand: r.brand, model: r.model, country: r.country as Vehicle['country'] };
+  return {
+    id: r.id,
+    type: isVehicleType(r.type) ? r.type : null,
+    plate: r.plate,
+    brand: r.brand,
+    model: r.model,
+    country: r.country as Vehicle['country'],
+  };
 }
 
 export async function getVehicles(userId: string): Promise<Vehicle[]> {
@@ -420,11 +430,21 @@ export async function getVehicles(userId: string): Promise<Vehicle[]> {
 
 export async function createVehicle(
   userId: string,
-  input: { plate: string; brand: string; model: string; country: string }
+  // A bicycle has no plate, and its brand/model are optional.
+  input: { type: VehicleType; plate?: string; brand?: string; model?: string; country: string }
 ): Promise<Vehicle> {
   const response = await request<VehicleApiResponse>(`/users/${userId}/vehicles`, {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+  return toVehicle(response);
+}
+
+/** Fills in the type of a vehicle saved before vehicles had one. */
+export async function updateVehicleType(userId: string, vehicleId: string, type: VehicleType): Promise<Vehicle> {
+  const response = await request<VehicleApiResponse>(`/users/${userId}/vehicles/${vehicleId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ type }),
   });
   return toVehicle(response);
 }

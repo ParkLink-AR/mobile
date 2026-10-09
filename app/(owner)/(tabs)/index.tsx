@@ -18,6 +18,7 @@ import { getPublicProfileApi } from '@/src/api/auth';
 import { artDateFromISO, todayArtDateISO } from '@/src/services/dateUtils';
 import { formatBookingWhen, formatLongDate, formatShortDate, formatShortDateFromISO, formatTime } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
+import { vehicleSummary } from '@/src/components/VehicleIdentity';
 
 export default function OwnerToday() {
   useLanguage();
@@ -185,7 +186,7 @@ export default function OwnerToday() {
                         {item.vehicle && (
                           <View style={styles.vehicleRow}>
                             <Ionicons name="car-outline" size={sc(16)} color={colors.textSecondary} />
-                            <Text style={styles.vehicleText}>{item.vehicle.brand} {item.vehicle.model}</Text>
+                            <Text style={styles.vehicleText}>{vehicleSummary(item.vehicle)}</Text>
                           </View>
                         )}
                         <Text style={typography.body}>

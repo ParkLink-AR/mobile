@@ -22,7 +22,10 @@ export type NotificationKind =
   | 'driver_verified'
   | 'message_received'
   | 'ticket_replied'
-  | 'owner_settlement_paid';
+  | 'owner_settlement_paid'
+  // An admin approved (it's published) or rejected (with a reason) the owner's new spot.
+  | 'owner_spot_approved'
+  | 'owner_spot_rejected';
 
 const KNOWN_KINDS = new Set<NotificationKind>([
   'owner_request',
@@ -37,6 +40,8 @@ const KNOWN_KINDS = new Set<NotificationKind>([
   'message_received',
   'ticket_replied',
   'owner_settlement_paid',
+  'owner_spot_approved',
+  'owner_spot_rejected',
 ]);
 
 /** Which side of the app a notification belongs to -- shown as the car/building icon on
@@ -49,6 +54,8 @@ const OWNER_KINDS = new Set<NotificationKind>([
   'owner_booking_cancelled',
   'owner_review_prompt',
   'owner_settlement_paid',
+  'owner_spot_approved',
+  'owner_spot_rejected',
 ]);
 
 /** item.role, falling back by kind for an entry the server saved without one. */
@@ -76,7 +83,8 @@ export interface AppNotification {
   readAt: string | null;
   /** owner_request only: true once it no longer waits for the owner's answer. */
   resolved: boolean;
-  /** message_received / ticket_replied: the start of the message. */
+  /** message_received / ticket_replied: the start of the message; owner_spot_rejected: the
+   * admin's reason. */
   preview?: string;
   /** The other person on the booking, by name -- "Calificá a Juan Pérez" instead of
    * "Calificá al conductor". Best-effort: absent if their profile couldn't be loaded. */
@@ -117,7 +125,7 @@ export function toAppNotification(entry: InboxNotificationApi): AppNotification 
     at: entry.created_at,
     readAt: entry.read_at,
     resolved: !!entry.resolved_at,
-    preview: str(data.preview) || undefined,
+    preview: str(data.preview) || str(data.notes) || undefined,
     driverId: str(data.driver_user_id) || undefined,
     settlementId: str(data.settlement_id) || undefined,
     ticketId: str(data.ticket_id) || undefined,

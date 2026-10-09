@@ -2,7 +2,6 @@ import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
 import {
   Text,
-  TextInput,
   View,
   FlatList,
   Pressable,
@@ -10,19 +9,20 @@ import {
   TouchableWithoutFeedback,
   StyleSheet,
   ActivityIndicator,
-  Keyboard,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
-import { ModalKeyboardAvoider } from '@/src/components/ModalKeyboardAvoider';
 import { Screen } from '@/src/components/Screen';
-import { VehiclePlate, isValidArgentinePlate, usePlateAssetsReady } from '@/src/components/VehiclePlate';
+import { usePlateAssetsReady } from '@/src/components/VehiclePlate';
+import { VehicleIdentity, vehicleName } from '@/src/components/VehicleIdentity';
+import { VehicleFormModal } from '@/src/components/VehicleFormModal';
+import { VehicleTypeModal } from '@/src/components/VehicleTypeModal';
+import { VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { getVehicles, createVehicle, deleteVehicle } from '@/src/api/auth';
-import { ApiError } from '@/src/api/client';
+import { getVehicles, deleteVehicle } from '@/src/api/auth';
 import { Vehicle } from '@/src/types';
 
 export default function VehiclesScreen() {
@@ -36,13 +36,10 @@ export default function VehiclesScreen() {
   const platesReady = usePlateAssetsReady();
 
   const [formVisible, setFormVisible] = useState(false);
-  const [plate, setPlate] = useState('');
-  const [brand, setBrand] = useState('');
-  const [model, setModel] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   // A failed load must not look like "no tenés vehículos" -- see the error state below.
   const [loadFailed, setLoadFailed] = useState(false);
+  // A vehicle saved before types existed, whose type the driver is filling in.
+  const [typeTarget, setTypeTarget] = useState<Vehicle | null>(null);
 
   const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -57,44 +54,6 @@ export default function VehiclesScreen() {
   }, [user.id]);
 
   useFocusEffect(load);
-
-  function openForm() {
-    setPlate('');
-    setBrand('');
-    setModel('');
-    setError(null);
-    setFormVisible(true);
-  }
-
-  async function handleSave() {
-    if (!plate.trim() || !brand.trim() || !model.trim()) {
-      setError(t('vehicles.error.required'));
-      return;
-    }
-    // Argentina only issues two domain formats (ABC123 pre-2016, AB123CD since) -- same
-    // check auth-service enforces server-side (see schemas.VehicleCreate), surfaced here
-    // too so the driver doesn't wait for a round-trip to find out.
-    if (!isValidArgentinePlate(plate)) {
-      setError(t('vehicles.error.invalidArPlate'));
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      const created = await createVehicle(user.id, {
-        plate: plate.trim(),
-        brand: brand.trim(),
-        model: model.trim(),
-        country: 'AR',
-      });
-      setVehicles((prev) => [...prev, created]);
-      setFormVisible(false);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.detail : t('vehicles.error.generic'));
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function handleDelete() {
     if (!deleteTarget) return;
@@ -117,13 +76,12 @@ export default function VehiclesScreen() {
     vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     vehicleInfo: { flex: 1 },
     vehicleBrandModel: { fontSize: 15, fontWeight: '700', color: colors.text },
+    vehicleType: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+    completeType: { fontSize: 13, fontWeight: '600', color: colors.warning, marginTop: 2 },
     deleteBtn: { padding: 6 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
     modalSheet: { backgroundColor: colors.surface, borderRadius: 16, padding: 20, gap: 12 },
     modalTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
-    label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 },
-    input: { borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: 15, color: colors.text },
-    error: { color: '#C62828', fontSize: 13 },
     modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
     cancelBtn: { flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border },
     cancelBtnText: { color: colors.textSecondary, fontWeight: '600' },
@@ -156,9 +114,18 @@ export default function VehiclesScreen() {
           renderItem={({ item }) => (
             <Card>
               <View style={styles.vehicleRow}>
-                <VehiclePlate plate={item.plate} size="small" />
+                <VehicleIdentity vehicle={item} />
                 <View style={styles.vehicleInfo}>
-                  <Text style={styles.vehicleBrandModel}>{item.brand} {item.model}</Text>
+                  <Text style={styles.vehicleBrandModel}>{vehicleName(item)}</Text>
+                  {item.type ? (
+                    <Text style={styles.vehicleType}>{t(VEHICLE_TYPE_LABEL_KEYS[item.type])}</Text>
+                  ) : (
+                    // Saved before vehicles had a type: it can't be used for a spot that
+                    // asks for the vehicle until it has one.
+                    <Text style={styles.completeType} onPress={() => setTypeTarget(item)}>
+                      {t('vehicles.completeType.action')}
+                    </Text>
+                  )}
                 </View>
                 <Pressable style={styles.deleteBtn} onPress={() => setDeleteTarget(item)}>
                   <Ionicons name="trash-outline" size={20} color={colors.textSecondary} />
@@ -169,72 +136,28 @@ export default function VehiclesScreen() {
         />
       )}
 
-      <Button title={t('vehicles.add')} onPress={openForm} />
+      <Button title={t('vehicles.add')} onPress={() => setFormVisible(true)} />
 
       {/* Add vehicle */}
-      <Modal visible={formVisible} transparent animationType="fade" onRequestClose={() => setFormVisible(false)}>
-        <ModalKeyboardAvoider>
-          <TouchableWithoutFeedback onPress={() => setFormVisible(false)}>
-            <View style={styles.modalOverlay}>
-              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View style={styles.modalSheet}>
-                  <Text style={styles.modalTitle}>{t('vehicles.add')}</Text>
+      <VehicleFormModal
+        visible={formVisible}
+        userId={user.id}
+        onClose={() => setFormVisible(false)}
+        onCreated={(created) => {
+          setVehicles((prev) => [...prev, created]);
+          setFormVisible(false);
+        }}
+      />
 
-                  {error ? <Text style={styles.error}>{error}</Text> : null}
-
-                  <View>
-                    <Text style={styles.label}>{t('vehicles.plate')}</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="AB123CD"
-                      placeholderTextColor={colors.textSecondary}
-                      autoCapitalize="characters"
-                      maxLength={10}
-                      value={plate}
-                      onChangeText={setPlate}
-                    />
-                  </View>
-
-                  <View>
-                    <Text style={styles.label}>{t('vehicles.brand')}</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Toyota"
-                      placeholderTextColor={colors.textSecondary}
-                      value={brand}
-                      onChangeText={setBrand}
-                    />
-                  </View>
-
-                  <View>
-                    <Text style={styles.label}>{t('vehicles.model')}</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Corolla"
-                      placeholderTextColor={colors.textSecondary}
-                      value={model}
-                      onChangeText={setModel}
-                    />
-                  </View>
-
-                  <View style={styles.modalActions}>
-                    <Pressable style={styles.cancelBtn} onPress={() => setFormVisible(false)}>
-                      <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
-                    </Pressable>
-                    <View style={{ flex: 1 }}>
-                      {saving ? (
-                        <ActivityIndicator color={colors.teal} />
-                      ) : (
-                        <Button title={t('vehicles.save')} onPress={handleSave} />
-                      )}
-                    </View>
-                  </View>
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </TouchableWithoutFeedback>
-        </ModalKeyboardAvoider>
-      </Modal>
+      <VehicleTypeModal
+        vehicle={typeTarget}
+        userId={user.id}
+        onClose={() => setTypeTarget(null)}
+        onSaved={(updated) => {
+          setVehicles((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
+          setTypeTarget(null);
+        }}
+      />
 
       {/* Delete confirmation */}
       <Modal visible={!!deleteTarget} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}>

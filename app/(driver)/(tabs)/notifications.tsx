@@ -27,6 +27,8 @@ const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
   message_received: 'chatbubble-ellipses-outline',
   ticket_replied: 'help-buoy-outline',
   owner_settlement_paid: 'cash-outline',
+  owner_spot_approved: 'checkmark-done-circle',
+  owner_spot_rejected: 'alert-circle',
 };
 
 const DANGER = '#C62828';
@@ -121,14 +123,20 @@ export default function Notifications() {
   });
 
   function iconColorFor(kind: AppNotification['kind']) {
-    if (kind === 'driver_confirmed' || kind === 'driver_verified' || kind === 'owner_settlement_paid') {
+    if (
+      kind === 'driver_confirmed' ||
+      kind === 'driver_verified' ||
+      kind === 'owner_settlement_paid' ||
+      kind === 'owner_spot_approved'
+    ) {
       return colors.success;
     }
     if (
       kind === 'driver_rejected' ||
       kind === 'driver_request_expired' ||
       kind === 'driver_spot_unavailable' ||
-      kind === 'owner_booking_cancelled'
+      kind === 'owner_booking_cancelled' ||
+      kind === 'owner_spot_rejected'
     ) {
       return DANGER;
     }
@@ -167,6 +175,12 @@ export default function Notifications() {
         return item.preview ? `“${item.preview}”` : t('notifications.ticketReplied.body');
       case 'owner_settlement_paid':
         return t('notifications.settlementPaid.body', { amount: item.total.toLocaleString('es-AR') });
+      case 'owner_spot_approved':
+        return t('notifications.spotApproved.body');
+      case 'owner_spot_rejected':
+        return item.preview
+          ? t('notifications.spotRejected.bodyWithReason', { reason: item.preview })
+          : t('notifications.spotRejected.body');
     }
   }
 
@@ -199,6 +213,11 @@ export default function Notifications() {
         break;
       case 'owner_settlement_paid':
         if (item.settlementId) router.push(`${group}/settlements/${item.settlementId}`);
+        break;
+      case 'owner_spot_approved':
+      case 'owner_spot_rejected':
+        // The owner's own spot page: published, or what to fix before sending it again.
+        if (item.parkingSpotId) router.push(`${group}/spots/${item.parkingSpotId}`);
         break;
       default:
         // driver_confirmed, driver_rejected, driver_request_expired, driver_spot_unavailable,

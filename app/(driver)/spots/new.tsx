@@ -8,7 +8,14 @@ import { Button } from '@/src/components/Button';
 import { Screen, FORM_SCROLL_PROPS, useScrollToFocusedInput } from '@/src/components/Screen';
 import { dayGroupsToEntries } from '@/src/components/AvailabilityPicker';
 import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
-import { StaySettingsEditor, StaySettingsFormValue, EMPTY_STAY_SETTINGS } from '@/src/components/StaySettingsEditor';
+import {
+  StaySettingsEditor,
+  StaySettingsFormValue,
+  EMPTY_STAY_SETTINGS,
+  isStayPricingValid,
+  stayPricesByVehicleTypeToNumbers,
+} from '@/src/components/StaySettingsEditor';
+import { RequireVehicleSetting } from '@/src/components/RequireVehicleSetting';
 import {
   HourlySettingsEditor,
   HourlySettingsFormValue,
@@ -52,6 +59,8 @@ export default function NewSpot() {
   const [capacity, setCapacity] = useState('1');
   const [hourlySettings, setHourlySettings] = useState<HourlySettingsFormValue>(EMPTY_HOURLY_SETTINGS);
   const [staySettings, setStaySettings] = useState<StaySettingsFormValue>(EMPTY_STAY_SETTINGS);
+  // "Pedir el vehículo al reservar" -- off by default.
+  const [requireVehicle, setRequireVehicle] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [publishing, setPublishing] = useState(false);
@@ -160,13 +169,7 @@ export default function NewSpot() {
       alert(t('owner.spot.new.requiredSchedule'));
       return;
     }
-    if (
-      staySettings.stayEnabled &&
-      (!staySettings.pricePerDay.trim() ||
-        !staySettings.pricePerWeek.trim() ||
-        !staySettings.pricePerMonth.trim() ||
-        !staySettings.maxStayDays.trim())
-    ) {
+    if (!isStayPricingValid(staySettings, vehicleTypes)) {
       alert(t('owner.spot.stay.requiredFields'));
       return;
     }
@@ -193,9 +196,14 @@ export default function NewSpot() {
         schedule: hourlySettings.hourlyEnabled ? dayGroupsToEntries(hourlySettings.schedule) : undefined,
         description: description.trim() || undefined,
         stayEnabled: staySettings.stayEnabled,
-        pricePerDay: staySettings.stayEnabled ? Number(staySettings.pricePerDay) : undefined,
-        pricePerWeek: staySettings.stayEnabled ? Number(staySettings.pricePerWeek) : undefined,
-        pricePerMonth: staySettings.stayEnabled ? Number(staySettings.pricePerMonth) : undefined,
+        ...(staySettings.stayEnabled && staySettings.pricePerVehicleType
+          ? { stayPricesByVehicleType: stayPricesByVehicleTypeToNumbers(staySettings, vehicleTypes) }
+          : {
+              pricePerDay: staySettings.stayEnabled ? Number(staySettings.pricePerDay) : undefined,
+              pricePerWeek: staySettings.stayEnabled ? Number(staySettings.pricePerWeek) : undefined,
+              pricePerMonth: staySettings.stayEnabled ? Number(staySettings.pricePerMonth) : undefined,
+            }),
+        requireVehicle,
         maxStayDays: staySettings.stayEnabled ? Number(staySettings.maxStayDays) : undefined,
         stayAvailableFrom: staySettings.stayEnabled ? (staySettings.stayAvailableFrom.trim() || undefined) : undefined,
         stayAvailableUntil: staySettings.stayEnabled ? (staySettings.stayAvailableUntil.trim() || undefined) : undefined,
@@ -410,6 +418,14 @@ export default function NewSpot() {
           <View style={styles.card}>
             <Text style={styles.sectionLabel}>{t('owner.spot.new.vehicleTypes')}</Text>
             <VehicleTypePicker value={vehicleTypes} onChange={setVehicleTypes} />
+            <RequireVehicleSetting
+              value={requireVehicle}
+              onChange={setRequireVehicle}
+              pricedPerVehicle={
+                (hourlySettings.hourlyEnabled && hourlySettings.pricePerVehicleType) ||
+                (staySettings.stayEnabled && staySettings.pricePerVehicleType)
+              }
+            />
           </View>
 
           {/* Alquiler por hora */}
@@ -426,6 +442,7 @@ export default function NewSpot() {
             <StaySettingsEditor
               value={staySettings}
               onChange={(patch) => setStaySettings((prev) => ({ ...prev, ...patch }))}
+              vehicleTypes={vehicleTypes}
             />
           </View>
 

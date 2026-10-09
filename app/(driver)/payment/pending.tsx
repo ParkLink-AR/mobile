@@ -12,7 +12,8 @@ import { request } from '@/src/api/client';
 import { BookingApiResponse, getBookingApi } from '@/src/api/booking';
 import { getParkingSpotDetail } from '@/src/services/parkingService';
 import { usePaymentApprovedSound } from '@/src/services/paymentSound';
-import { formatBookingWhen, formatLongDateFromISO, formatShortDate, formatTime, mapBookingDateRange } from '@/src/services/bookingDates';
+import { formatBookingWhen, formatLongDateFromISO, formatShortDate, formatTime, mapBookingDateRange, toVehicleSnapshot } from '@/src/services/bookingDates';
+import { vehicleSummary } from '@/src/components/VehicleIdentity';
 
 // 'refunded': Mercado Pago approved the payment, but the booking couldn't take it (its
 // hold ran out first) -- payment-service refunds it automatically.
@@ -411,7 +412,8 @@ function Receipt({
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
   const when = formatWhen(booking);
-  const vehicle = booking.vehicle ? `${booking.vehicle.brand} ${booking.vehicle.model} · ${booking.vehicle.plate}` : null;
+  const snapshot = toVehicleSnapshot(booking.vehicle);
+  const vehicle = snapshot ? vehicleSummary(snapshot) : null;
   const styles = StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 7 },
     label: { width: sc(92), fontSize: sc(13), color: colors.textSecondary },
