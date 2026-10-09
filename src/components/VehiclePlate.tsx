@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Image, ImageBackground, ImageSourcePropType, NativeSyntheticEvent, Platform, TextLayoutEventData,
 } from 'react-native';
@@ -120,6 +120,11 @@ export function usePlateAssetsReady(): boolean {
   return ready;
 }
 
+/** Told once by every plate as its image is drawn -- lets a screen listing several plates
+ * (see "Mis vehículos") wait for all of them and show them at once, instead of each one
+ * popping in on its own. */
+export const PlateDrawnContext = createContext<(() => void) | null>(null);
+
 /** A plate's image with its lettering on top, both hidden until the image has actually
  * been drawn and the fonts are in, so they appear together. */
 function PlateBackground({ source, style, children }: {
@@ -129,15 +134,26 @@ function PlateBackground({ source, style, children }: {
 }) {
   const assetsReady = usePlateAssetsReady();
   const [imageLoaded, setImageLoaded] = useState(false);
+  const onPlateDrawn = useContext(PlateDrawnContext);
+  const reported = useRef(false);
   const visible = assetsReady && imageLoaded;
+
+  function markLoaded() {
+    setImageLoaded(true);
+    if (!reported.current) {
+      reported.current = true;
+      onPlateDrawn?.();
+    }
+  }
+
   return (
     <ImageBackground
       source={source}
       style={[style, !visible && backgroundStyles.hidden]}
       resizeMode="stretch"
-      onLoad={() => setImageLoaded(true)}
+      onLoad={markLoaded}
       // A broken image shouldn't hide the plate number forever.
-      onError={() => setImageLoaded(true)}
+      onError={markLoaded}
     >
       {children}
     </ImageBackground>

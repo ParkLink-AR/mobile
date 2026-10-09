@@ -1,5 +1,5 @@
 import { t, useLanguage } from '@/src/i18n';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Text,
   View,
@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
-import { usePlateAssetsReady } from '@/src/components/VehiclePlate';
+import { PlateDrawnContext, usePlateAssetsReady } from '@/src/components/VehiclePlate';
 import { VehicleIdentity, vehicleName } from '@/src/components/VehicleIdentity';
 import { VehicleFormModal } from '@/src/components/VehicleFormModal';
 import { VehicleTypeModal } from '@/src/components/VehicleTypeModal';
@@ -34,6 +34,14 @@ export default function VehiclesScreen() {
   const [loading, setLoading] = useState(true);
   // Keep the spinner until the plate images are in too, so the list shows up complete.
   const platesReady = usePlateAssetsReady();
+  // The list stays hidden (behind the spinner) until every plate in the first load has
+  // been drawn, so they all appear at once instead of popping in one by one. How many
+  // plates the first load has -- null until it lands (a bicycle has no plate to wait for).
+  const [platesExpected, setPlatesExpected] = useState<number | null>(null);
+  const [platesDrawn, setPlatesDrawn] = useState(0);
+  // A plate that never reports (a broken image) mustn't hide the list forever.
+  const [waitedEnough, setWaitedEnough] = useState(false);
+  const onPlateDrawn = useCallback(() => setPlatesDrawn((n) => n + 1), []);
 
   const [formVisible, setFormVisible] = useState(false);
   // A failed load must not look like "no tenés vehículos" -- see the error state below.
@@ -48,12 +56,26 @@ export default function VehiclesScreen() {
     setLoading(true);
     setLoadFailed(false);
     getVehicles(user.id)
-      .then(setVehicles)
+      .then((list) => {
+        setVehicles(list);
+        setPlatesExpected((prev) => prev ?? list.filter((v) => v.plate).length);
+      })
       .catch(() => setLoadFailed(true))
       .finally(() => setLoading(false));
   }, [user.id]);
 
   useFocusEffect(load);
+
+  useEffect(() => {
+    if (platesExpected === null) return;
+    const timer = setTimeout(() => setWaitedEnough(true), 4000);
+    return () => clearTimeout(timer);
+  }, [platesExpected]);
+
+  // Only the first load shows the spinner: coming back to the screen refreshes the list in
+  // place, without hiding the plates already on screen.
+  const firstLoad = platesExpected === null;
+  const listReady = !firstLoad && platesReady && (platesDrawn >= platesExpected || waitedEnough);
 
   async function handleDelete() {
     if (!deleteTarget) return;
@@ -71,6 +93,9 @@ export default function VehiclesScreen() {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 8, gap: 12 },
+    // Over the (hidden) list while its plates are drawn.
+    loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+    hidden: { opacity: 0 },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
     vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -92,48 +117,54 @@ export default function VehiclesScreen() {
 
   return (
     <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
-      {loading || !platesReady ? (
-        <ActivityIndicator color={colors.teal} />
-      ) : loadFailed ? (
+      {!listReady && !loadFailed ? (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator color={colors.teal} />
+        </View>
+      ) : null}
+      {(firstLoad && loading) || !platesReady ? null : loadFailed ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="cloud-offline-outline" size={40} color={colors.textSecondary} />
           <Text style={styles.emptyText}>{t('common.loadError')}</Text>
           <Button title={t('common.retry')} onPress={load} />
         </View>
       ) : (
-        <FlatList
-          data={vehicles}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={vehicles.length === 0 ? { gap: 10, flexGrow: 1 } : { gap: 10 }}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="car-outline" size={40} color={colors.textSecondary} />
-              <Text style={styles.emptyText}>{t('vehicles.empty')}</Text>
-            </View>
-          }
-          renderItem={({ item }) => (
-            <Card>
-              <View style={styles.vehicleRow}>
-                <VehicleIdentity vehicle={item} />
-                <View style={styles.vehicleInfo}>
-                  <Text style={styles.vehicleBrandModel}>{vehicleName(item)}</Text>
-                  {item.type ? (
-                    <Text style={styles.vehicleType}>{t(VEHICLE_TYPE_LABEL_KEYS[item.type])}</Text>
-                  ) : (
-                    // Saved before vehicles had a type: it can't be used for a spot that
-                    // asks for the vehicle until it has one.
-                    <Text style={styles.completeType} onPress={() => setTypeTarget(item)}>
-                      {t('vehicles.completeType.action')}
-                    </Text>
-                  )}
-                </View>
-                <Pressable style={styles.deleteBtn} onPress={() => setDeleteTarget(item)}>
-                  <Ionicons name="trash-outline" size={20} color={colors.textSecondary} />
-                </Pressable>
+        <PlateDrawnContext.Provider value={onPlateDrawn}>
+          <FlatList
+            style={!listReady && styles.hidden}
+            data={vehicles}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={vehicles.length === 0 ? { gap: 10, flexGrow: 1 } : { gap: 10 }}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="car-outline" size={40} color={colors.textSecondary} />
+                <Text style={styles.emptyText}>{t('vehicles.empty')}</Text>
               </View>
-            </Card>
-          )}
-        />
+            }
+            renderItem={({ item }) => (
+              <Card>
+                <View style={styles.vehicleRow}>
+                  <VehicleIdentity vehicle={item} />
+                  <View style={styles.vehicleInfo}>
+                    <Text style={styles.vehicleBrandModel}>{vehicleName(item)}</Text>
+                    {item.type ? (
+                      <Text style={styles.vehicleType}>{t(VEHICLE_TYPE_LABEL_KEYS[item.type])}</Text>
+                    ) : (
+                      // Saved before vehicles had a type: it can't be used for a spot that
+                      // asks for the vehicle until it has one.
+                      <Text style={styles.completeType} onPress={() => setTypeTarget(item)}>
+                        {t('vehicles.completeType.action')}
+                      </Text>
+                    )}
+                  </View>
+                  <Pressable style={styles.deleteBtn} onPress={() => setDeleteTarget(item)}>
+                    <Ionicons name="trash-outline" size={20} color={colors.textSecondary} />
+                  </Pressable>
+                </View>
+              </Card>
+            )}
+          />
+        </PlateDrawnContext.Provider>
       )}
 
       <Button title={t('vehicles.add')} onPress={() => setFormVisible(true)} />
