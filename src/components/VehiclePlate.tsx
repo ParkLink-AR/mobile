@@ -327,13 +327,17 @@ function MercosurBikePlate({
       alignItems: 'center',
       justifyContent: 'center',
     },
+    // Each line gets its own fixed half of the text window. No adjustsFontSizeToFit: on
+    // iOS it also shrinks to the height it's given, and the first line (whose letters are
+    // taller than its line box) squeezed the second one down to a tiny size. The size is
+    // fixed instead -- four characters at most per line, which fit the plate's width.
+    lineBox: { height: textHeight / 2, width: '100%', alignItems: 'center', justifyContent: 'center' },
     line: {
-      width: '100%',
       textAlign: 'center',
       color: '#444',
       fontSize: Math.round((textHeight / 2) * 1.15),
-      lineHeight: Math.round(textHeight / 2),
       letterSpacing: 0.5,
+      includeFontPadding: false,
       fontFamily: fontLoaded ? PLATE_FONT : undefined,
       fontWeight: fontLoaded ? 'normal' : '800',
     },
@@ -343,12 +347,16 @@ function MercosurBikePlate({
     <View style={styles.slot}>
       <PlateBackground source={MODERN_BIKE_PLATE_BG} style={styles.container}>
         <View style={styles.textWindow}>
-          <Text style={styles.line} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
-            {clean.slice(0, 4)}
-          </Text>
-          <Text style={styles.line} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
-            {clean.slice(4)}
-          </Text>
+          <View style={styles.lineBox}>
+            <Text style={styles.line} numberOfLines={1} allowFontScaling={false}>
+              {clean.slice(0, 4)}
+            </Text>
+          </View>
+          <View style={styles.lineBox}>
+            <Text style={styles.line} numberOfLines={1} allowFontScaling={false}>
+              {clean.slice(4)}
+            </Text>
+          </View>
         </View>
       </PlateBackground>
     </View>
