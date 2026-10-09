@@ -78,7 +78,9 @@ export function SearchScreen() {
   const [spotsError, setSpotsError] = useState<string | null>(null);
   const [filters, setFilters] = useState<SearchParkingSpotsFilters>({});
   const [modalVisible, setModalVisible] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  // The map first: it's what a driver opens the app to see. Web has no map (see the
+  // toggle below), so it starts on the list there.
+  const [viewMode, setViewMode] = useState<'list' | 'map'>(Platform.OS === 'web' ? 'list' : 'map');
   const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
   const mapRef = useRef<MapView>(null);
   // Used to prevent the map's onPress from immediately clearing a marker
