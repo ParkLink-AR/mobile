@@ -35,3 +35,9 @@ export function addOneDayISO(dateISO: string): string {
   const [year, month, day] = dateISO.split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
 }
+
+/** Suma (o resta) días a un YYYY-MM-DD. */
+export function addDaysISO(dateISO: string, days: number): string {
+  const [year, month, day] = dateISO.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
