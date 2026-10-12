@@ -4,7 +4,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator
 import { useLocalSearchParams, router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { FAVORITE_RED } from '@/src/components/ParkingSpotCard';
-import { formatShortDate } from '@/src/services/bookingDates';
+import { formatShortDate, formatWeekdayDayMonth } from '@/src/services/bookingDates';
 import { PhotoGallery } from '@/src/components/PhotoGallery';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -20,10 +20,36 @@ import { useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
 import { getParkingSpotDetail, formatScheduleForDisplay, getSpotPricePerHour, getMinPricePerHour } from '@/src/services/parkingService';
-import { addOneDayISO, artDateFromISO, artMidnightForDate, nowArtHour, todayArtDateISO } from '@/src/services/dateUtils';
+import { addDaysISO, addOneDayISO, nowArtHour, todayArtDateISO } from '@/src/services/dateUtils';
+import {
+  defaultEnd,
+  defaultStart,
+  durationHours as rangeDurationHours,
+  endBounds,
+  endDateOf,
+  endOnDate,
+  barDomain,
+  freeRangesIn,
+  startDateOf,
+  endRangeOnDate,
+  formatArtTime,
+  formatRanges,
+  freeRangesOnDay,
+  isInRanges,
+  MIN_BOOKING_MINUTES,
+  pickStartFromTap,
+  resolveEndInput,
+  resolveStartInput,
+  timeToDigits,
+  toArtISO,
+  validStartRanges,
+} from '@/src/services/bookingRange';
+import { TimeEntrySheet } from '@/src/components/TimeEntrySheet';
+import { DayAvailabilityBar } from '@/src/components/DayAvailabilityBar';
+import { MonthAvailabilitySheet } from '@/src/components/MonthAvailabilitySheet';
 import { useAvailability } from '@/src/hooks/useAvailability';
 import { getPublicProfileApi } from '@/src/api/auth';
-import { getStayQuote, type FreeWindow, type StayQuote } from '@/src/api/parking';
+import { getStayQuote, type StayQuote } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { VehicleType, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { ParkingSpot } from '@/src/types';
@@ -46,83 +72,32 @@ function formatPesos(amount: number): string {
   return `$${Math.round(amount).toLocaleString('es-AR')}`;
 }
 
+/** "1,5" / "2" -- horas con coma decimal, sin ceros de más. */
+function formatHours(hours: number): string {
+  return String(Math.round(hours * 100) / 100).replace('.', ',');
+}
+
+/** El mismo horario de `endMs` pero sobre `dateISO` (con 24:00 como la medianoche con la que termina ese día). */
+function endOnSameTime(dateISO: string, endMs: number): number {
+  const [hours, minutes] = formatArtTime(endMs, true).split(':').map(Number);
+  return endOnDate(dateISO, hours, minutes);
+}
+
+/** "14/10" */
+function formatDayMonth(dateISO: string): string {
+  const [, month, day] = dateISO.split('-');
+  return `${day}/${month}`;
+}
+
 /** 0 = Monday ... 6 = Sunday, on the Buenos Aires calendar (same as the schedule). */
 function todayScheduleDay(): number {
   const art = new Date(Date.now() - 3 * 3600_000);
   return (art.getUTCDay() + 6) % 7;
 }
 
-/**
- * Extracts the Buenos Aires hour-of-day from an ISO datetime string.
- * Handles both offset-aware strings ("...T08:00:00-03:00") and UTC ("...T11:00:00Z").
- * Always returns the hour in ART (UTC-3).
- */
-function hourFromISO(iso: string): number {
-  const date = new Date(iso);
-  // Convert to ART (UTC-3): subtract 3 hours from UTC
-  const utcHour = date.getUTCHours();
-  return ((utcHour - 3) + 24) % 24;
-}
-
-/**
- * Current hour in ART (UTC-3) with a 10-minute grace period.
- * If it's 13:05 → returns 13 (still bookable). If it's 13:11 → returns 14.
- * Returns -1 for future dates (nothing is in the past).
- */
-function currentArtHourForDate(dateISO: string): number {
-  const nowUTC = new Date();
-  const nowArt = new Date(nowUTC.getTime() - 3 * 60 * 60 * 1000);
-
-  const todayISO = `${nowArt.getUTCFullYear()}-${String(nowArt.getUTCMonth() + 1).padStart(2, '0')}-${String(nowArt.getUTCDate()).padStart(2, '0')}`;
-
-  if (dateISO > todayISO) return -1;   // future date: nothing is past
-  if (dateISO < todayISO) return 24;   // past date: everything is past
-
-  // It's today: return cutoff hour (with 10-min grace)
-  const artMinutes = nowArt.getUTCHours() * 60 + nowArt.getUTCMinutes();
-  const graceMinutes = artMinutes - 10; // subtract grace period
-  return Math.ceil(graceMinutes / 60); // round up to next full hour
-}
-
-/**
- * Returns valid start hours from parking-service's real availability
- * (published schedule minus active bookings). A start hour `h` is valid if a
- * free window covers [h:00, h+durationHours:00] exactly — i.e. the window
- * starts at or before h:00 AND ends at or after h+durationHours:00.
- *
- * Uses epoch milliseconds from the raw ISO strings rather than truncating to
- * hours, so a free window that starts at e.g. 08:30 (left by a booking that
- * ends at 08:30) does NOT incorrectly expose 08:00 as bookable.
- */
-function startHoursFromFreeWindows(freeWindows: FreeWindow[], durationHours: number): number[] {
-  const hours: number[] = [];
-  for (const window of freeWindows) {
-    const windowStartMs = new Date(window.start).getTime();
-    const windowEndMs = new Date(window.end).getTime();
-    // Derive the ART calendar date from the window start to anchor midnight.
-    const artDate = artDateFromISO(window.start);
-    const artMidnightMs = artMidnightForDate(artDate);
-
-    // First whole ART hour where slot start >= window start.
-    const windowStartArtHour = hourFromISO(window.start);
-    const windowStartMinute = new Date(window.start).getUTCMinutes();
-    // If window starts exactly on the hour, it is a valid slot start;
-    // otherwise bump to the next whole hour.
-    const firstHour = windowStartMinute === 0 ? windowStartArtHour : windowStartArtHour + 1;
-
-    for (let h = firstHour; ; h++) {
-      const slotStartMs = artMidnightMs + h * 3600_000;
-      const slotEndMs = artMidnightMs + (h + durationHours) * 3600_000;
-      if (slotEndMs > windowEndMs) break;
-      if (slotStartMs < windowStartMs) continue; // shouldn't happen after firstHour calc, but guard
-      hours.push(h);
-    }
-  }
-  return [...new Set(hours)].sort((a, b) => a - b);
-}
-
-// Same ceiling the old duration stepper had (1-12h).
-const MAX_BOOKING_HOURS = 12;
+// Cuántos días desde el de inicio se le pide disponibilidad a parking-service (su tope por pedido):
+// es también lo más lejos que puede terminar una reserva por hora.
+const MAX_BOOKING_SPAN_DAYS = 14;
 
 // Check-in de una estadía: no depende del horario publicado (una cochera de
 // solo estadía no tiene ninguno) -- cualquier hora del día es una opción
@@ -139,8 +114,13 @@ export default function SpotDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [owner, setOwner] = useState<{ name: string; avatarUrl: string | null } | null>(null);
-  const [selectedStartHour, setSelectedStartHour] = useState<number | null>(null);
-  const [selectedEndHour, setSelectedEndHour] = useState<number | null>(null);
+  // Inicio y fin de la reserva por hora, en epoch-ms. Sólo guardan lo que el conductor tocó: lo que
+  // se muestra sale de effectiveStartMs/effectiveEndMs más abajo, que caen en un valor válido solos.
+  const [startMsOverride, setStartMsOverride] = useState<number | null>(null);
+  const [endMsOverride, setEndMsOverride] = useState<number | null>(null);
+  const [endDateNotice, setEndDateNotice] = useState(false);
+  const [timeSheet, setTimeSheet] = useState<'start' | 'end' | null>(null);
+  const [monthSheetOpen, setMonthSheetOpen] = useState(false);
   // Sólo importa para el precio cuando la cochera cobra distinto por
   // vehículo (spot.pricePerHourByVehicleType) -- ver el picker más abajo,
   // que sólo se muestra en ese caso.
@@ -172,11 +152,15 @@ export default function SpotDetail() {
       .catch(() => {});
   }, [spot?.ownerId]);
 
-  // Auto-refreshing availability: refetches on day change and every 30 s. The
-  // fetch itself covers the whole day regardless of any chosen duration, so
-  // there's no duration argument to pass here anymore.
-  const { freeWindows, loading: availabilityLoading, error: availabilityError, refresh: refreshAvailability } =
-    useAvailability(id, selectedDateISO, 1);
+  // Auto-refreshing availability: refetches on day change and every 30 s. Trae el día de inicio y
+  // los siguientes (hasta MAX_BOOKING_SPAN_DAYS), con las ventanas que se tocan ya unidas, para poder
+  // reservar cruzando la medianoche o por varios días.
+  // La disponibilidad se pide desde hoy mientras el inicio sea hoy o mañana: así elegir en la barra un horario de
+  // pasada la medianoche cambia el día sin volver a cargar. Más lejos, desde el día elegido.
+  const availabilityAnchorISO =
+    selectedDateISO <= addDaysISO(todayArtDateISO(), 1) ? todayArtDateISO() : selectedDateISO;
+  const { windows, loading: availabilityLoading, error: availabilityError, refresh: refreshAvailability } =
+    useAvailability(id, availabilityAnchorISO, MAX_BOOKING_SPAN_DAYS);
 
   // Refresh whenever the screen comes back into focus (e.g. after pressing "back"
   // from the confirm screen when there was a 409 conflict).
@@ -186,62 +170,122 @@ export default function SpotDetail() {
     }, [refreshAvailability]),
   );
 
-  // Every hour that could start at least a 1-hour booking. When still
-  // loading (no prior data) or in error (no prior data) this is [] so the
-  // picker shows a spinner/error instead of stale or unchecked slots. The
-  // schedule-only fallback has been intentionally removed: showing slots
-  // without subtracting existing bookings causes 409 conflicts at confirmation.
-  const allStartHours = useMemo(() => {
-    if (!spot || availabilityLoading || freeWindows === null) return [];
-    return startHoursFromFreeWindows(freeWindows, 1);
-  }, [spot, freeWindows, availabilityLoading]);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
-  // Cutoff hour for the selected day (with 10-min grace). Hours strictly below
-  // this are in the past and cannot be booked.
-  const pastCutoffHour = useMemo(
-    () => currentArtHourForDate(selectedDateISO),
-    [selectedDateISO],
+  // Lo libre del día de inicio, al minuto. Mientras carga (o si falló sin datos previos) es []: no se ofrece
+  // nada sin restar las reservas existentes, porque terminaría en un 409 al confirmar.
+  const freeToday = useMemo(
+    () => (!spot || windows === null ? [] : freeRangesOnDay(windows, selectedDateISO, nowMs)),
+    [spot, windows, selectedDateISO, nowMs],
+  );
+  const startRanges = useMemo(
+    () => (!spot || windows === null ? [] : validStartRanges(windows, selectedDateISO, nowMs)),
+    [spot, windows, selectedDateISO, nowMs],
   );
 
-  // Only show hours that are not in the past — past hours are never bookable and
-  // displaying them (even greyed-out) confuses the user into thinking they can pick them.
-  const bookableStartHours = useMemo(
-    () => allStartHours.filter((h) => h >= pastCutoffHour),
-    [allStartHours, pastCutoffHour],
+  // Si el inicio elegido ya no está libre (cambió el día, se lo ganaron), cae en el sugerido. Derivado
+  // en vez de sincronizado con un useEffect, para no encadenar renders.
+  const effectiveStartMs: number | null =
+    startMsOverride !== null && isInRanges(startRanges, startMsOverride)
+      ? startMsOverride
+      : defaultStart(startRanges, nowMs);
+
+  // Entre cuándo puede terminar: hasta donde acaba la ventana libre que contiene el inicio, sea el mismo
+  // día o varios después.
+  const endLimits = useMemo(
+    () => (windows === null || effectiveStartMs === null ? null : endBounds(windows, effectiveStartMs)),
+    [windows, effectiveStartMs],
   );
 
-  // Derive the effective selected hour: if the current selection is no longer
-  // in bookableStartHours (e.g. day changed, slot was just taken), fall back to
-  // the first available hour. This replaces a useEffect+setState pattern with
-  // pure derivation so there are no cascading renders.
-  const effectiveStartHour: number | null = bookableStartHours.includes(selectedStartHour as number)
-    ? selectedStartHour
-    : bookableStartHours[0] ?? null;
+  const effectiveEndMs: number | null =
+    endMsOverride !== null && endLimits !== null && isInRanges([endLimits], endMsOverride)
+      ? endMsOverride
+      : effectiveStartMs !== null
+        ? defaultEnd(endLimits, effectiveStartMs)
+        : null;
 
-  // Every end hour that keeps [effectiveStartHour, end) inside a single free
-  // window, capped at a 12-hour booking (same ceiling the old duration
-  // stepper had). Reuses startHoursFromFreeWindows itself instead of
-  // re-deriving the window-overlap math: for a given trial duration d,
-  // effectiveStartHour is a valid *start* of a d-hour booking exactly when
-  // effectiveStartHour + d is a valid end hour.
-  const bookableEndHours = useMemo(() => {
-    if (!spot || availabilityLoading || freeWindows === null || effectiveStartHour === null) return [];
-    const hours: number[] = [];
-    for (let duration = 1; duration <= MAX_BOOKING_HOURS; duration++) {
-      if (startHoursFromFreeWindows(freeWindows, duration).includes(effectiveStartHour)) {
-        hours.push(effectiveStartHour + duration);
-      }
+  const endDateISO = effectiveEndMs !== null ? endDateOf(effectiveEndMs) : selectedDateISO;
+
+  // Lo que dibuja la barra: las próximas 24 h desde ahora (o el día de inicio entero si cae más lejos).
+  const barWindow = barDomain(selectedDateISO, effectiveStartMs, nowMs);
+  const freeInBar = useMemo(
+    () => (windows === null ? [] : freeRangesIn(windows, barWindow)),
+    // barWindow es un objeto nuevo en cada render: se compara por sus extremos.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [windows, barWindow.startMs, barWindow.endMs],
+  );
+
+  const durationHours =
+    effectiveStartMs !== null && effectiveEndMs !== null ? rangeDurationHours(effectiveStartMs, effectiveEndMs) : 0;
+
+  function handleStartDateChange(dateISO: string) {
+    setSelectedDateOverride(dateISO);
+    setStartMsOverride(null);
+    setEndMsOverride(null);
+    setEndDateNotice(false);
+  }
+
+  function handleStartTimeConfirm(ms: number) {
+    setStartMsOverride(ms);
+    // Cambiar el inicio puede dejar el fin elegido fuera de la ventana libre -- se limpia para que
+    // caiga en el fin sugerido.
+    setEndMsOverride(null);
+    setEndDateNotice(false);
+    setTimeSheet(null);
+  }
+
+  // Cambiar el día de fin conserva la hora si ese día la tiene libre; si no, la más cercana que entre. Si
+  // ese día no se alcanza sin pisar otra reserva, no cambia nada y avisa.
+  function handleEndDateChange(dateISO: string) {
+    const range = endLimits ? endRangeOnDate(endLimits, dateISO) : null;
+    if (!range || effectiveEndMs === null) {
+      setEndDateNotice(true);
+      return;
     }
-    return hours;
-  }, [spot, freeWindows, availabilityLoading, effectiveStartHour]);
+    const sameTimeOfDay = endOnSameTime(dateISO, effectiveEndMs);
+    setEndMsOverride(Math.min(Math.max(sameTimeOfDay, range.startMs), range.endMs));
+    setEndDateNotice(false);
+  }
 
-  const effectiveEndHour: number | null = bookableEndHours.includes(selectedEndHour as number)
-    ? selectedEndHour
-    : bookableEndHours[0] ?? null;
+  // Elegir un inicio en la barra (o en el detalle por día): puede caer en otro día -- entonces cambia también "Desde".
+  function pickStartAt(ms: number) {
+    setSelectedDateOverride(startDateOf(ms));
+    handleStartTimeConfirm(ms);
+  }
 
-  const durationHours = effectiveStartHour !== null && effectiveEndHour !== null
-    ? effectiveEndHour - effectiveStartHour
-    : 0;
+  function handleBarPick(tapMs: number) {
+    if (windows === null) return;
+    const ms = pickStartFromTap(validStartRanges(windows, startDateOf(tapMs), nowMs), tapMs);
+    if (ms !== null) pickStartAt(ms);
+  }
+
+  function handleEndTimeConfirm(ms: number) {
+    setEndMsOverride(ms);
+    setEndDateNotice(false);
+    setTimeSheet(null);
+  }
+
+  // Lo que dicen las hojas de hora: qué instante es lo tipeado (o por qué no sirve) y qué hay libre.
+  function resolveStartTyped(hours: number, minutes: number) {
+    const result = resolveStartInput(startRanges, selectedDateISO, hours, minutes);
+    return 'ms' in result ? result : { error: t('spot.time.unavailable') };
+  }
+
+  function resolveEndTyped(hours: number, minutes: number) {
+    if (!endLimits) return { error: t('spot.time.unavailable') };
+    const result = resolveEndInput(endLimits, endDateISO, hours, minutes);
+    if ('ms' in result) return result;
+    return {
+      error:
+        result.error === 'tooShort'
+          ? t('spot.time.tooShort', { minutes: String(MIN_BOOKING_MINUTES) })
+          : t('spot.time.unavailable'),
+    };
+  }
 
   // ── Estadía (rango de fechas + hora de check-in) ────────────────────────
   const [stayStartDateOverride, setStayStartDateOverride] = useState<string | null>(null);
@@ -252,7 +296,7 @@ export default function SpotDetail() {
   const [stayQuoteError, setStayQuoteError] = useState<string | null>(null);
 
   // No antes de hoy ni antes de lo que el dueño configuró como
-  // stayAvailableFrom -- igual que effectiveStartHour arriba, se deriva en
+  // stayAvailableFrom -- igual que effectiveStartMs arriba, se deriva en
   // vez de sincronizarse con un useEffect, así un cambio en spot.stayAvailableFrom
   // (o el simple paso del tiempo) nunca deja el override en un valor inválido.
   const minStayStartDate = spot
@@ -306,14 +350,14 @@ export default function SpotDetail() {
   const isOwner = !!user && spot.ownerId === user.id;
   // Si la cochera cobra distinto por vehículo, hace falta uno elegido para
   // saber qué tarifa mostrar/cobrar -- se deriva del override en vez de
-  // sincronizarse con un useEffect, mismo criterio que effectiveStartHour.
+  // sincronizarse con un useEffect, mismo criterio que effectiveStartMs.
   const effectiveVehicleType: VehicleType | null = spot.vehicleTypes.includes(selectedVehicleType as VehicleType)
     ? selectedVehicleType
     : spot.vehicleTypes[0] ?? null;
   const rawPricePerHour = effectiveVehicleType !== null ? getSpotPricePerHour(spot, effectiveVehicleType) : spot.pricePerHour;
   const visiblePricePerHour = rawPricePerHour !== null ? getDriverVisiblePrice(rawPricePerHour, commissionRatePercent) : null;
   const total = (visiblePricePerHour ?? 0) * durationHours;
-  const canBook = effectiveStartHour !== null && effectiveEndHour !== null;
+  const canBook = effectiveStartMs !== null && effectiveEndMs !== null;
 
   const showHourly = spot.hourlyEnabled && (!spot.stayEnabled || bookingMode === 'hourly');
   const showStay = spot.stayEnabled && (!spot.hourlyEnabled || bookingMode === 'stay');
@@ -397,6 +441,16 @@ export default function SpotDetail() {
 
     field: { marginBottom: 18 },
     fieldLabel: { fontSize: sc(14), fontWeight: '600', color: colors.text, marginBottom: 8 },
+    monthButton: {
+      flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14,
+      paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.teal,
+      backgroundColor: colors.surface,
+    },
+    monthButtonText: { flex: 1, fontSize: sc(14), fontWeight: '600', color: colors.teal },
+    rangeRow: { flexDirection: 'row', gap: 10 },
+    rangeDate: { flex: 1.55 },
+    rangeTime: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
+    rangeTimeText: { fontSize: sc(15), color: colors.text, fontVariant: ['tabular-nums'] },
     dateInput: { borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 13, backgroundColor: colors.surface },
     hint: { fontSize: sc(13), color: colors.textSecondary, marginTop: 8, lineHeight: sc(18) },
     warn: { fontSize: sc(14), color: colors.warning },
@@ -424,8 +478,8 @@ export default function SpotDetail() {
     },
     footerInfo: { flex: 1 },
     footerTotal: { fontSize: sc(18), fontWeight: '700', color: colors.teal },
-    footerWhen: { fontSize: sc(13), color: colors.textSecondary, marginTop: 2 },
-    footerButton: { minWidth: 150 },
+    footerWhen: { fontSize: sc(13), color: colors.textSecondary, marginTop: 1 },
+    footerButton: { minWidth: 130 },
     editBtn: {
       flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
       backgroundColor: colors.teal, borderRadius: 12, paddingVertical: 14,
@@ -717,58 +771,129 @@ export default function SpotDetail() {
                   {/* Vehicle type picker -- sólo si el precio depende de cuál elijas */}
                   {spot.pricePerHourByVehicleType && vehicleTypeChips()}
 
-                  {/* Date picker (calendar, coloreado por disponibilidad real) */}
+                  {/* Cuándo hay lugar ese día: arriba de los campos, es lo primero que conviene mirar */}
                   <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>{t('spot.field.day')}</Text>
-                    <AvailabilityDatePickerField
-                      fetchAvailability={hourlyAvailabilityFetcher(spot.id)}
-                      value={selectedDateISO}
-                      onChange={setSelectedDateOverride}
-                      placeholder={t('spot.datePlaceholder')}
-                      minimumDate={new Date(`${todayArtDateISO()}T00:00:00`)}
-                      style={styles.dateInput}
-                    />
-                  </View>
-
-                  <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>{t('spot.field.from')}</Text>
-                    {availabilityLoading && freeWindows === null ? (
+                    {availabilityLoading && windows === null ? (
                       <ActivityIndicator size="small" color={colors.teal} style={{ alignSelf: 'flex-start' }} />
-                    ) : availabilityError && freeWindows === null ? (
+                    ) : availabilityError && windows === null ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Text style={styles.warn}>{t('spot.availabilityError')}</Text>
                         <TouchableOpacity onPress={refreshAvailability}>
                           <Text style={styles.retry}>{t('spot.availabilityRetry')}</Text>
                         </TouchableOpacity>
                       </View>
-                    ) : bookableStartHours.length === 0 ? (
-                      <Text style={styles.warn}>{t('spot.noSlotsToday')}</Text>
+                    ) : startRanges.length === 0 ? (
+                      <Text style={styles.warn}>{t('spot.noSlotsDay')}</Text>
                     ) : (
-                      hourChips(bookableStartHours, effectiveStartHour, (h) => {
-                        setSelectedStartHour(h);
-                        // Cambiar el inicio invalida el fin elegido si ya no entra en la
-                        // misma ventana libre -- se limpia la selección manual para que
-                        // caiga en el primer horario de fin válido.
-                        setSelectedEndHour(null);
-                      })
+                      <DayAvailabilityBar
+                        domain={barWindow}
+                        free={freeInBar}
+                        selection={
+                          effectiveStartMs !== null && effectiveEndMs !== null
+                            ? { startMs: effectiveStartMs, endMs: effectiveEndMs }
+                            : null
+                        }
+                        onPick={handleBarPick}
+                      />
+                    )}
+                    {windows !== null && (
+                      <Pressable style={styles.monthButton} onPress={() => setMonthSheetOpen(true)}>
+                        <Ionicons name="calendar-outline" size={sc(18)} color={colors.teal} />
+                        <Text style={styles.monthButtonText}>{t('spot.month.button')}</Text>
+                        <Ionicons name="chevron-forward" size={sc(18)} color={colors.teal} />
+                      </Pressable>
                     )}
                   </View>
 
-                  {effectiveStartHour !== null && (
+                  {/* Inicio: día (calendario coloreado por disponibilidad real) + hora */}
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>{t('spot.field.from')}</Text>
+                    <View style={styles.rangeRow}>
+                      <AvailabilityDatePickerField
+                        fetchAvailability={hourlyAvailabilityFetcher(spot.id)}
+                        value={selectedDateISO}
+                        onChange={handleStartDateChange}
+                        placeholder={t('spot.datePlaceholder')}
+                        minimumDate={new Date(`${todayArtDateISO()}T00:00:00`)}
+                        style={[styles.dateInput, styles.rangeDate]}
+                      />
+                      <Pressable
+                        style={[styles.dateInput, styles.rangeTime]}
+                        onPress={() => startRanges.length > 0 && setTimeSheet('start')}
+                      >
+                        <Text style={styles.rangeTimeText}>{effectiveStartMs !== null ? formatArtTime(effectiveStartMs) : '--:--'}</Text>
+                        <Ionicons name="time-outline" size={sc(18)} color={colors.textSecondary} />
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  {/* Fin: puede ser el mismo día, el siguiente (cruzando la medianoche) o varios después */}
+                  {effectiveStartMs !== null && effectiveEndMs !== null && (
                     <View style={styles.field}>
                       <Text style={styles.fieldLabel}>{t('spot.field.to')}</Text>
-                      {hourChips(bookableEndHours, effectiveEndHour, setSelectedEndHour)}
+                      <View style={styles.rangeRow}>
+                        <AvailabilityDatePickerField
+                          fetchAvailability={hourlyAvailabilityFetcher(spot.id)}
+                          value={endDateISO}
+                          onChange={handleEndDateChange}
+                          placeholder={t('spot.datePlaceholder')}
+                          minimumDate={new Date(`${selectedDateISO}T00:00:00`)}
+                          style={[styles.dateInput, styles.rangeDate]}
+                        />
+                        <Pressable style={[styles.dateInput, styles.rangeTime]} onPress={() => setTimeSheet('end')}>
+                          <Text style={styles.rangeTimeText}>{formatArtTime(effectiveEndMs, true)}</Text>
+                          <Ionicons name="time-outline" size={sc(18)} color={colors.textSecondary} />
+                        </Pressable>
+                      </View>
+                      {endDateNotice && <Text style={[styles.warn, { marginTop: 8 }]}>{t('spot.endDateUnavailable')}</Text>}
                     </View>
                   )}
 
                   {canBook && visiblePricePerHour !== null && (
                     <View style={styles.priceLine}>
                       <Text style={styles.priceLineText}>
-                        {t('spot.priceLine', { price: formatPesos(visiblePricePerHour), hours: String(durationHours) })}
+                        {t('spot.priceLine', { price: formatPesos(visiblePricePerHour), hours: formatHours(durationHours) })}
                       </Text>
                       <Text style={styles.priceLineText}>{formatPesos(total)}</Text>
                     </View>
                   )}
+
+                  {canBook && spot.stayEnabled && durationHours >= 24 && (
+                    <Text style={styles.hint}>{t('spot.longRangeHint')}</Text>
+                  )}
+
+                  <MonthAvailabilitySheet
+                    visible={monthSheetOpen}
+                    spotId={spot.id}
+                    nowMs={nowMs}
+                    selectedMs={effectiveStartMs}
+                    onPick={pickStartAt}
+                    onClose={() => setMonthSheetOpen(false)}
+                  />
+                  <TimeEntrySheet
+                    visible={timeSheet === 'start'}
+                    title={t('spot.sheet.startTitle')}
+                    hint={t('spot.time.freeOnDay', { ranges: formatRanges(freeToday, { ms: nowMs, label: t('spot.time.now') }) })}
+                    initialDigits={effectiveStartMs !== null ? timeToDigits(effectiveStartMs) : ''}
+                    resolve={resolveStartTyped}
+                    onConfirm={handleStartTimeConfirm}
+                    onClose={() => setTimeSheet(null)}
+                  />
+                  <TimeEntrySheet
+                    visible={timeSheet === 'end'}
+                    title={t('spot.sheet.endTitle')}
+                    hint={
+                      endLimits
+                        ? t('spot.time.freeUntil', {
+                            until: `${formatDayMonth(endDateOf(endLimits.endMs))} ${formatArtTime(endLimits.endMs, true)}`,
+                          })
+                        : ''
+                    }
+                    initialDigits={effectiveEndMs !== null ? timeToDigits(effectiveEndMs, true) : ''}
+                    resolve={resolveEndTyped}
+                    onConfirm={handleEndTimeConfirm}
+                    onClose={() => setTimeSheet(null)}
+                  />
                 </>
               )}
 
@@ -831,13 +956,18 @@ export default function SpotDetail() {
             <View style={styles.footerInfo}>
               <Text style={styles.footerTotal}>{canBook ? formatPesos(total) : '—'}</Text>
               {canBook && (
-                <Text style={styles.footerWhen}>
-                  {t('spot.footer.when', {
-                    date: formatShortDate(selectedDateISO),
-                    from: pad(effectiveStartHour!),
-                    to: pad(effectiveEndHour!),
-                  })}
-                </Text>
+                <>
+                  <Text style={styles.footerWhen} numberOfLines={1} adjustsFontSizeToFit>
+                    {t('spot.footer.from', {
+                      when: `${formatWeekdayDayMonth(selectedDateISO)} ${formatArtTime(effectiveStartMs!)}`,
+                    })}
+                  </Text>
+                  <Text style={styles.footerWhen} numberOfLines={1} adjustsFontSizeToFit>
+                    {t('spot.footer.to', {
+                      when: `${formatWeekdayDayMonth(endDateISO)} ${formatArtTime(effectiveEndMs!, true)}`,
+                    })}
+                  </Text>
+                </>
               )}
             </View>
             <Button
@@ -849,9 +979,8 @@ export default function SpotDetail() {
                   params: {
                     spotId: spot.id,
                     hours: String(durationHours),
-                    startHour: String(effectiveStartHour),
-                    endHour: String(effectiveEndHour),
-                    bookingDate: selectedDateISO,
+                    startAt: toArtISO(effectiveStartMs!),
+                    endAt: toArtISO(effectiveEndMs!),
                     ...(effectiveVehicleType ? { vehicleType: effectiveVehicleType } : {}),
                   },
                 })

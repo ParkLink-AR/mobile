@@ -11,7 +11,7 @@ import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { getParkingSpotDetail, getSpotPricePerHour, toISOToday } from '@/src/services/parkingService';
+import { getParkingSpotDetail, getSpotPricePerHour } from '@/src/services/parkingService';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { getAvailability } from '@/src/api/parking';
@@ -21,43 +21,18 @@ import { createBookingApi, createPaymentPreference, type ScheduleEntryBody } fro
 import { bookingVehicleBody, useBookingVehicle, vehicleErrorMessage } from '@/src/services/bookingVehicle';
 import { PaymentMethodDisplay } from '@/src/components/PaymentMethodDisplay';
 import { VehiclePicker } from '@/src/components/VehiclePicker';
-import { formatLongDate } from '@/src/services/bookingDates';
-import { todayArtDateISO } from '@/src/services/dateUtils';
+import { formatLongDateTime, formatShortDate } from '@/src/services/bookingDates';
+import { addDaysISO } from '@/src/services/dateUtils';
+import { endDateOf, formatArtTime, mergeFreeWindows, startDateOf } from '@/src/services/bookingRange';
 
-// ── Helpers for availability pre-check ───────────────────────────────────────
-
-function addOneDay(dateISO: string): string {
-  const [year, month, day] = dateISO.split('-').map(Number);
-  const next = new Date(year, month - 1, day + 1);
-  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
-}
+// ── Helper for availability pre-check ────────────────────────────────────────
 
 /**
- * Checks whether the requested integer-hour slot [startHour:00, endHour:00]
- * is fully covered by at least one free window. Compares epoch-ms so that a
- * free window starting at e.g. 08:30 does NOT falsely cover the 08:00 slot.
+ * Checks whether [startMs, endMs) is fully covered by one continuous free block. Windows from
+ * consecutive days are merged first, so a booking across midnight is checked as a whole.
  */
-function slotIsCoveredByFreeWindows(
-  freeWindows: Array<{ start: string; end: string }>,
-  startHour: number,
-  endHour: number,
-  bookingDate: string,
-): boolean {
-  // Build the exact epoch-ms for slotStart and slotEnd using the booking date.
-  const artMidnightMs = artMidnightForDate(bookingDate);
-  const slotStartMs = artMidnightMs + startHour * 3600_000;
-  const slotEndMs = artMidnightMs + endHour * 3600_000;
-  return freeWindows.some((w) => {
-    const wStartMs = new Date(w.start).getTime();
-    const wEndMs = new Date(w.end).getTime();
-    return wStartMs <= slotStartMs && slotEndMs <= wEndMs;
-  });
-}
-
-/** UTC epoch-ms of Buenos Aires midnight (00:00 ART = 03:00 UTC) for a YYYY-MM-DD date. */
-function artMidnightForDate(dateISO: string): number {
-  const [year, month, day] = dateISO.split('-').map(Number);
-  return Date.UTC(year, month - 1, day, 3, 0, 0, 0); // ART midnight = UTC 03:00
+function rangeIsFree(days: Parameters<typeof mergeFreeWindows>[0], startMs: number, endMs: number): boolean {
+  return mergeFreeWindows(days).some((window) => window.startMs <= startMs && endMs <= window.endMs);
 }
 
 /** "$17.280" -- whole pesos with thousands separators, like the rest of the app. */
@@ -74,12 +49,11 @@ export default function ConfirmBooking() {
   const largeText = scale > 1;
   const typography = useTypography();
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
-  const { spotId, hours, startHour, endHour, bookingDate, vehicleType } = useLocalSearchParams<{
+  const { spotId, hours, startAt, endAt, vehicleType } = useLocalSearchParams<{
     spotId: string;
     hours: string;
-    startHour?: string;
-    endHour?: string;
-    bookingDate?: string; // YYYY-MM-DD passed from spot/[id].tsx
+    startAt: string; // RFC3339 con offset de Buenos Aires, armado en spot/[id].tsx
+    endAt: string;
     vehicleType?: string; // elegido en spot/[id].tsx -- decide el precio si la cochera cobra distinto por vehículo
   }>();
   const user = useSessionStore((s) => s.user);
@@ -93,23 +67,11 @@ export default function ConfirmBooking() {
   // handleCancel for the same fix applied to the cancel-booking confirmation.
   const [conflictModalVisible, setConflictModalVisible] = useState(false);
 
-  const reservedHours = Math.max(Number(hours) || 1, 1);
-  const start = startHour ? Number(startHour) : 8;
-  const end = endHour ? Number(endHour) : start + reservedHours;
-
-  // Use the date selected in spot/[id].tsx; fall back to today.
-  function toISO(dateISO: string | undefined, hour: number): string {
-    let base = dateISO ?? toISOToday(0).slice(0, 10); // "YYYY-MM-DD"
-    // Un turno puede terminar a las 24:00 (p.ej. reservar 23→24hs): 24 no es
-    // una hora válida en RFC3339, así que se pasa a las 00:00 del día
-    // siguiente para que booking-service no rechace el timestamp.
-    if (hour >= 24) {
-      base = addOneDay(base);
-      hour -= 24;
-    }
-    const paddedHour = String(hour).padStart(2, '0');
-    return `${base}T${paddedHour}:00:00-03:00`;
-  }
+  const reservedHours = Math.max(Number(hours) || 0.5, 0.5);
+  const startMs = new Date(startAt).getTime();
+  const endMs = new Date(endAt).getTime();
+  const startDate = startDateOf(startMs);
+  const endDate = endDateOf(endMs);
 
   // Only load the spot detail on mount — no booking is created yet.
   useEffect(() => {
@@ -153,12 +115,8 @@ export default function ConfirmBooking() {
     // This gives a fast, friendly error if the slot was taken while the user
     // was on the confirm screen, without consuming a hold.
     try {
-      const dateFrom = bookingDate ?? toISOToday(0).slice(0, 10);
-      const dateTo = addOneDay(dateFrom);
-      const availability = await getAvailability(spot.id, dateFrom, dateTo);
-      const freeWindows = availability.days[0]?.free_windows ?? [];
-      const slotIsFree = slotIsCoveredByFreeWindows(freeWindows, start, end, dateFrom);
-      if (!slotIsFree) {
+      const availability = await getAvailability(spot.id, startDate, addDaysISO(endDate, 1));
+      if (!rangeIsFree(availability.days, startMs, endMs)) {
         setConflictModalVisible(true);
         setProcessing(false);
         return;
@@ -171,8 +129,6 @@ export default function ConfirmBooking() {
     // ── Step 1: create the booking ──────────────────────────────────────────
     let bookingId: string;
     try {
-      const startISO = toISO(bookingDate, start);
-      const endISO = toISO(bookingDate, end);
       const schedule: ScheduleEntryBody[] = spot.schedule.map((entry) => ({
         day_of_week: entry.dayOfWeek,
         start_hour: entry.startHour,
@@ -180,8 +136,8 @@ export default function ConfirmBooking() {
       }));
 
       const created = await createBookingApi({
-        start: startISO,
-        end: endISO,
+        start: startAt,
+        end: endAt,
         amount: Math.round(pricePerHour * reservedHours * 100), // centavos -- booking-service recomputes this itself and ignores whatever's sent here
         parking_spot: { id: spotId, schedule, capacity: spot.capacity },
         vehicle: bookingVehicleBody(selectedVehicle),
@@ -206,7 +162,7 @@ export default function ConfirmBooking() {
     try {
       const preference = await createPaymentPreference({
         title: `Cochera ${spot.title}`,
-        description: `Reserva ${bookingDate ?? 'hoy'} ${String(start).padStart(2, '0')}:00–${String(end).padStart(2, '0')}:00`,
+        description: `Reserva ${formatShortDate(startDate)} ${formatArtTime(startMs)} – ${formatShortDate(endDate)} ${formatArtTime(endMs, true)}`,
         payerEmail: user.email,
         externalReference: bookingId, // bookingId IS the external reference for the webhook
       });
@@ -358,18 +314,14 @@ export default function ConfirmBooking() {
               </View>
 
               <View style={styles.detailRow}>
-                <Ionicons name="calendar-outline" size={sc(16)} color={colors.textSecondary} />
-                <Text style={styles.detailLabel}>{t('driver.booking.date')}</Text>
-                <Text style={styles.detailValue}>
-                  {formatLongDate(bookingDate || todayArtDateISO())}
-                </Text>
+                <Ionicons name="log-in-outline" size={sc(16)} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>{t('driver.booking.from')}</Text>
+                <Text style={styles.detailValue}>{formatLongDateTime(startAt)}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Ionicons name="time-outline" size={sc(16)} color={colors.textSecondary} />
-                <Text style={styles.detailLabel}>{t('driver.booking.time')}</Text>
-                <Text style={styles.detailValue}>
-                  {String(start).padStart(2, '0')}:00 {t('driver.booking.timeTo')} {String(end).padStart(2, '0')}:00
-                </Text>
+                <Ionicons name="log-out-outline" size={sc(16)} color={colors.textSecondary} />
+                <Text style={styles.detailLabel}>{t('driver.booking.until')}</Text>
+                <Text style={styles.detailValue}>{formatLongDateTime(endAt)}</Text>
               </View>
               {spot.pricePerHourByVehicleType && effectiveVehicleType && (
                 <View style={styles.detailRow}>
@@ -386,7 +338,7 @@ export default function ConfirmBooking() {
               <View style={styles.detailRow}>
                 <Ionicons name="hourglass-outline" size={sc(16)} color={colors.textSecondary} />
                 <Text style={styles.detailLabel}>{t('driver.booking.hours')}</Text>
-                <Text style={styles.detailValue}>{reservedHours} {t('driver.booking.hoursUnit')}</Text>
+                <Text style={styles.detailValue}>{String(Math.round(reservedHours * 100) / 100).replace('.', ',')} {t('driver.booking.hoursUnit')}</Text>
               </View>
 
               <View style={styles.divider} />

@@ -69,6 +69,13 @@ const MONTHS: Record<string, string[]> = {
   en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
 };
 
+const WEEKDAYS: Record<string, string[]> = {
+  // Domingo primero, como Date#getUTCDay.
+  es: ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
+  en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  ja: ['日', '月', '火', '水', '木', '金', '土'],
+};
+
 function ymd(dateISO: string): [number, number, number] {
   const [year, month, day] = dateISO.slice(0, 10).split('-').map(Number);
   return [year, month, day];
@@ -144,4 +151,35 @@ export function formatBookingWhen(
 export function ownerEarningsFrom(b: { amount?: number; owner_amount?: number }): number {
   const centavos = typeof b.owner_amount === 'number' ? b.owner_amount : typeof b.amount === 'number' ? b.amount : 0;
   return centavos / 100;
+}
+
+/** "jueves 12/10" -- día de la semana, día y mes (sin año), para lugares donde importa saber qué día cae. */
+export function formatWeekdayDayMonth(dateISO: string): string {
+  const [year, month, day] = ymd(dateISO);
+  const lang = getLanguage();
+  const weekday = (WEEKDAYS[lang] ?? WEEKDAYS.es)[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
+  const dayMonth = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+  return lang === 'ja' ? `${dayMonth}（${weekday}）` : `${weekday} ${dayMonth}`;
+}
+
+const WEEKDAYS_SHORT: Record<string, string[]> = {
+  es: ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'],
+  en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  ja: WEEKDAYS.ja,
+};
+
+/** "mar 13" -- día de la semana corto y número de día, para rotular filas y marcas. */
+export function formatWeekdayShortDay(dateISO: string): string {
+  const [year, month, day] = ymd(dateISO);
+  const lang = getLanguage();
+  const weekday = (WEEKDAYS_SHORT[lang] ?? WEEKDAYS_SHORT.es)[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
+  return lang === 'ja' ? `${day}（${weekday}）` : `${weekday} ${day}`;
+}
+
+/** "Octubre 2026" (month 1-12). */
+export function formatMonthYear(year: number, month: number): string {
+  const lang = getLanguage();
+  if (lang === 'ja') return `${year}年${month}月`;
+  const name = (MONTHS[lang] ?? MONTHS.es)[month - 1];
+  return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${year}`;
 }
