@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { View, Text, TextInput, Pressable, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView, Image } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
+import { shrinkForUpload, SPOT_PHOTO_UPLOAD_MAX } from '@/src/services/imageUpload';
 import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
@@ -35,8 +36,6 @@ import { t, useLanguage } from '@/src/i18n';
 import { useScale } from '@/src/theme/typography';
 
 const MAX_PHOTOS = 10;
-const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export default function NewSpot() {
   const colors = useThemeColors();
@@ -85,17 +84,11 @@ export default function NewSpot() {
     });
     if (result.canceled) return;
 
-    const picked: ParkingSpotPhotoAsset[] = [];
-    for (const asset of result.assets) {
-      const mimeType = asset.mimeType ?? 'image/jpeg';
-      if (!ALLOWED_PHOTO_TYPES.includes(mimeType)) continue;
-      if (asset.fileSize && asset.fileSize > MAX_PHOTO_SIZE_BYTES) continue;
-      picked.push({
-        uri: asset.uri,
-        name: asset.fileName ?? `photo.${mimeType.split('/')[1]}`,
-        type: mimeType,
-      });
-    }
+    // Shrunk on the phone first: much faster to upload (see shrinkForUpload).
+    const shrunk = await Promise.all(
+      result.assets.map((asset, i) => shrinkForUpload(asset, SPOT_PHOTO_UPLOAD_MAX, `photo-${Date.now()}-${i}`)),
+    );
+    const picked: ParkingSpotPhotoAsset[] = shrunk.filter((p): p is ParkingSpotPhotoAsset => p !== null);
     setPhotos((prev) => [...prev, ...picked].slice(0, MAX_PHOTOS));
   }
 

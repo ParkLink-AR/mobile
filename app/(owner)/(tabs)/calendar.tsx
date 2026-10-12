@@ -288,7 +288,7 @@ export default function OwnerCalendar() {
                 <View style={styles.stayRow}>
                   <Ionicons name="time-outline" size={Math.round(15 * scale)} color={colors.textSecondary} />
                   <Text style={typography.body}>
-                    {formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}
+                    {formatBookingWhen(item, t('driver.booking.timeTo'))}
                   </Text>
                 </View>
               ) : (

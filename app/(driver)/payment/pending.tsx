@@ -12,7 +12,7 @@ import { request } from '@/src/api/client';
 import { BookingApiResponse, getBookingApi } from '@/src/api/booking';
 import { getParkingSpotDetail } from '@/src/services/parkingService';
 import { usePaymentApprovedSound } from '@/src/services/paymentSound';
-import { formatBookingWhen, formatLongDateFromISO, formatShortDate, formatTime, mapBookingDateRange, toVehicleSnapshot } from '@/src/services/bookingDates';
+import { formatBookingWhen, formatLongDateFromISO, formatTime, mapBookingDateRange, toVehicleSnapshot } from '@/src/services/bookingDates';
 import { vehicleSummary } from '@/src/components/VehicleIdentity';
 
 // 'refunded': Mercado Pago approved the payment, but the booking couldn't take it (its
@@ -48,11 +48,7 @@ function formatPaidAt(iso: string): string {
 // "9 de octubre de 2026, 10:00 a 13:00"; a multi-day stay, compact so it fits on one line:
 // "08/10/2026 15:00 – 10/10/2026 12:00".
 function formatWhen(booking: BookingApiResponse): string {
-  const range = mapBookingDateRange(booking.start, booking.end);
-  if (range.date && range.date !== range.endDate) {
-    return `${formatShortDate(range.date)} ${range.startTime} – ${formatShortDate(range.endDate)} ${range.endTime}`;
-  }
-  return formatBookingWhen(range, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'), 'long');
+  return formatBookingWhen(mapBookingDateRange(booking.start, booking.end), t('driver.booking.timeTo'), 'long');
 }
 
 function formatPesos(centavos: number): string {

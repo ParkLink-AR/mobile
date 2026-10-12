@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { isRunningInExpoGo } from 'expo';
 import { deleteDeviceToken, putDeviceToken, type DevicePlatform } from '@/src/api/notifications';
 import { useAccountTypeStore, groupFor } from '@/src/store/useAccountTypeStore';
+import { useSessionStore } from '@/src/store/useSessionStore';
 
 const BRAND_COLOR = '#168B8D';
 
@@ -257,11 +258,42 @@ function routeFor(data: Record<string, string> | undefined): string | null {
     case 'support.ticket_replied':
       if (!data.bookingId || !data.ticketId) return null;
       return `${group}/bookings/${data.bookingId}/tickets/${data.ticketId}`;
-    // Sent to the owner once an admin confirms a batch of their payouts into a paid
-    // Settlement. No bookingId: a settlement covers however many bookings were batched.
+    // Sent to the owner once an admin prepares a settlement of their payouts, and once its
+    // transfer is confirmed. No bookingId: a settlement covers however many bookings were
+    // batched.
+    case 'settlement.drafted':
     case 'settlement.paid':
       if (!data.settlementId) return null;
       return `${group}/settlements/${data.settlementId}`;
+    // Sent to the driver once their payment went through (the owner still has to accept).
+    case 'booking.payment_received':
+      if (!data.bookingId) return null;
+      return `${group}/bookings/${data.bookingId}?view=driver`;
+    // Sent to the owner before a booking request expires unanswered.
+    case 'booking.approval_reminder':
+      if (!data.bookingId) return null;
+      return `${group}/bookings/${data.bookingId}?view=owner`;
+    // An admin decided on a booking that ended without its arrival verified (owner: paid
+    // or not; driver: refunded), and the before-start reminder -- both say which side.
+    case 'booking.verification_reviewed':
+    case 'booking.starting_soon':
+      if (!data.bookingId) return null;
+      return `${group}/bookings/${data.bookingId}?view=${data.role === 'owner' ? 'owner' : 'driver'}`;
+    // Sent to the driver before a stay ends, and once a refund that had failed reaches them.
+    case 'booking.ending_soon':
+    case 'refund.completed':
+      if (!data.bookingId) return null;
+      return `${group}/bookings/${data.bookingId}?view=driver`;
+    // Sent to whoever was reviewed: their own profile, where the review shows.
+    case 'review.received': {
+      const userId = useSessionStore.getState().user?.id;
+      if (!userId) return null;
+      return `${group}/profile/${userId}?as=${data.role === 'owner' ? 'owner' : 'driver'}`;
+    }
+    // Sent to whoever opened a support ticket, once staff close it.
+    case 'support.ticket_closed':
+      if (!data.bookingId || !data.ticketId) return null;
+      return `${group}/bookings/${data.bookingId}/tickets/${data.ticketId}`;
     // Sent to the owner once an admin approves or rejects their new parking spot.
     case 'parking_spot.reviewed':
       if (!data.parkingSpotId) return null;

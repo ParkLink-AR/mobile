@@ -190,7 +190,7 @@ export default function OwnerToday() {
                           </View>
                         )}
                         <Text style={typography.body}>
-                          {formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}
+                          {formatBookingWhen(item, t('driver.booking.timeTo'))}
                         </Text>
                         <Text style={styles.earnText}>
                           {t('owner.booking.youEarn', {
@@ -295,7 +295,7 @@ export default function OwnerToday() {
                 <View style={styles.stayRow}>
                   <Ionicons name="time-outline" size={sc(15)} color={colors.textSecondary} />
                   <Text style={typography.body}>
-                    {formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}
+                    {formatBookingWhen(item, t('driver.booking.timeTo'))}
                   </Text>
                 </View>
               ) : (

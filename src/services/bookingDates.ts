@@ -120,24 +120,22 @@ export function formatLongDateTime(dateTimeISO: string): string {
  * Línea "cuándo" de una reserva. Cuando `date` y `endDate` coinciden (HOURLY, o una
  * estadía de un solo día) muestra la fecha una sola vez -- "14/09/2026 14:00 a 16:00"
  * (short, para listas) o "14 de septiembre de 2026, 14:00 a 16:00" (long). Si difieren
- * (estadía multi-día, check-out al mismo horario que el check-in) son días distintos,
- * así que se etiquetan en vez del ambiguo "14:00 a 14:00" -- "Check-in 14/09/2026 14:00
- * — Check-out 16/09/2026 14:00".
+ * (estadía multi-día) van las dos fechas con su hora, siempre en formato corto para que
+ * entre en una línea: "14/09/2026 14:00 – 16/09/2026 14:00" -- sin "Check-in"/"Check-out",
+ * que la alargaban sin aportar.
  */
 export function formatBookingWhen(
   item: { date: string; endDate: string; startTime: string; endTime: string },
   timeToLabel: string,
-  checkInLabel: string,
-  checkOutLabel: string,
   style: 'short' | 'long' = 'short',
 ): string {
   if (!item.date) return '';
+  if (item.date !== item.endDate) {
+    return `${formatShortDate(item.date)} ${item.startTime} – ${formatShortDate(item.endDate)} ${item.endTime}`;
+  }
   const format = style === 'long' ? formatLongDate : formatShortDate;
   const separator = style === 'long' && getLanguage() !== 'ja' ? ', ' : ' ';
-  if (item.date === item.endDate) {
-    return `${format(item.date)}${separator}${item.startTime} ${timeToLabel} ${item.endTime}`;
-  }
-  return `${checkInLabel} ${format(item.date)}${separator}${item.startTime} — ${checkOutLabel} ${format(item.endDate)}${separator}${item.endTime}`;
+  return `${format(item.date)}${separator}${item.startTime} ${timeToLabel} ${item.endTime}`;
 }
 
 /** What the owner earns from a booking, in pesos: owner_amount when the API sent it, else

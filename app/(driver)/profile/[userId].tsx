@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Image, FlatList, StyleSheet } from 'react-native';
+import { View, Text, Image, FlatList, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Screen } from '@/src/components/Screen';
+import { ImageViewerModal } from '@/src/components/ImageViewerModal';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import { t, useLanguage } from '@/src/i18n';
@@ -28,6 +29,7 @@ export default function PublicProfile() {
   const [average, setAverage] = useState(0);
   const [count, setCount] = useState(0);
   const [reviews, setReviews] = useState<ProfileReviewItem[]>([]);
+  const [viewingAvatar, setViewingAvatar] = useState(false);
 
   useEffect(() => {
     if (!userId || !as) return;
@@ -83,7 +85,9 @@ export default function PublicProfile() {
     <Screen style={styles.container} edges={['left', 'right', 'bottom']}>
       <Card style={styles.headerCard}>
         {profile.avatar_url ? (
-          <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+          <Pressable onPress={() => setViewingAvatar(true)} accessibilityRole="imagebutton">
+            <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+          </Pressable>
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="person" size={sc(36)} color={colors.textSecondary} />
@@ -118,6 +122,11 @@ export default function PublicProfile() {
             {!!item.comment && <Text style={typography.body}>{item.comment}</Text>}
           </Card>
         )}
+      />
+
+      <ImageViewerModal
+        uri={viewingAvatar ? profile.avatar_url ?? null : null}
+        onClose={() => setViewingAvatar(false)}
       />
     </Screen>
   );

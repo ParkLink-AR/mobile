@@ -12,6 +12,7 @@ import { isOpenRequest, useNotificationsStore } from '@/src/store/useNotificatio
 import { AppNotification, notificationRole } from '@/src/services/notificationsFeed';
 import { formatBookingWhen, formatShortDateFromISO } from '@/src/services/bookingDates';
 import { approveBookingApi, rejectBookingApi } from '@/src/api/booking';
+import { useSessionStore } from '@/src/store/useSessionStore';
 import { ApiError } from '@/src/api/client';
 
 const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
@@ -29,6 +30,19 @@ const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
   owner_settlement_paid: 'cash-outline',
   owner_spot_approved: 'checkmark-done-circle',
   owner_spot_rejected: 'alert-circle',
+  driver_payment_received: 'card-outline',
+  owner_request_expired: 'hourglass-outline',
+  owner_request_reminder: 'alarm-outline',
+  owner_payout_approved: 'cash-outline',
+  owner_payout_denied: 'close-circle',
+  driver_unverified_refunded: 'cash-outline',
+  driver_starting_soon: 'car-outline',
+  owner_starting_soon: 'car-outline',
+  driver_stay_ending: 'time-outline',
+  review_received: 'star',
+  ticket_closed: 'checkmark-circle-outline',
+  driver_refund_completed: 'cash-outline',
+  owner_settlement_drafted: 'receipt-outline',
 };
 
 const DANGER = '#C62828';
@@ -127,7 +141,11 @@ export default function Notifications() {
       kind === 'driver_confirmed' ||
       kind === 'driver_verified' ||
       kind === 'owner_settlement_paid' ||
-      kind === 'owner_spot_approved'
+      kind === 'owner_spot_approved' ||
+      kind === 'driver_payment_received' ||
+      kind === 'owner_payout_approved' ||
+      kind === 'driver_unverified_refunded' ||
+      kind === 'driver_refund_completed'
     ) {
       return colors.success;
     }
@@ -136,16 +154,45 @@ export default function Notifications() {
       kind === 'driver_request_expired' ||
       kind === 'driver_spot_unavailable' ||
       kind === 'owner_booking_cancelled' ||
-      kind === 'owner_spot_rejected'
+      kind === 'owner_spot_rejected' ||
+      kind === 'owner_request_expired' ||
+      kind === 'owner_payout_denied'
     ) {
       return DANGER;
     }
-    if (kind === 'message_received' || kind === 'ticket_replied') return colors.teal;
+    if (
+      kind === 'message_received' ||
+      kind === 'ticket_replied' ||
+      kind === 'ticket_closed' ||
+      kind === 'review_received' ||
+      kind === 'driver_starting_soon' ||
+      kind === 'owner_starting_soon' ||
+      kind === 'owner_settlement_drafted'
+    ) {
+      return colors.teal;
+    }
     return colors.warning;
   }
 
+  // The notification's bold first line: the spot (or the ticket's subject) -- or, for the
+  // ones not about a single spot, a fixed title.
+  function titleFor(item: AppNotification): string {
+    switch (item.kind) {
+      case 'owner_settlement_paid':
+        return t('notifications.settlementPaid.title');
+      case 'owner_settlement_drafted':
+        return t('notifications.settlementDrafted.title');
+      case 'driver_refund_completed':
+        return t('notifications.refundCompleted.title');
+      case 'review_received':
+        return item.spotTitle || t('notifications.reviewReceived.title');
+      default:
+        return item.spotTitle;
+    }
+  }
+
   function bodyFor(item: AppNotification): string {
-    const when = formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'));
+    const when = formatBookingWhen(item, t('driver.booking.timeTo'));
     switch (item.kind) {
       case 'owner_request':
         return isOpenRequest(item, answeredBookingIds)
@@ -181,6 +228,32 @@ export default function Notifications() {
         return item.preview
           ? t('notifications.spotRejected.bodyWithReason', { reason: item.preview })
           : t('notifications.spotRejected.body');
+      case 'driver_payment_received':
+        return t('notifications.paymentReceived.body', { when });
+      case 'owner_request_expired':
+        return t('notifications.ownerRequestExpired.body', { when });
+      case 'owner_request_reminder':
+        return t('notifications.ownerRequestReminder.body', { when });
+      case 'owner_payout_approved':
+        return t('notifications.payoutApproved.body', { when });
+      case 'owner_payout_denied':
+        return t('notifications.payoutDenied.body', { when });
+      case 'driver_unverified_refunded':
+        return t('notifications.unverifiedRefunded.body', { when });
+      case 'driver_starting_soon':
+        return t('notifications.driverStartingSoon.body', { time: item.startTime });
+      case 'owner_starting_soon':
+        return t('notifications.ownerStartingSoon.body', { time: item.startTime });
+      case 'driver_stay_ending':
+        return t('notifications.stayEnding.body', { time: item.endTime });
+      case 'review_received':
+        return t('notifications.reviewReceived.body', { stars: '★'.repeat(Math.max(0, Math.min(item.rating ?? 0, 5))) });
+      case 'ticket_closed':
+        return t('notifications.ticketClosed.body');
+      case 'driver_refund_completed':
+        return t('notifications.refundCompleted.body', { amount: item.total.toLocaleString('es-AR') });
+      case 'owner_settlement_drafted':
+        return t('notifications.settlementDrafted.body', { amount: item.total.toLocaleString('es-AR') });
     }
   }
 
@@ -189,6 +262,7 @@ export default function Notifications() {
   // *current* route group -- jumping into the other group's stack would open the screen on
   // its own, with no back button -- and passes the side explicitly instead.
   const group = `/${useSegments()[0]}`;
+  const userId = useSessionStore((s) => s.user?.id);
   function handlePress(item: AppNotification) {
     const role = notificationRole(item);
     switch (item.kind) {
@@ -212,7 +286,20 @@ export default function Notifications() {
         if (item.ticketId) router.push(`${group}/bookings/${item.bookingId}/tickets/${item.ticketId}`);
         break;
       case 'owner_settlement_paid':
+      case 'owner_settlement_drafted':
         if (item.settlementId) router.push(`${group}/settlements/${item.settlementId}`);
+        break;
+      case 'owner_request_reminder':
+        // Still waiting: straight to where it can be answered.
+        if (item.parkingSpotId) router.push(`${group}/spots/${item.parkingSpotId}/requests`);
+        else router.push(`${group}/bookings/${item.bookingId}?view=owner`);
+        break;
+      case 'review_received':
+        // Their own profile, as the side that was reviewed -- where the review shows.
+        if (userId) router.push(`${group}/profile/${userId}?as=${role}`);
+        break;
+      case 'ticket_closed':
+        if (item.ticketId) router.push(`${group}/bookings/${item.bookingId}/tickets/${item.ticketId}`);
         break;
       case 'owner_spot_approved':
       case 'owner_spot_rejected':
@@ -269,7 +356,7 @@ export default function Notifications() {
                 </View>
                 <View style={styles.textBlock}>
                   <Text style={styles.itemTitle}>
-                    {item.kind === 'owner_settlement_paid' ? t('notifications.settlementPaid.title') : item.spotTitle}
+                    {titleFor(item)}
                   </Text>
                   <Text style={styles.itemBody}>{bodyFor(item)}</Text>
                   <Text style={styles.itemTime}>{formatAgo(item.at)}</Text>

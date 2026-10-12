@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { router, useSegments } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { AVATAR_UPLOAD_MAX, shrinkForUpload } from '@/src/services/imageUpload';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -24,8 +25,6 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { updateUserProfile, uploadAvatar, AvatarAsset } from '@/src/api/auth';
 import { ApiError } from '@/src/api/client';
 
-const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export default function DriverProfileEdit() {
   useLanguage();
@@ -57,23 +56,14 @@ export default function DriverProfileEdit() {
     });
     if (result.canceled || !result.assets[0]?.uri) return;
 
-    const asset = result.assets[0];
-    const mimeType = asset.mimeType ?? 'image/jpeg';
-    if (!ALLOWED_AVATAR_TYPES.includes(mimeType)) {
+    // Shrunk on the phone first: much faster to upload (see shrinkForUpload).
+    const shrunk = await shrinkForUpload(result.assets[0], AVATAR_UPLOAD_MAX, 'avatar');
+    if (!shrunk) {
       Alert.alert('Formato no permitido', 'Usá una imagen JPEG, PNG o WEBP.');
       return;
     }
-    if (asset.fileSize && asset.fileSize > MAX_AVATAR_SIZE_BYTES) {
-      Alert.alert('Imagen muy grande', 'El tamaño máximo es 5 MB.');
-      return;
-    }
-
-    setAvatarUri(asset.uri);
-    setAvatarAsset({
-      uri: asset.uri,
-      name: asset.fileName ?? `avatar.${mimeType.split('/')[1]}`,
-      type: mimeType,
-    });
+    setAvatarUri(shrunk.uri);
+    setAvatarAsset(shrunk);
   }
 
   async function save() {

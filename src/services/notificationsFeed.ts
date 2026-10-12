@@ -25,7 +25,29 @@ export type NotificationKind =
   | 'owner_settlement_paid'
   // An admin approved (it's published) or rejected (with a reason) the owner's new spot.
   | 'owner_spot_approved'
-  | 'owner_spot_rejected';
+  | 'owner_spot_rejected'
+  // The driver paid; the booking now waits for the owner.
+  | 'driver_payment_received'
+  // The owner never answered a booking request in time (it was cancelled and refunded), or
+  // is about to.
+  | 'owner_request_expired'
+  | 'owner_request_reminder'
+  // An admin decided on a booking that ended without its arrival code verified.
+  | 'owner_payout_approved'
+  | 'owner_payout_denied'
+  | 'driver_unverified_refunded'
+  // Reminders: a booking starts within the hour, a stay ends within the hour.
+  | 'driver_starting_soon'
+  | 'owner_starting_soon'
+  | 'driver_stay_ending'
+  // The other side of a booking reviewed this user (as an owner or as a driver).
+  | 'review_received'
+  // ParkLink staff closed the user's support ticket.
+  | 'ticket_closed'
+  // A refund that had failed finally reached the driver.
+  | 'driver_refund_completed'
+  // An admin prepared the owner's settlement; the transfer comes next.
+  | 'owner_settlement_drafted';
 
 const KNOWN_KINDS = new Set<NotificationKind>([
   'owner_request',
@@ -42,6 +64,19 @@ const KNOWN_KINDS = new Set<NotificationKind>([
   'owner_settlement_paid',
   'owner_spot_approved',
   'owner_spot_rejected',
+  'driver_payment_received',
+  'owner_request_expired',
+  'owner_request_reminder',
+  'owner_payout_approved',
+  'owner_payout_denied',
+  'driver_unverified_refunded',
+  'driver_starting_soon',
+  'owner_starting_soon',
+  'driver_stay_ending',
+  'review_received',
+  'ticket_closed',
+  'driver_refund_completed',
+  'owner_settlement_drafted',
 ]);
 
 /** Which side of the app a notification belongs to -- shown as the car/building icon on
@@ -56,6 +91,12 @@ const OWNER_KINDS = new Set<NotificationKind>([
   'owner_settlement_paid',
   'owner_spot_approved',
   'owner_spot_rejected',
+  'owner_request_expired',
+  'owner_request_reminder',
+  'owner_payout_approved',
+  'owner_payout_denied',
+  'owner_starting_soon',
+  'owner_settlement_drafted',
 ]);
 
 /** item.role, falling back by kind for an entry the server saved without one. */
@@ -93,6 +134,8 @@ export interface AppNotification {
   driverId?: string;
   settlementId?: string;
   ticketId?: string;
+  /** review_received: the stars given. */
+  rating?: number;
 }
 
 const str = (value: unknown): string => (typeof value === 'string' ? value : '');
@@ -116,12 +159,15 @@ export function toAppNotification(entry: InboxNotificationApi): AppNotification 
     role: entry.role,
     bookingId: str(data.booking_id),
     parkingSpotId: str(data.parking_spot_id),
-    spotTitle: kind === 'ticket_replied' ? str(data.subject) : str(data.spot_title),
+    spotTitle: kind === 'ticket_replied' || kind === 'ticket_closed' ? str(data.subject) : str(data.spot_title),
     date: dates.date,
     endDate: dates.endDate,
     startTime: dates.startTime,
     endTime: dates.endTime,
-    total: kind === 'owner_settlement_paid' ? num(data.net_amount) / 100 : num(data.amount) / 100,
+    total:
+      kind === 'owner_settlement_paid' || kind === 'owner_settlement_drafted'
+        ? num(data.net_amount) / 100
+        : num(data.amount) / 100,
     at: entry.created_at,
     readAt: entry.read_at,
     resolved: !!entry.resolved_at,
@@ -129,6 +175,7 @@ export function toAppNotification(entry: InboxNotificationApi): AppNotification 
     driverId: str(data.driver_user_id) || undefined,
     settlementId: str(data.settlement_id) || undefined,
     ticketId: str(data.ticket_id) || undefined,
+    rating: num(data.rating) || undefined,
   };
 }
 

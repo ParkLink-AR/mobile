@@ -27,7 +27,7 @@ import { useNotificationsStore } from '@/src/store/useNotificationsStore';
 import { ApiError } from '@/src/api/client';
 import { getParkingSpotDetail } from '@/src/api/parking';
 import { getPublicProfileApi } from '@/src/api/auth';
-import { mapBookingDateRange, formatBookingWhen, formatLongDate, formatLongDateFromISO, formatLongDateTime, toVehicleSnapshot, ownerEarningsFrom } from '@/src/services/bookingDates';
+import { mapBookingDateRange, formatBookingWhen, formatLongDateFromISO, formatLongDateTime, toVehicleSnapshot, ownerEarningsFrom } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 import { useScale } from '@/src/theme/typography';
 
@@ -437,25 +437,12 @@ export default function DriverBookingDetail() {
               <Text style={styles.sectionLabel}>{t('driver.booking.summary')}</Text>
             </View>
 
-            {booking.kind === 'STAY' ? (
-              <>
-                <View style={styles.detailRow}>
-                  <Ionicons name="log-in-outline" size={sc(16)} color={colors.textSecondary} />
-                  <Text style={styles.detailLabel}>{t('spot.stay.checkIn')}</Text>
-                  <Text style={styles.detailValue}>{formatLongDate(booking.date)}, {booking.startTime}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Ionicons name="log-out-outline" size={sc(16)} color={colors.textSecondary} />
-                  <Text style={styles.detailLabel}>{t('spot.stay.checkOut')}</Text>
-                  <Text style={styles.detailValue}>{formatLongDate(booking.endDate)}, {booking.endTime}</Text>
-                </View>
-              </>
-            ) : (
-              <View style={styles.detailRow}>
-                <Ionicons name="calendar-outline" size={sc(16)} color={colors.textSecondary} />
-                <Text style={styles.whenValue}>{formatBookingWhen(booking, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'), 'long')}</Text>
-              </View>
-            )}
+            {/* One line for every booking: a stay shows both dates with their times
+                ("20/11/2026 15:00 – 22/11/2026 15:00"), not separate check-in/check-out rows. */}
+            <View style={styles.detailRow}>
+              <Ionicons name="calendar-outline" size={sc(16)} color={colors.textSecondary} />
+              <Text style={styles.whenValue}>{formatBookingWhen(booking, t('driver.booking.timeTo'), 'long')}</Text>
+            </View>
             <View style={styles.detailRow}>
               <Ionicons name="hourglass-outline" size={sc(16)} color={colors.textSecondary} />
               <Text style={styles.detailLabel}>{t('driver.booking.detail.duration')}</Text>

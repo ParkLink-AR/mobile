@@ -35,14 +35,13 @@ describe('date formats', () => {
 
   it('booking line, short and long', () => {
     const range = mapBookingDateRange('2026-09-14T13:00:00Z', '2026-09-14T16:00:00Z');
-    expect(formatBookingWhen(range, 'a', 'Check-in', 'Check-out')).toBe('14/09/2026 10:00 a 13:00');
-    expect(formatBookingWhen(range, 'a', 'Check-in', 'Check-out', 'long')).toBe('14 de septiembre de 2026, 10:00 a 13:00');
+    expect(formatBookingWhen(range, 'a')).toBe('14/09/2026 10:00 a 13:00');
+    expect(formatBookingWhen(range, 'a', 'long')).toBe('14 de septiembre de 2026, 10:00 a 13:00');
   });
 
-  it('multi-day stay gets check-in and check-out', () => {
+  it('multi-day stay: both dates with their times, compact, no check-in/check-out labels', () => {
     const range = mapBookingDateRange('2026-09-14T13:00:00Z', '2026-09-16T13:00:00Z');
-    expect(formatBookingWhen(range, 'a', 'Check-in', 'Check-out')).toBe(
-      'Check-in 14/09/2026 10:00 — Check-out 16/09/2026 10:00',
-    );
+    expect(formatBookingWhen(range, 'a')).toBe('14/09/2026 10:00 – 16/09/2026 10:00');
+    expect(formatBookingWhen(range, 'a', 'long')).toBe('14/09/2026 10:00 – 16/09/2026 10:00');
   });
 });

@@ -57,8 +57,6 @@ async function loadReviewContext(bookingId: string, role: 'driver' | 'owner'): P
       when: formatBookingWhen(
         mapBookingDateRange(booking.start, booking.end),
         t('driver.booking.timeTo'),
-        t('spot.stay.checkIn'),
-        t('spot.stay.checkOut'),
         'long',
       ),
       vehicle: toVehicleSnapshot(booking.vehicle) ?? null,

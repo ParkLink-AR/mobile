@@ -128,7 +128,7 @@ export default function DriverBookings() {
                 <StatusBadge status={item.status} />
               </View>
               <Text style={typography.caption}>
-                {formatBookingWhen(item, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'))}
+                {formatBookingWhen(item, t('driver.booking.timeTo'))}
               </Text>
               <Text style={styles.total}>${item.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
               {item.status === 'CONFIRMED' && item.verificationCode && (

@@ -36,7 +36,7 @@ async function resolvePayoutRow(payout: SettlementPayout): Promise<PayoutRow> {
   try {
     const booking = await getBookingApi(payout.bookingId);
     const range = mapBookingDateRange(booking.start, booking.end);
-    const when = formatBookingWhen(range, t('driver.booking.timeTo'), t('spot.stay.checkIn'), t('spot.stay.checkOut'));
+    const when = formatBookingWhen(range, t('driver.booking.timeTo'));
     return { ...payout, when };
   } catch {
     return { ...payout, when: null };
