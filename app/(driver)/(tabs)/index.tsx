@@ -431,7 +431,7 @@ export function SearchScreen() {
       borderWidth: 1,
       borderColor: colors.border,
     },
-    locationErrorText: { flex: 1, fontSize: 13, color: colors.textSecondary },
+    locationErrorText: { flex: 1, fontSize: sc(13), color: colors.textSecondary },
     candidateEmpty: {
       paddingVertical: 16,
       fontSize: sc(13),

@@ -55,7 +55,7 @@ export default function ChangePhoneScreen() {
     phoneRow: { flexDirection: 'row', gap: 8 },
     countryButton: { ...form.input, justifyContent: 'center', minWidth: sc(100) },
     countryButtonText: { fontSize: sc(15), color: colors.text, fontWeight: '600' },
-    phoneInput: { flex: 1 },
+    phoneInput: { flex: 1, minWidth: 0 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(4, 35, 71, 0.4)', justifyContent: 'flex-end' },
     modalContent: {
       backgroundColor: colors.surface,

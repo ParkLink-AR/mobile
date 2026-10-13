@@ -1,13 +1,12 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Pressable, Modal, TouchableWithoutFeedback, Linking } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useLocalSearchParams, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { StatusBadge } from '@/src/components/StatusBadge';
-import { VehiclePlate } from '@/src/components/VehiclePlate';
-import { vehicleDescription } from '@/src/components/VehicleIdentity';
+import { VehicleSummaryRow } from '@/src/components/VehicleIdentity';
 import { VerifyArrivalCode } from '@/src/components/VerifyArrivalCode';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
@@ -27,7 +26,7 @@ import { useNotificationsStore } from '@/src/store/useNotificationsStore';
 import { ApiError } from '@/src/api/client';
 import { getParkingSpotDetail } from '@/src/api/parking';
 import { getPublicProfileApi } from '@/src/api/auth';
-import { mapBookingDateRange, formatBookingWhen, formatLongDateFromISO, formatLongDateTime, toVehicleSnapshot, ownerEarningsFrom } from '@/src/services/bookingDates';
+import { mapBookingDateRange, formatBookingWhen, formatLongDate, formatLongDateFromISO, formatLongDateTime, toVehicleSnapshot, ownerEarningsFrom } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
 import { PaymentDueCard } from '@/src/components/PaymentDue';
 import { SpotSummaryRow } from '@/src/components/SpotSummaryCard';
@@ -79,12 +78,12 @@ function openDirections(lat: number, lng: number) {
 /** Duración legible: horas para HOURLY, días de check-in a check-out para STAY. */
 function durationLabel(booking: Booking): string {
   if (booking.kind === 'HOURLY') {
-    return t('driver.booking.durationHours', { hours: String(booking.hours) });
+    return booking.hours === 1 ? t('driver.booking.durationOneHour') : t('driver.booking.durationHours', { hours: String(booking.hours) });
   }
   const days = Math.max(1, Math.round(
     (new Date(`${booking.endDate}T00:00:00`).getTime() - new Date(`${booking.date}T00:00:00`).getTime()) / 86_400_000,
   ));
-  return t('driver.booking.durationDays', { days: String(days) });
+  return days === 1 ? t('driver.booking.durationOneDay') : t('driver.booking.durationDays', { days: String(days) });
 }
 
 export default function DriverBookingDetail() {
@@ -99,6 +98,7 @@ export default function DriverBookingDetail() {
   const { id, view } = useLocalSearchParams<{ id: string; view?: 'owner' | 'driver' }>();
   const isOwnerView = view ? view === 'owner' : segment === '(owner)';
   const scale = useScale();
+  const largeText = scale > 1;
   const sc = (n: number) => Math.round(n * scale);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [spotLocation, setSpotLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
@@ -239,20 +239,27 @@ export default function DriverBookingDetail() {
     },
 
     divider: { height: 1, backgroundColor: colors.border },
-    detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    detailLabel: { flex: 1, fontSize: sc(14), color: colors.textSecondary },
-    detailValue: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
-    detailValueLink: { color: colors.teal },
+    // Same as the confirm screens: the value never squeezes the label -- it wraps on its own
+    // side, and with the large text size it drops to its own line under the label.
+    detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: largeText ? 'wrap' : 'nowrap', rowGap: 2 },
+    detailLabel: { flexGrow: 1, flexShrink: 1, fontSize: sc(14), color: colors.textSecondary },
+    detailValue: largeText
+      ? { flexBasis: '100%', paddingLeft: sc(16) + 8, fontSize: sc(14), color: colors.text, fontWeight: '600' }
+      : { flexShrink: 1, textAlign: 'right', fontSize: sc(14), color: colors.text, fontWeight: '600' },
+    // A name with its chevron: those rows don't wrap -- the name wraps within its side instead,
+    // so the chevron never ends up alone on a line.
+    detailRowLink: { flexWrap: 'nowrap' },
+    detailValueLink: largeText ? { color: colors.teal, flexBasis: 'auto', paddingLeft: 0, flexShrink: 1, textAlign: 'right' } : { color: colors.teal },
     whenValue: { flex: 1, fontSize: sc(14), color: colors.text, fontWeight: '600' },
     totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     totalLabel: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
     totalValue: { fontSize: sc(18), color: colors.teal, fontWeight: '700' },
 
-    refundReason: { fontSize: 14, color: colors.text, fontWeight: '600' },
-    refundBody: { flex: 1, fontSize: 14, color: colors.text, lineHeight: 20 },
-    refundNote: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
+    refundReason: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
+    refundBody: { flex: 1, fontSize: sc(14), color: colors.text, lineHeight: sc(20) },
+    refundNote: { fontSize: sc(12), color: colors.textSecondary, lineHeight: sc(17) },
     reviewedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12 },
-    reviewedText: { fontSize: 14, color: colors.textSecondary, fontWeight: '600' },
+    reviewedText: { fontSize: sc(14), color: colors.textSecondary, fontWeight: '600' },
     answerRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingBottom: 16 },
     answerBtn: {
       flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -296,8 +303,8 @@ export default function DriverBookingDetail() {
       padding: 16,
       gap: 10,
     },
-    verifyTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
-    verifyHint: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
+    verifyTitle: { fontSize: sc(15), fontWeight: '700', color: colors.text },
+    verifyHint: { fontSize: sc(13), color: colors.textSecondary, lineHeight: sc(18) },
     inProgressCard: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -432,7 +439,7 @@ export default function DriverBookingDetail() {
 
             {isOwnerView && driverName && (
               <Pressable
-                style={styles.detailRow}
+                style={[styles.detailRow, styles.detailRowLink]}
                 onPress={() => router.push(`${group}/profile/${booking.driverId}?as=driver`)}
               >
                 <Ionicons name="person-outline" size={sc(16)} color={colors.textSecondary} />
@@ -444,7 +451,7 @@ export default function DriverBookingDetail() {
 
             {!isOwnerView && ownerName && (
               <Pressable
-                style={styles.detailRow}
+                style={[styles.detailRow, styles.detailRowLink]}
                 onPress={() => router.push(`${group}/profile/${booking.ownerId}?as=owner`)}
               >
                 <Ionicons name="person-outline" size={sc(16)} color={colors.textSecondary} />
@@ -454,21 +461,11 @@ export default function DriverBookingDetail() {
               </Pressable>
             )}
 
+            {/* The driver's vehicle as one block: what it is, and its plate on the right. */}
             {booking.vehicle && (
               <>
-                <View style={styles.detailRow}>
-                  <Ionicons name="car-outline" size={sc(16)} color={colors.textSecondary} />
-                  <Text style={styles.detailLabel}>{t('driver.booking.detail.vehicle')}</Text>
-                  <Text style={styles.detailValue}>{vehicleDescription(booking.vehicle)}</Text>
-                </View>
-                {/* A bicycle has no plate. */}
-                {booking.vehicle.plate ? (
-                  <View style={styles.detailRow}>
-                    <MaterialCommunityIcons name="card-text-outline" size={sc(16)} color={colors.textSecondary} />
-                    <Text style={styles.detailLabel}>{t('driver.booking.detail.plate')}</Text>
-                    <VehiclePlate plate={booking.vehicle.plate} size="small" align="end" />
-                  </View>
-                ) : null}
+                <View style={styles.divider} />
+                <VehicleSummaryRow vehicle={booking.vehicle} />
               </>
             )}
 
@@ -479,12 +476,27 @@ export default function DriverBookingDetail() {
               <Text style={styles.sectionLabel}>{t('driver.booking.summary')}</Text>
             </View>
 
-            {/* One line for every booking: a stay shows both dates with their times
-                ("20/11/2026 15:00 – 22/11/2026 15:00"), not separate check-in/check-out rows. */}
-            <View style={styles.detailRow}>
-              <Ionicons name="calendar-outline" size={sc(16)} color={colors.textSecondary} />
-              <Text style={styles.whenValue}>{formatBookingWhen(booking, t('driver.booking.timeTo'), 'long')}</Text>
-            </View>
+            {/* A stay gets its check-in and check-out, each with its date and time -- here, in
+                its detail, there's room for it (lists and notifications keep the short form). */}
+            {booking.kind === 'STAY' ? (
+              <>
+                <View style={styles.detailRow}>
+                  <Ionicons name="log-in-outline" size={sc(16)} color={colors.textSecondary} />
+                  <Text style={styles.detailLabel}>{t('spot.stay.checkIn')}</Text>
+                  <Text style={styles.detailValue}>{formatLongDate(booking.date)}, {booking.startTime}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Ionicons name="log-out-outline" size={sc(16)} color={colors.textSecondary} />
+                  <Text style={styles.detailLabel}>{t('spot.stay.checkOut')}</Text>
+                  <Text style={styles.detailValue}>{formatLongDate(booking.endDate)}, {booking.endTime}</Text>
+                </View>
+              </>
+            ) : (
+              <View style={styles.detailRow}>
+                <Ionicons name="calendar-outline" size={sc(16)} color={colors.textSecondary} />
+                <Text style={styles.whenValue}>{formatBookingWhen(booking, t('driver.booking.timeTo'), 'long')}</Text>
+              </View>
+            )}
             <View style={styles.detailRow}>
               <Ionicons name="hourglass-outline" size={sc(16)} color={colors.textSecondary} />
               <Text style={styles.detailLabel}>{t('driver.booking.detail.duration')}</Text>

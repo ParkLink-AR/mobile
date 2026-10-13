@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { Card } from '@/src/components/Card';
@@ -30,6 +30,9 @@ export default function SpotReviews() {
   const [reviews, setReviews] = useState<SpotReviewItem[]>([]);
   const [average, setAverage] = useState(0);
   const [count, setCount] = useState(0);
+  // The list says "no reviews" only once it's actually loaded -- not while the reviewers'
+  // names are still being looked up.
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     getParkingSpotDetail(id).then((s) => setSpot(s ?? null));
@@ -54,7 +57,8 @@ export default function SpotReviews() {
           comment: r.comment,
         })),
       );
-    });
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
   }, [id]);
 
   if (!spot) return null;
@@ -79,10 +83,14 @@ export default function SpotReviews() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={reviews.length === 0 ? { gap: 10, flexGrow: 1 } : { gap: 10 }}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="star-outline" size={sc(40)} color={colors.textSecondary} />
-            <Text style={styles.emptyText}>{t('spot.reviews.empty')}</Text>
-          </View>
+          loaded ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="star-outline" size={sc(40)} color={colors.textSecondary} />
+              <Text style={styles.emptyText}>{t('spot.reviews.empty')}</Text>
+            </View>
+          ) : (
+            <ActivityIndicator color={colors.teal} style={{ marginTop: 40 }} />
+          )
         }
         renderItem={({ item }) => (
           <Card>

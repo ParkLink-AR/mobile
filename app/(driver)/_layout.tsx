@@ -46,6 +46,7 @@ export default function DriverLayout() {
       {/* Profile */}
       <Stack.Screen name="profile-edit" options={{ title: t('driver.profile.edit') }} />
       <Stack.Screen name="change-email" options={{ title: t('changeEmail.title') }} />
+      <Stack.Screen name="change-password" options={{ title: t('changePassword.title') }} />
       <Stack.Screen name="change-phone" options={{ title: t('changePhone.title') }} />
       <Stack.Screen name="settings" options={{ title: t('owner.settings.title') }} />
     </Stack>

@@ -443,8 +443,10 @@ export default function SpotDetail() {
       alignItems: 'center', justifyContent: 'center', backgroundColor: colors.teal + '1A',
     },
     rateText: { flex: 1 },
-    rateHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
-    rateLabel: { fontSize: sc(14), fontWeight: '600', color: colors.text },
+    // When the label and the price don't fit side by side (large text), the price drops whole to
+    // the next line instead of both wrapping word by word.
+    rateHead: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', columnGap: 8, rowGap: 2 },
+    rateLabel: { flexShrink: 0, fontSize: sc(14), fontWeight: '600', color: colors.text },
     rateValue: { fontSize: sc(18), fontWeight: '700', color: colors.teal },
     rateUnit: { fontSize: sc(13), fontWeight: '400', color: colors.textSecondary },
     rateDetail: { fontSize: sc(13), color: colors.textSecondary, marginTop: 2, lineHeight: sc(18) },

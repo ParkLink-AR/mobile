@@ -10,7 +10,7 @@ import { StatusIcon } from '@/src/components/StatusIcon';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { VehicleIdentity, vehicleDescription } from '@/src/components/VehicleIdentity';
+import { VehicleSummaryRow } from '@/src/components/VehicleIdentity';
 import { ImageViewerModal } from '@/src/components/ImageViewerModal';
 import { getBookingApi, getBookingReviewsApi, submitReviewApi, ReviewTargetType } from '@/src/api/booking';
 import { getParkingSpotDetail } from '@/src/api/parking';
@@ -58,7 +58,6 @@ async function loadReviewContext(bookingId: string, role: 'driver' | 'owner'): P
       when: formatBookingWhen(
         mapBookingDateRange(booking.start, booking.end),
         t('driver.booking.timeTo'),
-        'long',
       ),
       vehicle: toVehicleSnapshot(booking.vehicle) ?? null,
       subjects,
@@ -164,10 +163,16 @@ function ReviewForm({
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 16 },
     card: { gap: 14 },
     blockTitle: { fontSize: sc(15), fontWeight: '700', color: colors.text },
-    bookingSummary: { gap: 8 },
+    bookingSummary: { gap: 12 },
+    summaryHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    summaryTitle: {
+      fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
+      letterSpacing: 0.8, textTransform: 'uppercase',
+    },
     summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    summaryText: { flex: 1, fontSize: sc(14), color: colors.text, fontWeight: '600' },
-    vehicleText: { fontSize: sc(13), color: colors.textSecondary },
+    summaryLabel: { flex: 1, fontSize: sc(14), color: colors.textSecondary },
+    summaryValue: { flexShrink: 1, fontSize: sc(14), fontWeight: '600', color: colors.text, textAlign: 'right' },
+    summaryDivider: { height: 1, backgroundColor: colors.border },
     subjectRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     subjectImage: { width: sc(52), height: sc(52), borderRadius: sc(26), backgroundColor: colors.border },
     subjectImageSquare: { borderRadius: 10 },
@@ -229,16 +234,24 @@ function ReviewForm({
       {/* Which booking it was (when, and the driver's vehicle) -- only for the owner rating a
           driver, to remember who it was. A driver rating the spot already knows. */}
       {context && targets.some((target) => target.targetType === 'driver') && (
+        // Laid out like the booking detail's summary: a section label, then label/value rows.
         <Card style={styles.bookingSummary}>
+          <View style={styles.summaryHeader}>
+            <Ionicons name="calendar-outline" size={sc(15)} color={colors.textSecondary} />
+            <Text style={styles.summaryTitle}>{t('review.booking.title')}</Text>
+          </View>
           <View style={styles.summaryRow}>
-            <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.summaryText}>{context.when}</Text>
+            <Ionicons name="time-outline" size={sc(16)} color={colors.textSecondary} />
+            <Text style={styles.summaryLabel}>{t('driver.payment.result.when')}</Text>
+            <Text style={styles.summaryValue}>{context.when}</Text>
           </View>
           {context.vehicle && (
-            <View style={styles.summaryRow}>
-              <VehicleIdentity vehicle={context.vehicle} />
-              <Text style={styles.vehicleText}>{vehicleDescription(context.vehicle)}</Text>
-            </View>
+            <>
+              <View style={styles.summaryDivider} />
+              {/* The driver's vehicle as one block: what it is on the left, its plate (or, for
+                  a bicycle, its type's badge) on the right. */}
+              <VehicleSummaryRow vehicle={context.vehicle} />
+            </>
           )}
         </Card>
       )}

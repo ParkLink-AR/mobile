@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/src/theme/useThemeColors';
+import { useScale } from '@/src/theme/typography';
 import { MercadoPagoLogo } from '@/src/components/MercadoPagoLogo';
 
 /** The booking's payment method -- always Mercado Pago: a booking is confirmed solely once
@@ -7,6 +8,8 @@ import { MercadoPagoLogo } from '@/src/components/MercadoPagoLogo';
  * Pago" isn't translated -- it's a brand name, shown the same in every locale. */
 export function PaymentMethodDisplay() {
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const styles = StyleSheet.create({
     row: {
       flexDirection: 'row',
@@ -15,16 +18,16 @@ export function PaymentMethodDisplay() {
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 8,
-      paddingVertical: 10,
+      paddingVertical: sc(10),
       paddingHorizontal: 12,
       backgroundColor: colors.surface,
     },
-    label: { flex: 1, fontSize: 14, color: colors.text },
+    label: { flex: 1, fontSize: sc(14), color: colors.text },
   });
 
   return (
     <View style={styles.row}>
-      <MercadoPagoLogo size={24} />
+      <MercadoPagoLogo size={sc(24)} />
       <Text style={styles.label} numberOfLines={1}>Mercado Pago</Text>
     </View>
   );

@@ -196,7 +196,8 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
       )}
       <View style={[styles.body, compact && styles.bodyCompact, !spot.active && styles.contentDimmed]}>
         <View style={styles.titleRow}>
-          <Text style={styles.title} numberOfLines={1}>
+          {/* Two lines: with the large text size, one left room for barely a word beside the price. */}
+          <Text style={styles.title} numberOfLines={2}>
             {spot.title}
           </Text>
           <View style={styles.priceBadge}>

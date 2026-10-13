@@ -424,7 +424,7 @@ export default function EditSpot() {
     },
     toggleActive: { backgroundColor: colors.teal, borderColor: colors.teal },
     toggleText: { fontSize: sc(14), fontWeight: '600', color: colors.textSecondary },
-    toggleTextActive: { color: colors.surface, fontWeight: '700' },
+    toggleTextActive: { fontSize: sc(14), color: colors.surface, fontWeight: '700' },
 
     photosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     photoThumbWrapper: { position: 'relative' },

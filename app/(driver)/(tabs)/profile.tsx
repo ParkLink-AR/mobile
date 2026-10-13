@@ -176,7 +176,7 @@ export default function Profile() {
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{[user.name, user.lastName].filter(Boolean).join(' ')}</Text>
-            <Text style={styles.profileEmail}>{user.email}</Text>
+            <Text style={styles.profileEmail} numberOfLines={1} ellipsizeMode="middle">{user.email}</Text>
             <VerifiedBadge />
           </View>
         </View>

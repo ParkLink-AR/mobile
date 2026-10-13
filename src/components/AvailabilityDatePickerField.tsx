@@ -222,7 +222,7 @@ export function AvailabilityDatePickerField({
     month: 'long',
     year: 'numeric',
     timeZone: 'UTC',
-  });
+  }).replace(/^./, (first) => first.toUpperCase()); // "Octubre de 2026" -- not "Octubre De 2026"
 
   const styles = StyleSheet.create({
     box: {
@@ -238,7 +238,7 @@ export function AvailabilityDatePickerField({
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     monthNav: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     navBtn: { padding: 6 },
-    monthLabel: { fontSize: sc(16), fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
+    monthLabel: { fontSize: sc(16), fontWeight: '700', color: colors.text },
     closeBtn: { padding: 4 },
     weekRow: { flexDirection: 'row' },
     weekDayCell: { flex: 1, alignItems: 'center', paddingBottom: 4 },

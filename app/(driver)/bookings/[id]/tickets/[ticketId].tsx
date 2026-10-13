@@ -89,8 +89,12 @@ export default function TicketThread() {
     try {
       const created = await addTicketMessageApi(ticketId, body);
       setMessages((prev) => [...prev, created]);
+      // Writing on a resolved ticket reopens it (booking-service does it too).
+      if (ticket?.status === 'RESOLVED') setTicket({ ...ticket, status: 'OPEN' });
     } catch (err) {
       setDraft(body);
+      // ParkLink closed it meanwhile: show it as closed, with how to get help now.
+      if (err instanceof ApiError && err.code === 'TICKET_CLOSED' && ticket) setTicket({ ...ticket, status: 'CLOSED' });
       const msg = err instanceof ApiError ? err.detail : t('driver.booking.tickets.errorSend');
       console.warn('[TicketThread] send error:', msg);
     } finally {
@@ -138,6 +142,11 @@ export default function TicketThread() {
       backgroundColor: colors.teal,
     },
     sendBtnDisabled: { opacity: 0.5 },
+    closedBar: {
+      flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14,
+      borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface,
+    },
+    closedText: { flex: 1, fontSize: sc(13.5), lineHeight: sc(19), color: colors.textSecondary },
   });
 
   const STATUS_COLORS: Record<TicketStatus, string> = {
@@ -209,27 +218,35 @@ export default function TicketThread() {
           </>
         )}
 
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            placeholder={t('driver.booking.tickets.messagePlaceholder')}
-            placeholderTextColor={colors.textSecondary}
-            value={draft}
-            onChangeText={setDraft}
-            multiline
-          />
-          <Pressable
-            style={[styles.sendBtn, (!draft.trim() || sending) && styles.sendBtnDisabled]}
-            onPress={handleSend}
-            disabled={!draft.trim() || sending}
-          >
-            {sending ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <Ionicons name="send" size={sc(17)} color={colors.white} />
-            )}
-          </Pressable>
-        </View>
+        {/* A closed ticket is final: no more messages, a new ticket is the way. */}
+        {ticket?.status === 'CLOSED' ? (
+          <View style={styles.closedBar}>
+            <Ionicons name="lock-closed-outline" size={sc(18)} color={colors.textSecondary} />
+            <Text style={styles.closedText}>{t('driver.booking.tickets.closedNote')}</Text>
+          </View>
+        ) : (
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              placeholder={t('driver.booking.tickets.messagePlaceholder')}
+              placeholderTextColor={colors.textSecondary}
+              value={draft}
+              onChangeText={setDraft}
+              multiline
+            />
+            <Pressable
+              style={[styles.sendBtn, (!draft.trim() || sending) && styles.sendBtnDisabled]}
+              onPress={handleSend}
+              disabled={!draft.trim() || sending}
+            >
+              {sending ? (
+                <ActivityIndicator color={colors.white} size="small" />
+              ) : (
+                <Ionicons name="send" size={sc(17)} color={colors.white} />
+              )}
+            </Pressable>
+          </View>
+        )}
         {/* El inset de abajo (home indicator) usa el fondo gris de la pantalla --
             esto lo pinta blanco para que combine con la barra de mensaje. */}
         <View style={{ height: insets.bottom, backgroundColor: colors.surface }} />

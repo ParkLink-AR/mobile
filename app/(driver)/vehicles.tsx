@@ -21,6 +21,7 @@ import { VehicleFormModal } from '@/src/components/VehicleFormModal';
 import { VehicleTypeModal } from '@/src/components/VehicleTypeModal';
 import { VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { useThemeColors } from '@/src/theme/useThemeColors';
+import { useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { getVehicles, deleteVehicle } from '@/src/api/auth';
 import { Vehicle } from '@/src/types';
@@ -28,6 +29,8 @@ import { Vehicle } from '@/src/types';
 export default function VehiclesScreen() {
   useLanguage();
   const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
   const user = useSessionStore((s) => s.user)!;
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -97,20 +100,20 @@ export default function VehiclesScreen() {
     loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
     hidden: { opacity: 0 },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-    emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    emptyText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
     vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     vehicleInfo: { flex: 1 },
-    vehicleBrandModel: { fontSize: 15, fontWeight: '700', color: colors.text },
-    vehicleType: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
-    completeType: { fontSize: 13, fontWeight: '600', color: colors.warning, marginTop: 2 },
+    vehicleBrandModel: { fontSize: sc(15), fontWeight: '700', color: colors.text },
+    vehicleType: { fontSize: sc(13), color: colors.textSecondary, marginTop: 2 },
+    completeType: { fontSize: sc(13), fontWeight: '600', color: colors.warning, marginTop: 2 },
     deleteBtn: { padding: 6 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
     modalSheet: { backgroundColor: colors.surface, borderRadius: 16, padding: 20, gap: 12 },
-    modalTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
+    modalTitle: { fontSize: sc(17), fontWeight: '700', color: colors.text },
     modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
     cancelBtn: { flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border },
     cancelBtnText: { color: colors.textSecondary, fontWeight: '600' },
-    deleteWarning: { fontSize: 14, color: colors.textSecondary, lineHeight: 20 },
+    deleteWarning: { fontSize: sc(14), color: colors.textSecondary, lineHeight: sc(20) },
     deleteConfirmBtn: { flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 10, backgroundColor: '#C62828' },
     deleteConfirmBtnText: { color: colors.white, fontWeight: '700' },
   });

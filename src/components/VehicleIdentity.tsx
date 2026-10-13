@@ -61,3 +61,29 @@ export function VehicleIdentity({
     </View>
   );
 }
+
+/**
+ * A booked vehicle as one block: what it is on the left (name, and its type underneath),
+ * its plate -- or, for a bicycle, its type's badge -- on the right. Used where a booking
+ * shows the driver's vehicle (its detail, rating the driver).
+ */
+export function VehicleSummaryRow({ vehicle }: { vehicle: VehicleSnapshot }) {
+  const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
+  const styles = StyleSheet.create({
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    info: { flex: 1 },
+    name: { fontSize: sc(15), fontWeight: '600', color: colors.text },
+    type: { fontSize: sc(13), color: colors.textSecondary, marginTop: 1 },
+  });
+  return (
+    <View style={styles.row}>
+      <View style={styles.info}>
+        <Text style={styles.name} numberOfLines={2}>{vehicleName(vehicle)}</Text>
+        {vehicle.type ? <Text style={styles.type}>{t(VEHICLE_TYPE_LABEL_KEYS[vehicle.type])}</Text> : null}
+      </View>
+      <VehicleIdentity vehicle={vehicle} align="end" />
+    </View>
+  );
+}

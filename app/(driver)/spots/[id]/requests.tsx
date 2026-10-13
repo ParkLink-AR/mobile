@@ -132,7 +132,7 @@ export default function SpotBookingRequests() {
     infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
     infoLabel: { flex: 1, fontSize: sc(13), color: colors.textSecondary },
     infoValue: { fontSize: sc(13), fontWeight: '600', color: colors.text },
-    total: { color: colors.teal, fontWeight: '700', marginTop: 8 },
+    total: { color: colors.teal, fontWeight: '700', marginTop: 8, fontSize: sc(14) },
     actionsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
     actionBtn: {
       flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -146,7 +146,7 @@ export default function SpotBookingRequests() {
       flexDirection: 'row', padding: 4, gap: 4, borderRadius: 12,
       backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     },
-    tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 9 },
+    tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, paddingHorizontal: 4, borderRadius: 9 },
     tabActive: { backgroundColor: colors.teal },
     tabText: { fontSize: sc(13), fontWeight: '700', color: colors.textSecondary },
     tabTextActive: { color: colors.white },
@@ -166,7 +166,15 @@ export default function SpotBookingRequests() {
           const active = tab.key === activeKey;
           return (
             <Pressable key={tab.key} style={[styles.tab, active && styles.tabActive]} onPress={() => setChosenTab(tab.key)}>
-              <Text style={[styles.tabText, active && styles.tabTextActive]} numberOfLines={1}>{tab.label}</Text>
+              <Text
+                style={[styles.tabText, active && styles.tabTextActive]}
+                numberOfLines={1}
+                // Three tabs in a row: with the large text size "Confirmadas" didn't fit.
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
+                {tab.label}
+              </Text>
               {tab.key === 'pending' && pending.length > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{pending.length > 9 ? '9+' : pending.length}</Text>
@@ -199,7 +207,7 @@ export default function SpotBookingRequests() {
                     disabled={!driverNames[item.driverId]}
                   >
                     <Ionicons name="person-circle-outline" size={sc(18)} color={colors.textSecondary} />
-                    <Text style={styles.driverRowText} numberOfLines={1}>{driverNames[item.driverId] ?? item.driverId}</Text>
+                    <Text style={styles.driverRowText} numberOfLines={2}>{driverNames[item.driverId] ?? item.driverId}</Text>
                     {!!driverNames[item.driverId] && <Ionicons name="chevron-forward" size={sc(13)} color={colors.textSecondary} />}
                   </TouchableOpacity>
                   <StatusBadge status={item.status} />

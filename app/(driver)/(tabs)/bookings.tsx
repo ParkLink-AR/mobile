@@ -77,7 +77,7 @@ export default function DriverBookings() {
     container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 8, gap: 8 },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
-    total: { color: colors.teal, fontWeight: '700', marginTop: 4 },
+    total: { color: colors.teal, fontWeight: '700', marginTop: 4, fontSize: sc(15) },
     codeChip: {
       alignSelf: 'flex-start',
       marginTop: 6,

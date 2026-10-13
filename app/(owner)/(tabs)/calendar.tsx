@@ -124,7 +124,7 @@ export default function OwnerCalendar() {
     month: 'long',
     year: 'numeric',
     timeZone: 'UTC',
-  });
+  }).replace(/^./, (first) => first.toUpperCase()); // "Octubre de 2026" -- not "Octubre De 2026"
   const selectedDayBookings = bookingsByDate[selectedDate] ?? [];
 
   function goToMonth(delta: number) {
@@ -147,7 +147,7 @@ export default function OwnerCalendar() {
     content: { paddingHorizontal: 16, paddingTop: 8, gap: 16 },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    monthLabel: { fontSize: Math.round(17 * scale), fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
+    monthLabel: { fontSize: Math.round(17 * scale), fontWeight: '700', color: colors.text },
     navBtn: { padding: Math.round(6 * scale) },
     todayLink: { alignSelf: 'center' },
     todayLinkText: { fontSize: Math.round(13 * scale), fontWeight: '600', color: colors.teal },
@@ -172,7 +172,6 @@ export default function OwnerCalendar() {
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     sectionTitle: {
       fontSize: Math.round(13 * scale), fontWeight: '700', color: colors.text,
-      textTransform: 'capitalize',
     },
     sectionLine: { flex: 1, height: 1, backgroundColor: colors.border },
     emptyCard: {

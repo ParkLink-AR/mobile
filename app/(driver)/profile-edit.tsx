@@ -31,6 +31,7 @@ export default function DriverProfileEdit() {
   const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const scale = useScale();
+  const largeText = scale > 1.2;
   const sc = (n: number) => Math.round(n * scale);
   const user = useSessionStore((s) => s.user)!;
   const setUser = useSessionStore((s) => s.setUser);
@@ -121,14 +122,17 @@ export default function DriverProfileEdit() {
     rowItem: { flex: 1 },
     error: { color: '#C62828', fontSize: sc(13) },
 
+    // With large text the value and its "Cambiar …" link don't fit side by side (the email or
+    // phone got cut short), so the link goes under the value.
     readOnlyRow: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      flexDirection: largeText ? 'column' : 'row',
+      alignItems: largeText ? 'flex-start' : 'center', justifyContent: 'space-between',
       borderWidth: 1, borderColor: colors.border, borderRadius: 10,
-      padding: sc(13), backgroundColor: colors.background, gap: 10,
+      padding: sc(13), backgroundColor: colors.background, gap: largeText ? 6 : 10,
     },
     readOnlyInfo: { flex: 1, gap: sc(2) },
     readOnlyValue: { fontSize: sc(15), color: colors.text },
-    verifiedRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: sc(6) },
+    verifiedRow: { flex: largeText ? undefined : 1, alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: sc(6) },
     readOnlyValueInline: { fontSize: sc(15), color: colors.text, flexShrink: 1 },
     changeLink: { fontSize: sc(13), fontWeight: '600', color: colors.teal },
     deleteAccountLink: { alignSelf: 'center', marginTop: sc(8), padding: 8 },
