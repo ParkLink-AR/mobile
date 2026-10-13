@@ -138,10 +138,7 @@ export default function Notifications() {
 
   function iconColorFor(kind: AppNotification['kind']) {
     if (
-      kind === 'driver_confirmed' ||
-      kind === 'driver_verified' ||
       kind === 'owner_settlement_paid' ||
-      kind === 'owner_spot_approved' ||
       kind === 'driver_payment_received' ||
       kind === 'owner_payout_approved' ||
       kind === 'driver_unverified_refunded' ||
@@ -160,7 +157,11 @@ export default function Notifications() {
     ) {
       return DANGER;
     }
+    // The ones whose icon is a tick: the app's checkmarks are all teal.
     if (
+      kind === 'driver_confirmed' ||
+      kind === 'driver_verified' ||
+      kind === 'owner_spot_approved' ||
       kind === 'message_received' ||
       kind === 'ticket_replied' ||
       kind === 'ticket_closed' ||

@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { getMessagesApi, sendMessageApi, MessageApiResponse } from '@/src/api/booking';
+import { getBookingApi, getMessagesApi, sendMessageApi, MessageApiResponse } from '@/src/api/booking';
 import { ApiError } from '@/src/api/client';
 import { useScale } from '@/src/theme/typography';
 
@@ -37,6 +37,8 @@ export default function BookingMessages() {
   const [loadError, setLoadError] = useState(false);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  // Not paid (yet): there's no writing to the other side -- booking-service refuses it too.
+  const [unpaid, setUnpaid] = useState(false);
   const listRef = useRef<FlatList>(null);
 
   const load = useCallback((withSpinner: boolean) => {
@@ -54,6 +56,13 @@ export default function BookingMessages() {
       .finally(() => {
         if (withSpinner) setLoading(false);
       });
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    getBookingApi(id)
+      .then((b) => setUnpaid(!b.paid_at && !b.payment_id))
+      .catch(() => {});
   }, [id]);
 
   useFocusEffect(
@@ -82,6 +91,7 @@ export default function BookingMessages() {
       setMessages((prev) => [...prev, created]);
     } catch (err) {
       setDraft(body);
+      if (err instanceof ApiError && err.code === 'BOOKING_NOT_PAID') setUnpaid(true);
       const msg = err instanceof ApiError ? err.detail : t('driver.booking.messages.errorSend');
       console.warn('[BookingMessages] send error:', msg);
     } finally {
@@ -119,6 +129,12 @@ export default function BookingMessages() {
       backgroundColor: colors.teal,
     },
     sendBtnDisabled: { opacity: 0.5 },
+    lockedBar: {
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      paddingHorizontal: 16, paddingVertical: 14,
+      borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface,
+    },
+    lockedText: { flex: 1, fontSize: sc(13.5), lineHeight: sc(19), color: colors.textSecondary },
   });
 
   if (loadError) {
@@ -150,12 +166,12 @@ export default function BookingMessages() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-            ListEmptyComponent={
+            ListEmptyComponent={unpaid ? null : (
               <View style={styles.centered}>
                 <Ionicons name="chatbubbles-outline" size={sc(40)} color={colors.textSecondary} />
                 <Text style={styles.errorText}>{t('driver.booking.messages.empty')}</Text>
               </View>
-            }
+            )}
             renderItem={({ item }) => {
               const mine = item.sender_id === userId;
               return (
@@ -174,27 +190,34 @@ export default function BookingMessages() {
           />
         )}
 
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            placeholder={t('driver.booking.messages.placeholder')}
-            placeholderTextColor={colors.textSecondary}
-            value={draft}
-            onChangeText={setDraft}
-            multiline
-          />
-          <Pressable
-            style={[styles.sendBtn, (!draft.trim() || sending) && styles.sendBtnDisabled]}
-            onPress={handleSend}
-            disabled={!draft.trim() || sending}
-          >
-            {sending ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <Ionicons name="send" size={sc(17)} color={colors.white} />
-            )}
-          </Pressable>
-        </View>
+        {unpaid ? (
+          <View style={styles.lockedBar}>
+            <Ionicons name="lock-closed-outline" size={sc(18)} color={colors.textSecondary} />
+            <Text style={styles.lockedText}>{t('driver.booking.messages.lockedUnpaid')}</Text>
+          </View>
+        ) : (
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              placeholder={t('driver.booking.messages.placeholder')}
+              placeholderTextColor={colors.textSecondary}
+              value={draft}
+              onChangeText={setDraft}
+              multiline
+            />
+            <Pressable
+              style={[styles.sendBtn, (!draft.trim() || sending) && styles.sendBtnDisabled]}
+              onPress={handleSend}
+              disabled={!draft.trim() || sending}
+            >
+              {sending ? (
+                <ActivityIndicator color={colors.white} size="small" />
+              ) : (
+                <Ionicons name="send" size={sc(17)} color={colors.white} />
+              )}
+            </Pressable>
+          </View>
+        )}
         {/* El inset de abajo (home indicator) usa el fondo gris de la pantalla --
             esto lo pinta blanco para que combine con la barra de mensaje. */}
         <View style={{ height: insets.bottom, backgroundColor: colors.surface }} />

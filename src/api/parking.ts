@@ -209,8 +209,13 @@ export async function searchParkingSpots(
   return request(`/parking-spots/search?${query.toString()}`);
 }
 
-export async function getParkingSpotDetail(id: string): Promise<ParkingSpotApiResponse> {
-  return request(`/parking-spots/${id}`);
+/** `includeDeleted`: also resolves a spot its owner deleted (status "deleted") -- for a booking's
+ * screens, which still have to say which spot it was. */
+export async function getParkingSpotDetail(
+  id: string,
+  { includeDeleted = false }: { includeDeleted?: boolean } = {},
+): Promise<ParkingSpotApiResponse> {
+  return request(`/parking-spots/${id}${includeDeleted ? '?includeDeleted=true' : ''}`);
 }
 
 /**
@@ -219,9 +224,12 @@ export async function getParkingSpotDetail(id: string): Promise<ParkingSpotApiRe
  * títulos de una sola vez en vez de un request por cochera. Cualquier id que
  * no exista o no esté ACTIVE/PAUSED simplemente no aparece en el array.
  */
-export async function getParkingSpotsByIds(ids: string[]): Promise<ParkingSpotApiResponse[]> {
+export async function getParkingSpotsByIds(
+  ids: string[],
+  { includeDeleted = false }: { includeDeleted?: boolean } = {},
+): Promise<ParkingSpotApiResponse[]> {
   if (ids.length === 0) return [];
-  return request(`/parking-spots?ids=${ids.join(',')}`);
+  return request(`/parking-spots?ids=${ids.join(',')}${includeDeleted ? '&includeDeleted=true' : ''}`);
 }
 
 export async function getParkingSpotsForOwner(ownerId: string): Promise<ParkingSpotApiResponse[]> {

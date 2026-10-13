@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getAvailability } from '@/src/api/parking';
 import { addDaysISO } from '@/src/services/dateUtils';
-import { Interval, mergeFreeWindows } from '@/src/services/bookingRange';
+import { Interval, firstFreeStart, mergeFreeWindows } from '@/src/services/bookingRange';
 
 const REFRESH_INTERVAL_MS = 30_000;
 
@@ -90,4 +90,22 @@ export function useAvailability(
   }, [fetch]);
 
   return { windows, loading, error, refresh: fetch };
+}
+
+/** How far ahead findFirstFreeStart looks, in requests of up to 14 days (parking-service's cap). */
+const FIRST_FREE_SEARCH_DAYS = 56;
+const SEARCH_CHUNK_DAYS = 14;
+
+/**
+ * The first moment the spot can be booked from `fromISO` on (see firstFreeStart), looking
+ * up to FIRST_FREE_SEARCH_DAYS ahead -- null if it's fully booked or closed all that time.
+ */
+export async function findFirstFreeStart(parkingSpotId: string, fromISO: string, nowMs: number): Promise<number | null> {
+  for (let offset = 0; offset < FIRST_FREE_SEARCH_DAYS; offset += SEARCH_CHUNK_DAYS) {
+    const from = addDaysISO(fromISO, offset);
+    const { days } = await getAvailability(parkingSpotId, from, addDaysISO(from, SEARCH_CHUNK_DAYS));
+    const startMs = firstFreeStart(mergeFreeWindows(days), nowMs);
+    if (startMs !== null) return startMs;
+  }
+  return null;
 }

@@ -29,6 +29,8 @@ import { getParkingSpotDetail } from '@/src/api/parking';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { mapBookingDateRange, formatBookingWhen, formatLongDateFromISO, formatLongDateTime, toVehicleSnapshot, ownerEarningsFrom } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
+import { PaymentDueCard } from '@/src/components/PaymentDue';
+import { SpotSummaryRow } from '@/src/components/SpotSummaryCard';
 import { useScale } from '@/src/theme/typography';
 
 /** Maps the backend wire shape to the UI Booking type -- same mapping as the
@@ -55,6 +57,7 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string, ownerId: string
     paidAt: b.paid_at,
     cancellationReason: b.cancellation_reason,
     verificationCode: b.verification_code,
+    holdExpiresAt: b.hold_expires_at,
     vehicle: toVehicleSnapshot(b.vehicle),
   };
 }
@@ -99,6 +102,8 @@ export default function DriverBookingDetail() {
   const sc = (n: number) => Math.round(n * scale);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [spotLocation, setSpotLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
+  // The booked spot as it is now: its photo for the header, and whether it's still listed.
+  const [spotInfo, setSpotInfo] = useState<{ address: string; photoUrl: string | null; status: string } | null>(null);
   const [driverName, setDriverName] = useState<string | null>(null);
   const [ownerName, setOwnerName] = useState<string | null>(null);
   const [error, setError] = useState(false);
@@ -118,9 +123,11 @@ export default function DriverBookingDetail() {
     if (!id) return;
     getBookingApi(id)
       .then(async (raw) => {
-        const spot = await getParkingSpotDetail(raw.parking_spot_id).catch(() => null);
+        // Even if its owner deleted it: the booking still has to say which spot it was.
+        const spot = await getParkingSpotDetail(raw.parking_spot_id, { includeDeleted: true }).catch(() => null);
         setBooking(mapApiBooking(raw, spot?.title ?? raw.parking_spot_id, spot?.ownerId ?? ''));
-        setSpotLocation(spot ? { lat: spot.lat, lng: spot.lng, address: spot.address } : null);
+        setSpotLocation(spot && spot.status !== 'deleted' ? { lat: spot.lat, lng: spot.lng, address: spot.address } : null);
+        setSpotInfo(spot ? { address: spot.address, photoUrl: spot.photos?.[0] ?? null, status: spot.status } : null);
         if (isOwnerView) {
           getPublicProfileApi(raw.user_id)
             .then((profile) => setDriverName(profile.name))
@@ -216,8 +223,11 @@ export default function DriverBookingDetail() {
       padding: 16,
       gap: 10,
     },
-    titleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
-    spotTitle: { flex: 1, fontSize: sc(19), fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
+    spotNotice: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: '#FFFBEB',
+    },
+    spotNoticeText: { flex: 1, fontSize: sc(13), lineHeight: sc(18), color: '#92400E' },
     kindRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     kindText: { fontSize: sc(13), fontWeight: '600', color: colors.teal },
 
@@ -359,11 +369,23 @@ export default function DriverBookingDetail() {
   // paid" -- only true once the booking is actually confirmed and stays that way
   // (CONFIRMED/IN_PROGRESS/COMPLETED), never for PENDING_OWNER_APPROVAL, EXPIRED, or
   // CANCELLED, regardless of whether the money moved at some point.
+  // The payment went through at some point (paymentId alone: paid before paidAt existed).
+  const wasPaid = !!booking.paidAt || !!booking.paymentId;
   const isPaidAndConfirmed = booking.paidAt != null &&
     (booking.status === 'CONFIRMED' || booking.status === 'IN_PROGRESS' || booking.status === 'COMPLETED');
   const paidDate = isPaidAndConfirmed && booking.paidAt ? new Date(booking.paidAt) : null;
   // Directions only help the driver, and only while they still have to get there -- the
   // owner knows where their own spot is.
+  // The driver goes to the spot's public listing; its owner, to their own spot's page.
+  const openSpot = () =>
+    router.push(`${group}/${isOwnerView ? 'spots' : 'spot'}/${booking.parkingSpotId}` as never);
+  // A booked spot that's no longer listed: paused (it may come back) or deleted for good.
+  const spotNotice: { icon: React.ComponentProps<typeof Ionicons>['name']; text: string } | null =
+    spotInfo?.status === 'paused'
+      ? { icon: 'pause-circle-outline', text: t(isOwnerView ? 'booking.spot.pausedOwner' : 'booking.spot.paused') }
+      : spotInfo?.status === 'deleted'
+        ? { icon: 'trash-outline', text: t(isOwnerView ? 'booking.spot.deletedOwner' : 'booking.spot.deleted') }
+        : null;
   const showDirections = !isOwnerView && !!spotLocation &&
     (booking.status === 'PENDING_OWNER_APPROVAL' || booking.status === 'CONFIRMED' || booking.status === 'IN_PROGRESS');
 
@@ -371,21 +393,41 @@ export default function DriverBookingDetail() {
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.body}>
+          {!isOwnerView && booking.status === 'PENDING_PAYMENT' && (
+            <PaymentDueCard
+              bookingId={booking.id}
+              holdExpiresAt={booking.holdExpiresAt}
+              spotTitle={booking.parkingSpotTitle}
+              when={formatBookingWhen(booking, t('driver.booking.timeTo'))}
+            />
+          )}
           {/* Hero: todo lo que responde "qué reservé, cuándo, cuánto salió" en una
               sola tarjeta -- antes el título y el Resumen vivían en tarjetas
               separadas con Mensajes/Ayuda metidos en el medio, cortando la lectura
               entre el nombre de la cochera y su propio resumen. */}
           <View style={styles.heroCard}>
-            <View style={styles.titleRow}>
-              <Text style={styles.spotTitle}>{booking.parkingSpotTitle}</Text>
-              <StatusBadge status={booking.status} />
-            </View>
+            {/* The spot: tapping it opens its listing (the owner, their own spot's page) -- unless
+                it was deleted. A spot that's no longer listed says so. */}
+            <SpotSummaryRow
+              title={booking.parkingSpotTitle}
+              address={spotInfo?.address}
+              photoUrl={spotInfo?.photoUrl}
+              onPress={spotInfo && spotInfo.status !== 'deleted' ? openSpot : undefined}
+            />
+            {spotNotice && (
+              <View style={styles.spotNotice}>
+                <Ionicons name={spotNotice.icon} size={sc(16)} color={colors.warning} />
+                <Text style={styles.spotNoticeText}>{spotNotice.text}</Text>
+              </View>
+            )}
 
             <View style={styles.kindRow}>
               <Ionicons name={booking.kind === 'STAY' ? 'calendar-outline' : 'time-outline'} size={sc(14)} color={colors.teal} />
               <Text style={styles.kindText}>
                 {t(booking.kind === 'STAY' ? 'driver.booking.kind.stay' : 'driver.booking.kind.hourly')}
               </Text>
+              <View style={{ flex: 1 }} />
+              <StatusBadge status={booking.status} />
             </View>
 
             {isOwnerView && driverName && (
@@ -526,7 +568,7 @@ export default function DriverBookingDetail() {
                       <Ionicons
                         name={refund?.status === 'refunded' ? 'checkmark-circle' : 'time-outline'}
                         size={18}
-                        color={refund?.status === 'refunded' ? colors.success : colors.warning}
+                        color={refund?.status === 'refunded' ? colors.teal : colors.warning}
                       />
                       <Text style={styles.refundBody}>
                         {refund?.status === 'refunded'
@@ -605,14 +647,20 @@ export default function DriverBookingDetail() {
                 </>
               )}
 
-              <Pressable style={styles.sectionHeader} onPress={() => router.push(`${group}/bookings/${id}/messages`)}>
-                <Ionicons name="chatbubble-outline" size={sc(15)} color={colors.textSecondary} />
-                <Text style={styles.sectionLabel}>{t('driver.booking.messages.link')}</Text>
-                <View style={{ flex: 1 }} />
-                <Ionicons name="chevron-forward" size={sc(13)} color={colors.teal} />
-              </Pressable>
+              {/* Messages open up once the booking is paid -- booking-service refuses them
+                  before (BOOKING_NOT_PAID). */}
+              {wasPaid && (
+                <>
+                  <Pressable style={styles.sectionHeader} onPress={() => router.push(`${group}/bookings/${id}/messages`)}>
+                    <Ionicons name="chatbubble-outline" size={sc(15)} color={colors.textSecondary} />
+                    <Text style={styles.sectionLabel}>{t('driver.booking.messages.link')}</Text>
+                    <View style={{ flex: 1 }} />
+                    <Ionicons name="chevron-forward" size={sc(13)} color={colors.teal} />
+                  </Pressable>
 
-              <View style={styles.divider} />
+                  <View style={styles.divider} />
+                </>
+              )}
 
               <Pressable style={styles.sectionHeader} onPress={() => router.push(`${group}/bookings/${id}/tickets`)}>
                 <Ionicons name="help-buoy-outline" size={sc(15)} color={colors.textSecondary} />
@@ -635,7 +683,7 @@ export default function DriverBookingDetail() {
               />
             ) : (
               <View style={styles.reviewedRow}>
-                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                <Ionicons name="checkmark-circle" size={18} color={colors.teal} />
                 <Text style={styles.reviewedText}>{t('booking.review.done')}</Text>
               </View>
             )}

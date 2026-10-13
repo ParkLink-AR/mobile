@@ -198,7 +198,7 @@ export default function DriverProfileEdit() {
                   <Ionicons
                     name="checkmark-circle"
                     size={sc(16)}
-                    color={colors.success}
+                    color={colors.teal}
                     accessibilityLabel={t('profile.edit.verified')}
                   />
                 )}
@@ -219,7 +219,7 @@ export default function DriverProfileEdit() {
                   <Ionicons
                     name="checkmark-circle"
                     size={sc(16)}
-                    color={colors.success}
+                    color={colors.teal}
                     accessibilityLabel={t('profile.edit.verified')}
                   />
                 )}

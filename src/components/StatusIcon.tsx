@@ -23,7 +23,7 @@ interface StatusIconProps {
  */
 export function StatusIcon({ variant, size = 72 }: StatusIconProps) {
   const colors = useThemeColors();
-  const color = variant === 'success' ? colors.success : variant === 'error' ? colors.warning : colors.textSecondary;
+  const color = variant === 'success' ? colors.teal : variant === 'error' ? colors.warning : colors.textSecondary;
 
   const styles = StyleSheet.create({
     wrap: {

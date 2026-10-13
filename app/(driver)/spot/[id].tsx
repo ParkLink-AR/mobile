@@ -1,7 +1,8 @@
 import { t, useLanguage } from '@/src/i18n';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Pressable, Image } from 'react-native';
 import { useLocalSearchParams, router, useFocusEffect, useSegments } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { FAVORITE_RED } from '@/src/components/ParkingSpotCard';
 import { formatShortDate, formatWeekdayDayMonth } from '@/src/services/bookingDates';
@@ -47,7 +48,8 @@ import {
 import { TimeEntrySheet } from '@/src/components/TimeEntrySheet';
 import { DayAvailabilityBar } from '@/src/components/DayAvailabilityBar';
 import { MonthAvailabilitySheet } from '@/src/components/MonthAvailabilitySheet';
-import { useAvailability } from '@/src/hooks/useAvailability';
+import { findFirstFreeStart, useAvailability } from '@/src/hooks/useAvailability';
+import { findFirstFreeStayStart } from '@/src/services/stayAvailability';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { getStayQuote, type StayQuote } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
@@ -106,6 +108,7 @@ const STAY_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => hour);
 
 export default function SpotDetail() {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
@@ -186,6 +189,27 @@ export default function SpotDetail() {
     () => (!spot || windows === null ? [] : validStartRanges(windows, selectedDateISO, nowMs)),
     [spot, windows, selectedDateISO, nowMs],
   );
+
+  // Al abrir la cochera, si hoy ya no queda nada libre, se salta solo al primer día y horario con lugar en vez de
+  // mostrar "no hay horarios" -- una sola vez, y sólo si el conductor todavía no eligió un día. Se busca hacia
+  // adelante de a 14 días (lo que ya está cargado no alcanza si la cochera está llena varias semanas).
+  const firstFreeLookup = useRef<'idle' | 'done'>('idle');
+  const todayHasNoStart = !!spot?.hourlyEnabled && windows !== null && selectedDateOverride === '' && startRanges.length === 0;
+  useEffect(() => {
+    if (!todayHasNoStart || firstFreeLookup.current === 'done') return;
+    // Sin cancelar en el cleanup: en modo estricto el efecto corre dos veces y la segunda ya no busca.
+    firstFreeLookup.current = 'done';
+    findFirstFreeStart(id, todayArtDateISO(), Date.now())
+      .then((startMs) => {
+        if (startMs === null) return;
+        // Si mientras tanto eligió un día a mano, se respeta lo suyo.
+        setSelectedDateOverride((prev) => prev || startDateOf(startMs));
+        setStartMsOverride((prev) => prev ?? startMs);
+      })
+      .catch(() => {
+        // Sin la búsqueda queda el aviso de siempre; el conductor puede elegir otro día a mano.
+      });
+  }, [todayHasNoStart, id]);
 
   // Si el inicio elegido ya no está libre (cambió el día, se lo ganaron), cae en el sugerido. Derivado
   // en vez de sincronizado con un useEffect, para no encadenar renders.
@@ -294,6 +318,8 @@ export default function SpotDetail() {
   const [stayQuote, setStayQuote] = useState<StayQuote | null>(null);
   const [stayQuoteLoading, setStayQuoteLoading] = useState(false);
   const [stayQuoteError, setStayQuoteError] = useState<string | null>(null);
+  // The quoted dates overlap another booking (409) -- as opposed to any other quote error.
+  const [stayQuoteTaken, setStayQuoteTaken] = useState(false);
 
   // No antes de hoy ni antes de lo que el dueño configuró como
   // stayAvailableFrom -- igual que effectiveStartMs arriba, se deriva en
@@ -327,6 +353,7 @@ export default function SpotDetail() {
     let cancelled = false;
     setStayQuoteLoading(true);
     setStayQuoteError(null);
+    setStayQuoteTaken(false);
     getStayQuote(spot.id, stayStartDate, stayEndDate, stayStartHour, stayQuoteVehicleType)
       .then((quote) => {
         if (cancelled) return;
@@ -336,6 +363,7 @@ export default function SpotDetail() {
         if (cancelled) return;
         setStayQuote(null);
         setStayQuoteError(err instanceof ApiError ? err.detail : t('spot.stay.quoteError'));
+        setStayQuoteTaken(err instanceof ApiError && err.status === 409);
       })
       .finally(() => {
         if (!cancelled) setStayQuoteLoading(false);
@@ -344,6 +372,26 @@ export default function SpotDetail() {
       cancelled = true;
     };
   }, [spot?.id, spot?.stayEnabled, stayStartDate, stayEndDate, stayStartHour, stayQuoteVehicleType]);
+
+  // Lo mismo que con las horas: si la estadía que se propone al abrir (hoy -> mañana) ya está tomada, se salta sola a
+  // las primeras fechas libres en vez de mostrar el aviso -- una sola vez, y sólo si el conductor no eligió fechas.
+  const firstFreeStayLookup = useRef<'idle' | 'done'>('idle');
+  const defaultStayTaken =
+    !!spot?.stayEnabled && stayQuoteTaken && stayStartDateOverride === null && stayEndDateOverride === null;
+  useEffect(() => {
+    if (!defaultStayTaken || firstFreeStayLookup.current === 'done' || !spot) return;
+    firstFreeStayLookup.current = 'done';
+    // Desde el día siguiente al propuesto: ése ya se sabe que no entra.
+    findFirstFreeStayStart(spot.id, addOneDayISO(stayStartDate))
+      .then((startDate) => {
+        if (startDate === null) return;
+        setStayStartDateOverride((prev) => prev ?? startDate);
+        setStayEndDateOverride((prev) => prev ?? addOneDayISO(startDate));
+      })
+      .catch(() => {
+        // Sin la búsqueda queda el aviso de siempre; las fechas se pueden elegir a mano.
+      });
+  }, [defaultStayTaken, spot, stayStartDate]);
 
   if (!spot) return null;
 
@@ -470,19 +518,26 @@ export default function SpotDetail() {
     priceLineText: { fontSize: sc(14), color: colors.text },
     breakdown: { fontSize: sc(13), color: colors.textSecondary, marginTop: 6 },
 
+    // Same as the payment screen's: the screen's own background instead of a white panel, and it runs to the
+    // bottom edge (the home indicator sits over its padding). The content scrolls under it, so a soft shadow
+    // upwards -- not a divider line -- is what sets it apart.
     footer: {
       flexDirection: 'row', alignItems: 'center', gap: 16,
-      paddingHorizontal: 22, paddingTop: 12, paddingBottom: 12,
-      borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
-      backgroundColor: colors.surface,
+      paddingHorizontal: 22, paddingTop: sc(12), paddingBottom: insets.bottom + sc(10),
+      backgroundColor: colors.background,
+      shadowColor: '#042347', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: -6 }, elevation: 12,
     },
     footerInfo: { flex: 1 },
     footerTotal: { fontSize: sc(18), fontWeight: '700', color: colors.teal },
     footerWhen: { fontSize: sc(13), color: colors.textSecondary, marginTop: 1 },
-    footerButton: { minWidth: 130 },
+    footerButton: {
+      minWidth: 130, borderRadius: 14, paddingVertical: sc(14),
+      shadowColor: colors.teal, shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3,
+    },
     editBtn: {
       flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-      backgroundColor: colors.teal, borderRadius: 12, paddingVertical: 14,
+      backgroundColor: colors.teal, borderRadius: 14, paddingVertical: sc(14),
+      shadowColor: colors.teal, shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3,
     },
     editBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.white },
   });
@@ -574,7 +629,7 @@ export default function SpotDetail() {
   ].filter(Boolean).join(' · ');
 
   return (
-    <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
+    <Screen style={styles.screen} edges={['left', 'right']}>
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.photoWrapper}>
           <PhotoGallery photos={spot.photos} fallbackUri={spot.photoUrl} />
@@ -951,6 +1006,13 @@ export default function SpotDetail() {
             <Ionicons name="pencil-outline" size={sc(16)} color={colors.white} />
             <Text style={styles.editBtnText}>{t('spot.editSpot')}</Text>
           </TouchableOpacity>
+        ) : spot.status !== 'active' ? (
+          // Paused (or otherwise not listed) -- reached from an old booking or a favorite: it
+          // can be looked at, not booked.
+          <View style={[styles.footerInfo, { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: sc(6) }]}>
+            <Ionicons name="pause-circle-outline" size={sc(22)} color={colors.warning} />
+            <Text style={[styles.footerWhen, { flex: 1, fontSize: sc(14), color: colors.text }]}>{t('spot.notBookable')}</Text>
+          </View>
         ) : showHourly ? (
           <>
             <View style={styles.footerInfo}>

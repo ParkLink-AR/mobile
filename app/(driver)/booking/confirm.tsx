@@ -1,9 +1,8 @@
 import { t, useLanguage } from '@/src/i18n';
 import { ApiError } from '@/src/api/client';
 import { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, ScrollView, StyleSheet, Alert, Platform, Modal, Pressable, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, ActivityIndicator, ScrollView, StyleSheet, Alert, Modal, Pressable, TouchableWithoutFeedback } from 'react-native';
 import { useLocalSearchParams, useSegments, router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
@@ -17,9 +16,11 @@ import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { getAvailability } from '@/src/api/parking';
 import { ParkingSpot } from '@/src/types';
 import { VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
+import { openCheckout } from '@/src/services/checkout';
 import { createBookingApi, createPaymentPreference, type ScheduleEntryBody } from '@/src/api/booking';
 import { bookingVehicleBody, useBookingVehicle, vehicleErrorMessage } from '@/src/services/bookingVehicle';
 import { PaymentMethodDisplay } from '@/src/components/PaymentMethodDisplay';
+import { SpotSummaryCard } from '@/src/components/SpotSummaryCard';
 import { VehiclePicker } from '@/src/components/VehiclePicker';
 import { formatLongDateTime, formatShortDate } from '@/src/services/bookingDates';
 import { addDaysISO } from '@/src/services/dateUtils';
@@ -174,32 +175,8 @@ export default function ConfirmBooking() {
       return;
     }
 
-    // ── Step 3: open MP checkout as an auth session ─────────────────────────
-    // openAuthSessionAsync (not openBrowserAsync) is the API built for this
-    // exact pattern -- it watches for the parklink://payment/pending redirect
-    // and closes the browser itself as soon as it fires, instead of relying
-    // on the OS to notice the deep link and dismiss it on its own. That used
-    // to race against the router.replace below: Expo Router would sometimes
-    // already be navigating from the deep link while this code also
-    // navigated, landing the user on whichever screen won the race.
-    //
-    // Web only: expo-web-browser's web implementation opens the auth session
-    // via window.open(), which browsers require to fire synchronously from
-    // the user's tap -- by this point we've already awaited two API calls
-    // (create booking, create preference), so it no longer qualifies and
-    // openAuthSessionAsync throws ERR_WEB_BROWSER_BLOCKED. openBrowserAsync
-    // doesn't have that restriction there; native has neither restriction.
-    if (Platform.OS === 'web') {
-      await WebBrowser.openBrowserAsync(checkoutUrl, {
-        dismissButtonStyle: 'cancel',
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-      });
-    } else {
-      await WebBrowser.openAuthSessionAsync(checkoutUrl, 'parklink://payment', {
-        dismissButtonStyle: 'cancel',
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-      });
-    }
+    // ── Step 3: open the Mercado Pago checkout (see openCheckout) ─────────────
+    await openCheckout(checkoutUrl);
 
     // ── Step 4: navigate to pending screen to poll for confirmation ─────────
     // This runs after the browser closes (either by redirect or by the user
@@ -237,17 +214,6 @@ export default function ConfirmBooking() {
     screen: { flex: 1, backgroundColor: colors.background },
     body: { padding: 16, gap: 14 },
 
-    heroCard: {
-      backgroundColor: colors.surface,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: 16,
-      gap: 4,
-    },
-    spotTitle: { fontSize: sc(19), fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
-    addressRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    spotAddress: { flex: 1, fontSize: sc(13), color: colors.textSecondary, lineHeight: sc(17) },
 
     card: { gap: 12 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -298,13 +264,7 @@ export default function ConfirmBooking() {
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.body}>
-          <View style={styles.heroCard}>
-            <Text style={styles.spotTitle}>{spot.title}</Text>
-            <View style={styles.addressRow}>
-              <Ionicons name="location-outline" size={sc(14)} color={colors.textSecondary} />
-              <Text style={styles.spotAddress} numberOfLines={2}>{spot.address}</Text>
-            </View>
-          </View>
+          <SpotSummaryCard spot={spot} />
 
           <Card>
             <View style={styles.card}>

@@ -8,6 +8,7 @@ import {
   barSpan,
   barTicks,
   endRangeOnDate,
+  firstFreeStart,
   formatArtTime,
   formatRanges,
   freeRangesIn,
@@ -312,5 +313,30 @@ describe('availability bar', () => {
 
   it('ignores a tap on something unavailable', () => {
     expect(pickStartFromTap(startRanges, art(14, 10, 0))).toBeNull();
+  });
+});
+
+describe('firstFreeStart', () => {
+  it('skips a day with nothing free and lands on the next free window', () => {
+    // Hoy (12) a las 20:00 no queda nada; mañana abre a las 8.
+    const windows = [{ startMs: art(13, 8), endMs: art(13, 18) }];
+    expect(firstFreeStart(windows, art(12, 20))).toBe(art(13, 8));
+  });
+
+  it('starts a window already open at now, rounded up to 15 minutes', () => {
+    const windows = [{ startMs: art(12, 8), endMs: art(12, 22) }];
+    expect(firstFreeStart(windows, art(12, 10, 7))).toBe(art(12, 10, 15));
+  });
+
+  it('skips what is left of a window too short to book', () => {
+    const windows = [
+      { startMs: art(12, 8), endMs: art(12, 10, 20) },
+      { startMs: art(14, 9), endMs: art(14, 12) },
+    ];
+    expect(firstFreeStart(windows, art(12, 10, 5))).toBe(art(14, 9));
+  });
+
+  it('is null when nothing is free', () => {
+    expect(firstFreeStart([], art(12, 10))).toBeNull();
   });
 });

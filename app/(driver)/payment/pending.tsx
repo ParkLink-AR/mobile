@@ -1,30 +1,34 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Animated, Easing, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Animated, Easing, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useSegments, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
 import { MercadoPagoLogo } from '@/src/components/MercadoPagoLogo';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useScale } from '@/src/theme/typography';
-import { request } from '@/src/api/client';
+import { ApiError, request } from '@/src/api/client';
 import { BookingApiResponse, getBookingApi } from '@/src/api/booking';
 import { getParkingSpotDetail } from '@/src/services/parkingService';
 import { usePaymentApprovedSound } from '@/src/services/paymentSound';
 import { formatBookingWhen, formatLongDateFromISO, formatTime, mapBookingDateRange, toVehicleSnapshot } from '@/src/services/bookingDates';
 import { vehicleSummary } from '@/src/components/VehicleIdentity';
+import { formatCountdown, holdRemainingMs, resumeCheckout, useHoldCountdown } from '@/src/services/checkout';
+import { useSessionStore } from '@/src/store/useSessionStore';
 
 // 'refunded': Mercado Pago approved the payment, but the booking couldn't take it (its
 // hold ran out first) -- payment-service refunds it automatically.
-type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'refunded' | 'unknown';
+// 'expired': nothing was paid and the booking's hold ran out -- the spot is free again.
+type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'refunded' | 'expired' | 'unknown';
 
 // Statuses a booking can only reach once its payment was actually accepted.
 const PAID_BOOKING_STATUSES = new Set(['PENDING_OWNER_APPROVAL', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED']);
 
 interface VerifyStatusResponse {
   currentStatus: string;
-  transaction?: { approved_at?: string | null } | null;
+  transaction?: { payment_id?: string | null; approved_at?: string | null } | null;
 }
 
 // Poll every 2 seconds, up to 2 minutes (60 attempts).
@@ -75,6 +79,18 @@ export default function PaymentPendingScreen() {
   const [booking, setBooking] = useState<BookingApiResponse | null>(null);
   const [spotTitle, setSpotTitle] = useState<string | null>(null);
   const pollCount = useRef(0);
+  // Bumped each time the driver goes back to Mercado Pago, to watch the new attempt.
+  const [attempt, setAttempt] = useState(0);
+  const [resuming, setResuming] = useState(false);
+  // Mercado Pago already has a payment in process for it: don't offer paying again.
+  const [paymentInFlight, setPaymentInFlight] = useState(false);
+  // An attempt that already failed: after going back to the checkout, verify-status keeps
+  // answering with it until the new one exists, and that mustn't read as a new rejection.
+  const failedPaymentId = useRef<string | null>(null);
+  const userEmail = useSessionStore((s) => s.user?.email);
+  const insets = useSafeAreaInsets();
+  // Time left to pay while the booking still awaits payment (0 otherwise).
+  const remaining = useHoldCountdown(booking?.status === 'PENDING_PAYMENT' ? booking.hold_expires_at : null);
   // Loaded with the screen so it plays the instant the payment is approved; through a ref
   // because the polling effect below only restarts for a new booking.
   const playApproved = usePaymentApprovedSound();
@@ -102,6 +118,7 @@ export default function PaymentPendingScreen() {
     // the approval played the chime twice.
     let checking = false;
     let settled = false;
+    pollCount.current = 0;
     const timer = setInterval(async () => {
       if (checking || settled) return;
       checking = true;
@@ -139,15 +156,38 @@ export default function PaymentPendingScreen() {
           }
           // Still PENDING_PAYMENT: the confirmation hit a transient error and the next
           // verify-status retries it -- keep polling (MAX_POLLS still bounds this).
-        } else if (mpStatus === 'rejected' || mpStatus === 'cancelled' || mpStatus === 'refunded') {
+        } else if (
+          (mpStatus === 'rejected' || mpStatus === 'cancelled' || mpStatus === 'refunded') &&
+          (res?.transaction?.payment_id ?? null) !== failedPaymentId.current
+        ) {
           settled = true;
           clearInterval(timer);
+          failedPaymentId.current = res?.transaction?.payment_id ?? null;
           setStatus('rejected');
+        }
+        if (mpStatus === 'pending' || mpStatus === 'in_process' || mpStatus === 'authorized') {
+          setPaymentInFlight(true);
         }
         // 'pending', 'in_process', 'authorized' → keep polling
       } catch (err) {
         // Log so we can diagnose issues (404 = not found yet, 401 = auth issue, etc.)
         console.warn('[PaymentPending] poll error:', err);
+      }
+      // Nothing paid and the hold is over: the booking expires and the spot is free again.
+      if (!settled) {
+        try {
+          const current = await getBookingApi(bookingId);
+          if (current.status === 'PENDING_PAYMENT') {
+            setBooking((prev) => (prev?.hold_expires_at === current.hold_expires_at ? prev : current));
+          } else if (current.status === 'EXPIRED' && holdRemainingMs(current.hold_expires_at) === 0) {
+            settled = true;
+            clearInterval(timer);
+            setBooking(current);
+            setStatus('expired');
+          }
+        } catch {
+          // Checked again on the next poll.
+        }
       }
       checking = false;
       if (!settled && pollCount.current >= MAX_POLLS) {
@@ -161,11 +201,35 @@ export default function PaymentPendingScreen() {
       settled = true;
       clearInterval(timer);
     };
-  }, [bookingId]);
+  }, [bookingId, attempt]);
+
+  // Back to Mercado Pago for this same booking -- the driver closed the checkout by
+  // mistake, or wants to try again after a declined card -- then watch for the payment.
+  async function resume() {
+    if (!booking || resuming) return;
+    setResuming(true);
+    try {
+      await resumeCheckout(booking.id, {
+        spotTitle,
+        when: formatBookingWhen(mapBookingDateRange(booking.start, booking.end), t('driver.booking.timeTo')),
+        payerEmail: userEmail,
+      });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        // Its hold ran out meanwhile (or it got paid): the next check shows how it ended.
+      } else {
+        Alert.alert(t('driver.payment.errorTitle'), t('driver.payment.errorCreatingPreference'));
+      }
+    } finally {
+      setResuming(false);
+      setStatus('pending');
+      setAttempt((n) => n + 1);
+    }
+  }
 
   const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    scroll: { paddingHorizontal: 24, paddingTop: sc(40), paddingBottom: 24, gap: sc(20) },
+    scroll: { paddingHorizontal: 24, paddingTop: sc(40), paddingBottom: sc(12), gap: sc(20) },
     heading: { alignItems: 'center', gap: 8 },
     title: { fontSize: sc(24), fontWeight: '800', color: colors.text, textAlign: 'center' },
     subtitle: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
@@ -176,9 +240,15 @@ export default function PaymentPendingScreen() {
     },
     note: { flexDirection: 'row', gap: 10, padding: 14, borderRadius: 14, borderWidth: 1 },
     noteText: { flex: 1, fontSize: sc(14), lineHeight: sc(20) },
+    // Part of the screen, not a panel stuck on it: same background, no divider, and it
+    // runs to the bottom edge (the home indicator sits over its padding, not under a gap).
     footer: {
-      paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16, gap: 4,
-      borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface,
+      paddingHorizontal: 24, paddingTop: sc(10), paddingBottom: insets.bottom + sc(6),
+      backgroundColor: colors.background,
+    },
+    primary: {
+      borderRadius: 14, paddingVertical: sc(14),
+      shadowColor: colors.teal, shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3,
     },
   });
 
@@ -195,9 +265,10 @@ export default function PaymentPendingScreen() {
 
   const hero = {
     pending: { tone: colors.teal, icon: 'card-outline' as IconName },
-    approved: { tone: SUCCESS, icon: 'checkmark' as IconName },
+    approved: { tone: colors.teal, icon: 'checkmark' as IconName },
     rejected: { tone: DANGER, icon: 'close' as IconName },
     refunded: { tone: WARNING, icon: 'time-outline' as IconName },
+    expired: { tone: WARNING, icon: 'time-outline' as IconName },
     unknown: { tone: WARNING, icon: 'hourglass-outline' as IconName },
   }[status];
 
@@ -206,6 +277,7 @@ export default function PaymentPendingScreen() {
     approved: awaitingOwner ? t('driver.payment.result.awaitingTitle') : t('driver.payment.result.approvedTitle'),
     rejected: t('driver.payment.result.rejectedTitle'),
     refunded: t('driver.payment.result.refundedTitle'),
+    expired: t('driver.payment.result.expiredTitle'),
     unknown: t('driver.payment.result.unknownTitle'),
   }[status];
 
@@ -214,8 +286,23 @@ export default function PaymentPendingScreen() {
     approved: approvedAt ? formatPaidAt(approvedAt) : t('driver.payment.result.approvedBody'),
     rejected: t('driver.payment.result.rejectedBody'),
     refunded: t('driver.payment.result.refundedBody'),
+    expired: t('driver.payment.result.expiredBody'),
     unknown: t('driver.payment.result.unknownBody'),
   }[status];
+
+  // Still payable: the booking awaits payment and its hold hasn't run out.
+  const canResume =
+    booking?.status === 'PENDING_PAYMENT' && remaining > 0 && !paymentInFlight &&
+    (status === 'pending' || status === 'rejected' || status === 'unknown');
+  const resumeButton = resuming ? (
+    <ActivityIndicator color={colors.teal} style={{ paddingVertical: sc(14) }} />
+  ) : (
+    <Button
+      title={t(status === 'rejected' ? 'driver.payment.resume.retry' : 'driver.payment.resume.button')}
+      onPress={resume}
+      style={styles.primary}
+    />
+  );
 
   const goToBooking = () => router.replace(`${group}/bookings/${bookingId}` as never);
   const goHome = () => router.replace(`${group}/(tabs)` as never);
@@ -224,7 +311,7 @@ export default function PaymentPendingScreen() {
     booking ? router.replace(`${group}/spot/${booking.parking_spot_id}` as never) : goHome();
 
   return (
-    <Screen style={styles.screen} edges={['top', 'left', 'right', 'bottom']}>
+    <Screen style={styles.screen} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <StatusHero tone={hero.tone} icon={hero.icon} busy={status === 'pending'} key={status} />
 
@@ -260,12 +347,19 @@ export default function PaymentPendingScreen() {
               booking={booking}
               spotTitle={spotTitle}
               showPaid={status === 'approved'}
-              faded={status === 'rejected' || status === 'refunded'}
+              faded={status === 'rejected' || status === 'refunded' || status === 'expired'}
             />
           </View>
         ) : null}
 
-        {status === 'pending' ? (
+        {canResume ? (
+          <View style={[styles.note, { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }]}>
+            <Ionicons name="time-outline" size={sc(18)} color={WARNING} />
+            <Text style={[styles.noteText, { color: '#92400E' }]}>
+              {t('driver.payment.resume.timeLeft', { time: formatCountdown(remaining) })}
+            </Text>
+          </View>
+        ) : status === 'pending' ? (
           <Text style={[styles.subtitle, { fontSize: sc(13) }]}>{t('driver.payment.result.pendingHint')}</Text>
         ) : null}
       </ScrollView>
@@ -273,16 +367,21 @@ export default function PaymentPendingScreen() {
       <View style={styles.footer}>
         {status === 'approved' ? (
           <>
-            <Button title={t('driver.payment.result.viewBooking')} onPress={goToBooking} />
+            <Button title={t('driver.payment.result.viewBooking')} onPress={goToBooking} style={styles.primary} />
             <SecondaryAction label={t('driver.payment.result.goHome')} onPress={goHome} />
           </>
-        ) : status === 'rejected' || status === 'refunded' ? (
+        ) : canResume ? (
           <>
-            <Button title={t('driver.payment.result.backToSpot')} onPress={goToSpot} />
+            {resumeButton}
+            <SecondaryAction label={t('driver.booking.success.viewBookings')} onPress={goToBookings} />
+          </>
+        ) : status === 'rejected' || status === 'refunded' || status === 'expired' ? (
+          <>
+            <Button title={t('driver.payment.result.backToSpot')} onPress={goToSpot} style={styles.primary} />
             <SecondaryAction label={t('driver.payment.result.goHome')} onPress={goHome} />
           </>
         ) : status === 'unknown' ? (
-          <Button title={t('driver.booking.success.viewBookings')} onPress={goToBookings} />
+          <Button title={t('driver.booking.success.viewBookings')} onPress={goToBookings} style={styles.primary} />
         ) : (
           // Pending: nothing to cancel -- an unpaid hold just expires on its own
           // (POST /bookings/{id}/cancel doesn't take PENDING_PAYMENT).
@@ -361,20 +460,20 @@ function Steps({ steps }: { steps: { label: string; state: StepState }[] }) {
     <View>
       {steps.map((step, index) => {
         const last = index === steps.length - 1;
-        const color = step.state === 'done' ? SUCCESS : step.state === 'current' ? colors.teal : colors.border;
+        const color = step.state === 'done' || step.state === 'current' ? colors.teal : colors.border;
         return (
           <View key={step.label} style={styles.row}>
             <View style={styles.rail}>
               <View
                 style={[
                   styles.dot,
-                  { borderColor: color, backgroundColor: step.state === 'done' ? SUCCESS : colors.surface },
+                  { borderColor: color, backgroundColor: step.state === 'done' ? colors.teal : colors.surface },
                 ]}
               >
                 {step.state === 'done' ? <Ionicons name="checkmark" size={sc(14)} color="#FFFFFF" /> : null}
                 {step.state === 'current' ? <View style={styles.currentDot} /> : null}
               </View>
-              {!last ? <View style={[styles.line, { backgroundColor: step.state === 'done' ? SUCCESS : colors.border }]} /> : null}
+              {!last ? <View style={[styles.line, { backgroundColor: step.state === 'done' ? colors.teal : colors.border }]} /> : null}
             </View>
             <Text
               style={[
@@ -468,9 +567,10 @@ function SecondaryAction({ label, onPress }: { label: string; onPress: () => voi
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => ({ paddingVertical: sc(12), alignItems: 'center', opacity: pressed ? 0.6 : 1 })}
+      hitSlop={6}
+      style={({ pressed }) => ({ alignSelf: 'center', paddingVertical: sc(10), paddingHorizontal: sc(16), opacity: pressed ? 0.6 : 1 })}
     >
-      <Text style={{ fontSize: sc(15), fontWeight: '600', color: colors.textSecondary }}>{label}</Text>
+      <Text style={{ fontSize: sc(14), fontWeight: '600', color: colors.teal }}>{label}</Text>
     </Pressable>
   );
 }

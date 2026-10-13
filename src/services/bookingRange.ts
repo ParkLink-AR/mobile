@@ -161,6 +161,22 @@ export function defaultStart(ranges: Interval[], nowMs: number): number | null {
   return ranges[0]?.startMs ?? null;
 }
 
+/**
+ * El primer inicio posible en cualquier día de `windows` (con al menos MIN_BOOKING_MINUTES por delante), con el mismo
+ * redondeo que defaultStart: es a dónde salta la pantalla de la cochera cuando hoy ya no queda nada libre.
+ */
+export function firstFreeStart(windows: Interval[], nowMs: number): number | null {
+  const earliest = ceilTo(nowMs - PAST_TOLERANCE_MINUTES * MINUTE_MS, MINUTE_MS);
+  const suggested = ceilTo(nowMs, SUGGESTED_START_STEP_MINUTES * MINUTE_MS);
+  for (const window of [...windows].sort((a, b) => a.startMs - b.startMs)) {
+    if (window.endMs <= earliest) continue;
+    // Una franja que ya empezó arranca en el sugerido (ahora redondeado); una futura, en su comienzo.
+    const candidate = window.startMs < suggested ? suggested : window.startMs;
+    if (window.endMs - candidate >= MIN_BOOKING_MS) return candidate;
+  }
+  return null;
+}
+
 /** Resuelve lo tipeado para el inicio: el instante, o por qué no sirve. */
 export function resolveStartInput(
   ranges: Interval[],

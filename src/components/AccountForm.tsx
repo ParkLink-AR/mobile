@@ -9,8 +9,9 @@ type IconName = React.ComponentProps<typeof Ionicons>['name'];
 const DANGER = '#C62828';
 const DANGER_BG = '#FDECEA';
 const DANGER_BORDER = '#F5C2C0';
-const SUCCESS = '#16A34A';
-const SUCCESS_BG = '#F0FDF4';
+// A confirmed code: the app's teal, like every other checkmark.
+const SUCCESS = '#168B8D';
+const SUCCESS_BG = '#E8F4F4';
 
 /**
  * Shared look of the account forms (login, password recovery, email/code verification,
@@ -207,7 +208,7 @@ export function ConfirmedRow({ text }: { text: string }) {
     row: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
       paddingVertical: sc(14), borderRadius: 12, backgroundColor: SUCCESS_BG,
-      borderWidth: 1, borderColor: '#BBF7D0',
+      borderWidth: 1, borderColor: '#A7D3D4',
     },
     text: { fontSize: sc(15), fontWeight: '700', color: SUCCESS },
   });

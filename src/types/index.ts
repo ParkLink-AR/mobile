@@ -188,6 +188,8 @@ export interface Booking {
   // in person. Present once status is CONFIRMED; absent before or once verified
   // (server clears attempts tracking but keeps the code, we just stop needing it).
   verificationCode?: string;
+  // Until when a PENDING_PAYMENT booking can still be paid.
+  holdExpiresAt?: string;
   verifiedAt?: string;
   // The vehicle the driver picked (optionally) from their own saved list when booking --
   // a snapshot taken at creation time, not a live reference (see VehiclePlate.tsx for how

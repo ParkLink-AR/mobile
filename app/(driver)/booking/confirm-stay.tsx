@@ -1,9 +1,8 @@
 import { t, useLanguage } from '@/src/i18n';
 import { ApiError } from '@/src/api/client';
 import { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, ScrollView, StyleSheet, Alert, Platform, Modal, Pressable, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, ActivityIndicator, ScrollView, StyleSheet, Alert, Modal, Pressable, TouchableWithoutFeedback } from 'react-native';
 import { useLocalSearchParams, useSegments, router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
@@ -16,9 +15,11 @@ import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils
 import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { getStayQuote, type StayQuote } from '@/src/api/parking';
 import { ParkingSpot } from '@/src/types';
+import { openCheckout } from '@/src/services/checkout';
 import { createBookingApi, createPaymentPreference } from '@/src/api/booking';
 import { bookingVehicleBody, useBookingVehicle, vehicleErrorMessage } from '@/src/services/bookingVehicle';
 import { PaymentMethodDisplay } from '@/src/components/PaymentMethodDisplay';
+import { SpotSummaryCard } from '@/src/components/SpotSummaryCard';
 import { VehiclePicker } from '@/src/components/VehiclePicker';
 import { formatLongDateTime, formatShortDate } from '@/src/services/bookingDates';
 
@@ -155,19 +156,8 @@ export default function ConfirmStayBooking() {
       return;
     }
 
-    // openAuthSessionAsync on native, openBrowserAsync on web: see the
-    // comment in booking/confirm.tsx's equivalent step for why.
-    if (Platform.OS === 'web') {
-      await WebBrowser.openBrowserAsync(checkoutUrl, {
-        dismissButtonStyle: 'cancel',
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-      });
-    } else {
-      await WebBrowser.openAuthSessionAsync(checkoutUrl, 'parklink://payment', {
-        dismissButtonStyle: 'cancel',
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-      });
-    }
+    // Open the Mercado Pago checkout (see openCheckout).
+    await openCheckout(checkoutUrl);
 
     setProcessing(false);
     router.replace({
@@ -196,17 +186,6 @@ export default function ConfirmStayBooking() {
     screen: { flex: 1, backgroundColor: colors.background },
     body: { padding: 16, gap: 14 },
 
-    heroCard: {
-      backgroundColor: colors.surface,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: 16,
-      gap: 4,
-    },
-    spotTitle: { fontSize: sc(19), fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
-    addressRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    spotAddress: { flex: 1, fontSize: sc(13), color: colors.textSecondary, lineHeight: sc(17) },
 
     card: { gap: 12 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -257,13 +236,7 @@ export default function ConfirmStayBooking() {
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.body}>
-          <View style={styles.heroCard}>
-            <Text style={styles.spotTitle}>{spot.title}</Text>
-            <View style={styles.addressRow}>
-              <Ionicons name="location-outline" size={sc(14)} color={colors.textSecondary} />
-              <Text style={styles.spotAddress} numberOfLines={2}>{spot.address}</Text>
-            </View>
-          </View>
+          <SpotSummaryCard spot={spot} />
 
           <Card>
             <View style={styles.card}>

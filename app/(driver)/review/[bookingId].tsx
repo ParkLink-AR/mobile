@@ -11,6 +11,7 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { VehicleIdentity, vehicleDescription } from '@/src/components/VehicleIdentity';
+import { ImageViewerModal } from '@/src/components/ImageViewerModal';
 import { getBookingApi, getBookingReviewsApi, submitReviewApi, ReviewTargetType } from '@/src/api/booking';
 import { getParkingSpotDetail } from '@/src/api/parking';
 import { getPublicProfileApi } from '@/src/api/auth';
@@ -153,38 +154,39 @@ function ReviewForm({
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
   const [ratings, setRatings] = useState<Record<string, { stars: number; comment: string }>>(() =>
-    Object.fromEntries(targets.map((target) => [target.targetType, { stars: 5, comment: '' }])),
+    Object.fromEntries(targets.map((target) => [target.targetType, { stars: 0, comment: '' }])),
   );
   const [submitting, setSubmitting] = useState(false);
+  // The photo being looked at full screen (the spot's cover or a person's), if any.
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 16 },
-    card: { gap: 10 },
+    card: { gap: 14 },
     blockTitle: { fontSize: sc(15), fontWeight: '700', color: colors.text },
     bookingSummary: { gap: 8 },
     summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     summaryText: { flex: 1, fontSize: sc(14), color: colors.text, fontWeight: '600' },
     vehicleText: { fontSize: sc(13), color: colors.textSecondary },
     subjectRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    subjectImage: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.border },
+    subjectImage: { width: sc(52), height: sc(52), borderRadius: sc(26), backgroundColor: colors.border },
     subjectImageSquare: { borderRadius: 10 },
     subjectPlaceholder: { alignItems: 'center', justifyContent: 'center' },
-    subjectText: { flex: 1, gap: 2 },
-    subjectRole: { fontSize: sc(12), fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6 },
-    subjectName: { fontSize: sc(16), fontWeight: '700', color: colors.text },
-    starsRow: { flexDirection: 'row', gap: 8 },
-    star: { fontSize: sc(32), color: colors.border },
-    starActive: { color: colors.warning },
+    // Same type as the rest of the app: the section-label style ("RESUMEN", "TU VEHÍCULO") for
+    // what's being rated, the spot-title style for its name, and the form fields' inputs.
+    subjectText: { flex: 1, gap: 3 },
+    subjectRole: {
+      fontSize: sc(11), fontWeight: '700', color: colors.textSecondary,
+      textTransform: 'uppercase', letterSpacing: 0.8,
+    },
+    subjectName: { fontSize: sc(17), fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
+    starsRow: { flexDirection: 'row', gap: sc(6) },
+    starsHint: { fontSize: sc(13), color: colors.textSecondary, marginTop: -6 },
+    starsLabel: { color: colors.warning, fontWeight: '600' },
     input: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
-      minHeight: 70,
-      fontSize: sc(15),
-      textAlignVertical: 'top',
-      color: colors.text,
-      backgroundColor: colors.surface,
+      borderWidth: 1, borderColor: colors.border, borderRadius: 10,
+      padding: sc(13), minHeight: sc(84), fontSize: sc(15), lineHeight: sc(21),
+      textAlignVertical: 'top', color: colors.text, backgroundColor: colors.background,
     },
   });
 
@@ -196,7 +198,11 @@ function ReviewForm({
     setRatings((prev) => ({ ...prev, [targetType]: { ...prev[targetType], comment } }));
   }
 
+  // Nothing comes pre-rated: every card needs its stars picked before sending.
+  const allRated = targets.every((target) => ratings[target.targetType].stars > 0);
+
   async function submit() {
+    if (!allRated) return;
     setSubmitting(true);
     const results = await Promise.allSettled(
       targets.map((target) => {
@@ -220,7 +226,9 @@ function ReviewForm({
 
   return (
     <Screen form style={styles.container} edges={['left', 'right', 'bottom']}>
-      {context && (
+      {/* Which booking it was (when, and the driver's vehicle) -- only for the owner rating a
+          driver, to remember who it was. A driver rating the spot already knows. */}
+      {context && targets.some((target) => target.targetType === 'driver') && (
         <Card style={styles.bookingSummary}>
           <View style={styles.summaryRow}>
             <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
@@ -245,7 +253,10 @@ function ReviewForm({
               // without seeing anyone else's reviews first.
               <View style={styles.subjectRow}>
                 {subject.imageUri ? (
-                  <Image source={{ uri: subject.imageUri }} style={[styles.subjectImage, isSpot && styles.subjectImageSquare]} />
+                  // The spot's cover / the person's photo opens full screen (only when there's one).
+                  <Pressable onPress={() => setViewingImage(subject.imageUri)} accessibilityRole="imagebutton">
+                    <Image source={{ uri: subject.imageUri }} style={[styles.subjectImage, isSpot && styles.subjectImageSquare]} />
+                  </Pressable>
                 ) : (
                   <View style={[styles.subjectImage, styles.subjectPlaceholder, isSpot && styles.subjectImageSquare]}>
                     <Ionicons name={isSpot ? 'car-outline' : 'person'} size={22} color={colors.textSecondary} />
@@ -261,11 +272,19 @@ function ReviewForm({
             )}
             <View style={styles.starsRow}>
               {[1, 2, 3, 4, 5].map((n) => (
-                <Pressable key={n} onPress={() => setStars(target.targetType, n)}>
-                  <Text style={[styles.star, n <= stars && styles.starActive]}>★</Text>
+                <Pressable key={n} onPress={() => setStars(target.targetType, n)} hitSlop={4}>
+                  {/* Icons, like the stars on a profile or a spot -- not a font's "★". */}
+                  <Ionicons
+                    name={n <= stars ? 'star' : 'star-outline'}
+                    size={sc(30)}
+                    color={n <= stars ? colors.warning : colors.textSecondary + '80'}
+                  />
                 </Pressable>
               ))}
             </View>
+            <Text style={[styles.starsHint, stars > 0 && styles.starsLabel]}>
+              {stars > 0 ? t(`review.stars.${stars}`) : t('review.stars.hint')}
+            </Text>
             <TextInput
               style={styles.input}
               placeholder={t('driver.review.placeholder')}
@@ -280,8 +299,10 @@ function ReviewForm({
       <Button
         title={submitting ? t('review.submitting') : t('driver.review.submit')}
         onPress={submit}
-        disabled={submitting}
+        disabled={submitting || !allRated}
       />
+
+      <ImageViewerModal uri={viewingImage} onClose={() => setViewingImage(null)} />
     </Screen>
   );
 }

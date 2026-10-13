@@ -286,7 +286,7 @@ export default function NewSpot() {
       backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center',
     },
     locationConfirmedRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    locationConfirmed: { color: colors.success, fontSize: sc(12), fontWeight: '700' },
+    locationConfirmed: { color: colors.teal, fontSize: sc(12), fontWeight: '700' },
     locationError: { color: '#C62828', fontSize: sc(12) },
 
     publishBtn: { marginTop: 4 },
@@ -336,7 +336,7 @@ export default function NewSpot() {
             </View>
             {coordinates && !addressSuggestionsOpen && (
               <View style={styles.locationConfirmedRow}>
-                <Ionicons name="checkmark-circle" size={sc(14)} color={colors.success} />
+                <Ionicons name="checkmark-circle" size={sc(14)} color={colors.teal} />
                 <Text style={styles.locationConfirmed}>{t('owner.spot.new.locationConfirmed')}</Text>
               </View>
             )}

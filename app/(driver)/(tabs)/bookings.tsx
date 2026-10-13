@@ -14,6 +14,7 @@ import { getUserBookingsApi, BookingApiResponse } from '@/src/api/booking';
 import { getParkingSpotsByIds } from '@/src/api/parking';
 import { mapBookingDateRange, formatBookingWhen, toVehicleSnapshot } from '@/src/services/bookingDates';
 import { Booking } from '@/src/types';
+import { PaymentDueHint } from '@/src/components/PaymentDue';
 
 /** Maps the backend wire shape to the UI Booking type. */
 function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
@@ -33,6 +34,7 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
     total: amount,
     status: b.status as Booking['status'],
     verificationCode: b.verification_code,
+    holdExpiresAt: b.hold_expires_at,
     vehicle: toVehicleSnapshot(b.vehicle),
   };
 }
@@ -56,7 +58,8 @@ export default function DriverBookings() {
         .then(async (list) => {
           // Deduplicate spot ids and fetch all their titles in a single batch request
           const uniqueSpotIds = [...new Set(list.map((b) => b.parking_spot_id))];
-          const spots = await getParkingSpotsByIds(uniqueSpotIds).catch(() => []);
+          // Deleted spots too: a booking still has to say which spot it was for.
+          const spots = await getParkingSpotsByIds(uniqueSpotIds, { includeDeleted: true }).catch(() => []);
           const spotTitleMap: Record<string, string> = Object.fromEntries(
             spots.map((spot) => [spot.id, spot.title]),
           );
@@ -131,6 +134,7 @@ export default function DriverBookings() {
                 {formatBookingWhen(item, t('driver.booking.timeTo'))}
               </Text>
               <Text style={styles.total}>${item.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+              {item.status === 'PENDING_PAYMENT' && <PaymentDueHint holdExpiresAt={item.holdExpiresAt} />}
               {item.status === 'CONFIRMED' && item.verificationCode && (
                 <View style={styles.codeChip}>
                   <Text style={styles.codeChipText}>{t('driver.booking.code', { code: item.verificationCode })}</Text>
