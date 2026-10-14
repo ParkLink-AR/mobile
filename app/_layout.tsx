@@ -18,6 +18,7 @@ import {
 import { useNotificationsSync } from '@/src/services/notificationsLive';
 import { preloadPlateAssets } from '@/src/components/VehiclePlate';
 import { onAccountBlocked, request } from '@/src/api/client';
+import { openInMode } from '@/src/services/openInMode';
 
 // Required for expo-web-browser to intercept deep-link redirects from
 // MercadoPago and close the in-app browser automatically.
@@ -97,10 +98,10 @@ export default function RootLayout() {
   // expo-notifications).
   useEffect(() => {
     getLaunchNotificationRoute().then((path) => {
-      if (path) router.push(path as never);
+      if (path) openInMode(path);
     });
-    const unsubFcmTaps = subscribeNotificationTaps((path) => router.push(path as never));
-    const unsubLocalTaps = subscribeLocalNotificationTaps((path) => router.push(path as never));
+    const unsubFcmTaps = subscribeNotificationTaps(openInMode);
+    const unsubLocalTaps = subscribeLocalNotificationTaps(openInMode);
     return () => {
       unsubFcmTaps();
       unsubLocalTaps();

@@ -39,6 +39,21 @@ export interface BookingApiResponse {
   // The vehicle the driver picked (optionally) from their own saved list when booking --
   // absent if they didn't pick one. See booking-service's vehicleResponseFromEntity.
   vehicle?: BookingVehicleApiResponse;
+  // centavos -- what went back to the driver when only part did (cancelled in its last
+  // hour, or an admin's partial refund). Absent when nothing, or everything, did.
+  refunded_amount?: number;
+  // OWNER_CANCELLED: the reason the owner gave.
+  cancellation_note?: string;
+  // Set on an extension: the booking it continues.
+  parent_booking_id?: string;
+  // This booking's latest extension that's still live (awaiting payment, or paid).
+  extension?: { id: string; end: string; status: string };
+}
+
+/** One way to extend a booking: until `end`, for `amount` centavos. */
+export interface ExtensionOptionApiResponse {
+  end: string;
+  amount: number;
 }
 
 export interface BookingVehicleApiResponse {
@@ -242,6 +257,46 @@ export async function rejectBookingApi(bookingId: string): Promise<BookingApiRes
  */
 export async function cancelBookingApi(bookingId: string): Promise<BookingApiResponse> {
   return request(`/bookings/${bookingId}/cancel`, { method: 'POST' });
+}
+
+/**
+ * The owner calls off a booking they had already accepted, before it starts, saying why.
+ * The driver gets everything back.
+ *
+ * POST /bookings/{id}/owner-cancel
+ */
+export async function ownerCancelBookingApi(bookingId: string, reason: string): Promise<BookingApiResponse> {
+  return request(`/bookings/${bookingId}/owner-cancel`, { method: 'POST', body: JSON.stringify({ reason }) });
+}
+
+/**
+ * Until when the driver can extend an hourly booking, an hour at a time, and for how much.
+ *
+ * GET /bookings/{id}/extension-options
+ */
+export async function getExtensionOptionsApi(bookingId: string): Promise<ExtensionOptionApiResponse[]> {
+  return request(`/bookings/${bookingId}/extension-options`);
+}
+
+/**
+ * Extends a booking until `end` (one of the options): creates the extension as a new booking
+ * awaiting payment, chained to this one. Paying it confirms it straight away.
+ *
+ * POST /bookings/{id}/extend
+ */
+export async function extendBookingApi(bookingId: string, end: string): Promise<BookingApiResponse> {
+  return request(`/bookings/${bookingId}/extend`, { method: 'POST', body: JSON.stringify({ end }) });
+}
+
+/**
+ * How to get into the booking's spot (gate code, floor...) -- the driver sees it once the
+ * owner accepted the booking. "" when the owner wrote none.
+ *
+ * GET /bookings/{id}/access
+ */
+export async function getBookingAccessApi(bookingId: string): Promise<string> {
+  const response = await request<{ access_instructions: string }>(`/bookings/${bookingId}/access`);
+  return response.access_instructions ?? '';
 }
 
 /**

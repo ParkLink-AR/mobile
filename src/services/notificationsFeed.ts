@@ -58,7 +58,12 @@ export type NotificationKind =
   | 'owner_spot_suspended'
   | 'owner_spot_restored'
   // An announcement from ParkLink to every user (or every driver or owner).
-  | 'announcement';
+  | 'announcement'
+  // The owner called off a booking they had accepted (with a reason): the driver gets it all back.
+  | 'driver_owner_cancelled'
+  // The driver paid to extend a booking: their confirmation, and the owner's notice.
+  | 'driver_booking_extended'
+  | 'owner_booking_extended';
 
 const KNOWN_KINDS = new Set<NotificationKind>([
   'owner_request',
@@ -95,6 +100,9 @@ const KNOWN_KINDS = new Set<NotificationKind>([
   'owner_spot_suspended',
   'owner_spot_restored',
   'announcement',
+  'driver_owner_cancelled',
+  'driver_booking_extended',
+  'owner_booking_extended',
 ]);
 
 /** Which side of the app a notification belongs to -- shown as the car/building icon on
@@ -119,6 +127,7 @@ const OWNER_KINDS = new Set<NotificationKind>([
   'owner_admin_refund',
   'owner_spot_suspended',
   'owner_spot_restored',
+  'owner_booking_extended',
 ]);
 
 /** item.role, falling back by kind for an entry the server saved without one. */
@@ -164,6 +173,8 @@ export interface AppNotification {
   ticketId?: string;
   /** review_received: the stars given. */
   rating?: number;
+  /** owner_booking_cancelled: the driver cancelled in the last hour, so the owner still gets part. */
+  lateCancellation?: boolean;
 }
 
 const ADMIN_REFUND_KINDS = new Set<NotificationKind>([
@@ -218,6 +229,7 @@ export function toAppNotification(entry: InboxNotificationApi): AppNotification 
     settlementId: str(data.settlement_id) || undefined,
     ticketId: str(data.ticket_id) || undefined,
     rating: num(data.rating) || undefined,
+    lateCancellation: num(data.refunded_amount) > 0 || undefined,
   };
 }
 

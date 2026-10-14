@@ -25,6 +25,7 @@ import { VehiclePicker } from '@/src/components/VehiclePicker';
 import { formatLongDateTime, formatShortDate } from '@/src/services/bookingDates';
 import { addDaysISO } from '@/src/services/dateUtils';
 import { endDateOf, formatArtTime, mergeFreeWindows, startDateOf } from '@/src/services/bookingRange';
+import { CancellationPolicyNote } from '@/src/components/booking/CancellationPolicyNote';
 
 // ── Helper for availability pre-check ────────────────────────────────────────
 
@@ -345,6 +346,7 @@ export default function ConfirmBooking() {
             </View>
           </Card>
 
+          <CancellationPolicyNote />
           <Button
             title={
               processing

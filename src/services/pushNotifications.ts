@@ -223,10 +223,26 @@ export async function unregisterPush(): Promise<void> {
  * carries no single bookingId, so a shared guard would have silently
  * swallowed it before ever reaching the switch.
  */
+// Which side a push is for, by type, for the ones whose data doesn't say so.
+const TYPE_ROLE: Record<string, 'driver' | 'owner'> = {
+  'booking.confirmed': 'driver',
+  'booking.verified': 'driver',
+  'booking.payment_received': 'driver',
+  'booking.ending_soon': 'driver',
+  'refund.completed': 'driver',
+  'booking.pending_approval': 'owner',
+  'booking.approval_reminder': 'owner',
+  'settlement.drafted': 'owner',
+  'settlement.paid': 'owner',
+  'parking_spot.reviewed': 'owner',
+};
+
 function routeFor(data: Record<string, string> | undefined): string | null {
-  // Always within the current mode's route group -- a screen pushed into the other group's
-  // stack opens on its own, with no back button. Which side to show travels as `view`.
-  const group = groupFor(useAccountTypeStore.getState().activeMode);
+  // In the route group of the side the notification is for (the server sends it as `role`;
+  // older pushes without it fall back by type) -- openInMode switches the app to that mode
+  // before opening it. An announcement isn't for either side: it stays in the current one.
+  const role = data?.role === 'owner' || data?.role === 'driver' ? data.role : data?.type ? TYPE_ROLE[data.type] : undefined;
+  const group = groupFor(role ?? useAccountTypeStore.getState().activeMode);
   switch (data?.type) {
     // Sent to the driver when their booking is confirmed.
     case 'booking.confirmed':
@@ -240,7 +256,7 @@ function routeFor(data: Record<string, string> | undefined): string | null {
     // it, never answered it, or closed their account; the owner when the driver cancelled.
     case 'booking.cancelled':
       if (!data.bookingId) return null;
-      return `${group}/bookings/${data.bookingId}`;
+      return role ? `${group}/bookings/${data.bookingId}?view=${role}` : `${group}/bookings/${data.bookingId}`;
     // Sent to both sides once the stay is over: each is asked to review the other.
     case 'booking.completed':
       if (!data.bookingId) return null;
@@ -294,8 +310,10 @@ function routeFor(data: Record<string, string> | undefined): string | null {
     case 'support.ticket_closed':
       if (!data.bookingId || !data.ticketId) return null;
       return `${group}/bookings/${data.bookingId}/tickets/${data.ticketId}`;
-    // Sent to both sides when ParkLink staff cancel a booking or refund one.
+    // Sent to both sides when ParkLink staff cancel a booking or refund one, and when the
+    // driver extends one (it opens the extension).
     case 'booking.admin_action':
+    case 'booking.extended':
       if (!data.bookingId) return null;
       return `${group}/bookings/${data.bookingId}?view=${data.role === 'owner' ? 'owner' : 'driver'}`;
     // An announcement from ParkLink: the inbox shows its whole text.

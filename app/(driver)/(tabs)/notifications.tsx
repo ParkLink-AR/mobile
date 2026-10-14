@@ -2,7 +2,7 @@ import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect, useSegments } from 'expo-router';
+import { useFocusEffect, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
 import { RoleIcon } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
@@ -13,6 +13,7 @@ import { AppNotification, isRoleless, notificationRole } from '@/src/services/no
 import { formatBookingWhen, formatShortDateFromISO } from '@/src/services/bookingDates';
 import { approveBookingApi, rejectBookingApi } from '@/src/api/booking';
 import { useSessionStore } from '@/src/store/useSessionStore';
+import { openInMode } from '@/src/services/openInMode';
 import { ApiError } from '@/src/api/client';
 
 const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
@@ -50,6 +51,9 @@ const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
   owner_spot_suspended: 'pause-circle',
   owner_spot_restored: 'play-circle',
   announcement: 'megaphone-outline',
+  driver_owner_cancelled: 'close-circle',
+  driver_booking_extended: 'add-circle-outline',
+  owner_booking_extended: 'add-circle-outline',
 };
 
 const DANGER = '#C62828';
@@ -165,7 +169,8 @@ export default function Notifications() {
       kind === 'driver_admin_cancelled' ||
       kind === 'owner_admin_cancelled' ||
       kind === 'owner_admin_refund' ||
-      kind === 'owner_spot_suspended'
+      kind === 'owner_spot_suspended' ||
+      kind === 'driver_owner_cancelled'
     ) {
       return DANGER;
     }
@@ -182,7 +187,9 @@ export default function Notifications() {
       kind === 'owner_starting_soon' ||
       kind === 'owner_settlement_drafted' ||
       kind === 'owner_spot_restored' ||
-      kind === 'announcement'
+      kind === 'announcement' ||
+      kind === 'driver_booking_extended' ||
+      kind === 'owner_booking_extended'
     ) {
       return colors.teal;
     }
@@ -224,7 +231,9 @@ export default function Notifications() {
       case 'driver_spot_unavailable':
         return t('notifications.driverSpotUnavailable.body');
       case 'owner_booking_cancelled':
-        return t('notifications.ownerBookingCancelled.body', { when });
+        return item.lateCancellation
+          ? t('notifications.ownerBookingCancelled.bodyLate', { when })
+          : t('notifications.ownerBookingCancelled.body', { when });
       case 'driver_review_prompt':
         return t('notifications.driverReviewPrompt.body');
       case 'owner_review_prompt':
@@ -289,52 +298,60 @@ export default function Notifications() {
         return t('notifications.spotRestored.body');
       case 'announcement':
         return item.preview ?? '';
+      case 'driver_owner_cancelled':
+        return item.preview
+          ? t('notifications.ownerCancelled.bodyWithReason', { when, reason: item.preview })
+          : t('notifications.ownerCancelled.body', { when });
+      case 'driver_booking_extended':
+        return t('notifications.bookingExtended.driverBody', { time: item.endTime });
+      case 'owner_booking_extended':
+        return t('notifications.bookingExtended.ownerBody', { time: item.endTime });
     }
   }
 
-  // Every notification shows its own side (owner or driver) whichever mode the user is in,
-  // so the same notification always shows the same thing. It still navigates within the
-  // *current* route group -- jumping into the other group's stack would open the screen on
-  // its own, with no back button -- and passes the side explicitly instead.
-  const group = `/${useSegments()[0]}`;
+  // Every notification belongs to one side (owner or driver), and tapping it opens it in
+  // that mode: an owner notification tapped in driver mode switches the app to owner mode
+  // first (see openInMode). An announcement isn't about either side and opens nothing.
+  const currentGroup = `/${useSegments()[0]}`;
   const userId = useSessionStore((s) => s.user?.id);
   function handlePress(item: AppNotification) {
     const role = notificationRole(item);
+    const group = isRoleless(item.kind) ? currentGroup : `/(${role})`;
     switch (item.kind) {
       case 'owner_request':
         if (isOpenRequest(item, answeredBookingIds) && item.parkingSpotId) {
-          router.push(`${group}/spots/${item.parkingSpotId}/requests`);
+          openInMode(`${group}/spots/${item.parkingSpotId}/requests`);
         } else {
-          router.push(`${group}/bookings/${item.bookingId}?view=owner`);
+          openInMode(`${group}/bookings/${item.bookingId}?view=owner`);
         }
         break;
       case 'driver_review_prompt':
-        router.push(`${group}/review/${item.bookingId}?role=driver`);
+        openInMode(`${group}/review/${item.bookingId}?role=driver`);
         break;
       case 'owner_review_prompt':
-        router.push(`${group}/review/${item.bookingId}?role=owner`);
+        openInMode(`${group}/review/${item.bookingId}?role=owner`);
         break;
       case 'message_received':
-        router.push(`${group}/bookings/${item.bookingId}/messages`);
+        openInMode(`${group}/bookings/${item.bookingId}/messages`);
         break;
       case 'ticket_replied':
-        if (item.ticketId) router.push(`${group}/bookings/${item.bookingId}/tickets/${item.ticketId}`);
+        if (item.ticketId) openInMode(`${group}/bookings/${item.bookingId}/tickets/${item.ticketId}`);
         break;
       case 'owner_settlement_paid':
       case 'owner_settlement_drafted':
-        if (item.settlementId) router.push(`${group}/settlements/${item.settlementId}`);
+        if (item.settlementId) openInMode(`${group}/settlements/${item.settlementId}`);
         break;
       case 'owner_request_reminder':
         // Still waiting: straight to where it can be answered.
-        if (item.parkingSpotId) router.push(`${group}/spots/${item.parkingSpotId}/requests`);
-        else router.push(`${group}/bookings/${item.bookingId}?view=owner`);
+        if (item.parkingSpotId) openInMode(`${group}/spots/${item.parkingSpotId}/requests`);
+        else openInMode(`${group}/bookings/${item.bookingId}?view=owner`);
         break;
       case 'review_received':
         // Their own profile, as the side that was reviewed -- where the review shows.
-        if (userId) router.push(`${group}/profile/${userId}?as=${role}`);
+        if (userId) openInMode(`${group}/profile/${userId}?as=${role}`);
         break;
       case 'ticket_closed':
-        if (item.ticketId) router.push(`${group}/bookings/${item.bookingId}/tickets/${item.ticketId}`);
+        if (item.ticketId) openInMode(`${group}/bookings/${item.bookingId}/tickets/${item.ticketId}`);
         break;
       case 'announcement':
         // Its whole text is already on screen; nothing to open.
@@ -344,12 +361,12 @@ export default function Notifications() {
       case 'owner_spot_suspended':
       case 'owner_spot_restored':
         // The owner's own spot page: published, or what to fix before sending it again.
-        if (item.parkingSpotId) router.push(`${group}/spots/${item.parkingSpotId}`);
+        if (item.parkingSpotId) openInMode(`${group}/spots/${item.parkingSpotId}`);
         break;
       default:
         // driver_confirmed, driver_rejected, driver_request_expired, driver_spot_unavailable,
         // owner_booking_cancelled, driver_verified, the *_admin_* ones
-        router.push(`${group}/bookings/${item.bookingId}?view=${role}`);
+        openInMode(`${group}/bookings/${item.bookingId}?view=${role}`);
     }
   }
 

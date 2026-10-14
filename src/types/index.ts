@@ -133,6 +133,8 @@ export interface ParkingSpot {
   // Suspendida por ParkLink (no aparece en búsquedas; el dueño no la puede reactivar).
   suspendedByAdmin: boolean;
   moderationNote: string | null;
+  // Días que el dueño cerró a mano (from/to inclusive, YYYY-MM-DD).
+  blockedDates: { from: string; to: string }[];
 }
 
 export type BookingStatus =
@@ -184,8 +186,17 @@ export interface Booking {
   // bookings/[id].tsx gates the payment card on both this AND status.
   paidAt?: string;
   // Why a CANCELLED booking got there: 'DRIVER_CANCELLED', 'OWNER_REJECTED' or
-  // 'OWNER_EXPIRED' (the owner never answered in time).
+  // 'OWNER_EXPIRED' (the owner never answered in time), 'OWNER_CANCELLED' (the owner called
+  // off one they had accepted), 'DRIVER_LATE_CANCELLED' (cancelled in its last hour)...
   cancellationReason?: string;
+  // OWNER_CANCELLED: the reason the owner gave.
+  cancellationNote?: string;
+  // Pesos that went back to the driver when only part did. 0 when nothing or everything did.
+  refundedAmount?: number;
+  // Set on an extension: the booking it continues.
+  parentBookingId?: string;
+  // This booking's latest live extension: until when, and whether it's paid yet.
+  extension?: { id: string; end: string; status: string };
   // Only ever populated for the booking's own driver (booking-service omits it for
   // everyone else) -- the 4-digit code the driver reads aloud to the spot's owner
   // in person. Present once status is CONFIRMED; absent before or once verified

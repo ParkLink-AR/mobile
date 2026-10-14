@@ -1,5 +1,5 @@
 import { t, useLanguage } from '@/src/i18n';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Pressable, Modal, TouchableWithoutFeedback, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useLocalSearchParams, useSegments } from 'expo-router';
@@ -31,6 +31,9 @@ import { Booking } from '@/src/types';
 import { PaymentDueCard } from '@/src/components/PaymentDue';
 import { SpotSummaryRow } from '@/src/components/SpotSummaryCard';
 import { useScale } from '@/src/theme/typography';
+import { AccessInstructionsCard } from '@/src/components/booking/AccessInstructionsCard';
+import { ExtendBooking } from '@/src/components/booking/ExtendBooking';
+import { OwnerCancelBooking } from '@/src/components/booking/OwnerCancelBooking';
 
 /** Maps the backend wire shape to the UI Booking type -- same mapping as the
  * driver's booking list (see (tabs)/bookings.tsx), plus payment_id/updated_at
@@ -55,6 +58,10 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string, ownerId: string
     paymentId: b.payment_id,
     paidAt: b.paid_at,
     cancellationReason: b.cancellation_reason,
+    cancellationNote: b.cancellation_note,
+    refundedAmount: (b.refunded_amount ?? 0) / 100,
+    parentBookingId: b.parent_booking_id,
+    extension: b.extension,
     verificationCode: b.verification_code,
     holdExpiresAt: b.hold_expires_at,
     vehicle: toVehicleSnapshot(b.vehicle),
@@ -118,6 +125,8 @@ export default function DriverBookingDetail() {
   const [refund, setRefund] = useState<RefundStatusResponse | null>(null);
   // Owner answering a PENDING_OWNER_APPROVAL request from here: which button is working.
   const [answering, setAnswering] = useState<'approve' | 'reject' | null>(null);
+  // When the screen opened -- what "already started" / "in its last hour" is measured against.
+  const [openedAt] = useState(() => Date.now());
 
   const load = useCallback(() => {
     if (!id) return;
@@ -144,7 +153,8 @@ export default function DriverBookingDetail() {
       });
   }, [id, isOwnerView]);
 
-  useEffect(load, [load]);
+  // On every visit -- coming back from paying an extension shows where it stands.
+  useFocusEffect(load);
 
   const isCompleted = booking?.status === 'COMPLETED';
   // A cancelled booking that had been paid (and not in cash) gets its money back --
@@ -200,7 +210,14 @@ export default function DriverBookingDetail() {
     try {
       const updated = await cancelBookingApi(booking.id);
       setBooking((prev) => prev ? { ...prev, status: updated.status as Booking['status'] } : prev);
-      setCancelResult({ ok: true, message: t('driver.booking.cancel.successMessage') });
+      const partial = (updated.refunded_amount ?? 0) / 100;
+      setCancelResult({
+        ok: true,
+        message: partial > 0
+          ? t('driver.booking.cancel.successLate', { amount: formatPesos(partial) })
+          : t('driver.booking.cancel.successMessage'),
+      });
+      load();
     } catch (err: any) {
       const msg = err?.detail ?? err?.message ?? t('driver.booking.detail.error');
       setCancelResult({ ok: false, message: msg });
@@ -396,6 +413,22 @@ export default function DriverBookingDetail() {
   const showDirections = !isOwnerView && !!spotLocation &&
     (booking.status === 'PENDING_OWNER_APPROVAL' || booking.status === 'CONFIRMED' || booking.status === 'IN_PROGRESS');
 
+  const startMs = booking.startAt ? Date.parse(booking.startAt) : 0;
+  const endMs = booking.endAt ? Date.parse(booking.endAt) : 0;
+  const accepted = booking.status === 'CONFIRMED' || booking.status === 'IN_PROGRESS';
+  const notStarted = openedAt < startMs;
+  // An extension is the same stay going on: no second arrival code.
+  const isExtension = !!booking.parentBookingId;
+  // The cancellation policy: in an accepted booking's last hour, half goes back.
+  const lateCancellation = booking.status === 'CONFIRMED' && notStarted && openedAt > startMs - 60 * 60 * 1000;
+  const canDriverCancel = !isOwnerView && notStarted &&
+    (booking.status === 'CONFIRMED' || booking.status === 'PENDING_OWNER_APPROVAL');
+  const canOwnerCancel = isOwnerView && notStarted && booking.status === 'CONFIRMED';
+  const canExtend = !isOwnerView && booking.kind === 'HOURLY' && accepted && openedAt < endMs && !booking.extension;
+  // What a cancelled booking gave back: part of it (refundedAmount), or all of it.
+  const refundTotal = booking.refundedAmount && booking.refundedAmount > 0 ? booking.refundedAmount : booking.total;
+  const sideParam = isOwnerView ? '?view=owner' : '';
+
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -502,6 +535,29 @@ export default function DriverBookingDetail() {
               <Text style={styles.detailLabel}>{t('driver.booking.detail.duration')}</Text>
               <Text style={styles.detailValue}>{durationLabel(booking)}</Text>
             </View>
+            {booking.extension && (
+              <Pressable
+                style={[styles.detailRow, styles.detailRowLink]}
+                onPress={() => router.push(`${group}/bookings/${booking.extension!.id}${sideParam}` as never)}
+              >
+                <Ionicons name="add-circle-outline" size={sc(16)} color={colors.teal} />
+                <Text style={styles.detailLabel}>
+                  {booking.extension.status === 'PENDING_PAYMENT' ? t('booking.extend.awaitingPayment') : t('booking.extend.extendedUntil')}
+                </Text>
+                <Text style={[styles.detailValue, styles.detailValueLink]}>{booking.extension.end.slice(11, 16)}</Text>
+                <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
+              </Pressable>
+            )}
+            {isExtension && (
+              <Pressable
+                style={[styles.detailRow, styles.detailRowLink]}
+                onPress={() => router.push(`${group}/bookings/${booking.parentBookingId}${sideParam}` as never)}
+              >
+                <Ionicons name="return-up-back-outline" size={sc(16)} color={colors.teal} />
+                <Text style={styles.detailLabel}>{t('booking.extend.isExtension')}</Text>
+                <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
+              </Pressable>
+            )}
 
             <View style={styles.divider} />
 
@@ -534,7 +590,7 @@ export default function DriverBookingDetail() {
           {/* Propietario: acá carga el código que el conductor le dice al llegar -- es la
               pantalla a la que llega desde Hoy, el Calendario y las notificaciones. Al
               verificarlo la reserva pasa a EN CURSO. */}
-          {isOwnerView && booking.status === 'CONFIRMED' && booking.startAt && booking.endAt && (
+          {isOwnerView && booking.status === 'CONFIRMED' && !isExtension && booking.startAt && booking.endAt && (
             <View style={styles.verifyCard}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="key-outline" size={15} color={colors.teal} />
@@ -560,6 +616,8 @@ export default function DriverBookingDetail() {
             </View>
           )}
 
+          {!isOwnerView && accepted && <AccessInstructionsCard bookingId={booking.id} />}
+
           {isRefundable && (
             <Card>
               <View style={styles.cardContent}>
@@ -567,13 +625,20 @@ export default function DriverBookingDetail() {
                   <Ionicons name="return-down-back-outline" size={15} color={colors.textSecondary} />
                   <Text style={styles.sectionLabel}>{t('booking.refund.section')}</Text>
                 </View>
-                {booking.cancellationReason && (
+                {/* The reasons are written to the driver ("Cancelaste...") -- the owner gets the
+                    explanation below instead. */}
+                {booking.cancellationReason && !(isOwnerView && booking.cancellationReason.startsWith('DRIVER_')) && (
                   <Text style={styles.refundReason}>
                     {t(`booking.refund.reason.${booking.cancellationReason}`)}
                   </Text>
                 )}
+                {booking.cancellationNote ? (
+                  <Text style={styles.refundBody}>{t('booking.refund.ownerNote', { note: booking.cancellationNote })}</Text>
+                ) : null}
                 {isOwnerView ? (
-                  <Text style={styles.refundBody}>{t('booking.refund.ownerBody')}</Text>
+                  <Text style={styles.refundBody}>
+                    {t(booking.cancellationReason === 'DRIVER_LATE_CANCELLED' ? 'booking.refund.ownerBodyLate' : 'booking.refund.ownerBody')}
+                  </Text>
                 ) : (
                   <>
                     <View style={styles.detailRow}>
@@ -585,14 +650,14 @@ export default function DriverBookingDetail() {
                       <Text style={styles.refundBody}>
                         {refund?.status === 'refunded'
                           ? t('booking.refund.done', {
-                              amount: formatPesos(refund.amount ?? booking.total),
+                              amount: formatPesos(refund.amount ?? refundTotal),
                               date: refund.refundedAt ? formatLongDateFromISO(refund.refundedAt) : '',
                             })
                           : refund?.status === 'delayed'
-                            ? t('booking.refund.delayed', { amount: formatPesos(refund.amount ?? booking.total) })
+                            ? t('booking.refund.delayed', { amount: formatPesos(refund.amount ?? refundTotal) })
                             : refund?.status === 'in_progress'
-                            ? t('booking.refund.inProgress', { amount: formatPesos(refund.amount ?? booking.total) })
-                            : t('booking.refund.automatic', { amount: formatPesos(booking.total) })}
+                            ? t('booking.refund.inProgress', { amount: formatPesos(refund.amount ?? refundTotal) })
+                            : t('booking.refund.automatic', { amount: formatPesos(refundTotal) })}
                       </Text>
                     </View>
                     <Text style={styles.refundNote}>{t('booking.refund.timingNote')}</Text>
@@ -736,8 +801,28 @@ export default function DriverBookingDetail() {
           </View>
         )}
 
-        {/* Cancelar: sólo el conductor titular puede hacerlo (el backend lo exige) */}
-        {!isOwnerView && (booking.status === 'CONFIRMED' || booking.status === 'PENDING_OWNER_APPROVAL') && (
+        {/* Extender: el conductor suma horas a una reserva por hora aceptada, mientras siga
+            libre; paga sólo esa parte en la extensión. */}
+        {canExtend && (
+          <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+            <ExtendBooking
+              bookingId={booking.id}
+              onExtended={(extensionId) => router.push(`${group}/bookings/${extensionId}` as never)}
+            />
+          </View>
+        )}
+
+        {/* El propietario puede cancelar una reserva que ya aceptó, antes de que empiece y
+            diciendo por qué -- el conductor recibe todo de vuelta. */}
+        {canOwnerCancel && (
+          <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+            <OwnerCancelBooking bookingId={booking.id} onCancelled={load} />
+          </View>
+        )}
+
+        {/* Cancelar: sólo el conductor titular puede hacerlo (el backend lo exige), y antes de
+            que empiece. */}
+        {canDriverCancel && (
           <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
             <Pressable
               style={[styles.cancelButton, cancelling && { opacity: 0.5 }]}
@@ -763,7 +848,11 @@ export default function DriverBookingDetail() {
             <TouchableWithoutFeedback>
               <View style={styles.modalSheet}>
                 <Text style={styles.modalTitle}>{t('driver.booking.cancel.title')}</Text>
-                <Text style={styles.modalBody}>{t('driver.booking.cancel.confirm')}</Text>
+                <Text style={styles.modalBody}>
+                  {lateCancellation
+                    ? t('driver.booking.cancel.confirmLate', { amount: formatPesos(booking.total / 2) })
+                    : t('driver.booking.cancel.confirm')}
+                </Text>
                 <View style={styles.modalActions}>
                   <Pressable
                     style={({ pressed }) => [styles.modalCancelBtn, { opacity: pressed ? 0.7 : 1 }]}

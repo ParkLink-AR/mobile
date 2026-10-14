@@ -245,6 +245,23 @@ export default function SpotDetail() {
             </View>
           )}
 
+          {/* Días cerrados a mano: vale para reservas por hora y estadías. */}
+          <TouchableOpacity style={styles.card} onPress={() => router.push(`${group}/spots/${id}/blocked-dates`)}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="close-circle-outline" size={sc(15)} color={colors.textSecondary} />
+              <Text style={styles.sectionLabel}>{t('owner.blocked.title')}</Text>
+              <View style={{ flex: 1 }} />
+              <Ionicons name="chevron-forward" size={sc(13)} color={colors.teal} />
+            </View>
+            <Text style={styles.value}>
+              {spot.blockedDates.length === 0
+                ? t('owner.blocked.summaryNone')
+                : spot.blockedDates.length === 1
+                  ? t('owner.blocked.summaryOne')
+                  : t('owner.blocked.summaryMany', { count: String(spot.blockedDates.length) })}
+            </Text>
+          </TouchableOpacity>
+
           <Button
             title={t('owner.spot.edit.title')}
             onPress={() => router.push(`${group}/spots/${id}/edit`)}

@@ -20,6 +20,7 @@ export default function OwnerLayout() {
       <Stack.Screen name="spots/[id]" options={{ title: t('owner.spot.detail.headerTitle') }} />
       <Stack.Screen name="spots/[id]/edit" options={{ title: t('owner.spot.edit.title') }} />
       <Stack.Screen name="spots/[id]/availability" options={{ title: t('layout.owner.availability') }} />
+      <Stack.Screen name="spots/[id]/blocked-dates" options={{ title: t('owner.blocked.title') }} />
       <Stack.Screen name="spots/[id]/requests" options={{ title: t('owner.spot.requests.title') }} />
       <Stack.Screen name="spots/[id]/documentation" options={{ title: t('owner.spot.documentation.title') }} />
       {/* Bookings */}

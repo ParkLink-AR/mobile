@@ -49,6 +49,8 @@ export interface ParkingSpotApiResponse {
   reviewNotes: string | null;
   // ParkLink staff took it out of the search; moderationNote says why.
   suspendedByAdmin?: boolean;
+  // Días completos que el dueño cerró a mano (los que todavía no pasaron), inclusive.
+  blockedDates?: BlockedDateRange[];
   moderationNote?: string | null;
   rules: string[];
   status: 'pending_review' | 'active' | 'paused' | 'rejected' | 'deleted';
@@ -152,6 +154,8 @@ export interface CreateParkingSpotInput extends StayFields {
 }
 
 export interface UpdateParkingSpotApiInput extends StayFields {
+  // Cómo entrar -- privado (sólo el dueño y el conductor de una reserva confirmada). "" lo borra.
+  accessInstructions?: string;
   hourlyEnabled?: boolean;
   pricePerHour?: number;
   // `null` explícito borra el precio-por-vehículo y vuelve a pricePerHour
@@ -214,6 +218,23 @@ export async function searchParkingSpots(
 
 /** `includeDeleted`: also resolves a spot its owner deleted (status "deleted") -- for a booking's
  * screens, which still have to say which spot it was. */
+/** Un período de días cerrados, `from` y `to` inclusive (YYYY-MM-DD). */
+export interface BlockedDateRange {
+  from: string;
+  to: string;
+}
+
+/** Las instrucciones de acceso de una cochera propia, para editarlas. */
+export async function getSpotAccessApi(id: string): Promise<string> {
+  const response = await request<{ accessInstructions: string | null }>(`/parking-spots/${id}/access`);
+  return response.accessInstructions ?? '';
+}
+
+/** Reemplaza los días cerrados de una cochera propia. */
+export async function setBlockedDatesApi(id: string, ranges: BlockedDateRange[]): Promise<ParkingSpotApiResponse> {
+  return request(`/parking-spots/${id}/blocked-dates`, { method: 'PUT', body: JSON.stringify({ ranges }) });
+}
+
 export async function getParkingSpotDetail(
   id: string,
   { includeDeleted = false }: { includeDeleted?: boolean } = {},

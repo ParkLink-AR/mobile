@@ -61,6 +61,7 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     reviewNotes: raw.reviewNotes ?? null,
     suspendedByAdmin: raw.suspendedByAdmin ?? false,
     moderationNote: raw.moderationNote ?? null,
+    blockedDates: raw.blockedDates ?? [],
   };
 }
 
@@ -341,6 +342,8 @@ export async function reorderParkingSpotPhotos(spotId: string, photos: string[])
 }
 
 export interface UpdateParkingSpotInput {
+  // Cómo entrar -- privado. "" lo borra.
+  accessInstructions?: string;
   hourlyEnabled?: boolean;
   pricePerHour?: number;
   // `null` explícito borra el precio-por-vehículo y vuelve a pricePerHour
@@ -380,6 +383,7 @@ export async function updateParkingSpot(
     pricePerHourByVehicleType: updates.pricePerHourByVehicleType,
     title: updates.title,
     description: updates.description,
+    accessInstructions: updates.accessInstructions,
     covered: updates.covered,
     vehicleTypes: updates.vehicleTypes,
     capacity: updates.capacity,

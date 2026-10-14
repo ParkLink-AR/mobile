@@ -22,6 +22,7 @@ import { PaymentMethodDisplay } from '@/src/components/PaymentMethodDisplay';
 import { SpotSummaryCard } from '@/src/components/SpotSummaryCard';
 import { VehiclePicker } from '@/src/components/VehiclePicker';
 import { formatLongDateTime, formatShortDate } from '@/src/services/bookingDates';
+import { CancellationPolicyNote } from '@/src/components/booking/CancellationPolicyNote';
 
 
 /**
@@ -311,6 +312,7 @@ export default function ConfirmStayBooking() {
             </View>
           </Card>
 
+          <CancellationPolicyNote />
           <Button
             title={
               processing

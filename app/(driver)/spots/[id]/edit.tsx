@@ -40,7 +40,7 @@ import {
   reorderParkingSpotPhotos,
 } from '@/src/services/parkingService';
 import { useSpotsStore } from '@/src/store/useSpotsStore';
-import { GeocodeCandidate, ParkingSpotPhotoAsset, reverseGeocode } from '@/src/api/parking';
+import { GeocodeCandidate, ParkingSpotPhotoAsset, getSpotAccessApi, reverseGeocode } from '@/src/api/parking';
 import { formatSpotTitle, SPOT_TITLE_MAX_LENGTH } from '@/src/utils/spotTitle';
 import { ApiError } from '@/src/api/client';
 import { ParkingSpot } from '@/src/types';
@@ -72,6 +72,8 @@ export default function EditSpot() {
   const [capacity, setCapacity] = useState('1');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  // Cómo entrar: privado, sólo lo ve el conductor una vez aceptada su reserva.
+  const [accessInstructions, setAccessInstructions] = useState('');
   const [covered, setCovered] = useState(true);
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [hourlySettings, setHourlySettings] = useState<HourlySettingsFormValue>(EMPTY_HOURLY_SETTINGS);
@@ -92,6 +94,7 @@ export default function EditSpot() {
 
   const load = useCallback(() => {
     setLoadError(false);
+    getSpotAccessApi(id).then(setAccessInstructions).catch(() => {});
     getParkingSpotDetail(id)
       .then((s) => {
         if (!s) return;
@@ -301,6 +304,7 @@ export default function EditSpot() {
           : undefined,
         title: title.trim(),
         description: description.trim(),
+        accessInstructions: accessInstructions.trim(),
         covered,
         vehicleTypes,
         capacity: Math.max(1, Math.trunc(Number(capacity)) || 1),
@@ -462,6 +466,7 @@ export default function EditSpot() {
     locationConfirmedRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     locationConfirmed: { color: colors.teal, fontSize: sc(12), fontWeight: '700' },
     locationError: { color: '#C62828', fontSize: sc(12) },
+    privateHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     reReviewHint: { fontSize: sc(12), color: colors.textSecondary, lineHeight: sc(17) },
     suspendedNote: { fontSize: sc(13), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(18), paddingVertical: 8 },
 
@@ -684,6 +689,23 @@ export default function EditSpot() {
               onChangeText={setDescription}
               multiline
               placeholder={t('owner.spot.new.descriptionPlaceholder')}
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
+
+          {/* Cómo entrar -- privado */}
+          <View style={styles.card}>
+            <View style={styles.privateHeader}>
+              <Ionicons name="lock-closed-outline" size={sc(13)} color={colors.textSecondary} />
+              <Text style={styles.sectionLabel}>{t('owner.spot.access.label')}</Text>
+            </View>
+            <Text style={styles.reReviewHint}>{t('owner.spot.access.hint')}</Text>
+            <TextInput
+              style={[styles.input, styles.multiline]}
+              value={accessInstructions}
+              onChangeText={(value) => setAccessInstructions(value.slice(0, 1000))}
+              multiline
+              placeholder={t('owner.spot.access.placeholder')}
               placeholderTextColor={colors.textSecondary}
             />
           </View>
