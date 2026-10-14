@@ -294,7 +294,14 @@ function routeFor(data: Record<string, string> | undefined): string | null {
     case 'support.ticket_closed':
       if (!data.bookingId || !data.ticketId) return null;
       return `${group}/bookings/${data.bookingId}/tickets/${data.ticketId}`;
-    // Sent to the owner once an admin approves or rejects their new parking spot.
+    // Sent to both sides when ParkLink staff cancel a booking or refund one.
+    case 'booking.admin_action':
+      if (!data.bookingId) return null;
+      return `${group}/bookings/${data.bookingId}?view=${data.role === 'owner' ? 'owner' : 'driver'}`;
+    // An announcement from ParkLink: the inbox shows its whole text.
+    case 'announcement':
+      return `${group}/notifications`;
+    // Sent to the owner once an admin approves, rejects, suspends or restores their spot.
     case 'parking_spot.reviewed':
       if (!data.parkingSpotId) return null;
       return `${group}/spots/${data.parkingSpotId}`;

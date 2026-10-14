@@ -130,6 +130,9 @@ export interface ParkingSpot {
   // muestran al conductor. reviewNotes es el motivo si status es 'rejected'.
   verificationPhotos: string[];
   reviewNotes: string | null;
+  // Suspendida por ParkLink (no aparece en búsquedas; el dueño no la puede reactivar).
+  suspendedByAdmin: boolean;
+  moderationNote: string | null;
 }
 
 export type BookingStatus =

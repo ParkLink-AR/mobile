@@ -18,6 +18,7 @@ export const FAVORITE_RED = '#FF385C';
 function unavailableLabel(spot: ParkingSpot): string {
   if (spot.status === 'pending_review') return t('spot.pendingReview');
   if (spot.status === 'rejected') return t('spot.rejected');
+  if (spot.suspendedByAdmin) return t('spot.suspended');
   return t('spot.unavailable');
 }
 

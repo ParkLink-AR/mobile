@@ -59,6 +59,8 @@ function toParkingSpot(raw: ParkingSpotApiResponse): ParkingSpot {
     status: raw.status,
     verificationPhotos: raw.verificationPhotos ?? [],
     reviewNotes: raw.reviewNotes ?? null,
+    suspendedByAdmin: raw.suspendedByAdmin ?? false,
+    moderationNote: raw.moderationNote ?? null,
   };
 }
 

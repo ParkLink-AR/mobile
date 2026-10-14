@@ -11,9 +11,12 @@ import { getParkingSpotDetail } from '@/src/services/parkingService';
 import { getSpotReviewsApi } from '@/src/api/parking';
 import { getPublicProfileApi } from '@/src/api/auth';
 import { ParkingSpot } from '@/src/types';
+import { ReportButton } from '@/src/components/ReportButton';
+import { useSessionStore } from '@/src/store/useSessionStore';
 
 interface SpotReviewItem {
   id: string;
+  reviewerId: string;
   reviewerName: string;
   rating: number;
   comment?: string;
@@ -30,6 +33,7 @@ export default function SpotReviews() {
   const [reviews, setReviews] = useState<SpotReviewItem[]>([]);
   const [average, setAverage] = useState(0);
   const [count, setCount] = useState(0);
+  const myId = useSessionStore((s) => s.user?.id);
   // The list says "no reviews" only once it's actually loaded -- not while the reviewers'
   // names are still being looked up.
   const [loaded, setLoaded] = useState(false);
@@ -52,6 +56,7 @@ export default function SpotReviews() {
       setReviews(
         res.reviews.map((r) => ({
           id: r.id,
+          reviewerId: r.reviewer_id,
           reviewerName: nameById[r.reviewer_id] ?? r.reviewer_id,
           rating: r.rating,
           comment: r.comment,
@@ -68,6 +73,7 @@ export default function SpotReviews() {
     subtitle: { marginBottom: 4 },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     stars: { color: colors.warning, fontSize: sc(13) },
+    reviewSide: { flexDirection: 'row', alignItems: 'center', gap: sc(8) },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     emptyText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
   });
@@ -96,7 +102,10 @@ export default function SpotReviews() {
           <Card>
             <View style={styles.row}>
               <Text style={typography.h2}>{item.reviewerName}</Text>
-              <Text style={styles.stars}>{'★'.repeat(item.rating)}</Text>
+              <View style={styles.reviewSide}>
+                <Text style={styles.stars}>{'★'.repeat(item.rating)}</Text>
+                {myId && myId !== item.reviewerId && <ReportButton targetType="review" targetId={item.id} variant="icon" />}
+              </View>
             </View>
             {!!item.comment && <Text style={typography.body}>{item.comment}</Text>}
           </Card>

@@ -9,7 +9,7 @@ import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import { isOpenRequest, useNotificationsStore } from '@/src/store/useNotificationsStore';
-import { AppNotification, notificationRole } from '@/src/services/notificationsFeed';
+import { AppNotification, isRoleless, notificationRole } from '@/src/services/notificationsFeed';
 import { formatBookingWhen, formatShortDateFromISO } from '@/src/services/bookingDates';
 import { approveBookingApi, rejectBookingApi } from '@/src/api/booking';
 import { useSessionStore } from '@/src/store/useSessionStore';
@@ -43,6 +43,13 @@ const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
   ticket_closed: 'checkmark-circle-outline',
   driver_refund_completed: 'cash-outline',
   owner_settlement_drafted: 'receipt-outline',
+  driver_admin_cancelled: 'close-circle',
+  owner_admin_cancelled: 'close-circle',
+  driver_admin_refund: 'cash-outline',
+  owner_admin_refund: 'cash-outline',
+  owner_spot_suspended: 'pause-circle',
+  owner_spot_restored: 'play-circle',
+  announcement: 'megaphone-outline',
 };
 
 const DANGER = '#C62828';
@@ -142,7 +149,8 @@ export default function Notifications() {
       kind === 'driver_payment_received' ||
       kind === 'owner_payout_approved' ||
       kind === 'driver_unverified_refunded' ||
-      kind === 'driver_refund_completed'
+      kind === 'driver_refund_completed' ||
+      kind === 'driver_admin_refund'
     ) {
       return colors.success;
     }
@@ -153,7 +161,11 @@ export default function Notifications() {
       kind === 'owner_booking_cancelled' ||
       kind === 'owner_spot_rejected' ||
       kind === 'owner_request_expired' ||
-      kind === 'owner_payout_denied'
+      kind === 'owner_payout_denied' ||
+      kind === 'driver_admin_cancelled' ||
+      kind === 'owner_admin_cancelled' ||
+      kind === 'owner_admin_refund' ||
+      kind === 'owner_spot_suspended'
     ) {
       return DANGER;
     }
@@ -168,7 +180,9 @@ export default function Notifications() {
       kind === 'review_received' ||
       kind === 'driver_starting_soon' ||
       kind === 'owner_starting_soon' ||
-      kind === 'owner_settlement_drafted'
+      kind === 'owner_settlement_drafted' ||
+      kind === 'owner_spot_restored' ||
+      kind === 'announcement'
     ) {
       return colors.teal;
     }
@@ -187,6 +201,8 @@ export default function Notifications() {
         return t('notifications.refundCompleted.title');
       case 'review_received':
         return item.spotTitle || t('notifications.reviewReceived.title');
+      case 'announcement':
+        return item.spotTitle || t('notifications.announcement.title');
       default:
         return item.spotTitle;
     }
@@ -255,6 +271,24 @@ export default function Notifications() {
         return t('notifications.refundCompleted.body', { amount: item.total.toLocaleString('es-AR') });
       case 'owner_settlement_drafted':
         return t('notifications.settlementDrafted.body', { amount: item.total.toLocaleString('es-AR') });
+      case 'driver_admin_cancelled':
+        return item.total > 0
+          ? t('notifications.adminCancelled.driverBodyRefund', { when, amount: item.total.toLocaleString('es-AR') })
+          : t('notifications.adminCancelled.driverBody', { when });
+      case 'owner_admin_cancelled':
+        return t('notifications.adminCancelled.ownerBody', { when });
+      case 'driver_admin_refund':
+        return t('notifications.adminRefund.driverBody', { amount: item.total.toLocaleString('es-AR') });
+      case 'owner_admin_refund':
+        return t('notifications.adminRefund.ownerBody', { amount: item.total.toLocaleString('es-AR') });
+      case 'owner_spot_suspended':
+        return item.preview
+          ? t('notifications.spotSuspended.bodyWithReason', { reason: item.preview })
+          : t('notifications.spotSuspended.body');
+      case 'owner_spot_restored':
+        return t('notifications.spotRestored.body');
+      case 'announcement':
+        return item.preview ?? '';
     }
   }
 
@@ -302,14 +336,19 @@ export default function Notifications() {
       case 'ticket_closed':
         if (item.ticketId) router.push(`${group}/bookings/${item.bookingId}/tickets/${item.ticketId}`);
         break;
+      case 'announcement':
+        // Its whole text is already on screen; nothing to open.
+        break;
       case 'owner_spot_approved':
       case 'owner_spot_rejected':
+      case 'owner_spot_suspended':
+      case 'owner_spot_restored':
         // The owner's own spot page: published, or what to fix before sending it again.
         if (item.parkingSpotId) router.push(`${group}/spots/${item.parkingSpotId}`);
         break;
       default:
         // driver_confirmed, driver_rejected, driver_request_expired, driver_spot_unavailable,
-        // owner_booking_cancelled, driver_verified
+        // owner_booking_cancelled, driver_verified, the *_admin_* ones
         router.push(`${group}/bookings/${item.bookingId}?view=${role}`);
     }
   }
@@ -363,7 +402,7 @@ export default function Notifications() {
                   <Text style={styles.itemTime}>{formatAgo(item.at)}</Text>
                 </View>
                 <View style={styles.side}>
-                  <RoleIcon role={notificationRole(item)} />
+                  {isRoleless(item.kind) ? null : <RoleIcon role={notificationRole(item)} />}
                   {fresh && <View style={styles.freshDot} />}
                 </View>
               </TouchableOpacity>

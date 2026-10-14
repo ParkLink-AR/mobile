@@ -47,7 +47,18 @@ export type NotificationKind =
   // A refund that had failed finally reached the driver.
   | 'driver_refund_completed'
   // An admin prepared the owner's settlement; the transfer comes next.
-  | 'owner_settlement_drafted';
+  | 'owner_settlement_drafted'
+  // ParkLink staff cancelled a booking (the driver refunded in full or in part), or refunded
+  // a finished one.
+  | 'driver_admin_cancelled'
+  | 'owner_admin_cancelled'
+  | 'driver_admin_refund'
+  | 'owner_admin_refund'
+  // ParkLink staff took the owner's spot out of the search (with a reason) or put it back.
+  | 'owner_spot_suspended'
+  | 'owner_spot_restored'
+  // An announcement from ParkLink to every user (or every driver or owner).
+  | 'announcement';
 
 const KNOWN_KINDS = new Set<NotificationKind>([
   'owner_request',
@@ -77,6 +88,13 @@ const KNOWN_KINDS = new Set<NotificationKind>([
   'ticket_closed',
   'driver_refund_completed',
   'owner_settlement_drafted',
+  'driver_admin_cancelled',
+  'owner_admin_cancelled',
+  'driver_admin_refund',
+  'owner_admin_refund',
+  'owner_spot_suspended',
+  'owner_spot_restored',
+  'announcement',
 ]);
 
 /** Which side of the app a notification belongs to -- shown as the car/building icon on
@@ -97,11 +115,20 @@ const OWNER_KINDS = new Set<NotificationKind>([
   'owner_payout_denied',
   'owner_starting_soon',
   'owner_settlement_drafted',
+  'owner_admin_cancelled',
+  'owner_admin_refund',
+  'owner_spot_suspended',
+  'owner_spot_restored',
 ]);
 
 /** item.role, falling back by kind for an entry the server saved without one. */
 export function notificationRole(item: Pick<AppNotification, 'kind'> & { role?: NotificationRole | null }): NotificationRole {
   return item.role ?? (OWNER_KINDS.has(item.kind) ? 'owner' : 'driver');
+}
+
+/** Kinds that aren't about either side of the app (an announcement to everyone). */
+export function isRoleless(kind: NotificationKind): boolean {
+  return kind === 'announcement';
 }
 
 export interface AppNotification {
@@ -117,15 +144,16 @@ export interface AppNotification {
   endDate: string;
   startTime: string;
   endTime: string;
-  /** Pesos: the booking's total, or the settlement's deposited amount. */
+  /** Pesos: the booking's total, the settlement's deposited amount, or what an admin
+   * refunded (the *_admin_* kinds). */
   total: number;
   /** When it happened (ISO), newest first. */
   at: string;
   readAt: string | null;
   /** owner_request only: true once it no longer waits for the owner's answer. */
   resolved: boolean;
-  /** message_received / ticket_replied: the start of the message; owner_spot_rejected: the
-   * admin's reason. */
+  /** message_received / ticket_replied: the start of the message; owner_spot_rejected /
+   * owner_spot_suspended: the admin's reason; announcement: its text. */
   preview?: string;
   /** The other person on the booking, by name -- "Calificá a Juan Pérez" instead of
    * "Calificá al conductor". Best-effort: absent if their profile couldn't be loaded. */
@@ -137,6 +165,13 @@ export interface AppNotification {
   /** review_received: the stars given. */
   rating?: number;
 }
+
+const ADMIN_REFUND_KINDS = new Set<NotificationKind>([
+  'driver_admin_cancelled',
+  'owner_admin_cancelled',
+  'driver_admin_refund',
+  'owner_admin_refund',
+]);
 
 const str = (value: unknown): string => (typeof value === 'string' ? value : '');
 const num = (value: unknown): number => (typeof value === 'number' ? value : 0);
@@ -159,7 +194,12 @@ export function toAppNotification(entry: InboxNotificationApi): AppNotification 
     role: entry.role,
     bookingId: str(data.booking_id),
     parkingSpotId: str(data.parking_spot_id),
-    spotTitle: kind === 'ticket_replied' || kind === 'ticket_closed' ? str(data.subject) : str(data.spot_title),
+    spotTitle:
+      kind === 'ticket_replied' || kind === 'ticket_closed'
+        ? str(data.subject)
+        : kind === 'announcement'
+          ? str(data.title)
+          : str(data.spot_title),
     date: dates.date,
     endDate: dates.endDate,
     startTime: dates.startTime,
@@ -167,11 +207,13 @@ export function toAppNotification(entry: InboxNotificationApi): AppNotification 
     total:
       kind === 'owner_settlement_paid' || kind === 'owner_settlement_drafted'
         ? num(data.net_amount) / 100
-        : num(data.amount) / 100,
+        : ADMIN_REFUND_KINDS.has(kind)
+          ? num(data.refunded_amount) / 100
+          : num(data.amount) / 100,
     at: entry.created_at,
     readAt: entry.read_at,
     resolved: !!entry.resolved_at,
-    preview: str(data.preview) || str(data.notes) || undefined,
+    preview: (kind === 'announcement' ? str(data.body) : str(data.preview) || str(data.notes)) || undefined,
     driverId: str(data.driver_user_id) || undefined,
     settlementId: str(data.settlement_id) || undefined,
     ticketId: str(data.ticket_id) || undefined,

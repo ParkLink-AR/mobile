@@ -35,6 +35,8 @@ function makeApiSpot(overrides: Partial<ParkingSpotApiResponse> = {}): ParkingSp
     photos: [],
     verificationPhotos: [],
     reviewNotes: null,
+    suspendedByAdmin: false,
+    moderationNote: null,
     rules: [],
     status: 'active',
     createdAt: '2026-01-01T00:00:00.000Z',

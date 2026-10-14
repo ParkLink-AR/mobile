@@ -132,6 +132,17 @@ export default function SpotDetail() {
             </TouchableOpacity>
           )}
 
+          {spot.suspendedByAdmin && (
+            <View style={[styles.reviewBanner, styles.reviewBannerRejected]}>
+              <Ionicons name="pause-circle-outline" size={sc(18)} color="#C62828" />
+              <Text style={styles.reviewBannerText}>
+                {spot.moderationNote
+                  ? t('owner.spot.review.suspendedBannerReason', { reason: spot.moderationNote })
+                  : t('owner.spot.review.suspendedBanner')}
+              </Text>
+            </View>
+          )}
+
           {/* Hero: title, address, rating, price and type together */}
           <View style={styles.heroCard}>
             <View style={styles.titleRow}>

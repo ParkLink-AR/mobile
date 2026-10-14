@@ -10,9 +10,12 @@ import { useTypography, useScale } from '@/src/theme/typography';
 import { t, useLanguage } from '@/src/i18n';
 import { getPublicProfileApi, PublicProfileApiResponse } from '@/src/api/auth';
 import { getUserReviewsApi } from '@/src/api/booking';
+import { ReportButton } from '@/src/components/ReportButton';
+import { useSessionStore } from '@/src/store/useSessionStore';
 
 interface ProfileReviewItem {
   id: string;
+  reviewerId: string;
   reviewerName: string;
   rating: number;
   comment?: string;
@@ -30,6 +33,7 @@ export default function PublicProfile() {
   const [count, setCount] = useState(0);
   const [reviews, setReviews] = useState<ProfileReviewItem[]>([]);
   const [viewingAvatar, setViewingAvatar] = useState(false);
+  const myId = useSessionStore((s) => s.user?.id);
   // Which side's reviews are shown: the one the viewer came for (`as`), unless they switched to
   // the other one from the small link under the rating.
   const [roleOverride, setRoleOverride] = useState<'owner' | 'driver' | null>(null);
@@ -68,6 +72,7 @@ export default function PublicProfile() {
       setReviews(
         res.reviews.map((r) => ({
           id: r.id,
+          reviewerId: r.reviewer_id,
           reviewerName: nameById[r.reviewer_id] ?? r.reviewer_id,
           rating: r.rating,
           comment: r.comment,
@@ -92,6 +97,7 @@ export default function PublicProfile() {
     },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     stars: { color: colors.warning, fontSize: sc(13) },
+    reviewSide: { flexDirection: 'row', alignItems: 'center', gap: sc(8) },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
     emptyText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
   });
@@ -130,6 +136,7 @@ export default function PublicProfile() {
             {t(`profile.public.seeOther.${otherRole}`, { rating: otherSide.average.toFixed(1), count: otherSide.count })}
           </Text>
         )}
+        {myId && myId !== userId && <ReportButton targetType="user" targetId={userId} />}
       </Card>
 
       <Text style={styles.sectionLabel}>{t(`profile.public.reviewsAs.${role}`)}</Text>
@@ -147,7 +154,10 @@ export default function PublicProfile() {
           <Card>
             <View style={styles.row}>
               <Text style={typography.h2}>{item.reviewerName}</Text>
-              <Text style={styles.stars}>{'★'.repeat(item.rating)}</Text>
+              <View style={styles.reviewSide}>
+                <Text style={styles.stars}>{'★'.repeat(item.rating)}</Text>
+                {myId && myId !== item.reviewerId && <ReportButton targetType="review" targetId={item.id} variant="icon" />}
+              </View>
             </View>
             {!!item.comment && <Text style={typography.body}>{item.comment}</Text>}
           </Card>

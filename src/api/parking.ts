@@ -47,6 +47,9 @@ export interface ParkingSpotApiResponse {
   verificationPhotos: string[];
   // Motivo que cargó el admin al rechazar (null si nunca se revisó o si se aprobó).
   reviewNotes: string | null;
+  // ParkLink staff took it out of the search; moderationNote says why.
+  suspendedByAdmin?: boolean;
+  moderationNote?: string | null;
   rules: string[];
   status: 'pending_review' | 'active' | 'paused' | 'rejected' | 'deleted';
   createdAt: string;

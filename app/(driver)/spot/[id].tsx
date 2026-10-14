@@ -55,6 +55,7 @@ import { getStayQuote, type StayQuote } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { VehicleType, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { ParkingSpot } from '@/src/types';
+import { ReportButton } from '@/src/components/ReportButton';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -997,6 +998,12 @@ export default function SpotDetail() {
                 </>
               )}
             </>
+          )}
+
+          {!isOwner && !!user && (
+            <View style={{ alignItems: 'center', marginTop: 8 }}>
+              <ReportButton targetType="spot" targetId={spot.id} />
+            </View>
           )}
         </View>
       </ScrollView>

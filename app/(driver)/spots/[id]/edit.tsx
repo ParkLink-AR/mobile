@@ -253,6 +253,8 @@ export default function EditSpot() {
   }
 
   if (!spot) return null;
+  // Already approved by ParkLink: a new address or new photos send it back to review.
+  const approved = (spot.status === 'active' || spot.status === 'paused') && !spot.suspendedByAdmin;
 
   async function save() {
     if (!title.trim()) {
@@ -460,6 +462,8 @@ export default function EditSpot() {
     locationConfirmedRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     locationConfirmed: { color: colors.teal, fontSize: sc(12), fontWeight: '700' },
     locationError: { color: '#C62828', fontSize: sc(12) },
+    reReviewHint: { fontSize: sc(12), color: colors.textSecondary, lineHeight: sc(17) },
+    suspendedNote: { fontSize: sc(13), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(18), paddingVertical: 8 },
 
     saveBtn: { marginTop: 4 },
     dangerBtn: {
@@ -555,11 +559,13 @@ export default function EditSpot() {
               </View>
             )}
             {locationError && !addressSuggestionsOpen && <Text style={styles.locationError}>{locationError}</Text>}
+            {approved && <Text style={styles.reReviewHint}>{t('owner.spot.edit.reReviewAddress')}</Text>}
           </View>
 
           {/* Photos */}
           <View style={styles.card}>
             <Text style={styles.sectionLabel}>{t('owner.spot.edit.photos')}</Text>
+            {approved && <Text style={styles.reReviewHint}>{t('owner.spot.edit.reReviewPhotos')}</Text>}
             <View style={styles.photosRow}>
               {photos.map((url, index) => (
                 <View key={url} style={styles.photoThumbWrapper}>
@@ -689,19 +695,24 @@ export default function EditSpot() {
             style={styles.saveBtn}
           />
 
-          <TouchableOpacity
-            style={styles.dangerBtn}
-            onPress={handleToggleActive}
-            disabled={statusBusy}
-          >
-            {statusBusy ? (
-              <ActivityIndicator color={colors.text} size="small" />
-            ) : (
-              <Text style={styles.dangerBtnText}>
-                {spot.active ? t('owner.spot.edit.deactivate') : t('owner.spot.edit.reactivate')}
-              </Text>
-            )}
-          </TouchableOpacity>
+          {/* A spot ParkLink suspended can't be switched back on by its owner. */}
+          {spot.suspendedByAdmin ? (
+            <Text style={styles.suspendedNote}>{t('owner.spot.edit.suspendedNoToggle')}</Text>
+          ) : (
+            <TouchableOpacity
+              style={styles.dangerBtn}
+              onPress={handleToggleActive}
+              disabled={statusBusy}
+            >
+              {statusBusy ? (
+                <ActivityIndicator color={colors.text} size="small" />
+              ) : (
+                <Text style={styles.dangerBtnText}>
+                  {spot.active ? t('owner.spot.edit.deactivate') : t('owner.spot.edit.reactivate')}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={[styles.dangerBtn, styles.deleteBtn]}
