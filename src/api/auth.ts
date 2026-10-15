@@ -11,6 +11,8 @@ interface RegisterInput {
   phone: string;
   birthDate: string; // 'YYYY-MM-DD'
   password: string;
+  // The Terms of Service and Privacy Policy -- auth-service refuses a sign-up without it.
+  acceptedTerms: boolean;
 }
 
 interface LoginInput {
@@ -108,6 +110,7 @@ export async function register(input: RegisterInput): Promise<void> {
       phone: input.phone,
       birth_date: input.birthDate,
       password: input.password,
+      accepted_terms: input.acceptedTerms,
     }),
   });
 }

@@ -29,15 +29,19 @@ import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
 import { searchParkingSpots, getMinPricePerHour, SearchParkingSpotsFilters } from '@/src/services/parkingService';
+
 import { todayArtDateISO } from '@/src/services/dateUtils';
 import { formatShortDate } from '@/src/services/bookingDates';
-import { geocodeAddress, reverseGeocode, GeocodeCandidate } from '@/src/api/parking';
+import { geocodeAddress, reverseGeocode, GeocodeCandidate, SearchSort } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { ParkingSpot } from '@/src/types';
 import { t, useLanguage } from '@/src/i18n';
 import { useLocationPermission } from '@/src/hooks/useLocationPermission';
 import { MAP_STYLE } from '@/src/theme/mapStyle';
 import { useScale } from '@/src/theme/typography';
+
+// How the results can be ordered (see search.sort.* in the i18n files).
+const SORTS: SearchSort[] = ['distance', 'price', 'rating'];
 
 // Precio a mostrar en el pin del mapa: por hora si la cochera lo ofrece
 // (aunque también tenga estadía -- ver el pedido del usuario de priorizar
@@ -319,12 +323,14 @@ export function SearchScreen() {
       date: scheduleFilterOn ? (dateInput || undefined) : undefined,
       fromHour: scheduleFilterOn ? fromHourInput : undefined,
       toHour: scheduleFilterOn ? toHourInput : undefined,
+      // The order is chosen outside the filters: applying or clearing them keeps it.
+      sort: filters.sort,
     });
     setModalVisible(false);
   }
 
   function clearFilters() {
-    setFilters({});
+    setFilters({ sort: filters.sort });
     setModalVisible(false);
   }
 
@@ -552,6 +558,9 @@ export function SearchScreen() {
       color: colors.white,
     },
     // ── Active filter chips ──────────────────────────────────────────────────
+    sortScroll: { flexGrow: 0 },
+    sortRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 4 },
+    sortLabel: { fontSize: sc(13), color: colors.textSecondary, fontWeight: '600', marginRight: 8, marginBottom: 6 },
     activeFiltersRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -899,6 +908,21 @@ export function SearchScreen() {
             <Chip key={chip.label} label={chip.label} onRemove={chip.onRemove} />
           ))}
         </View>
+      )}
+
+      {/* ── Sort (list only: on the map, order doesn't matter) ─────────── */}
+      {(viewMode === 'list' || Platform.OS === 'web') && spots.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sortScroll} contentContainerStyle={styles.sortRow}>
+          <Text style={styles.sortLabel}>{t('search.sort.label')}</Text>
+          {SORTS.map((option) => (
+            <Chip
+              key={option}
+              label={t(`search.sort.${option}`)}
+              selected={(filters.sort ?? 'distance') === option}
+              onPress={() => setFilters((current) => ({ ...current, sort: option === 'distance' ? undefined : option }))}
+            />
+          ))}
+        </ScrollView>
       )}
 
       {/* ── Results ────────────────────────────────────────────────── */}

@@ -35,6 +35,7 @@ import { AccessInstructionsCard } from '@/src/components/booking/AccessInstructi
 import { ExtendBooking } from '@/src/components/booking/ExtendBooking';
 import { OwnerCancelBooking } from '@/src/components/booking/OwnerCancelBooking';
 import { ReportButton } from '@/src/components/ReportButton';
+import { shareReceipt } from '@/src/services/receipt';
 
 /** Maps the backend wire shape to the UI Booking type -- same mapping as the
  * driver's booking list (see (tabs)/bookings.tsx), plus payment_id/updated_at
@@ -83,14 +84,19 @@ function openDirections(lat: number, lng: number) {
   Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
 }
 
+/** Días de check-in a check-out de una estadía. */
+function stayDays(booking: Booking): number {
+  return Math.max(1, Math.round(
+    (new Date(`${booking.endDate}T00:00:00`).getTime() - new Date(`${booking.date}T00:00:00`).getTime()) / 86_400_000,
+  ));
+}
+
 /** Duración legible: horas para HOURLY, días de check-in a check-out para STAY. */
 function durationLabel(booking: Booking): string {
   if (booking.kind === 'HOURLY') {
     return booking.hours === 1 ? t('driver.booking.durationOneHour') : t('driver.booking.durationHours', { hours: String(booking.hours) });
   }
-  const days = Math.max(1, Math.round(
-    (new Date(`${booking.endDate}T00:00:00`).getTime() - new Date(`${booking.date}T00:00:00`).getTime()) / 86_400_000,
-  ));
+  const days = stayDays(booking);
   return days === 1 ? t('driver.booking.durationOneDay') : t('driver.booking.durationDays', { days: String(days) });
 }
 
@@ -124,6 +130,8 @@ export default function DriverBookingDetail() {
   // spot and its owner (booking-service rejects a second review of the same target).
   const [reviewPending, setReviewPending] = useState<boolean | null>(null);
   const [refund, setRefund] = useState<RefundStatusResponse | null>(null);
+  const sessionUser = useSessionStore((s) => s.user);
+  const [receiptBusy, setReceiptBusy] = useState(false);
   // Owner answering a PENDING_OWNER_APPROVAL request from here: which button is working.
   const [answering, setAnswering] = useState<'approve' | 'reject' | null>(null);
   // When the screen opened -- what "already started" / "in its last hour" is measured against.
@@ -287,6 +295,12 @@ export default function DriverBookingDetail() {
     rejectBtn: { borderWidth: 1.5, borderColor: '#C62828' },
     approveBtnText: { color: colors.white, fontWeight: '700', fontSize: sc(15) },
     rejectBtnText: { color: '#C62828', fontWeight: '700', fontSize: sc(15) },
+    // Outlined, secondary action ("Volver a reservar").
+    receiptButton: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      borderRadius: 12, borderWidth: 1.5, borderColor: colors.teal, paddingVertical: 13,
+    },
+    receiptButtonText: { fontSize: sc(15), fontWeight: '700', color: colors.teal },
     cancelButton: {
       borderRadius: 12,
       borderWidth: 1.5,
@@ -431,6 +445,62 @@ export default function DriverBookingDetail() {
   const sideParam = isOwnerView ? '?view=owner' : '';
   // Something went wrong with the stay (no-show, overstay, spot taken): from half an hour
   // before it starts, while it's on, and once it's over.
+  // The driver's receipt: for any booking that was actually paid (a cancelled one shows what
+  // went back).
+  const canDownloadReceipt = !isOwnerView && !!booking.paidAt && booking.paymentId !== 'CASH';
+  async function downloadReceipt() {
+    if (!booking) return;
+    setReceiptBusy(true);
+    try {
+      await shareReceipt({
+        bookingId: booking.id,
+        spotTitle: booking.parkingSpotTitle,
+        spotAddress: spotInfo?.address,
+        driverName: [sessionUser?.name, sessionUser?.lastName].filter(Boolean).join(' '),
+        ownerName: ownerName ?? undefined,
+        when: booking.kind === 'STAY'
+          ? `${formatLongDate(booking.date)}, ${booking.startTime} → ${formatLongDate(booking.endDate)}, ${booking.endTime}`
+          : formatBookingWhen(booking, t('driver.booking.timeTo'), 'long'),
+        duration: durationLabel(booking),
+        vehicle: booking.vehicle
+          ? [booking.vehicle.brand, booking.vehicle.model, booking.vehicle.plate].filter(Boolean).join(' · ')
+          : undefined,
+        total: booking.total,
+        paidAt: booking.paidAt ? formatLongDateTime(booking.paidAt) : undefined,
+        paymentRef: booking.paymentId,
+        status: t(`receipt.statusValue.${booking.status}`),
+        refunded: booking.status === 'CANCELLED' ? refundTotal : booking.refundedAmount,
+        issuedAt: formatLongDateTime(new Date().toISOString()),
+      });
+    } catch {
+      alert(t('receipt.error'));
+    } finally {
+      setReceiptBusy(false);
+    }
+  }
+
+  const receiptRow = canDownloadReceipt ? (
+    <>
+      <View style={styles.divider} />
+      <Pressable style={styles.sectionHeader} onPress={downloadReceipt} disabled={receiptBusy}>
+        <Ionicons name="document-text-outline" size={sc(15)} color={colors.teal} />
+        <Text style={[styles.sectionLabel, { color: colors.teal }]}>{t('receipt.download')}</Text>
+        <View style={{ flex: 1 }} />
+        {receiptBusy ? <ActivityIndicator color={colors.teal} size="small" /> : <Ionicons name="download-outline" size={sc(15)} color={colors.teal} />}
+      </Pressable>
+    </>
+  ) : null;
+
+  // "Volver a reservar": a booking that's over (or never happened), on a spot still listed.
+  const canRepeat = !isOwnerView && spotInfo?.status === 'active' &&
+    (booking.status === 'COMPLETED' || booking.status === 'CANCELLED' || booking.status === 'EXPIRED');
+  const repeatBooking = () => {
+    const params = new URLSearchParams(
+      booking.kind === 'STAY' ? { mode: 'stay', days: String(stayDays(booking)) } : { mode: 'hourly', hours: String(booking.hours) },
+    );
+    if (booking.vehicle?.type) params.set('vehicleType', booking.vehicle.type);
+    router.push(`${group}/spot/${booking.parkingSpotId}?${params.toString()}` as never);
+  };
   const canReportProblem = (accepted || booking.status === 'COMPLETED') && openedAt > startMs - 30 * 60 * 1000;
 
   return (
@@ -665,6 +735,7 @@ export default function DriverBookingDetail() {
                       </Text>
                     </View>
                     <Text style={styles.refundNote}>{t('booking.refund.timingNote')}</Text>
+                    {receiptRow}
                   </>
                 )}
               </View>
@@ -702,6 +773,7 @@ export default function DriverBookingDetail() {
                     <Text style={styles.detailValue} numberOfLines={1}>{booking.paymentId}</Text>
                   </View>
                 )}
+                {receiptRow}
               </View>
             </Card>
           )}
@@ -807,6 +879,15 @@ export default function DriverBookingDetail() {
                   <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
                 </>
               )}
+            </Pressable>
+          </View>
+        )}
+
+        {canRepeat && (
+          <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+            <Pressable style={styles.receiptButton} onPress={repeatBooking}>
+              <Ionicons name="refresh" size={sc(18)} color={colors.teal} />
+              <Text style={styles.receiptButtonText}>{t('booking.repeat')}</Text>
             </Pressable>
           </View>
         )}

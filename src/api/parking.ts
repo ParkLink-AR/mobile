@@ -83,7 +83,11 @@ export interface SearchParkingSpotsParams {
   // Mobile los trata como mutuamente excluyentes en su UI (elegir uno
   // deselecciona el otro), pero acá van sueltos -- el back no impone esa regla.
   hourlyOnly?: boolean;
+  // Cómo ordenar: 'distance' (por defecto), 'price' o 'rating'.
+  sort?: SearchSort;
 }
+
+export type SearchSort = 'distance' | 'price' | 'rating';
 
 // One candidate match for a free-text address query -- ambiguous street
 // names (very common across Argentine cities) can resolve to several real
@@ -212,6 +216,7 @@ export async function searchParkingSpots(
     ...(params.to !== undefined ? { to: params.to } : {}),
     ...(params.stayOnly !== undefined ? { stayOnly: String(params.stayOnly) } : {}),
     ...(params.hourlyOnly !== undefined ? { hourlyOnly: String(params.hourlyOnly) } : {}),
+    ...(params.sort && params.sort !== 'distance' ? { sort: params.sort } : {}),
   });
   return request(`/parking-spots/search?${query.toString()}`);
 }

@@ -115,7 +115,13 @@ export default function SpotDetail() {
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   useLanguage();
   const group = `/${useSegments()[0]}`;
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // "Volver a reservar" opens the spot set up like the booking it repeats: same kind (hourly
+  // or stay), same length (hours, or days for a stay) and same vehicle type. The day still
+  // falls on the first free one, like any other visit.
+  const { id, mode: repeatMode, hours: repeatHoursParam, days: repeatDaysParam, vehicleType: repeatVehicleType } =
+    useLocalSearchParams<{ id: string; mode?: string; hours?: string; days?: string; vehicleType?: string }>();
+  const repeatHours = Number(repeatHoursParam) > 0 ? Number(repeatHoursParam) : null;
+  const repeatDays = Number(repeatDaysParam) > 0 ? Math.round(Number(repeatDaysParam)) : null;
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [owner, setOwner] = useState<{ name: string; avatarUrl: string | null } | null>(null);
   // Inicio y fin de la reserva por hora, en epoch-ms. Sólo guardan lo que el conductor tocó: lo que
@@ -128,11 +134,13 @@ export default function SpotDetail() {
   // Sólo importa para el precio cuando la cochera cobra distinto por
   // vehículo (spot.pricePerHourByVehicleType) -- ver el picker más abajo,
   // que sólo se muestra en ese caso.
-  const [selectedVehicleType, setSelectedVehicleType] = useState<VehicleType | null>(null);
+  const [selectedVehicleType, setSelectedVehicleType] = useState<VehicleType | null>(
+    () => (repeatVehicleType as VehicleType | undefined) ?? null,
+  );
   // Sólo importa cuando la cochera ofrece los dos modos -- ahí el conductor
   // elige uno a la vez en vez de ver los dos formularios juntos (que
   // confundía sobre cuál total/botón corresponde a qué reserva).
-  const [bookingMode, setBookingMode] = useState<'hourly' | 'stay'>('hourly');
+  const [bookingMode, setBookingMode] = useState<'hourly' | 'stay'>(() => (repeatMode === 'stay' ? 'stay' : 'hourly'));
   const user = useSessionStore((s) => s.user);
   const isFavorite = useFavoritesStore((s) => (id ? s.ids.has(id) : false));
   const toggleFavorite = useFavoritesStore((s) => s.toggle);
@@ -230,7 +238,10 @@ export default function SpotDetail() {
     endMsOverride !== null && endLimits !== null && isInRanges([endLimits], endMsOverride)
       ? endMsOverride
       : effectiveStartMs !== null
-        ? defaultEnd(endLimits, effectiveStartMs)
+        ? repeatHours !== null && endLimits !== null
+          ? // Repeating a booking: as long as last time, or as far as it's free.
+            Math.max(endLimits.startMs, Math.min(effectiveStartMs + repeatHours * 60 * 60 * 1000, endLimits.endMs))
+          : defaultEnd(endLimits, effectiveStartMs)
         : null;
 
   const endDateISO = effectiveEndMs !== null ? endDateOf(effectiveEndMs) : selectedDateISO;
@@ -338,8 +349,10 @@ export default function SpotDetail() {
   // que minStayStartDate: si stayStartDate avanza más allá del fin elegido
   // (o el fin nunca se eligió), el mínimo se recalcula solo.
   const minStayEndDate = addOneDayISO(stayStartDate);
+  // Repeating a stay suggests the same number of days.
+  const suggestedStayEndDate = repeatDays !== null ? addDaysISO(stayStartDate, repeatDays) : minStayEndDate;
   const stayEndDate =
-    stayEndDateOverride && stayEndDateOverride >= minStayEndDate ? stayEndDateOverride : minStayEndDate;
+    stayEndDateOverride && stayEndDateOverride >= minStayEndDate ? stayEndDateOverride : suggestedStayEndDate;
 
   // A spot that prices stays per vehicle type quotes by the type picked below (the first
   // one it accepts until the driver picks).

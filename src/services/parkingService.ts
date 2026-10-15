@@ -16,6 +16,7 @@ import {
   uploadParkingSpotPhotos as apiUploadParkingSpotPhotos,
   deleteParkingSpotPhoto as apiDeleteParkingSpotPhoto,
   reorderParkingSpotPhotos as apiReorderParkingSpotPhotos,
+  SearchSort,
 } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { getDriverVisiblePrice } from './utils';
@@ -194,6 +195,8 @@ export interface SearchParkingSpotsFilters {
   // Contraparte de stayOnly -- sólo cocheras con alquiler por hora habilitado.
   // Mobile los trata como mutuamente excluyentes en la UI del buscador.
   hourlyOnly?: boolean;
+  // Cómo ordenar los resultados -- el servidor los devuelve ya ordenados.
+  sort?: SearchSort;
 }
 
 // Builds an ISO 8601 datetime for `hour` on `dateISO` (YYYY-MM-DD), with a
@@ -225,6 +228,7 @@ export async function searchParkingSpots(
     to: filters.toHour !== undefined ? toISODateTime(dateISO, filters.toHour) : undefined,
     stayOnly: filters.stayOnly,
     hourlyOnly: filters.hourlyOnly,
+    sort: filters.sort,
   });
   const spots = results.map(toParkingSpot);
   if (filters.minPrice === undefined) return spots;

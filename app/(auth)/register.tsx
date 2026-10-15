@@ -33,6 +33,7 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { ApiError } from '@/src/api/client';
 import { COUNTRIES, DEFAULT_COUNTRY, Country } from '@/src/data/countries';
 import { formatShortDate } from '@/src/services/bookingDates';
+import { PRIVACY_URL, TERMS_URL, openLegalPage } from '@/src/constants/legal';
 
 type Step = 'email' | 'email-code' | 'phone' | 'phone-code' | 'personal';
 
@@ -87,6 +88,7 @@ export default function Register() {
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [password, setPassword] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const fullPhone = `${country.dialCode}${phoneNumber.replace(/[^0-9]/g, '')}`;
 
@@ -248,6 +250,10 @@ export default function Register() {
       setError(t('auth.register.personal.error.required'));
       return;
     }
+    if (!acceptedTerms) {
+      setError(t('auth.register.terms.required'));
+      return;
+    }
     setLoading(true);
     try {
       await register({
@@ -258,6 +264,7 @@ export default function Register() {
         phone: fullPhone,
         birthDate: birthDate.toISOString().slice(0, 10),
         password,
+        acceptedTerms,
       });
       const { user: newUser, tokens } = await login({ email, password });
       setSession(newUser, tokens);
@@ -574,6 +581,7 @@ export default function Register() {
             />
             <Text style={form.helper}>{t('auth.register.personal.passwordHint')}</Text>
           </View>
+          <TermsCheckbox checked={acceptedTerms} onToggle={() => setAcceptedTerms((value) => !value)} />
           {loading ? (
             <ActivityIndicator color={colors.teal} />
           ) : (
@@ -582,6 +590,31 @@ export default function Register() {
         </>
       )}
     </Screen>
+  );
+}
+
+/** "Acepto los Términos y la Política de Privacidad", each opening its page. */
+function TermsCheckbox({ checked, onToggle }: { checked: boolean; onToggle: () => void }) {
+  const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
+  const link = { color: colors.teal, fontWeight: '700' as const };
+  return (
+    <Pressable
+      onPress={onToggle}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 16 }}
+    >
+      <Ionicons name={checked ? 'checkbox' : 'square-outline'} size={sc(22)} color={checked ? colors.teal : colors.textSecondary} />
+      <Text style={{ flex: 1, fontSize: sc(14), color: colors.text, lineHeight: sc(20) }}>
+        {t('auth.register.terms.prefix')}
+        <Text style={link} onPress={() => openLegalPage(TERMS_URL)}>{t('legal.terms.title')}</Text>
+        {t('auth.register.terms.and')}
+        <Text style={link} onPress={() => openLegalPage(PRIVACY_URL)}>{t('legal.privacy.title')}</Text>
+        {t('auth.register.terms.suffix')}
+      </Text>
+    </Pressable>
   );
 }
 

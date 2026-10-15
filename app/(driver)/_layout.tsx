@@ -43,6 +43,7 @@ export default function DriverLayout() {
       <Stack.Screen name="settlements" options={{ title: t('layout.owner.settlements') }} />
       <Stack.Screen name="settlements/[id]" options={{ title: t('layout.owner.settlementDetail') }} />
       <Stack.Screen name="vehicles" options={{ title: t('vehicles.title') }} />
+      <Stack.Screen name="legal" options={{ title: t('legal.title') }} />
       <Stack.Screen name="account-deletion" options={{ title: t('account.deletion.title') }} />
       {/* Profile */}
       <Stack.Screen name="profile-edit" options={{ title: t('driver.profile.edit') }} />

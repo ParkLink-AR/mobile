@@ -211,7 +211,7 @@ export default function Profile() {
           </Pressable>
         </View>
 
-        {/* Finanzas / legales — solo propietario. Mismo patrón de tarjeta con filas
+        {/* Finanzas — solo propietario. Mismo patrón de tarjeta con filas
             divididas que Preferencias, más abajo -- dos botones sueltos uno arriba
             del otro se leían como dos secciones distintas cuando en realidad son
             la misma categoría (accesos del propietario). */}
@@ -246,18 +246,6 @@ export default function Profile() {
                 <Ionicons name="chevron-forward" size={sc(16)} color={colors.textSecondary} />
               </Pressable>
 
-              <View style={styles.prefDivider} />
-
-              <Pressable
-                style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
-                onPress={() => router.push(`${group}/legal`)}
-              >
-                <View style={styles.prefRowLeft}>
-                  <Ionicons name="document-text-outline" size={sc(18)} color={colors.teal} />
-                  <Text style={styles.prefLabel}>{t('profile.legal')}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={sc(16)} color={colors.textSecondary} />
-              </Pressable>
             </View>
           </>
         )}
@@ -329,6 +317,17 @@ export default function Profile() {
               </Text>
               <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
             </View>
+          </Pressable>
+
+          <View style={styles.prefDivider} />
+
+          {/* Términos y Privacidad: para todos, conductores y propietarios. */}
+          <Pressable
+            style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => router.push(`${group}/legal`)}
+          >
+            <Text style={styles.prefLabel}>{t('profile.legal')}</Text>
+            <Ionicons name="chevron-forward" size={sc(14)} color={colors.teal} />
           </Pressable>
         </View>
 
