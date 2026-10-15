@@ -34,6 +34,7 @@ import { useScale } from '@/src/theme/typography';
 import { AccessInstructionsCard } from '@/src/components/booking/AccessInstructionsCard';
 import { ExtendBooking } from '@/src/components/booking/ExtendBooking';
 import { OwnerCancelBooking } from '@/src/components/booking/OwnerCancelBooking';
+import { ReportButton } from '@/src/components/ReportButton';
 
 /** Maps the backend wire shape to the UI Booking type -- same mapping as the
  * driver's booking list (see (tabs)/bookings.tsx), plus payment_id/updated_at
@@ -428,6 +429,9 @@ export default function DriverBookingDetail() {
   // What a cancelled booking gave back: part of it (refundedAmount), or all of it.
   const refundTotal = booking.refundedAmount && booking.refundedAmount > 0 ? booking.refundedAmount : booking.total;
   const sideParam = isOwnerView ? '?view=owner' : '';
+  // Something went wrong with the stay (no-show, overstay, spot taken): from half an hour
+  // before it starts, while it's on, and once it's over.
+  const canReportProblem = (accepted || booking.status === 'COMPLETED') && openedAt > startMs - 30 * 60 * 1000;
 
   return (
     <Screen style={styles.screen} edges={['left', 'right', 'bottom']}>
@@ -747,6 +751,12 @@ export default function DriverBookingDetail() {
               </Pressable>
             </View>
           </Card>
+
+          {canReportProblem && (
+            <View style={{ alignItems: 'center' }}>
+              <ReportButton targetType="booking" targetId={booking.id} bookingSide={isOwnerView ? 'owner' : 'driver'} />
+            </View>
+          )}
         </View>
 
         {/* Calificar: una vez terminada la reserva (COMPLETED, apenas pasa su horario de

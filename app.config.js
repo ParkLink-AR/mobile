@@ -11,13 +11,19 @@
 // blank. Create one at https://console.cloud.google.com -> enable
 // "Maps SDK for Android" + "Maps SDK for iOS" -> APIs & Services -> Credentials.
 // One key works for both platforms.
+//
+// Sentry (crash/error reports): the DSN goes in EXPO_PUBLIC_SENTRY_DSN (without it nothing
+// is sent). Uploading source maps on native builds needs SENTRY_ORG, SENTRY_PROJECT and
+// SENTRY_AUTH_TOKEN -- until those are set, eas.json skips the upload
+// (SENTRY_DISABLE_AUTO_UPLOAD) so builds don't fail.
+const { withSentry } = require('@sentry/react-native/expo');
 const appJson = require('./app.json');
 
 module.exports = () => {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY || '';
   const { expo } = appJson;
 
-  return {
+  const config = {
     ...expo,
     ios: {
       ...expo.ios,
@@ -28,4 +34,10 @@ module.exports = () => {
       config: { ...(expo.android && expo.android.config), googleMaps: { apiKey } },
     },
   };
+
+  return withSentry(config, {
+    url: 'https://sentry.io/',
+    organization: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+  });
 };

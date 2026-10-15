@@ -1,9 +1,9 @@
 import { request } from './client';
 
-export type ReportTargetType = 'spot' | 'user' | 'review';
+export type ReportTargetType = 'spot' | 'user' | 'review' | 'booking';
 
 /**
- * Reports a spot, a person or a review to ParkLink staff, who see it in the admin panel's
+ * Reports a spot, a person, a review, or a problem with a booking to ParkLink staff, who see it in the admin panel's
  * "Denuncias" queue.
  *
  * POST /reports

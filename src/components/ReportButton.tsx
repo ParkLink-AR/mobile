@@ -15,7 +15,9 @@ const DETAILS_MAX = 1000;
 
 // The reasons offered for each kind of thing. The reason travels in Spanish whatever the
 // app's language, since ParkLink staff read it in the admin panel.
-const REASONS: Record<ReportTargetType, { key: string; es: string }[]> = {
+type Reason = { key: string; es: string };
+
+const REASONS: Record<Exclude<ReportTargetType, 'booking'>, Reason[]> = {
   spot: [
     { key: 'fake', es: 'La cochera no existe o es falsa' },
     { key: 'misleading', es: 'Fotos o datos engañosos' },
@@ -37,15 +39,33 @@ const REASONS: Record<ReportTargetType, { key: string; es: string }[]> = {
   ],
 };
 
+// A problem with a booking, as each side lives it.
+const BOOKING_REASONS: Record<'owner' | 'driver', Reason[]> = {
+  owner: [
+    { key: 'noShow', es: 'El conductor no vino' },
+    { key: 'overstay', es: 'El conductor se pasó del horario' },
+    { key: 'damage', es: 'El conductor causó daños' },
+    { key: 'other', es: 'Otro problema' },
+  ],
+  driver: [
+    { key: 'spotTaken', es: 'La cochera estaba ocupada' },
+    { key: 'noAccess', es: 'No me dejaron entrar' },
+    { key: 'notAsDescribed', es: 'La cochera no era como se describía' },
+    { key: 'other', es: 'Otro problema' },
+  ],
+};
+
 interface ReportButtonProps {
   targetType: ReportTargetType;
   targetId: string;
   /** 'link' (flag + "Denunciar", default) or 'icon' (just the flag, for tight rows). */
   variant?: 'link' | 'icon';
+  /** targetType 'booking': which side is reporting -- each one gets its own reasons. */
+  bookingSide?: 'owner' | 'driver';
 }
 
 /** "Denunciar": a small link that opens a sheet to pick a reason and send it to ParkLink. */
-export function ReportButton({ targetType, targetId, variant = 'link' }: ReportButtonProps) {
+export function ReportButton({ targetType, targetId, variant = 'link', bookingSide = 'driver' }: ReportButtonProps) {
   useLanguage();
   const colors = useThemeColors();
   const scale = useScale();
@@ -65,8 +85,11 @@ export function ReportButton({ targetType, targetId, variant = 'link' }: ReportB
     setOpen(true);
   }
 
+  const reasons = targetType === 'booking' ? BOOKING_REASONS[bookingSide] : REASONS[targetType];
+  const reasonKey = (key: string) => (targetType === 'booking' ? `report.bookingReason.${key}` : `report.reason.${key}`);
+
   async function send() {
-    const chosen = REASONS[targetType].find((r) => r.key === reason);
+    const chosen = reasons.find((r) => r.key === reason);
     if (!chosen) return;
     setBusy(true);
     setError(null);
@@ -119,7 +142,9 @@ export function ReportButton({ targetType, targetId, variant = 'link' }: ReportB
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         <Ionicons name="flag-outline" size={sc(14)} color={colors.textSecondary} />
-        {variant === 'link' ? <Text style={styles.triggerText}>{t('report.action')}</Text> : null}
+        {variant === 'link' ? (
+          <Text style={styles.triggerText}>{t(targetType === 'booking' ? 'report.bookingAction' : 'report.action')}</Text>
+        ) : null}
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -140,7 +165,7 @@ export function ReportButton({ targetType, targetId, variant = 'link' }: ReportB
                   <>
                     <Text style={styles.title}>{t(`report.title.${targetType}`)}</Text>
                     <Text style={styles.subtitle}>{t('report.subtitle')}</Text>
-                    {REASONS[targetType].map((r) => {
+                    {reasons.map((r) => {
                       const active = r.key === reason;
                       return (
                         <TouchableOpacity key={r.key} style={[styles.option, active && styles.optionActive]} onPress={() => setReason(r.key)}>
@@ -149,7 +174,7 @@ export function ReportButton({ targetType, targetId, variant = 'link' }: ReportB
                             size={sc(18)}
                             color={active ? colors.teal : colors.textSecondary}
                           />
-                          <Text style={styles.optionText}>{t(`report.reason.${r.key}`)}</Text>
+                          <Text style={styles.optionText}>{t(reasonKey(r.key))}</Text>
                         </TouchableOpacity>
                       );
                     })}

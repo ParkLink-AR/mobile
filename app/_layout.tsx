@@ -19,6 +19,9 @@ import { useNotificationsSync } from '@/src/services/notificationsLive';
 import { preloadPlateAssets } from '@/src/components/VehiclePlate';
 import { onAccountBlocked, request } from '@/src/api/client';
 import { openInMode } from '@/src/services/openInMode';
+import { initMonitoring, setMonitoringUser, wrapRoot } from '@/src/services/monitoring';
+
+initMonitoring();
 
 // Required for expo-web-browser to intercept deep-link redirects from
 // MercadoPago and close the in-app browser automatically.
@@ -33,8 +36,12 @@ const ACCOUNT_CHECK_INTERVAL_MS = 60 * 1000;
 // the first time a screen shows one (see VehiclePlate).
 preloadPlateAssets();
 
-export default function RootLayout() {
+function RootLayout() {
   const userId = useSessionStore((s) => s.user?.id ?? null);
+
+  useEffect(() => {
+    setMonitoringUser(userId);
+  }, [userId]);
   const prevUserId = useRef<string | null>(null);
   const fetchCommissionRate = useCommissionStore((s) => s.fetchRate);
 
@@ -129,3 +136,5 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+export default wrapRoot(RootLayout);

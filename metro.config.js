@@ -1,7 +1,9 @@
 // https://docs.expo.dev/guides/customizing-metro/
-const { getDefaultConfig } = require('expo/metro-config');
+// Sentry's version of Expo's default config: same thing, plus the debug ids it needs to
+// match errors to source maps.
+const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 
 // react-native-maps and react-native-map-clustering use
 // `codegenNativeComponent` from react-native, which is not available on web.
