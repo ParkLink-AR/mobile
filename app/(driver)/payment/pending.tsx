@@ -550,11 +550,24 @@ function Receipt({
         </View>
       ) : null}
       <View style={styles.divider} />
+      {/* The payment also covers the pending balances the booking took on: itemised, so the total adds up. */}
+      {booking.debt_amount ? (
+        <>
+          <View style={styles.row}>
+            <Text style={styles.label}>{t('booking.debt.price')}</Text>
+            <Text style={styles.value}>{formatPesos(booking.amount)}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>{t('booking.debt.included')}</Text>
+            <Text style={styles.value}>{formatPesos(booking.debt_amount)}</Text>
+          </View>
+        </>
+      ) : null}
       <View style={[styles.row, { alignItems: 'center' }]}>
         <Text style={[styles.label, styles.totalLabel]}>
           {showPaid ? t('driver.payment.result.totalPaid') : t('driver.payment.result.total')}
         </Text>
-        <Text style={[styles.value, styles.total]}>{formatPesos(booking.amount)}</Text>
+        <Text style={[styles.value, styles.total]}>{formatPesos(booking.amount + (booking.debt_amount ?? 0))}</Text>
       </View>
     </View>
   );

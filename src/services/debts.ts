@@ -8,7 +8,7 @@ import { formatShortDateFromISO } from '@/src/services/bookingDates';
 /**
  * What the driver owes for staying past the end of a booking: charged on their next reservation,
  * never blocking it. The app tells them before they get to the payment, and itemises it on the
- * confirmation -- see DebtBreakdown and PendingBalanceBanner.
+ * confirmation -- see DebtBreakdown.
  */
 export interface Debt {
   id: string;

@@ -8,8 +8,6 @@ import { FAVORITE_RED } from '@/src/components/ParkingSpotCard';
 import { formatShortDate, formatWeekdayDayMonth } from '@/src/services/bookingDates';
 import { PhotoGallery } from '@/src/components/PhotoGallery';
 import { Button } from '@/src/components/Button';
-import { PendingBalanceBanner } from '@/src/components/booking/PendingBalanceBanner';
-import { useMyDebts } from '@/src/services/debts';
 import { Screen } from '@/src/components/Screen';
 import {
   AvailabilityDatePickerField,
@@ -111,7 +109,6 @@ const STAY_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => hour);
 
 export default function SpotDetail() {
   const colors = useThemeColors();
-  const { pending: pendingBalance } = useMyDebts();
   const insets = useSafeAreaInsets();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
@@ -823,12 +820,6 @@ export default function SpotDetail() {
             <>
               <View style={styles.divider} />
               <Text style={styles.sectionTitle}>{t('spot.section.book')}</Text>
-              {/* Owed for staying past a booking's end: it rides on this reservation, so say so now. */}
-              {pendingBalance > 0 && (
-                <View style={{ marginBottom: 14 }}>
-                  <PendingBalanceBanner pending={pendingBalance} />
-                </View>
-              )}
 
               {spot.hourlyEnabled && spot.stayEnabled && (
                 <View style={styles.segment}>

@@ -1,5 +1,6 @@
 import { t, useLanguage } from '@/src/i18n';
 import { View, Text, StyleSheet } from 'react-native';
+import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useScale } from '@/src/theme/typography';
@@ -15,6 +16,7 @@ import { debtBookingDay, formatDebtPesos, type Debt } from '@/src/services/debts
  */
 export function DebtBreakdown({ bookingTotal, debts }: { bookingTotal: number | null; debts: Debt[] }) {
   useLanguage();
+  const group = `/${useSegments()[0]}`;
   const colors = useThemeColors();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
@@ -31,6 +33,7 @@ export function DebtBreakdown({ bookingTotal, debts }: { bookingTotal: number | 
     totalValue: { fontSize: sc(18), color: colors.teal, fontWeight: '700' },
     note: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
     noteText: { flex: 1, fontSize: sc(12), color: colors.textSecondary, lineHeight: sc(17) },
+    noteLink: { fontSize: sc(12), fontWeight: '600', color: colors.teal },
     group: { gap: 8 },
   });
 
@@ -70,7 +73,12 @@ export function DebtBreakdown({ bookingTotal, debts }: { bookingTotal: number | 
       </View>
       <View style={styles.note}>
         <Ionicons name="information-circle-outline" size={sc(15)} color={colors.textSecondary} />
-        <Text style={styles.noteText}>{t('debts.breakdown.note')}</Text>
+        <Text style={styles.noteText}>
+          {t('debts.breakdown.note')}{' '}
+          <Text style={styles.noteLink} onPress={() => router.push(`${group}/debts` as never)}>
+            {t('debts.breakdown.seeDetail')}
+          </Text>
+        </Text>
       </View>
     </View>
   );
