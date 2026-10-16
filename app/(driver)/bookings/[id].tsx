@@ -8,6 +8,7 @@ import { Button } from '@/src/components/Button';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { VehicleSummaryRow } from '@/src/components/VehicleIdentity';
 import { VerifyArrivalCode } from '@/src/components/VerifyArrivalCode';
+import { BookingExit } from '@/src/components/booking/BookingExit';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import {
@@ -55,6 +56,7 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string, ownerId: string
     subtotal: amount,
     serviceCharge: 0,
     total: amount,
+    debtAmount: b.debt_amount ? b.debt_amount / 100 : undefined,
     ownerEarnings: ownerEarningsFrom(b),
     status: b.status as Booking['status'],
     paymentId: b.payment_id,
@@ -65,6 +67,7 @@ function mapApiBooking(b: BookingApiResponse, spotTitle: string, ownerId: string
     parentBookingId: b.parent_booking_id,
     extension: b.extension,
     verificationCode: b.verification_code,
+    verifiedAt: b.verified_at,
     holdExpiresAt: b.hold_expires_at,
     vehicle: toVehicleSnapshot(b.vehicle),
   };
@@ -269,6 +272,7 @@ export default function DriverBookingDetail() {
     // side, and with the large text size it drops to its own line under the label.
     detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: largeText ? 'wrap' : 'nowrap', rowGap: 2 },
     detailLabel: { flexGrow: 1, flexShrink: 1, fontSize: sc(14), color: colors.textSecondary },
+    detailHint: { fontSize: sc(12), color: colors.textSecondary, lineHeight: sc(17) },
     detailValue: largeText
       ? { flexBasis: '100%', paddingLeft: sc(16) + 8, fontSize: sc(14), color: colors.text, fontWeight: '600' }
       : { flexShrink: 1, textAlign: 'right', fontSize: sc(14), color: colors.text, fontWeight: '600' },
@@ -441,7 +445,9 @@ export default function DriverBookingDetail() {
   const canOwnerCancel = isOwnerView && notStarted && booking.status === 'CONFIRMED';
   const canExtend = !isOwnerView && booking.kind === 'HOURLY' && accepted && openedAt < endMs && !booking.extension;
   // What a cancelled booking gave back: part of it (refundedAmount), or all of it.
-  const refundTotal = booking.refundedAmount && booking.refundedAmount > 0 ? booking.refundedAmount : booking.total;
+  // A full refund returns the whole payment: the booking's price and the pending balance it carried.
+  const paidTotal = booking.total + (booking.debtAmount ?? 0);
+  const refundTotal = booking.refundedAmount && booking.refundedAmount > 0 ? booking.refundedAmount : paidTotal;
   const sideParam = isOwnerView ? '?view=owner' : '';
   // Something went wrong with the stay (no-show, overstay, spot taken): from half an hour
   // before it starts, while it's on, and once it's over.
@@ -465,7 +471,7 @@ export default function DriverBookingDetail() {
         vehicle: booking.vehicle
           ? [booking.vehicle.brand, booking.vehicle.model, booking.vehicle.plate].filter(Boolean).join(' · ')
           : undefined,
-        total: booking.total,
+        total: paidTotal,
         paidAt: booking.paidAt ? formatLongDateTime(booking.paidAt) : undefined,
         paymentRef: booking.paymentId,
         status: t(`receipt.statusValue.${booking.status}`),
@@ -638,10 +644,25 @@ export default function DriverBookingDetail() {
             {/* The driver sees what they were charged. The owner sees what they earn --
                 their own price, without ParkLink's commission -- and, below, what the
                 driver paid. */}
+            {/* Carrying the driver's pending balance (extra time on earlier bookings): the payment is
+                the booking's price plus that, itemised -- the owner never sees it. */}
+            {!isOwnerView && !!booking.debtAmount && (
+              <>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>{t('booking.debt.price')}</Text>
+                  <Text style={styles.detailValue}>{formatPesos(booking.total)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>{t('booking.debt.included')}</Text>
+                  <Text style={styles.detailValue}>{formatPesos(booking.debtAmount)}</Text>
+                </View>
+                <Text style={styles.detailHint}>{t('booking.debt.includedHint')}</Text>
+              </>
+            )}
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>{t(isOwnerView ? 'owner.booking.youEarnLabel' : 'driver.booking.total')}</Text>
               <Text style={styles.totalValue}>
-                {formatPesos(isOwnerView ? booking.ownerEarnings ?? booking.total : booking.total)}
+                {formatPesos(isOwnerView ? booking.ownerEarnings ?? booking.total : paidTotal)}
               </Text>
             </View>
             {isOwnerView && booking.ownerEarnings !== undefined && booking.ownerEarnings !== booking.total && (
@@ -689,6 +710,24 @@ export default function DriverBookingDetail() {
               </View>
             </View>
           )}
+
+          {/* How a verified hourly booking ends: the driver's exit code (and the owner's button to enter
+              it) while it waits, then when the vehicle left and what staying past the end came to.
+              A booking carried on by a paid extension ends there instead. */}
+          {/* (booking-service only sends verified_at to the driver, so the owner just asks: an exit
+              that doesn't apply comes back as nothing to show.) */}
+          {booking.kind === 'HOURLY' &&
+            (isOwnerView || booking.verifiedAt) &&
+            ['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(booking.status) &&
+            booking.endAt &&
+            !(booking.extension && booking.extension.status !== 'PENDING_PAYMENT') && (
+              <BookingExit
+                bookingId={booking.id}
+                role={isOwnerView ? 'owner' : 'driver'}
+                endAt={booking.endAt}
+                onChanged={load}
+              />
+            )}
 
           {!isOwnerView && accepted && <AccessInstructionsCard bookingId={booking.id} />}
 

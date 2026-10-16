@@ -14,6 +14,7 @@ import { formatBookingWhen, formatShortDateFromISO } from '@/src/services/bookin
 import { approveBookingApi, rejectBookingApi } from '@/src/api/booking';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { openInMode } from '@/src/services/openInMode';
+import { formatDebtPesos } from '@/src/services/debts';
 import { ApiError } from '@/src/api/client';
 
 const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
@@ -40,6 +41,10 @@ const ICONS: Record<AppNotification['kind'], keyof typeof Ionicons.glyphMap> = {
   driver_starting_soon: 'car-outline',
   owner_starting_soon: 'car-outline',
   driver_stay_ending: 'time-outline',
+  driver_hourly_ending: 'time-outline',
+  driver_booking_ended: 'log-out-outline',
+  driver_overstay_charged: 'wallet-outline',
+  owner_overstay_paid: 'cash-outline',
   review_received: 'star',
   ticket_closed: 'checkmark-circle-outline',
   driver_refund_completed: 'cash-outline',
@@ -272,6 +277,18 @@ export default function Notifications() {
         return t('notifications.ownerStartingSoon.body', { time: item.startTime });
       case 'driver_stay_ending':
         return t('notifications.stayEnding.body', { time: item.endTime });
+      case 'driver_hourly_ending':
+        return t('notifications.hourlyEnding.body', { time: item.endTime });
+      case 'driver_booking_ended':
+        return t('notifications.bookingEnded.body');
+      case 'driver_overstay_charged':
+        return t('notifications.overstayCharged.body', {
+          minutes: String(item.overstayMinutes ?? 0), amount: formatDebtPesos(item.overstayAmount ?? 0),
+        });
+      case 'owner_overstay_paid':
+        return t('notifications.overstayPaid.body', {
+          minutes: String(item.overstayMinutes ?? 0), amount: formatDebtPesos(item.overstayAmount ?? 0),
+        });
       case 'review_received':
         return t('notifications.reviewReceived.body', { stars: '★'.repeat(Math.max(0, Math.min(item.rating ?? 0, 5))) });
       case 'ticket_closed':
@@ -352,6 +369,10 @@ export default function Notifications() {
         break;
       case 'ticket_closed':
         if (item.ticketId) openInMode(`${group}/bookings/${item.bookingId}/tickets/${item.ticketId}`);
+        break;
+      case 'driver_overstay_charged':
+        // What they owe, itemised: the balance and the booking it comes from.
+        openInMode(`${group}/debts`);
         break;
       case 'announcement':
         // Its whole text is already on screen; nothing to open.

@@ -46,6 +46,7 @@ export default function OwnerLayout() {
       {/* Finances (demo -- mocked data) */}
       <Stack.Screen name="finances" options={{ title: t('layout.owner.finances') }} />
       <Stack.Screen name="vehicles" options={{ title: t('vehicles.title') }} />
+      <Stack.Screen name="debts" options={{ title: t('debts.title') }} />
       <Stack.Screen name="account-deletion" options={{ title: t('account.deletion.title') }} />
     </Stack>
   );

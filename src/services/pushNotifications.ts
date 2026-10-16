@@ -229,6 +229,8 @@ const TYPE_ROLE: Record<string, 'driver' | 'owner'> = {
   'booking.verified': 'driver',
   'booking.payment_received': 'driver',
   'booking.ending_soon': 'driver',
+  'booking.hourly_ending_soon': 'driver',
+  'booking.ended': 'driver',
   'refund.completed': 'driver',
   'booking.pending_approval': 'owner',
   'booking.approval_reminder': 'owner',
@@ -297,9 +299,16 @@ function routeFor(data: Record<string, string> | undefined): string | null {
       return `${group}/bookings/${data.bookingId}?view=${data.role === 'owner' ? 'owner' : 'driver'}`;
     // Sent to the driver before a stay ends, and once a refund that had failed reaches them.
     case 'booking.ending_soon':
+    case 'booking.hourly_ending_soon':
+    case 'booking.ended':
     case 'refund.completed':
       if (!data.bookingId) return null;
       return `${group}/bookings/${data.bookingId}?view=driver`;
+    // The driver stayed past the grace period of a booking's end: the driver is taken to what they
+    // now owe (itemised, with the booking it comes from), the owner to the booking.
+    case 'booking.overstay_charged':
+      if (!data.bookingId) return null;
+      return data.role === 'owner' ? `${group}/bookings/${data.bookingId}?view=owner` : `${group}/debts`;
     // Sent to whoever was reviewed: their own profile, where the review shows.
     case 'review.received': {
       const userId = useSessionStore.getState().user?.id;

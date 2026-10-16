@@ -15,6 +15,9 @@ export interface BookingApiResponse {
   // When a PENDING_OWNER_APPROVAL booking is auto-cancelled if the owner doesn't answer.
   owner_response_deadline?: string;
   amount: number; // centavos -- what the driver was charged (owner's price + commission)
+  // centavos -- what the payment charged on top of `amount`: the pending balances the booking took
+  // on (see DebtApiResponse). Only sent to the driver; absent when none.
+  debt_amount?: number;
   // centavos -- what the spot's owner earns (their own price). Only sent to the owner;
   // absent for a booking that predates it, whose `amount` was the owner's price itself.
   owner_amount?: number;
@@ -312,6 +315,86 @@ export async function verifyBookingCodeApi(bookingId: string, code: string): Pro
     method: 'POST',
     body: JSON.stringify({ code }),
   });
+}
+
+/** How a verified hourly booking ends -- see booking-service's exitResponse. */
+export interface BookingExitApiResponse {
+  /** True while the vehicle's departure still has to be recorded. */
+  awaiting: boolean;
+  /** Only for the booking's driver, while it awaits its exit: the code they give the owner. */
+  exit_code?: string;
+  /** Set once the departure was recorded. */
+  exited_at?: string;
+  closed_by?: 'OWNER_CODE' | 'SUPPORT';
+  /** How long past the booking's end the vehicle stayed, and how much of it is charged (all of it
+   * once it went past the grace period, none before). */
+  overstay_minutes: number;
+  charged_minutes: number;
+  /** centavos -- what the driver owes for the charged minutes (the driver's side only). */
+  overstay_amount?: number;
+  /** centavos -- what the spot's owner is owed for them (the owner's side only). */
+  overstay_owner_amount?: number;
+}
+
+/**
+ * The booking's exit as the caller sees it. The driver, the first time they ask while it awaits
+ * its exit, gets the code to give the owner.
+ *
+ * GET /bookings/{id}/exit
+ */
+export async function getBookingExitApi(bookingId: string): Promise<BookingExitApiResponse> {
+  return request(`/bookings/${bookingId}/exit`);
+}
+
+/**
+ * The owner enters the code the driver gives them as the vehicle leaves: records when it left
+ * and completes the booking.
+ *
+ * POST /bookings/{id}/verify-exit
+ */
+export async function verifyBookingExitApi(bookingId: string, code: string): Promise<BookingExitApiResponse> {
+  return request(`/bookings/${bookingId}/verify-exit`, {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
+/** What the driver owes for staying past the end of a booking -- see booking-service's debtResponse. */
+export interface DebtApiResponse {
+  id: string;
+  /** PENDING: the next booking takes it on. RESERVED: it is on a booking still waiting for its
+   * payment. PAID: that booking's payment settled it. */
+  status: 'PENDING' | 'RESERVED' | 'PAID';
+  /** centavos */
+  amount: number;
+  /** How long past the end they stayed -- all of it was charged. */
+  minutes: number;
+  /** The booking that was overstayed, and where. */
+  booking_id: string;
+  booking_start: string;
+  booking_end: string;
+  parking_spot_id: string;
+  parking_spot_title: string;
+  /** The booking whose payment includes it, once one does. */
+  charged_booking_id?: string;
+  created_at: string;
+  paid_at?: string;
+}
+
+export interface MyDebtsApiResponse {
+  /** centavos -- what a new booking would add to its price right now. */
+  pending_amount: number;
+  debts: DebtApiResponse[];
+}
+
+/**
+ * The caller's balances for staying past the end of a booking, newest first, and how much their
+ * next reservation will carry.
+ *
+ * GET /debts
+ */
+export async function getMyDebtsApi(): Promise<MyDebtsApiResponse> {
+  return request('/debts');
 }
 
 /**
