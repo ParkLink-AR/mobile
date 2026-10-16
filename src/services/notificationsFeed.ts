@@ -40,6 +40,14 @@ export type NotificationKind =
   | 'driver_starting_soon'
   | 'owner_starting_soon'
   | 'driver_stay_ending'
+  // An hourly booking ends in minutes (time to extend it), and is over while its exit code is still
+  // to be given to the owner.
+  | 'driver_hourly_ending'
+  | 'driver_booking_ended'
+  // The driver stayed past the grace period of a booking's end: the balance that rides on their next
+  // reservation, and what ParkLink pays the owner for the extra time.
+  | 'driver_overstay_charged'
+  | 'owner_overstay_paid'
   // The other side of a booking reviewed this user (as an owner or as a driver).
   | 'review_received'
   // ParkLink staff closed the user's support ticket.
@@ -89,6 +97,10 @@ const KNOWN_KINDS = new Set<NotificationKind>([
   'driver_starting_soon',
   'owner_starting_soon',
   'driver_stay_ending',
+  'driver_hourly_ending',
+  'driver_booking_ended',
+  'driver_overstay_charged',
+  'owner_overstay_paid',
   'review_received',
   'ticket_closed',
   'driver_refund_completed',
@@ -128,6 +140,7 @@ const OWNER_KINDS = new Set<NotificationKind>([
   'owner_spot_suspended',
   'owner_spot_restored',
   'owner_booking_extended',
+  'owner_overstay_paid',
 ]);
 
 /** item.role, falling back by kind for an entry the server saved without one. */
@@ -175,6 +188,10 @@ export interface AppNotification {
   rating?: number;
   /** owner_booking_cancelled: the driver cancelled in the last hour, so the owner still gets part. */
   lateCancellation?: boolean;
+  /** *_overstay_*: how long past the booking's end the driver stayed, and the pesos it comes to for
+   * this side (the balance the driver owes, or what the owner is paid). */
+  overstayMinutes?: number;
+  overstayAmount?: number;
 }
 
 const ADMIN_REFUND_KINDS = new Set<NotificationKind>([
@@ -230,6 +247,8 @@ export function toAppNotification(entry: InboxNotificationApi): AppNotification 
     ticketId: str(data.ticket_id) || undefined,
     rating: num(data.rating) || undefined,
     lateCancellation: num(data.refunded_amount) > 0 || undefined,
+    overstayMinutes: num(data.overstay_minutes) || undefined,
+    overstayAmount: num(data.overstay_amount) ? num(data.overstay_amount) / 100 : undefined,
   };
 }
 

@@ -11,6 +11,8 @@ export interface SettlementPayoutApiResponse {
   gross_amount: number;
   commission_amount: number;
   net_amount: number;
+  // OVERSTAY: what ParkLink pays for the driver staying past the booking's end. Absent on older servers.
+  kind?: 'BOOKING' | 'OVERSTAY';
 }
 
 export interface SettlementApiResponse {
@@ -36,6 +38,7 @@ function toSettlementPayout(p: SettlementPayoutApiResponse): SettlementPayout {
     grossAmount: p.gross_amount,
     commissionAmount: p.commission_amount,
     netAmount: p.net_amount,
+    kind: p.kind ?? 'BOOKING',
   };
 }
 

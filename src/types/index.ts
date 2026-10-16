@@ -177,7 +177,10 @@ export interface Booking {
   // hasn't approved or rejected it yet.
   ownerResponseDeadline?: string;
   serviceCharge: number;
+  // `total` is the booking's own price. When it also took on the driver's pending balances,
+  // those are `debtAmount` (pesos) and the payment was total + debtAmount.
   total: number;
+  debtAmount?: number;
   status: BookingStatus;
   paymentId?: string;
   // Set once, the moment Mercado Pago's payment was actually confirmed -- absent means
@@ -249,6 +252,8 @@ export interface SettlementPayout {
   grossAmount: number; // centavos
   commissionAmount: number; // centavos
   netAmount: number; // centavos
+  // OVERSTAY: lo que ParkLink paga por el tiempo que el conductor se quedó de más en la reserva.
+  kind?: 'BOOKING' | 'OVERSTAY';
 }
 
 // Un lote de pago del propietario: un admin agrupa todo su saldo pendiente

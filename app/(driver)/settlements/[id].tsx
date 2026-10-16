@@ -150,6 +150,7 @@ export default function SettlementDetail() {
         renderItem={({ item }) => (
           <Card>
             <Text style={styles.bookingWhen}>{item.when ?? item.bookingId}</Text>
+            {item.kind === 'OVERSTAY' && <Text style={typography.caption}>{t('settlements.overstayLabel')}</Text>}
             <Text style={typography.caption}>{money(item.netAmount)}</Text>
           </Card>
         )}

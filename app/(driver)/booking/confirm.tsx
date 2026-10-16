@@ -26,6 +26,8 @@ import { formatLongDateTime, formatShortDate } from '@/src/services/bookingDates
 import { addDaysISO } from '@/src/services/dateUtils';
 import { endDateOf, formatArtTime, mergeFreeWindows, startDateOf } from '@/src/services/bookingRange';
 import { CancellationPolicyNote } from '@/src/components/booking/CancellationPolicyNote';
+import { DebtBreakdown } from '@/src/components/booking/DebtBreakdown';
+import { confirmChangedTotal, debtChanged, formatDebtPesos, useMyDebts } from '@/src/services/debts';
 
 // ── Helper for availability pre-check ────────────────────────────────────────
 
@@ -68,6 +70,9 @@ export default function ConfirmBooking() {
   // Alert.alert with a buttons array is a no-op on web -- see bookings/[id].tsx's
   // handleCancel for the same fix applied to the cancel-booking confirmation.
   const [conflictModalVisible, setConflictModalVisible] = useState(false);
+  // What the driver owes for staying past an earlier booking's end rides on this one: shown, itemised,
+  // before they pay.
+  const { pendingDebts, pending: pendingBalance, loading: debtsLoading } = useMyDebts();
 
   const reservedHours = Math.max(Number(hours) || 0.5, 0.5);
   const startMs = new Date(startAt).getTime();
@@ -147,6 +152,14 @@ export default function ConfirmBooking() {
       bookingId = created.id;
       // No amount travels to the checkout: payment-service charges the booking's own
       // server-side price (owner's price + platform commission), looked up by bookingId.
+      if (debtChanged(pendingBalance, created.debt_amount)) {
+        // The balance it took on isn't the one shown: say what the total is now before paying.
+        const goOn = await confirmChangedTotal(Math.round(getDriverVisiblePrice(pricePerHour, commissionRatePercent) * reservedHours) + (created.debt_amount ?? 0) / 100);
+        if (!goOn) {
+          setProcessing(false);
+          return;
+        }
+      }
     } catch (err: any) {
       const isConflict = err instanceof ApiError && err.status === 409;
       if (isConflict) {
@@ -304,10 +317,7 @@ export default function ConfirmBooking() {
 
               <View style={styles.divider} />
 
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>{t('driver.booking.total')}</Text>
-                <Text style={styles.totalValue}>{formatPesos(visibleTotal)}</Text>
-              </View>
+              <DebtBreakdown bookingTotal={Math.round(visibleTotal)} debts={pendingDebts} />
             </View>
           </Card>
 
@@ -351,10 +361,10 @@ export default function ConfirmBooking() {
             title={
               processing
                 ? t('driver.booking.processing')
-                : t('driver.booking.confirmPay').replace('$%{total}', formatPesos(visibleTotal))
+                : t('driver.booking.confirmPay').replace('$%{total}', formatDebtPesos(Math.round(visibleTotal) + pendingBalance))
             }
             onPress={reserve}
-            disabled={processing}
+            disabled={processing || debtsLoading}
             style={styles.button}
           />
         </View>

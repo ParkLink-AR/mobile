@@ -15,6 +15,7 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { useSettingsStore, Language, FontSize } from '@/src/store/useSettingsStore';
 import { useAccountTypeStore } from '@/src/store/useAccountTypeStore';
 import { logout as logoutRequest } from '@/src/api/auth';
+import { formatDebtPesos, useMyDebts } from '@/src/services/debts';
 
 const LANGS: { key: Language; label: string }[] = [
   { key: 'es', label: 'Español' },
@@ -43,6 +44,7 @@ export default function Profile() {
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [fontSizeModalVisible, setFontSizeModalVisible] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const { pending: pendingBalance } = useMyDebts();
 
   if (!user) return null;
 
@@ -208,6 +210,24 @@ export default function Profile() {
               <Text style={styles.prefLabel}>{t('profile.vehicles')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={sc(16)} color={colors.textSecondary} />
+          </Pressable>
+
+          <View style={styles.prefDivider} />
+
+          <Pressable
+            style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => router.push(`${group}/debts`)}
+          >
+            <View style={styles.prefRowLeft}>
+              <Ionicons name="wallet-outline" size={sc(18)} color={colors.teal} />
+              <Text style={styles.prefLabel}>{t('profile.debts')}</Text>
+            </View>
+            <View style={styles.prefRowLeft}>
+              {pendingBalance > 0 && (
+                <Text style={[styles.prefLabel, { color: colors.warning, fontWeight: '700' }]}>{formatDebtPesos(pendingBalance)}</Text>
+              )}
+              <Ionicons name="chevron-forward" size={sc(16)} color={colors.textSecondary} />
+            </View>
           </Pressable>
         </View>
 

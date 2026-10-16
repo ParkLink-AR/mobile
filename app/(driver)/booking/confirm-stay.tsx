@@ -23,6 +23,8 @@ import { SpotSummaryCard } from '@/src/components/SpotSummaryCard';
 import { VehiclePicker } from '@/src/components/VehiclePicker';
 import { formatLongDateTime, formatShortDate } from '@/src/services/bookingDates';
 import { CancellationPolicyNote } from '@/src/components/booking/CancellationPolicyNote';
+import { DebtBreakdown } from '@/src/components/booking/DebtBreakdown';
+import { confirmChangedTotal, debtChanged, formatDebtPesos, useMyDebts } from '@/src/services/debts';
 
 
 /**
@@ -36,11 +38,6 @@ import { CancellationPolicyNote } from '@/src/components/booking/CancellationPol
  * qué booking-service ignora el amount que mande el cliente para una
  * estadía.
  */
-/** "$17.280" -- whole pesos with thousands separators, like the rest of the app. */
-function formatPesos(amount: number): string {
-  return `$${Math.round(amount).toLocaleString('es-AR')}`;
-}
-
 export default function ConfirmStayBooking() {
   useLanguage();
   const group = `/${useSegments()[0]}`;
@@ -74,6 +71,9 @@ export default function ConfirmStayBooking() {
   // Alert.alert with a buttons array is a no-op on web -- see bookings/[id].tsx's
   // handleCancel for the same fix applied to the cancel-booking confirmation.
   const [conflictModalVisible, setConflictModalVisible] = useState(false);
+  // What the driver owes for staying past an earlier booking's end rides on this one: shown, itemised,
+  // before they pay.
+  const { pendingDebts, pending: pendingBalance, loading: debtsLoading } = useMyDebts();
 
   // Se re-cotiza acá (no se reutiliza la de spot/[id].tsx) porque puede haber
   // pasado tiempo entre que el conductor la vio y llegó a confirmar -- ésta
@@ -126,6 +126,16 @@ export default function ConfirmStayBooking() {
       bookingId = created.id;
       // No amount travels to the checkout: payment-service charges the booking's own
       // server-side price (owner's price + platform commission), looked up by bookingId.
+      if (debtChanged(pendingBalance, created.debt_amount)) {
+        // The balance it took on isn't the one shown: say what the total is now before paying.
+        const goOn = await confirmChangedTotal(
+          Math.round(getDriverVisiblePrice(quote.amount / 100, commissionRatePercent)) + (created.debt_amount ?? 0) / 100,
+        );
+        if (!goOn) {
+          setProcessing(false);
+          return;
+        }
+      }
     } catch (err: any) {
       const isConflict = err instanceof ApiError && err.status === 409;
       if (isConflict) {
@@ -268,10 +278,7 @@ export default function ConfirmStayBooking() {
 
                   <View style={styles.divider} />
 
-                  <View style={styles.totalRow}>
-                    <Text style={styles.totalLabel}>{t('driver.booking.total')}</Text>
-                    <Text style={styles.totalValue}>{visibleTotal !== null ? formatPesos(visibleTotal) : '—'}</Text>
-                  </View>
+                  <DebtBreakdown bookingTotal={visibleTotal !== null ? Math.round(visibleTotal) : null} debts={pendingDebts} />
                 </>
               )}
             </View>
@@ -317,10 +324,10 @@ export default function ConfirmStayBooking() {
             title={
               processing
                 ? t('driver.booking.processing')
-                : t('driver.booking.confirmPay').replace('$%{total}', visibleTotal !== null ? formatPesos(visibleTotal) : '—')
+                : t('driver.booking.confirmPay').replace('$%{total}', visibleTotal !== null ? formatDebtPesos(Math.round(visibleTotal) + pendingBalance) : '—')
             }
             onPress={reserve}
-            disabled={processing || !quote}
+            disabled={processing || !quote || debtsLoading}
             style={styles.button}
           />
         </View>
