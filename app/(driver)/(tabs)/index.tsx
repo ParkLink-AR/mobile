@@ -490,8 +490,10 @@ export function SearchScreen() {
       backgroundColor: colors.surface,
     },
     // ── Toolbar (filters + view toggle) ─────────────────────────────────────
+    // Con letra grande "Filtros" y el switch Lista/Mapa no entran en una línea: el switch baja a la siguiente.
     toolbar: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
       paddingHorizontal: 20,
       paddingVertical: 10,
@@ -537,6 +539,8 @@ export function SearchScreen() {
       borderWidth: 1.5,
       borderColor: colors.border,
       padding: 2,
+      marginLeft: 'auto',
+      maxWidth: '100%',
     },
     segmentButton: {
       flexDirection: 'row',

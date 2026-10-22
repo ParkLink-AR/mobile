@@ -1,6 +1,6 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useCallback, useState } from 'react';
-import { Text, View, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { Text, View, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
@@ -72,14 +72,33 @@ export default function OwnerFinances() {
   const sc = (n: number) => Math.round(n * scale);
   const user = useSessionStore((s) => s.user);
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
+  // Hasta saber cuántas cocheras tiene el propietario no se muestra ningún monto: antes se veían
+  // tres totales distintos seguidos (sin cocheras, con las primeras, con todas) hasta que
+  // terminaba de cargar.
+  const [loaded, setLoaded] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      if (user) getParkingSpotsForOwner(user.id).then(setSpots);
+      if (!user) return;
+      getParkingSpotsForOwner(user.id)
+        .then(setSpots)
+        .catch(() => undefined)
+        .finally(() => setLoaded(true));
     }, [user?.id]),
   );
 
   if (!user) return null;
+
+  if (!loaded) {
+    return (
+      <Screen
+        style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center' }}
+        edges={['left', 'right', 'bottom']}
+      >
+        <ActivityIndicator color={colors.teal} />
+      </Screen>
+    );
+  }
 
   const spotAmounts = getSpotAmounts(spots.length);
   const thisMonth = spotAmounts.length > 0

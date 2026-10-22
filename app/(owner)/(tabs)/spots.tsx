@@ -75,8 +75,10 @@ export default function OwnerSpots() {
       padding: 16, paddingBottom: 8,
     },
     // "Añadir cochera" on the left, list/map switch on the right.
+    // Con letra grande los dos controles no entran en una línea: el switch baja a la siguiente, a la derecha.
     toggleRow: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+      flexWrap: 'wrap',
       paddingHorizontal: 16, paddingBottom: 8,
     },
     // Outlined button sized like the list/map switch next to it: same 1.5 border, and its
@@ -90,6 +92,7 @@ export default function OwnerSpots() {
     segmentedControl: {
       flexDirection: 'row', backgroundColor: colors.background,
       borderRadius: 10, borderWidth: 1.5, borderColor: colors.border, padding: 2,
+      marginLeft: 'auto', maxWidth: '100%',
     },
     segmentButton: {
       flexDirection: 'row', alignItems: 'center', gap: 5,

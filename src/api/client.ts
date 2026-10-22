@@ -1,4 +1,5 @@
 import { useSessionStore } from '@/src/store/useSessionStore';
+import { mocksEnabled } from '@/src/mock/flag';
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
 
@@ -69,7 +70,11 @@ async function rawFetch(
   // editing it, with no way for the browser to know that PUT invalidated
   // this GET). The client always wants the current server state, never an
   // HTTP-cache guess at it.
-  return fetch(`${API_URL}${path}`, { ...options, headers, cache: 'no-store' });
+  const real = () => fetch(`${API_URL}${path}`, { ...options, headers, cache: 'no-store' });
+  // Demo/capturas: con EXPO_PUBLIC_MOCKS_ENABLED=true se le suman datos de ejemplo a lo real
+  // (src/mock). Con false no se carga nada de eso.
+  if (mocksEnabled) return require('@/src/mock').withMocks(path, options, real);
+  return real();
 }
 
 // auth-service rotates refresh tokens on every use (revokes the used one,
