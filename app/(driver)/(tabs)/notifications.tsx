@@ -413,7 +413,7 @@ export default function Notifications() {
         onRefresh={refresh}
         onEndReached={loadMore}
         onEndReachedThreshold={0.4}
-        ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} color={colors.teal} /> : null}
+        ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} color={colors.teal} /> : undefined}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="notifications-outline" size={sc(40)} color={colors.textSecondary} />

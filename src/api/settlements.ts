@@ -82,3 +82,42 @@ export async function getUserSettlementsApi(userId: string): Promise<SettlementA
 export async function getSettlementApi(id: string): Promise<SettlementApiResponse> {
   return request(`/settlements/${id}`);
 }
+
+// ── Earnings ("Mis finanzas") ────────────────────────────────────────────────
+
+interface OwnerEarningsApiResponse {
+  months: { month: string; earned: number; bookings: number }[];
+  spots: { parking_spot_id: string; earned: number; bookings: number }[];
+  total_earned: number;
+  paid_out: number;
+  to_collect: number;
+  upcoming: number;
+  upcoming_count: number;
+}
+
+/** What an owner made from their spots -- their own share, in centavos (see booking-service's
+ * GetOwnerEarningsUseCase). */
+export interface OwnerEarnings {
+  /** The last six months, oldest first; the last one is the current month ("2026-10"). */
+  months: { month: string; earned: number; bookings: number }[];
+  /** Per spot over those months, only the ones that earned something. */
+  spots: { parkingSpotId: string; earned: number; bookings: number }[];
+  totalEarned: number;
+  paidOut: number;
+  toCollect: number;
+  upcoming: number;
+  upcomingCount: number;
+}
+
+export async function getOwnerEarningsApi(userId: string): Promise<OwnerEarnings> {
+  const raw = await request<OwnerEarningsApiResponse>(`/users/${userId}/earnings`);
+  return {
+    months: raw.months,
+    spots: raw.spots.map((spot) => ({ parkingSpotId: spot.parking_spot_id, earned: spot.earned, bookings: spot.bookings })),
+    totalEarned: raw.total_earned,
+    paidOut: raw.paid_out,
+    toCollect: raw.to_collect,
+    upcoming: raw.upcoming,
+    upcomingCount: raw.upcoming_count,
+  };
+}

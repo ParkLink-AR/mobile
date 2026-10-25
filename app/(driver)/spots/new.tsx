@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { View, Text, TextInput, Pressable, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, TextInput, Pressable, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView, Image, type ScrollViewInstance, type ViewInstance } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { shrinkForUpload, SPOT_PHOTO_UPLOAD_MAX } from '@/src/services/imageUpload';
@@ -42,8 +42,8 @@ export default function NewSpot() {
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
   useLanguage();
-  const scrollRef = useRef<ScrollView>(null);
-  const contentRef = useRef<View>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const contentRef = useRef<ViewInstance>(null);
   useScrollToFocusedInput(scrollRef, contentRef);
   const group = `/${useSegments()[0]}`;
   const user = useSessionStore((s) => s.user);
@@ -62,6 +62,8 @@ export default function NewSpot() {
   const [requireVehicle, setRequireVehicle] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  // Cómo entrar: privado, sólo lo ve el conductor una vez aceptada su reserva.
+  const [accessInstructions, setAccessInstructions] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [photos, setPhotos] = useState<ParkingSpotPhotoAsset[]>([]);
 
@@ -188,6 +190,7 @@ export default function NewSpot() {
         capacity: Math.max(1, Math.trunc(Number(capacity)) || 1),
         schedule: hourlySettings.hourlyEnabled ? dayGroupsToEntries(hourlySettings.schedule) : undefined,
         description: description.trim() || undefined,
+        accessInstructions: accessInstructions.trim() || undefined,
         stayEnabled: staySettings.stayEnabled,
         ...(staySettings.stayEnabled && staySettings.pricePerVehicleType
           ? { stayPricesByVehicleType: stayPricesByVehicleTypeToNumbers(staySettings, vehicleTypes) }
@@ -196,6 +199,12 @@ export default function NewSpot() {
               pricePerWeek: staySettings.stayEnabled ? Number(staySettings.pricePerWeek) : undefined,
               pricePerMonth: staySettings.stayEnabled ? Number(staySettings.pricePerMonth) : undefined,
             }),
+        // "Media estadía (12 h)": only within the stay; its price per vehicle went in the map above.
+        halfDayEnabled: staySettings.stayEnabled && staySettings.halfDayEnabled,
+        pricePerHalfDay:
+          staySettings.stayEnabled && staySettings.halfDayEnabled && !staySettings.pricePerVehicleType
+            ? Number(staySettings.pricePerHalfDay)
+            : undefined,
         requireVehicle,
         maxStayDays: staySettings.stayEnabled ? Number(staySettings.maxStayDays) : undefined,
         stayAvailableFrom: staySettings.stayEnabled ? (staySettings.stayAvailableFrom.trim() || undefined) : undefined,
@@ -249,6 +258,8 @@ export default function NewSpot() {
       padding: 12, fontSize: sc(15), color: colors.text,
     },
     multiline: { minHeight: 80, textAlignVertical: 'top' },
+    privateHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    privateHint: { fontSize: sc(12), color: colors.textSecondary, lineHeight: sc(17) },
 
     toggleRow: { flexDirection: 'row', gap: 8 },
     toggle: {
@@ -448,6 +459,23 @@ export default function NewSpot() {
               onChangeText={setDescription}
               multiline
               placeholder={t('owner.spot.new.descriptionPlaceholder')}
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
+
+          {/* Cómo entrar -- privado */}
+          <View style={styles.card}>
+            <View style={styles.privateHeader}>
+              <Ionicons name="lock-closed-outline" size={sc(13)} color={colors.textSecondary} />
+              <Text style={styles.sectionLabel}>{t('owner.spot.access.label')}</Text>
+            </View>
+            <Text style={styles.privateHint}>{t('owner.spot.access.hint')}</Text>
+            <TextInput
+              style={[styles.input, styles.multiline]}
+              value={accessInstructions}
+              onChangeText={(value) => setAccessInstructions(value.slice(0, 1000))}
+              multiline
+              placeholder={t('owner.spot.access.placeholder')}
               placeholderTextColor={colors.textSecondary}
             />
           </View>

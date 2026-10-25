@@ -1,6 +1,6 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs';
+import { BottomTabBarProps } from 'expo-router/tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useSettingsStore } from '@/src/store/useSettingsStore';
@@ -28,7 +28,7 @@ const OWNER_TAB_KEYS: TabKey[] = [
   { name: 'profile',       labelKey: 'tabs.owner.profile',       icon: 'person-outline',        activeIcon: 'person' },
 ];
 
-function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[] }) {
+function TabBar({ state, emitter, navigateToTab, tabs }: BottomTabBarProps & { tabs: TabKey[] }) {
   useLanguage();
   const colors = useThemeColors();
   const scale = useScale();
@@ -86,13 +86,15 @@ function TabBar({ state, navigation, tabs }: BottomTabBarProps & { tabs: TabKey[
             accessibilityLabel={t(tab.labelKey as any)}
             style={styles.tab}
             onPress={() => {
-              const event = navigation.emit({
+              // Same as expo-router's own tab bar: tell the screen, then switch by route key.
+              if (!route) return;
+              const event = emitter.emit({
                 type: 'tabPress',
-                target: route?.key,
+                target: route.key,
                 canPreventDefault: true,
               });
               if (!focused && !event.defaultPrevented) {
-                navigation.navigate(tab.name);
+                navigateToTab(route.key);
               }
             }}
             android_ripple={{ borderless: true, radius: 32 }}

@@ -559,10 +559,11 @@ export default function Register() {
                     mode="date"
                     display="spinner"
                     maximumDate={new Date()}
-                    onChange={(_, date) => {
+                    onValueChange={(_, date) => {
                       setShowDatePicker(false);
-                      if (date) setBirthDate(date);
+                      setBirthDate(date);
                     }}
+                    onDismiss={() => setShowDatePicker(false)}
                   />
                 )}
               </>

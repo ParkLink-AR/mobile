@@ -110,6 +110,8 @@ interface AvailabilityDatePickerFieldProps {
   onChange: (value: string) => void;
   placeholder: string;
   minimumDate?: Date;
+  /** The last day that can be picked (bookings go up to a year ahead). */
+  maximumDate?: Date;
   /** Mismo criterio que DatePickerField: caja idéntica a los TextInput vecinos. */
   style?: StyleProp<ViewStyle>;
   /** Devuelve, para el rango [from, to) del mes visible, qué días son
@@ -132,6 +134,7 @@ export function AvailabilityDatePickerField({
   onChange,
   placeholder,
   minimumDate,
+  maximumDate,
   style,
   fetchAvailability,
 }: AvailabilityDatePickerFieldProps) {
@@ -153,6 +156,9 @@ export function AvailabilityDatePickerField({
   const minimumDateISO = minimumDate
     ? `${minimumDate.getFullYear()}-${String(minimumDate.getMonth() + 1).padStart(2, '0')}-${String(minimumDate.getDate()).padStart(2, '0')}`
     : today;
+  const maximumDateISO = maximumDate
+    ? `${maximumDate.getFullYear()}-${String(maximumDate.getMonth() + 1).padStart(2, '0')}-${String(maximumDate.getDate()).padStart(2, '0')}`
+    : '9999-12-31';
 
   useEffect(() => {
     if (!modalVisible) return;
@@ -197,7 +203,7 @@ export function AvailabilityDatePickerField({
 
   function selectDay(cell: DayCell) {
     if (!cell.inMonth) return;
-    if (cell.dateISO < minimumDateISO) return;
+    if (cell.dateISO < minimumDateISO || cell.dateISO > maximumDateISO) return;
     if (!availableByDate[cell.dateISO]) return;
     onChange(cell.dateISO);
     setModalVisible(false);
@@ -309,7 +315,8 @@ export function AvailabilityDatePickerField({
                 {weeks.map((week, weekIndex) => (
                   <View key={weekIndex} style={styles.weekRowGrid}>
                     {week.map((cell) => {
-                      const isPast = cell.dateISO < minimumDateISO;
+                      // Out of the pickable range: before the first day, or past the last one.
+                      const isPast = cell.dateISO < minimumDateISO || cell.dateISO > maximumDateISO;
                       const isSelected = cell.dateISO === value;
                       const isAvailable = cell.inMonth && !isPast && availableByDate[cell.dateISO] === true;
                       const isUnavailable = cell.inMonth && !isPast && availableByDate[cell.dateISO] === false;

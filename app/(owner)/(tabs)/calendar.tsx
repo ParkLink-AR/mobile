@@ -270,7 +270,7 @@ export default function OwnerCalendar() {
               <Ionicons name="calendar-outline" size={Math.round(32 * scale)} color={colors.textSecondary} />
               <Text style={styles.emptyText}>{t('owner.calendar.emptyDay')}</Text>
             </View>
-          ) : null
+          ) : undefined
         }
         renderItem={({ item }) => (
           <Pressable onPress={() => router.push(`${group}/bookings/${item.id}`)}>

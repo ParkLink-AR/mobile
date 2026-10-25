@@ -2,7 +2,9 @@ import { request } from './client';
 
 // ── Wire shapes returned by booking-service ──────────────────────────────────
 
-export type BookingKind = 'HOURLY' | 'STAY';
+// HALF_DAY: "media estadía" -- 12 hours from the driver's chosen hour, priced like a stay by
+// parking-service's half-day quote and ended with the exit code like an hourly booking.
+export type BookingKind = 'HOURLY' | 'STAY' | 'HALF_DAY';
 
 export interface BookingApiResponse {
   id: string;
@@ -136,7 +138,9 @@ export interface CreateBookingBody {
   start: string;
   end: string; // For kind "STAY", re-derived server-side too -- send the quote's endDateTime.
   amount: number; // Ignored by booking-service for kind "STAY" -- see stay_end_date.
-  // "HOURLY" (default, omit for the existing slot-booking flow) or "STAY". For
+  // "HOURLY" (default, omit for the existing slot-booking flow), "STAY" or "HALF_DAY". For
+  // "HALF_DAY", `start` carries the chosen day and hour and booking-service books the 12 hours
+  // its own half-day quote says, like a stay. For
   // "STAY", stay_end_date is required and booking-service prices the
   // booking itself instead of trusting `amount` -- see getStayQuote in
   // api/parking.ts, which the caller should already have used to show the

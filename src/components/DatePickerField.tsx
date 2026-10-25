@@ -12,6 +12,8 @@ interface DatePickerFieldProps {
   onChange: (value: string) => void;
   placeholder: string;
   minimumDate?: Date;
+  /** The last day that can be picked. */
+  maximumDate?: Date;
   /** Mismo estilo de caja que usan los TextInput vecinos del formulario (borde, radio, padding, fuente) -- así el selector no desentona con el resto. */
   style?: StyleProp<ViewStyle>;
 }
@@ -38,7 +40,7 @@ function formatDisplay(iso: string): string {
  * navegador en web porque @react-native-community/datetimepicker no
  * soporta esa plataforma.
  */
-export function DatePickerField({ value, onChange, placeholder, minimumDate, style }: DatePickerFieldProps) {
+export function DatePickerField({ value, onChange, placeholder, minimumDate, maximumDate, style }: DatePickerFieldProps) {
   const colors = useThemeColors();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
@@ -56,6 +58,7 @@ export function DatePickerField({ value, onChange, placeholder, minimumDate, sty
       type: 'date',
       value,
       min: minimumDate ? toISODate(minimumDate) : undefined,
+      max: maximumDate ? toISODate(maximumDate) : undefined,
       onChange: (e: { target: { value: string } }) => onChange(e.target.value),
       // El style del caller (StyleSheet.create) ya es un objeto plano en
       // react-native-web -- se spreadea igual que register.tsx hace con su
@@ -90,10 +93,12 @@ export function DatePickerField({ value, onChange, placeholder, minimumDate, sty
           mode="date"
           display="spinner"
           minimumDate={minimumDate}
-          onChange={(_, date) => {
+          maximumDate={maximumDate}
+          onValueChange={(_, date) => {
             setShowPicker(false);
-            if (date) onChange(toISODate(date));
+            onChange(toISODate(date));
           }}
+          onDismiss={() => setShowPicker(false)}
         />
       )}
     </View>

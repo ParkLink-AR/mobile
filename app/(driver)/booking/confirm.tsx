@@ -13,7 +13,6 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail, getSpotPricePerHour } from '@/src/services/parkingService';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useCommissionStore } from '@/src/store/useCommissionStore';
-import { getAvailability } from '@/src/api/parking';
 import { ParkingSpot } from '@/src/types';
 import { VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { openCheckout } from '@/src/services/checkout';
@@ -23,21 +22,12 @@ import { PaymentMethodDisplay } from '@/src/components/PaymentMethodDisplay';
 import { SpotSummaryCard } from '@/src/components/SpotSummaryCard';
 import { VehiclePicker } from '@/src/components/VehiclePicker';
 import { formatLongDateTime, formatShortDate } from '@/src/services/bookingDates';
-import { addDaysISO } from '@/src/services/dateUtils';
-import { endDateOf, formatArtTime, mergeFreeWindows, startDateOf } from '@/src/services/bookingRange';
+import { endDateOf, formatArtTime, startDateOf } from '@/src/services/bookingRange';
 import { CancellationPolicyNote } from '@/src/components/booking/CancellationPolicyNote';
 import { DebtBreakdown } from '@/src/components/booking/DebtBreakdown';
 import { confirmChangedTotal, debtChanged, formatDebtPesos, useMyDebts } from '@/src/services/debts';
 
 // ── Helper for availability pre-check ────────────────────────────────────────
-
-/**
- * Checks whether [startMs, endMs) is fully covered by one continuous free block. Windows from
- * consecutive days are merged first, so a booking across midnight is checked as a whole.
- */
-function rangeIsFree(days: Parameters<typeof mergeFreeWindows>[0], startMs: number, endMs: number): boolean {
-  return mergeFreeWindows(days).some((window) => window.startMs <= startMs && endMs <= window.endMs);
-}
 
 /** "$17.280" -- whole pesos with thousands separators, like the rest of the app. */
 function formatPesos(amount: number): string {
@@ -118,20 +108,9 @@ export default function ConfirmBooking() {
     }
     setProcessing(true);
 
-    // ── Step 0: pre-check availability before creating the booking ─────────
-    // This gives a fast, friendly error if the slot was taken while the user
-    // was on the confirm screen, without consuming a hold.
-    try {
-      const availability = await getAvailability(spot.id, startDate, addDaysISO(endDate, 1));
-      if (!rangeIsFree(availability.days, startMs, endMs)) {
-        setConflictModalVisible(true);
-        setProcessing(false);
-        return;
-      }
-    } catch {
-      // If availability check fails (network error), proceed and let the
-      // booking-service conflict check be the final gate.
-    }
+    // No separate availability check first: booking-service checks the slot itself (hours,
+    // closed days, room) and a taken slot comes back as a 409 -- the same "ya no está
+    // disponible" notice, without holding anything -- one round trip less before paying.
 
     // ── Step 1: create the booking ──────────────────────────────────────────
     let bookingId: string;

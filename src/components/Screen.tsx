@@ -1,6 +1,6 @@
 import { useEffect, useRef, RefObject } from 'react';
 import { SafeAreaView, Edge } from 'react-native-safe-area-context';
-import { Keyboard, Platform, ScrollView, ScrollViewProps, StyleSheet, TextInput, View, ViewStyle } from 'react-native';
+import { Keyboard, Platform, ScrollView, ScrollViewProps, StyleSheet, TextInput, View, ViewStyle, type ScrollViewInstance, type ViewInstance } from 'react-native';
 
 /**
  * Keyboard behaviour for any scrollable screen with text inputs:
@@ -29,7 +29,7 @@ const FOCUSED_INPUT_TOP_MARGIN = 210;
  * clamped by the content's own length, so a short form just slides up as far as it can.
  * `contentRef` is the view the inputs are positioned in (the scroll view's content).
  */
-export function useScrollToFocusedInput(scrollRef: RefObject<ScrollView | null>, contentRef: RefObject<View | null>) {
+export function useScrollToFocusedInput(scrollRef: RefObject<ScrollViewInstance | null>, contentRef: RefObject<ViewInstance | null>) {
   useEffect(() => {
     const subscription = Keyboard.addListener('keyboardDidShow', () => {
       const input = TextInput.State.currentlyFocusedInput();
@@ -79,8 +79,8 @@ export function Screen({ children, style, edges, form }: ScreenProps) {
 }
 
 function FormScreen({ children, style, edges }: { children: React.ReactNode; style?: ViewStyle; edges: Edge[] }) {
-  const scrollRef = useRef<ScrollView>(null);
-  const contentRef = useRef<View>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const contentRef = useRef<ViewInstance>(null);
   useScrollToFocusedInput(scrollRef, contentRef);
 
   // The background stays on the screen; everything that lays out the content (padding,

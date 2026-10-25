@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, type TextInputInstance } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useScale } from '@/src/theme/typography';
@@ -142,7 +142,7 @@ export function CodeInput({
   const colors = useThemeColors();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const [focused, setFocused] = useState(autoFocus);
   const activeIndex = Math.min(value.length, length - 1);
 

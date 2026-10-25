@@ -166,7 +166,7 @@ export default function BookingMessages() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-            ListEmptyComponent={unpaid ? null : (
+            ListEmptyComponent={unpaid ? undefined : (
               <View style={styles.centered}>
                 <Ionicons name="chatbubbles-outline" size={sc(40)} color={colors.textSecondary} />
                 <Text style={styles.errorText}>{t('driver.booking.messages.empty')}</Text>

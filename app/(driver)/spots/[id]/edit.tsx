@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef } from 'react';
 import {
-  View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback,
+  View, Text, TextInput, ScrollView, StyleSheet, Pressable, Image, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback, type ScrollViewInstance, type ViewInstance
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -55,8 +55,8 @@ export default function EditSpot() {
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
   useLanguage();
-  const scrollRef = useRef<ScrollView>(null);
-  const contentRef = useRef<View>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const contentRef = useRef<ViewInstance>(null);
   useScrollToFocusedInput(scrollRef, contentRef);
   const group = `/${useSegments()[0]}`;
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -126,6 +126,9 @@ export default function EditSpot() {
           stayAvailableUntil: s.stayAvailableUntil ?? '',
           pricePerVehicleType: s.stayPricesByVehicleType !== null,
           pricesByVehicleType: stayPricesByVehicleTypeToForm(s.stayPricesByVehicleType),
+          // Off for every spot that existed before it: the owner turns it on here.
+          halfDayEnabled: s.halfDayEnabled,
+          pricePerHalfDay: s.pricePerHalfDay !== null ? String(s.pricePerHalfDay) : '',
         });
         setRequireVehicle(s.requireVehicle);
       })
@@ -323,6 +326,12 @@ export default function EditSpot() {
               pricePerWeek: staySettings.stayEnabled ? Number(staySettings.pricePerWeek) : undefined,
               pricePerMonth: staySettings.stayEnabled ? Number(staySettings.pricePerMonth) : undefined,
             }),
+        // "Media estadía (12 h)": only within the stay; its price per vehicle went in the map above.
+        halfDayEnabled: staySettings.stayEnabled && staySettings.halfDayEnabled,
+        pricePerHalfDay:
+          staySettings.stayEnabled && staySettings.halfDayEnabled && !staySettings.pricePerVehicleType
+            ? Number(staySettings.pricePerHalfDay)
+            : undefined,
         requireVehicle,
         maxStayDays: staySettings.stayEnabled ? Number(staySettings.maxStayDays) : undefined,
         stayAvailableFrom: staySettings.stayEnabled ? (staySettings.stayAvailableFrom.trim() || undefined) : undefined,

@@ -8,7 +8,7 @@ import {
   Text,
   View,
   Image,
-  useWindowDimensions,
+  useWindowDimensions, type ScrollViewInstance
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/src/theme/useThemeColors';
@@ -40,7 +40,7 @@ export function PhotoGallery({ photos, fallbackUri }: PhotoGalleryProps) {
   const colors = useThemeColors();
   const [index, setIndex] = useState(0);
   const uris = photos.length > 0 ? photos : fallbackUri ? [fallbackUri] : [];
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const boxSize = width;
 
   // Web only: RN's ScrollView handles touch-drag and trackpad/wheel scroll

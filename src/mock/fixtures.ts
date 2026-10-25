@@ -1,4 +1,5 @@
 import { Image } from 'react-native';
+import { withReadState } from './seen';
 
 // Datos de ejemplo fijos (usuario "Facundo Luzzi", 6 cocheras, sus reservas, reseñas y plata,
 // todo coherente entre pantallas y con fechas relativas a "hoy"). Se usan de respaldo cuando
@@ -74,7 +75,13 @@ export const profile = (id: string) => {
 
 // ── Cocheras ─────────────────────────────────────────────────────────────────
 
-const photo = (module: number) => Image.resolveAssetSource(module).uri;
+// On the phone a bundled image is resolved to its URI; on the web there's no resolveAssetSource
+// (react-native-web) and the import already is the URL (or carries it).
+const photo = (module: number | string | { uri?: string }): string => {
+  if (typeof Image.resolveAssetSource === 'function') return Image.resolveAssetSource(module as number)?.uri ?? '';
+  if (typeof module === 'string') return module;
+  return typeof module === 'object' && module ? module.uri ?? '' : '';
+};
 const PHOTO_RECONQUISTA = photo(require('../../assets/mock/cochera-reconquista.webp'));
 const PHOTO_MOTO = photo(require('../../assets/mock/cochera-moto.webp'));
 const PHOTO_CASA = photo(require('../../assets/mock/cochera-casa.webp'));
@@ -468,7 +475,9 @@ function notificationsPage() {
       resolved_at: null,
     },
   ];
-  return { items, unread_count: items.filter((i) => !i.read_at).length, next_before: null };
+  // The ones the user already read stay read (see seen.ts).
+  const page = items.map(withReadState);
+  return { items: page, unread_count: page.filter((i) => !i.read_at).length, next_before: null };
 }
 
 // ── Liquidaciones ────────────────────────────────────────────────────────────

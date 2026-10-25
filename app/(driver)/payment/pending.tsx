@@ -1,7 +1,7 @@
 import { t, useLanguage } from '@/src/i18n';
-import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Animated, Easing, Pressable, Alert, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams, useSegments, router } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Animated, Easing, Pressable, Alert, ActivityIndicator, AppState } from 'react-native';
+import { useFocusEffect, useLocalSearchParams, useSegments, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/src/components/Button';
@@ -99,6 +99,33 @@ export default function PaymentPendingScreen() {
     playApprovedRef.current = playApproved;
   }, [playApproved]);
 
+  // The chime goes with the check mark, never ahead of it: only once this screen is the one
+  // in front (not still under Mercado Pago's browser, which can be closing as the payment
+  // lands), the app is active, and the approved state is already drawn -- one frame after it.
+  const [onScreen, setOnScreen] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      setOnScreen(true);
+      return () => setOnScreen(false);
+    }, []),
+  );
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => setAppActive(state === 'active'));
+    return () => subscription.remove();
+  }, []);
+  const chimed = useRef(false);
+
+  useEffect(() => {
+    if (status !== 'approved' || !onScreen || !appActive || chimed.current) return;
+    const frame = requestAnimationFrame(() => {
+      if (chimed.current) return;
+      chimed.current = true;
+      playApprovedRef.current();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [status, onScreen, appActive]);
+
   // The receipt: what was booked, when, and for how much.
   useEffect(() => {
     if (!bookingId) return;
@@ -141,8 +168,7 @@ export default function PaymentPendingScreen() {
             settled = true;
             clearInterval(timer);
             setAwaitingOwner(latest.status === 'PENDING_OWNER_APPROVAL');
-            // The chime first, in the same moment the check mark appears.
-            playApprovedRef.current();
+            // The chime plays once this is on screen (see the effect on `status` below).
             setApprovedAt(res?.transaction?.approved_at ?? latest.paid_at ?? null);
             setStatus('approved');
             return;
@@ -170,8 +196,11 @@ export default function PaymentPendingScreen() {
         }
         // 'pending', 'in_process', 'authorized' → keep polling
       } catch (err) {
-        // Log so we can diagnose issues (404 = not found yet, 401 = auth issue, etc.)
-        console.warn('[PaymentPending] poll error:', err);
+        // 404 is the normal answer until the driver pays in Mercado Pago: there's no payment
+        // yet. Anything else is worth logging (401 = auth issue, 5xx = a service down...).
+        if (!(err instanceof ApiError && err.status === 404)) {
+          console.warn('[PaymentPending] poll error:', err);
+        }
       }
       // Nothing paid and the hold is over: the booking expires and the spot is free again.
       if (!settled) {

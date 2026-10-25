@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, Image, ImageBackground, ImageSourcePropType, NativeSyntheticEvent, Platform, TextLayoutEventData,
+  View, Text, StyleSheet, Image, ImageSourcePropType, Platform, type TextLayoutEvent,
 } from 'react-native';
 import * as Font from 'expo-font';
 import { Asset } from 'expo-asset';
@@ -146,17 +146,22 @@ function PlateBackground({ source, style, children }: {
     }
   }
 
+  // What ImageBackground (deprecated in React Native 0.88) did: a View with the image laid
+  // underneath, absolutely positioned -- and given the box's own width and height, because an
+  // Image otherwise takes its file's natural size and spills out of the box.
+  const { width, height } = StyleSheet.flatten(style) as { width?: number; height?: number };
   return (
-    <ImageBackground
-      source={source}
-      style={[style, !visible && backgroundStyles.hidden]}
-      resizeMode="stretch"
-      onLoad={markLoaded}
-      // A broken image shouldn't hide the plate number forever.
-      onError={markLoaded}
-    >
+    <View style={[style, !visible && backgroundStyles.hidden]}>
+      <Image
+        source={source}
+        style={[StyleSheet.absoluteFill, { width, height }]}
+        resizeMode="stretch"
+        onLoad={markLoaded}
+        // A broken image shouldn't hide the plate number forever.
+        onError={markLoaded}
+      />
       {children}
-    </ImageBackground>
+    </View>
   );
 }
 
@@ -420,7 +425,7 @@ function LegacyPlateText({
     fontSize * (LEGACY_ASCENT_PER_EM - LEGACY_CAP_HEIGHT_PER_EM / 2),
   );
 
-  function onTextLayout(event: NativeSyntheticEvent<TextLayoutEventData>) {
+  function onTextLayout(event: TextLayoutEvent) {
     const line = event.nativeEvent.lines[0];
     if (!line || !line.capHeight || !line.ascender) return;
     const measured = line.y + line.ascender - line.capHeight / 2;

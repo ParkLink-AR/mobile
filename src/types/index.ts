@@ -5,6 +5,8 @@ export interface StayRates {
   day: number;
   week: number;
   month: number;
+  // Media estadía (12 h) -- only when the spot offers it (see ParkingSpot.halfDayEnabled).
+  halfDay?: number;
 }
 
 // El backend no tiene un rol fijo por usuario: cualquiera puede operar como
@@ -113,6 +115,12 @@ export interface ParkingSpot {
   // Tarifas de estadía distintas por tipo de vehículo -- null es "las mismas para todos".
   // Si está seteado, pricePerDay/Week/Month de arriba son las más bajas (el "desde").
   stayPricesByVehicleType: Partial<Record<VehicleType, StayRates>> | null;
+  // "Media estadía (12 h)": un bloque de 12 horas desde la hora que elija el conductor, a precio
+  // cerrado. Es parte de la estadía (mismas fechas ofrecidas y días cerrados) y viene apagada
+  // salvo que el dueño la active. pricePerHalfDay es null cuando está apagada; con tarifas por
+  // vehículo es la más baja (cada una trae su halfDay en stayPricesByVehicleType).
+  halfDayEnabled: boolean;
+  pricePerHalfDay: number | null;
   // "Pedir el vehículo al reservar": el conductor elige uno de sus vehículos (con patente,
   // salvo una bici). Una cochera que cobra por vehículo lo pide siempre -- ver
   // spotNeedsVehicle en parkingService.ts.
@@ -157,7 +165,9 @@ export interface Booking {
   driverId: string;
   driverName: string;
   ownerId: string;
-  kind: 'HOURLY' | 'STAY';
+  // HALF_DAY: "media estadía", 12 horas a precio cerrado -- termina con código de salida como
+  // una reserva por hora.
+  kind: 'HOURLY' | 'STAY' | 'HALF_DAY';
   date: string;
   // Fecha de checkout, ART (YYYY-MM-DD) -- igual a `date` para HOURLY; en
   // STAY cae en un día posterior (el checkout es a la misma hora que el

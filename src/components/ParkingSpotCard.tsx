@@ -1,11 +1,11 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet, GestureResponderEvent } from 'react-native';
 import { Card } from '@/src/components/Card';
 import { getDriverVisiblePrice } from '@/src/services/utils';
-import { getMinPricePerHour } from '@/src/services/parkingService';
+import { spotListPrice } from '@/src/services/parkingService';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { ParkingSpot } from '@/src/types';
-import { VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
+import { VEHICLE_TYPE_LABEL_KEYS, VehicleType } from '@/src/constants/vehicleTypes';
 import { t, useLanguage } from '@/src/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { useScale } from '@/src/theme/typography';
@@ -22,24 +22,32 @@ function unavailableLabel(spot: ParkingSpot): string {
   return t('spot.unavailable');
 }
 
-// Precio a mostrar en la tarjeta cuando todavía no se eligió un tipo de
-// vehículo (previsualización del mapa, resultados de búsqueda) -- una
-// cochera sin alquiler por hora (sólo estadía) no tiene nada que mostrar acá,
-// aunque en teoría tuviera un pricePerHour viejo de cuando lo tenía activado.
-function priceBadgeLabel(spot: ParkingSpot, commissionRatePercent: number): string {
-  if (!spot.hourlyEnabled) return t('spot.stayOnlyBadge');
-  const price = getMinPricePerHour(spot);
+// Precio a mostrar en la tarjeta de resultados: por hora, o por día si se buscan estadías
+// (o la cochera sólo ofrece estadía y se buscan estadías), con la tarifa del vehículo
+// elegido en los filtros -- "desde $X" cuando varía por vehículo y no se eligió ninguno.
+function priceBadgeLabel(
+  spot: ParkingSpot,
+  commissionRatePercent: number,
+  options: { stays?: boolean; halfDay?: boolean; vehicleType?: VehicleType },
+): string {
+  if (!options.stays && !options.halfDay && !spot.hourlyEnabled) return t('spot.stayOnlyBadge');
+  const price = spotListPrice(spot, options);
   if (price === null) return t('spot.stayOnlyBadge');
-  const formatted = `$${getDriverVisiblePrice(price, commissionRatePercent)}${t('spot.pricePerHour.short')}`;
-  return spot.pricePerHourByVehicleType ? t('spot.pricePerHour.from', { price: formatted }) : formatted;
+  const unit =
+    price.unit === 'hour'
+      ? t('spot.pricePerHour.short')
+      : price.unit === 'halfDay'
+        ? t('spot.pricePerHalfDay.short')
+        : t('spot.pricePerDay.short');
+  const formatted = `$${getDriverVisiblePrice(price.amount, commissionRatePercent)}${unit}`;
+  return price.from ? t('spot.pricePerHour.from', { price: formatted }) : formatted;
 }
 
-// Tag keys stored in mock data mapped to their i18n key and icon
+// The spot's tags (see parkingService's mapping) mapped to their i18n key and icon.
 const TAG_KEY_MAP: Record<string, { i18nKey: string; iconName: string }> = {
   'covered':   { i18nKey: 'spot.tag.covered',  iconName: 'car-outline' },
   'uncovered': { i18nKey: 'spot.tag.uncovered', iconName: 'sunny-outline' },
   'access247': { i18nKey: 'spot.tag.access247', iconName: 'time-outline' },
-  'secure':    { i18nKey: 'spot.tag.secure',    iconName: 'shield-checkmark-outline' },
 };
 
 /** Exported so other screens can translate tag keys without icons */
@@ -54,9 +62,15 @@ interface ParkingSpotCardProps {
   // Trimmed-down layout (no photo, no description/tags) for the map view's
   // selected-spot preview, where screen space is shared with the map itself.
   compact?: boolean;
+  // From the search filters: show the daily price when looking for stays, and the price of
+  // the driver's vehicle when they chose one.
+  stays?: boolean;
+  // Looking for half-days: the 12-hour price.
+  halfDay?: boolean;
+  vehicleType?: VehicleType;
 }
 
-export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }: ParkingSpotCardProps) {
+export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact, stays, halfDay, vehicleType }: ParkingSpotCardProps) {
   const colors = useThemeColors();
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   const scale = useScale();
@@ -202,7 +216,7 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
             {spot.title}
           </Text>
           <View style={styles.priceBadge}>
-            <Text style={styles.priceText}>{priceBadgeLabel(spot, commissionRatePercent)}</Text>
+            <Text style={styles.priceText}>{priceBadgeLabel(spot, commissionRatePercent, { stays, halfDay, vehicleType })}</Text>
           </View>
         </View>
 
@@ -252,12 +266,18 @@ export function ParkingSpotCard({ spot, isFavorite, onToggleFavorite, compact }:
                 );
               })}
               {spot.stayEnabled && (
-                // No es parte de spot.tags (eso sólo refleja covered/uncovered) --
+                // No es parte de spot.tags (techada y acceso 24/7) --
                 // se muestra acá aparte para que el buscador identifique de un
                 // vistazo qué cocheras aceptan estadía por día/semana/mes.
                 <View style={styles.tag}>
                   <Ionicons name="calendar-outline" size={sc(12)} color={colors.teal} />
                   <Text style={styles.tagText}>{t('spot.tag.stay')}</Text>
+                </View>
+              )}
+              {spot.halfDayEnabled && (
+                <View style={styles.tag}>
+                  <Ionicons name="hourglass-outline" size={sc(12)} color={colors.teal} />
+                  <Text style={styles.tagText}>{t('spot.tag.halfDay')}</Text>
                 </View>
               )}
             </View>

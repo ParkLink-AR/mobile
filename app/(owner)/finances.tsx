@@ -129,7 +129,9 @@ export default function OwnerFinances() {
       paddingHorizontal: 8, paddingVertical: 3, marginTop: 4,
     },
     trendChipText: { fontSize: sc(12), fontWeight: '700', color: colors.success },
-    statsRow: { flexDirection: 'row', gap: 10 },
+    // With large text the month's amount doesn't fit a third of the width: it takes a row of its own.
+    statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    statCardWide: { flexBasis: '100%' },
     statCard: {
       flex: 1, backgroundColor: colors.surface, borderRadius: 14,
       borderWidth: 1, borderColor: colors.border, padding: 12, gap: 4,
@@ -177,7 +179,7 @@ export default function OwnerFinances() {
         </Card>
 
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, scale > 1 && styles.statCardWide]}>
             <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>{money(thisMonth)}</Text>
             <Text style={styles.statLabel}>{t('owner.finances.thisMonth')}</Text>
           </View>

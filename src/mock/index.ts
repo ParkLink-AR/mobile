@@ -1,4 +1,5 @@
 import { useSessionStore } from '@/src/store/useSessionStore';
+import { markMockNotificationsRead, withReadState } from './seen';
 import { CAR, DAY_MS, DRIVERS, ago, at, fallbackFetch, iso, profile, reviewsOf, settlements, uid } from './fixtures';
 
 export { mocksEnabled } from './flag';
@@ -335,7 +336,7 @@ function enrich(pathname: string, query: URLSearchParams, data: any): any {
   }
   if (/^\/notifications$/.test(pathname) && !query.get('before') && data && Array.isArray(data.items)) {
     const userId = useSessionStore.getState().user?.id;
-    const extra = userId ? mockNotifications(userId) : [];
+    const extra = (userId ? mockNotifications(userId) : []).map(withReadState);
     // Los avisos reales también muestran el nombre de la cochera sin tildes ni caracteres rotos.
     const real = data.items.map((item: any) =>
       item?.data?.spot_title ? { ...item, data: { ...item.data, spot_title: cleanTitle(item.data.spot_title) } } : item,
@@ -362,6 +363,17 @@ export async function withMocks(
 ): Promise<Response> {
   const [pathname, search = ''] = path.split('?');
   const method = (options.method ?? 'GET').toUpperCase();
+
+  // Marking notifications read reaches the example ones too (see seen.ts).
+  if (method === 'POST' && pathname === '/notifications/read') {
+    let ids: string[] | undefined;
+    try {
+      ids = JSON.parse(String(options.body ?? '{}')).ids;
+    } catch {
+      ids = undefined;
+    }
+    markMockNotificationsRead(ids);
+  }
 
   const served = await serveMockEntity(path, pathname, options, method);
   if (served) return served;

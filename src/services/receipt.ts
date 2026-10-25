@@ -1,6 +1,4 @@
 import { Platform } from 'react-native';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import { t } from '@/src/i18n';
 
 // The wordmark the transactional emails use too (served by the landing page).
@@ -118,6 +116,10 @@ export async function shareReceipt(data: ReceiptData): Promise<void> {
     page.onload = () => page.print();
     return;
   }
+  // Loaded only here: they're native modules, and an app build made before they were added
+  // would otherwise fail on startup just for importing them.
+  const Print = await import('expo-print');
+  const Sharing = await import('expo-sharing');
   const { uri } = await Print.printToFileAsync({ html, width: A4_WIDTH_PT, height: A4_HEIGHT_PT });
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(uri, {

@@ -8,11 +8,13 @@ import { useScale } from '@/src/theme/typography';
 import { VehicleType, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { StayRates } from '@/src/types';
 
-/** The three stay prices of one vehicle type, as typed (strings). */
+/** The stay prices of one vehicle type, as typed (strings). halfDay only counts with the
+ * half-day on. */
 export interface StayRatesForm {
   day: string;
   week: string;
   month: string;
+  halfDay?: string;
 }
 
 // Todo en string (no number) porque son valores de TextInput controlados --
@@ -35,6 +37,11 @@ export interface StaySettingsFormValue {
   // sección del formulario). Ver ParkingSpot.stayPricesByVehicleType en parking-service.
   pricePerVehicleType: boolean;
   pricesByVehicleType: Partial<Record<VehicleType, StayRatesForm>>;
+  // "Media estadía (12 h)": un bloque de 12 horas desde la hora que elija el conductor, a
+  // precio cerrado. Apagada por defecto, también en las cocheras que ya existían. Con tarifas
+  // por vehículo, su precio va en pricesByVehicleType[tipo].halfDay.
+  halfDayEnabled: boolean;
+  pricePerHalfDay: string;
 }
 
 export const EMPTY_STAY_SETTINGS: StaySettingsFormValue = {
@@ -47,6 +54,8 @@ export const EMPTY_STAY_SETTINGS: StaySettingsFormValue = {
   stayAvailableUntil: '',
   pricePerVehicleType: false,
   pricesByVehicleType: {},
+  halfDayEnabled: false,
+  pricePerHalfDay: '',
 };
 
 function isPositiveNumber(raw: string | undefined): boolean {
@@ -65,10 +74,36 @@ export function isStayPricingValid(value: StaySettingsFormValue, vehicleTypes: V
   if (value.pricePerVehicleType) {
     return vehicleTypes.length > 0 && vehicleTypes.every((vt) => {
       const rates = value.pricesByVehicleType[vt];
-      return !!rates && isPositiveNumber(rates.day) && isPositiveNumber(rates.week) && isPositiveNumber(rates.month);
+      return (
+        !!rates &&
+        isPositiveNumber(rates.day) &&
+        isPositiveNumber(rates.week) &&
+        isPositiveNumber(rates.month) &&
+        (!value.halfDayEnabled || isPositiveNumber(rates.halfDay))
+      );
     });
   }
-  return isPositiveNumber(value.pricePerDay) && isPositiveNumber(value.pricePerWeek) && isPositiveNumber(value.pricePerMonth);
+  return (
+    isPositiveNumber(value.pricePerDay) &&
+    isPositiveNumber(value.pricePerWeek) &&
+    isPositiveNumber(value.pricePerMonth) &&
+    (!value.halfDayEnabled || isPositiveNumber(value.pricePerHalfDay))
+  );
+}
+
+/**
+ * Whether a 12-hour price isn't below the full day's -- for every vehicle when pricing per
+ * vehicle. Not an error (the owner decides), just worth a heads-up: a driver would rather
+ * book the whole day.
+ */
+export function halfDayCostsAsMuchAsADay(value: StaySettingsFormValue, vehicleTypes: VehicleType[]): boolean {
+  if (!value.stayEnabled || !value.halfDayEnabled) return false;
+  const notCheaper = (halfDay: string | undefined, day: string | undefined) =>
+    isPositiveNumber(halfDay) && isPositiveNumber(day) && Number(halfDay) >= Number(day);
+  if (value.pricePerVehicleType) {
+    return vehicleTypes.some((vt) => notCheaper(value.pricesByVehicleType[vt]?.halfDay, value.pricesByVehicleType[vt]?.day));
+  }
+  return notCheaper(value.pricePerHalfDay, value.pricePerDay);
 }
 
 /** Las tarifas por vehículo como números, sólo para los tipos que la cochera acepta --
@@ -80,7 +115,12 @@ export function stayPricesByVehicleTypeToNumbers(
   const result: Partial<Record<VehicleType, StayRates>> = {};
   for (const vt of vehicleTypes) {
     const rates = value.pricesByVehicleType[vt]!;
-    result[vt] = { day: Number(rates.day), week: Number(rates.week), month: Number(rates.month) };
+    result[vt] = {
+      day: Number(rates.day),
+      week: Number(rates.week),
+      month: Number(rates.month),
+      ...(value.halfDayEnabled ? { halfDay: Number(rates.halfDay) } : {}),
+    };
   }
   return result;
 }
@@ -91,7 +131,12 @@ export function stayPricesByVehicleTypeToForm(
 ): Partial<Record<VehicleType, StayRatesForm>> {
   const result: Partial<Record<VehicleType, StayRatesForm>> = {};
   for (const [vt, rates] of Object.entries(prices ?? {}) as [VehicleType, StayRates][]) {
-    result[vt] = { day: String(rates.day), week: String(rates.week), month: String(rates.month) };
+    result[vt] = {
+      day: String(rates.day),
+      week: String(rates.week),
+      month: String(rates.month),
+      halfDay: rates.halfDay !== undefined && rates.halfDay !== null ? String(rates.halfDay) : '',
+    };
   }
   return result;
 }
@@ -139,7 +184,7 @@ export function StaySettingsEditor({ value, onChange, vehicleTypes }: StaySettin
   });
 
   function setVehicleRate(vehicleType: VehicleType, unit: keyof StayRatesForm, text: string) {
-    const current = value.pricesByVehicleType[vehicleType] ?? { day: '', week: '', month: '' };
+    const current = value.pricesByVehicleType[vehicleType] ?? { day: '', week: '', month: '', halfDay: '' };
     onChange({
       pricesByVehicleType: {
         ...value.pricesByVehicleType,
@@ -194,12 +239,24 @@ export function StaySettingsEditor({ value, onChange, vehicleTypes }: StaySettin
             />
           </View>
 
+          <View style={styles.row}>
+            <View style={styles.labelBlock}>
+              <Text style={styles.fieldLabel}>{t('owner.spot.halfDay.enable')}</Text>
+              <Text style={styles.hint}>{t('owner.spot.halfDay.enableHint')}</Text>
+            </View>
+            <Switch
+              value={value.halfDayEnabled}
+              onValueChange={(v) => onChange({ halfDayEnabled: v })}
+              trackColor={{ true: colors.teal }}
+            />
+          </View>
+
           {value.pricePerVehicleType ? (
             vehicleTypes.length === 0 ? (
               <Text style={styles.warning}>{t('owner.spot.hourly.selectVehicleTypesFirst')}</Text>
             ) : (
               vehicleTypes.map((vehicleType) => {
-                const rates = value.pricesByVehicleType[vehicleType] ?? { day: '', week: '', month: '' };
+                const rates = value.pricesByVehicleType[vehicleType] ?? { day: '', week: '', month: '', halfDay: '' };
                 return (
                   <View key={vehicleType} style={styles.vehicleGroup}>
                     <Text style={styles.vehicleGroupTitle}>{t(VEHICLE_TYPE_LABEL_KEYS[vehicleType])}</Text>
@@ -218,6 +275,21 @@ export function StaySettingsEditor({ value, onChange, vehicleTypes }: StaySettin
                         </View>
                       ))}
                     </View>
+                    {value.halfDayEnabled && (
+                      <View style={styles.rateRow}>
+                        <View style={styles.rateCell}>
+                          <Text style={styles.rateLabel}>{t('owner.spot.stay.unit.halfDay')}</Text>
+                          <TextInput
+                            style={styles.input}
+                            value={rates.halfDay ?? ''}
+                            onChangeText={(text) => setVehicleRate(vehicleType, 'halfDay', text)}
+                            keyboardType="numeric"
+                            placeholder="$"
+                            placeholderTextColor={colors.textSecondary}
+                          />
+                        </View>
+                      </View>
+                    )}
                   </View>
                 );
               })
@@ -272,7 +344,28 @@ export function StaySettingsEditor({ value, onChange, vehicleTypes }: StaySettin
                   </Text>
                 )}
               </View>
+              {value.halfDayEnabled && (
+                <View>
+                  <Text style={styles.fieldLabel}>{t('owner.spot.halfDay.price')}</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={value.pricePerHalfDay}
+                    onChangeText={(text) => numericField(text, (v) => onChange({ pricePerHalfDay: v }))}
+                    keyboardType="numeric"
+                    placeholder="$5.000"
+                    placeholderTextColor={colors.textSecondary}
+                  />
+                  {priceBreakdown(value.pricePerHalfDay, 'owner.spot.halfDay.priceBreakdown') && (
+                    <Text style={styles.priceBreakdown}>
+                      {priceBreakdown(value.pricePerHalfDay, 'owner.spot.halfDay.priceBreakdown')}
+                    </Text>
+                  )}
+                </View>
+              )}
             </>
+          )}
+          {halfDayCostsAsMuchAsADay(value, vehicleTypes) && (
+            <Text style={styles.warning}>{t('owner.spot.halfDay.notCheaperWarning')}</Text>
           )}
           <View>
             <Text style={styles.fieldLabel}>{t('owner.spot.stay.maxStayDays')}</Text>

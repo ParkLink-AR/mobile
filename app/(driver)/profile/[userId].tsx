@@ -37,7 +37,8 @@ export default function PublicProfile() {
   // Which side's reviews are shown: the one the viewer came for (`as`), unless they switched to
   // the other one from the small link under the rating.
   const [roleOverride, setRoleOverride] = useState<'owner' | 'driver' | null>(null);
-  const role = roleOverride ?? as;
+  // Every link says which side to show; one that doesn't (an old notification) shows them as a driver.
+  const role = roleOverride ?? as ?? 'driver';
   const otherRole = role === 'owner' ? 'driver' : 'owner';
   // The other side's rating, for that link -- it only shows if there are reviews to see there.
   const [otherSide, setOtherSide] = useState<{ average: number; count: number } | null>(null);

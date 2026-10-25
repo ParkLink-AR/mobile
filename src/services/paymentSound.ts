@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useAudioPlayer } from 'expo-audio';
+import { createAudioPlayer, useAudioPlayer } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 
 const PAYMENT_APPROVED_SOUND = require('@/assets/sounds/payment-approved.wav');
@@ -16,8 +16,16 @@ export function usePaymentApprovedSound(): () => void {
     try {
       player.seekTo(0);
       player.play();
-    } catch (err) {
-      console.warn('[paymentSound] could not play:', err);
+    } catch {
+      // The screen's player was already released (a hot reload in development does it):
+      // play it from a one-off player instead, released once it's done.
+      try {
+        const oneOff = createAudioPlayer(PAYMENT_APPROVED_SOUND);
+        oneOff.play();
+        setTimeout(() => oneOff.release(), 5000);
+      } catch (err) {
+        console.warn('[paymentSound] could not play:', err);
+      }
     }
   }, [player]);
 }

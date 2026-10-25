@@ -1,4 +1,5 @@
 import { t, useLanguage } from '@/src/i18n';
+import { bookingKindLabelKey, tracksExit } from '@/src/services/bookingKind';
 import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Pressable, Modal, TouchableWithoutFeedback, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -94,9 +95,9 @@ function stayDays(booking: Booking): number {
   ));
 }
 
-/** Duración legible: horas para HOURLY, días de check-in a check-out para STAY. */
+/** Duración legible: horas para HOURLY y HALF_DAY (12), días de check-in a check-out para STAY. */
 function durationLabel(booking: Booking): string {
-  if (booking.kind === 'HOURLY') {
+  if (booking.kind !== 'STAY') {
     return booking.hours === 1 ? t('driver.booking.durationOneHour') : t('driver.booking.durationHours', { hours: String(booking.hours) });
   }
   const days = stayDays(booking);
@@ -120,7 +121,9 @@ export default function DriverBookingDetail() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [spotLocation, setSpotLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
   // The booked spot as it is now: its photo for the header, and whether it's still listed.
-  const [spotInfo, setSpotInfo] = useState<{ address: string; photoUrl: string | null; status: string } | null>(null);
+  const [spotInfo, setSpotInfo] = useState<
+    { address: string; photoUrl: string | null; status: string; hourlyEnabled: boolean } | null
+  >(null);
   const [driverName, setDriverName] = useState<string | null>(null);
   const [ownerName, setOwnerName] = useState<string | null>(null);
   const [error, setError] = useState(false);
@@ -148,7 +151,9 @@ export default function DriverBookingDetail() {
         const spot = await getParkingSpotDetail(raw.parking_spot_id, { includeDeleted: true }).catch(() => null);
         setBooking(mapApiBooking(raw, spot?.title ?? raw.parking_spot_id, spot?.ownerId ?? ''));
         setSpotLocation(spot && spot.status !== 'deleted' ? { lat: spot.lat, lng: spot.lng, address: spot.address } : null);
-        setSpotInfo(spot ? { address: spot.address, photoUrl: spot.photos?.[0] ?? null, status: spot.status } : null);
+        setSpotInfo(
+          spot ? { address: spot.address, photoUrl: spot.photos?.[0] ?? null, status: spot.status, hourlyEnabled: spot.hourlyEnabled } : null,
+        );
         if (isOwnerView) {
           getPublicProfileApi(raw.user_id)
             .then((profile) => setDriverName(profile.name))
@@ -443,7 +448,10 @@ export default function DriverBookingDetail() {
   const canDriverCancel = !isOwnerView && notStarted &&
     (booking.status === 'CONFIRMED' || booking.status === 'PENDING_OWNER_APPROVAL');
   const canOwnerCancel = isOwnerView && notStarted && booking.status === 'CONFIRMED';
-  const canExtend = !isOwnerView && booking.kind === 'HOURLY' && accepted && openedAt < endMs && !booking.extension;
+  // By the hour: an hourly booking always, a half-day when the spot also takes hourly bookings
+  // (the extension is priced and checked as one -- see booking-service's ExtensionOptions).
+  const extendableKind = booking.kind === 'HOURLY' || (booking.kind === 'HALF_DAY' && !!spotInfo?.hourlyEnabled);
+  const canExtend = !isOwnerView && extendableKind && accepted && openedAt < endMs && !booking.extension;
   // What a cancelled booking gave back: part of it (refundedAmount), or all of it.
   // A full refund returns the whole payment: the booking's price and the pending balance it carried.
   const paidTotal = booking.total + (booking.debtAmount ?? 0);
@@ -464,7 +472,7 @@ export default function DriverBookingDetail() {
         spotAddress: spotInfo?.address,
         driverName: [sessionUser?.name, sessionUser?.lastName].filter(Boolean).join(' '),
         ownerName: ownerName ?? undefined,
-        when: booking.kind === 'STAY'
+        when: booking.kind !== 'HOURLY'
           ? `${formatLongDate(booking.date)}, ${booking.startTime} → ${formatLongDate(booking.endDate)}, ${booking.endTime}`
           : formatBookingWhen(booking, t('driver.booking.timeTo'), 'long'),
         duration: durationLabel(booking),
@@ -502,7 +510,11 @@ export default function DriverBookingDetail() {
     (booking.status === 'COMPLETED' || booking.status === 'CANCELLED' || booking.status === 'EXPIRED');
   const repeatBooking = () => {
     const params = new URLSearchParams(
-      booking.kind === 'STAY' ? { mode: 'stay', days: String(stayDays(booking)) } : { mode: 'hourly', hours: String(booking.hours) },
+      booking.kind === 'STAY'
+        ? { mode: 'stay', days: String(stayDays(booking)) }
+        : booking.kind === 'HALF_DAY'
+          ? { mode: 'halfDay' }
+          : { mode: 'hourly', hours: String(booking.hours) },
     );
     if (booking.vehicle?.type) params.set('vehicleType', booking.vehicle.type);
     router.push(`${group}/spot/${booking.parkingSpotId}?${params.toString()}` as never);
@@ -542,10 +554,12 @@ export default function DriverBookingDetail() {
             )}
 
             <View style={styles.kindRow}>
-              <Ionicons name={booking.kind === 'STAY' ? 'calendar-outline' : 'time-outline'} size={sc(14)} color={colors.teal} />
-              <Text style={styles.kindText}>
-                {t(booking.kind === 'STAY' ? 'driver.booking.kind.stay' : 'driver.booking.kind.hourly')}
-              </Text>
+              <Ionicons
+                name={booking.kind === 'STAY' ? 'calendar-outline' : booking.kind === 'HALF_DAY' ? 'hourglass-outline' : 'time-outline'}
+                size={sc(14)}
+                color={colors.teal}
+              />
+              <Text style={styles.kindText}>{t(bookingKindLabelKey(booking.kind))}</Text>
               <View style={{ flex: 1 }} />
               <StatusBadge status={booking.status} />
             </View>
@@ -589,9 +603,10 @@ export default function DriverBookingDetail() {
               <Text style={styles.sectionLabel}>{t('driver.booking.summary')}</Text>
             </View>
 
-            {/* A stay gets its check-in and check-out, each with its date and time -- here, in
-                its detail, there's room for it (lists and notifications keep the short form). */}
-            {booking.kind === 'STAY' ? (
+            {/* A stay (or a half-day, which can cross midnight) gets its check-in and check-out,
+                each with its date and time -- here, in its detail, there's room for it (lists and
+                notifications keep the short form). */}
+            {booking.kind !== 'HOURLY' ? (
               <>
                 <View style={styles.detailRow}>
                   <Ionicons name="log-in-outline" size={sc(16)} color={colors.textSecondary} />
@@ -716,7 +731,7 @@ export default function DriverBookingDetail() {
               A booking carried on by a paid extension ends there instead. */}
           {/* (booking-service only sends verified_at to the driver, so the owner just asks: an exit
               that doesn't apply comes back as nothing to show.) */}
-          {booking.kind === 'HOURLY' &&
+          {tracksExit(booking.kind) &&
             (isOwnerView || booking.verifiedAt) &&
             ['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(booking.status) &&
             booking.endAt &&

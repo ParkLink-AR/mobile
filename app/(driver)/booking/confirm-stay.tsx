@@ -13,7 +13,7 @@ import { useSessionStore } from '@/src/store/useSessionStore';
 import { getParkingSpotDetail } from '@/src/services/parkingService';
 import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
 import { useCommissionStore } from '@/src/store/useCommissionStore';
-import { getStayQuote, type StayQuote } from '@/src/api/parking';
+import { getHalfDayQuote, getStayQuote } from '@/src/api/parking';
 import { ParkingSpot } from '@/src/types';
 import { openCheckout } from '@/src/services/checkout';
 import { createBookingApi, createPaymentPreference } from '@/src/api/booking';
@@ -27,8 +27,19 @@ import { DebtBreakdown } from '@/src/components/booking/DebtBreakdown';
 import { confirmChangedTotal, debtChanged, formatDebtPesos, useMyDebts } from '@/src/services/debts';
 
 
+/** What this screen books, as quoted by parking-service -- a stay's or a half-day's. */
+interface Quoted {
+  startDateTime: string;
+  endDateTime: string;
+  endDate: string; // YYYY-MM-DD, a stay's check-out day
+  amount: number; // centavos, the owner's own price
+  duration: string; // "1 semana + 2 días" / "12 horas"
+}
+
 /**
- * Confirmación + pago de una estadía (rango de fechas + hora de check-in) --
+ * Confirmación + pago de una estadía (rango de fechas + hora de check-in) -- o, con
+ * mode=halfDay, de una media estadía (12 horas desde la hora elegida, mismo flujo: el precio
+ * sale de su propia cotización y se reserva como HALF_DAY) --
  * contraparte de booking/confirm.tsx (por hora), separada en su propia
  * pantalla en vez de ramificar esa por dos motivos: los parámetros son
  * distintos (startDate/endDate/startHour, no startHour/endHour de una franja
@@ -47,24 +58,26 @@ export default function ConfirmStayBooking() {
   const largeText = scale > 1;
   const typography = useTypography();
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
-  const { spotId, startDate, endDate, startHour, vehicleType } = useLocalSearchParams<{
+  const { spotId, startDate, endDate, startHour, vehicleType, mode } = useLocalSearchParams<{
     spotId: string;
     startDate: string; // YYYY-MM-DD
-    endDate: string; // YYYY-MM-DD
+    endDate?: string; // YYYY-MM-DD -- a stay's check-out day; a half-day has none
     startHour: string;
     vehicleType?: string; // elegido en spot/[id].tsx -- decide la tarifa si la cochera cobra distinto por vehículo
+    mode?: 'stay' | 'halfDay';
   }>();
+  const isHalfDay = mode === 'halfDay';
   const stayStartHour = Number(startHour) || 0;
   const user = useSessionStore((s) => s.user);
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   // The quote, with the vehicle type it was priced for -- a spot that prices stays per
   // vehicle is re-quoted when the picked vehicle changes.
-  const [quoted, setQuoted] = useState<{ vehicleType: string; quote: StayQuote } | null>(null);
+  const [quoted, setQuoted] = useState<{ vehicleType: string; quote: Quoted } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const {
     vehicles, selectedVehicle, setSelectedVehicle, onVehicleSaved, needsVehicle, vehicleType: pricingVehicleType,
-  } = useBookingVehicle(user?.id, spot, 'stay', vehicleType);
+  } = useBookingVehicle(user?.id, spot, isHalfDay ? 'halfDay' : 'stay', vehicleType);
   // Only a spot that prices stays per vehicle is quoted by type.
   const quoteVehicleType = spot?.stayPricesByVehicleType ? pricingVehicleType : null;
   const quote = quoted && quoted.vehicleType === (quoteVehicleType ?? '') ? quoted.quote : null;
@@ -90,10 +103,25 @@ export default function ConfirmStayBooking() {
     if (!spot) return;
     // Priced per vehicle and no vehicle yet: nothing to quote until one is picked.
     if (pricedPerVehicle && !quoteVehicleType) return;
-    getStayQuote(spotId, startDate, endDate, stayStartHour, quoteVehicleType)
+    const request: Promise<Quoted> = isHalfDay
+      ? getHalfDayQuote(spotId, startDate, stayStartHour, quoteVehicleType).then((q) => ({
+          startDateTime: q.startDateTime,
+          endDateTime: q.endDateTime,
+          endDate: q.endDateTime.slice(0, 10),
+          amount: q.amount,
+          duration: t('spot.halfDay.duration', { hours: String(q.hours) }),
+        }))
+      : getStayQuote(spotId, startDate, endDate ?? startDate, stayStartHour, quoteVehicleType).then((q) => ({
+          startDateTime: q.startDateTime,
+          endDateTime: q.endDateTime,
+          endDate: q.endDate,
+          amount: q.amount,
+          duration: formatStayBreakdown(q.breakdown),
+        }));
+    request
       .then((result) => setQuoted({ vehicleType: quoteVehicleType ?? '', quote: result }))
-      .catch((err) => setLoadError(err instanceof ApiError ? err.detail : t('spot.stay.quoteError')));
-  }, [spot, pricedPerVehicle, spotId, startDate, endDate, stayStartHour, quoteVehicleType]);
+      .catch((err) => setLoadError(err instanceof ApiError ? err.detail : t(isHalfDay ? 'spot.halfDay.quoteError' : 'spot.stay.quoteError')));
+  }, [spot, pricedPerVehicle, isHalfDay, spotId, startDate, endDate, stayStartHour, quoteVehicleType]);
 
   // Mismo flujo que booking/confirm.tsx (POST /bookings -> POST
   // /payments/create-preference -> WebBrowser -> pending.tsx), sin el
@@ -118,8 +146,7 @@ export default function ConfirmStayBooking() {
         start: quote.startDateTime,
         end: quote.endDateTime,
         amount: quote.amount,
-        kind: 'STAY',
-        stay_end_date: quote.endDate,
+        ...(isHalfDay ? { kind: 'HALF_DAY' as const } : { kind: 'STAY' as const, stay_end_date: quote.endDate }),
         parking_spot: { id: spotId, schedule: [], capacity: spot.capacity },
         vehicle: bookingVehicleBody(selectedVehicle),
       });
@@ -152,10 +179,12 @@ export default function ConfirmStayBooking() {
     try {
       const preference = await createPaymentPreference({
         title: `Cochera ${spot.title}`,
-        description: t('spot.stay.paymentDescription', {
-          start: formatShortDate(quote.startDate),
-          end: formatShortDate(quote.endDate),
-        }),
+        description: isHalfDay
+          ? t('spot.halfDay.paymentDescription', { start: formatLongDateTime(quote.startDateTime) })
+          : t('spot.stay.paymentDescription', {
+              start: formatShortDate(startDate),
+              end: formatShortDate(quote.endDate),
+            }),
         payerEmail: user.email,
         externalReference: bookingId,
       });
@@ -273,7 +302,7 @@ export default function ConfirmStayBooking() {
                   <View style={styles.detailRow}>
                     <Ionicons name="hourglass-outline" size={sc(16)} color={colors.textSecondary} />
                     <Text style={styles.detailLabel}>{t('spot.stay.duration')}</Text>
-                    <Text style={styles.detailValue}>{formatStayBreakdown(quote.breakdown)}</Text>
+                    <Text style={styles.detailValue}>{quote.duration}</Text>
                   </View>
 
                   <View style={styles.divider} />

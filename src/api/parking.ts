@@ -36,6 +36,10 @@ export interface ParkingSpotApiResponse {
   maxStayDays: number | null;
   // Ver ParkingSpot.stayPricesByVehicleType / requireVehicle en parking-service.
   stayPricesByVehicleType?: Partial<Record<VehicleType, StayRates>> | null;
+  // "Media estadía (12 h)" -- ver ParkingSpot.halfDayEnabled en parking-service. Opcionales:
+  // un backend anterior no los manda (y entonces no hay media estadía).
+  halfDayEnabled?: boolean;
+  pricePerHalfDay?: number | null;
   requireVehicle?: boolean;
   covered: boolean;
   vehicleTypes: VehicleType[];
@@ -68,8 +72,18 @@ export interface SearchParkingSpotsParams {
   lat: number;
   lng: number;
   radius?: number;
+  // Price range in the owner's own rates (the commission already taken out): per hour, or
+  // per day for stays, at the vehicle's rate when vehicleType is given.
+  minPrice?: number;
   maxPrice?: number;
   covered?: boolean;
+  // Only spots that take this vehicle.
+  vehicleType?: string;
+  // Only spots rated at least this many stars (from at least one review).
+  minRating?: number;
+  // A stay's check-in and check-out days (YYYY-MM-DD). Go together.
+  stayFrom?: string;
+  stayTo?: string;
   // Desired reservation window, ISO 8601 with offset. Go together: send
   // both or neither (see SearchParkingSpotDto). parking-service uses these
   // to filter out spots that are already booked for that window (see
@@ -83,6 +97,9 @@ export interface SearchParkingSpotsParams {
   // Mobile los trata como mutuamente excluyentes en su UI (elegir uno
   // deselecciona el otro), pero acá van sueltos -- el back no impone esa regla.
   hourlyOnly?: boolean;
+  // Sólo cocheras con media estadía (12 h). Con `from`, el bloque [from, from + 12 h) tiene que
+  // estar libre (to se ignora); los precios pasan a ser los de 12 horas.
+  halfDayOnly?: boolean;
   // Cómo ordenar: 'distance' (por defecto), 'price' o 'rating'.
   sort?: SearchSort;
 }
@@ -132,6 +149,10 @@ interface StayFields {
   // Tarifas de estadía por tipo de vehículo -- alternativa a pricePerDay/Week/Month. En
   // update, `null` vuelve a las mismas para todos.
   stayPricesByVehicleType?: Partial<Record<VehicleType, StayRates>> | null;
+  // "Media estadía (12 h)": sólo con stayEnabled. Su precio va acá, o por vehículo en
+  // stayPricesByVehicleType[tipo].halfDay.
+  halfDayEnabled?: boolean;
+  pricePerHalfDay?: number;
   // "Pedir el vehículo al reservar".
   requireVehicle?: boolean;
 }
@@ -139,6 +160,8 @@ interface StayFields {
 export interface CreateParkingSpotInput extends StayFields {
   title: string;
   description?: string;
+  // Cómo entrar -- privado (sólo el conductor de una reserva aceptada).
+  accessInstructions?: string;
   address: string;
   lat: number;
   lng: number;
@@ -210,12 +233,17 @@ export async function searchParkingSpots(
     lat: String(params.lat),
     lng: String(params.lng),
     ...(params.radius !== undefined ? { radius: String(params.radius) } : {}),
+    ...(params.minPrice !== undefined ? { minPrice: String(params.minPrice) } : {}),
     ...(params.maxPrice !== undefined ? { maxPrice: String(params.maxPrice) } : {}),
+    ...(params.vehicleType !== undefined ? { vehicleType: params.vehicleType } : {}),
+    ...(params.minRating !== undefined ? { minRating: String(params.minRating) } : {}),
+    ...(params.stayFrom !== undefined && params.stayTo !== undefined ? { stayFrom: params.stayFrom, stayTo: params.stayTo } : {}),
     ...(params.covered !== undefined ? { covered: String(params.covered) } : {}),
     ...(params.from !== undefined ? { from: params.from } : {}),
     ...(params.to !== undefined ? { to: params.to } : {}),
     ...(params.stayOnly !== undefined ? { stayOnly: String(params.stayOnly) } : {}),
     ...(params.hourlyOnly !== undefined ? { hourlyOnly: String(params.hourlyOnly) } : {}),
+    ...(params.halfDayOnly ? { halfDayOnly: 'true' } : {}),
     ...(params.sort && params.sort !== 'distance' ? { sort: params.sort } : {}),
   });
   return request(`/parking-spots/search?${query.toString()}`);
@@ -414,6 +442,45 @@ export async function getStayQuote(
   const query = new URLSearchParams({ startDate, endDate, startHour: String(startHour) });
   if (vehicleType) query.set('vehicleType', vehicleType);
   return request(`/parking-spots/${parkingSpotId}/stays/quote?${query.toString()}`);
+}
+
+/** A half-day's price and exact instants -- see StaysService.getHalfDayQuote in parking-service. */
+export interface HalfDayQuote {
+  startDateTime: string; // RFC3339, -03:00
+  endDateTime: string;
+  hours: number; // 12
+  amount: number; // centavos, the owner's own price
+}
+
+/**
+ * Cotiza una media estadía: 12 horas desde `startHour`:00 de `date`. Valida que la cochera la
+ * ofrezca, que caiga dentro de las fechas de estadía y sin días cerrados, y que no choque con
+ * otra reserva (con el margen de 15 minutos entre reservas). 400/404/409 (ApiError) si no.
+ *
+ * GET /parking-spots/{id}/half-days/quote
+ */
+export async function getHalfDayQuote(
+  parkingSpotId: string,
+  date: string,
+  startHour: number,
+  vehicleType?: VehicleType | null,
+): Promise<HalfDayQuote> {
+  const query = new URLSearchParams({ date, startHour: String(startHour) });
+  if (vehicleType) query.set('vehicleType', vehicleType);
+  return request(`/parking-spots/${parkingSpotId}/half-days/quote?${query.toString()}`);
+}
+
+/**
+ * The hours of `date` a half-day can start at (0-23), and whether each is free -- the same
+ * rules as the quote, for the driver to only pick a free one.
+ *
+ * GET /parking-spots/{id}/half-days/starts
+ */
+export async function getHalfDayStarts(
+  parkingSpotId: string,
+  date: string,
+): Promise<{ date: string; starts: { hour: number; available: boolean }[] }> {
+  return request(`/parking-spots/${parkingSpotId}/half-days/starts?date=${date}`);
 }
 
 export interface StayDayAvailability {

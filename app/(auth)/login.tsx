@@ -1,6 +1,6 @@
 import { t, useLanguage } from '@/src/i18n';
 import { useEffect, useState } from 'react';
-import { Text, TextInput, Image, StyleSheet, ActivityIndicator, InteractionManager, View, Modal, Pressable } from 'react-native';
+import { Text, TextInput, Image, StyleSheet, ActivityIndicator, View, Modal, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -41,8 +41,10 @@ export default function Login() {
   // Same when the session was ended because the account got suspended or is closing.
   useEffect(() => {
     if (!accountDeletionDate && !accountNotice) return;
-    const task = InteractionManager.runAfterInteractions(() => clearSession());
-    return () => task.cancel();
+    // requestIdleCallback replaces InteractionManager (removed in React Native 0.88): it runs
+    // once the app is idle, after those screens are gone.
+    const handle = requestIdleCallback(() => clearSession());
+    return () => cancelIdleCallback(handle);
   }, [accountDeletionDate, accountNotice, clearSession]);
 
   const form = useAccountFormStyles();

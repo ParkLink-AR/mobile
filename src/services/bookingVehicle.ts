@@ -16,7 +16,7 @@ import { ParkingSpot, Vehicle } from '@/src/types';
 export function useBookingVehicle(
   userId: string | undefined,
   spot: ParkingSpot | null,
-  mode: 'hourly' | 'stay',
+  mode: 'hourly' | 'stay' | 'halfDay',
   preferredType?: string,
 ) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);

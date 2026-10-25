@@ -50,6 +50,9 @@ export default function OwnerSpots() {
   const colors = useThemeColors();
   const typography = useTypography();
   const scale = useScale();
+  // With large text the list/map switch shows just its icons: with the words it doesn't
+  // fit next to the button beside it.
+  const iconOnlySwitch = scale > 1;
   const sc = (n: number) => Math.round(n * scale);
   const user = useSessionStore((s) => s.user);
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
@@ -74,25 +77,26 @@ export default function OwnerSpots() {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       padding: 16, paddingBottom: 8,
     },
-    // "Añadir cochera" on the left, list/map switch on the right.
-    // Con letra grande los dos controles no entran en una línea: el switch baja a la siguiente, a la derecha.
+    // List/map switch on the left, "Añadir cochera" on the right.
+    // If they still don't fit on one line, the button wraps to the next one.
     toggleRow: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8,
       flexWrap: 'wrap',
       paddingHorizontal: 16, paddingBottom: 8,
     },
-    // Outlined button sized like the list/map switch next to it: same 1.5 border, and its
-    // padding (8) is the switch's own padding (2) plus a segment's (6).
+    // A soft teal button the height of the list/map switch next to it: same 1.5 (here
+    // invisible) border, and its padding (8) is the switch's own padding (2) plus a segment's
+    // (6). It gives way first when the row runs short (large text).
     addButton: {
-      flexDirection: 'row', alignItems: 'center', gap: 5,
+      flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1, marginLeft: 'auto',
       paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
-      borderWidth: 1.5, borderColor: colors.teal, backgroundColor: colors.surface,
+      borderWidth: 1.5, borderColor: 'transparent', backgroundColor: colors.teal + '1A',
     },
-    addButtonText: { fontSize: sc(13), fontWeight: '600', color: colors.teal },
+    addButtonText: { flexShrink: 1, fontSize: sc(13), fontWeight: '600', color: colors.teal },
     segmentedControl: {
       flexDirection: 'row', backgroundColor: colors.background,
       borderRadius: 10, borderWidth: 1.5, borderColor: colors.border, padding: 2,
-      marginLeft: 'auto', maxWidth: '100%',
+      maxWidth: '100%',
     },
     segmentButton: {
       flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -134,20 +138,19 @@ export default function OwnerSpots() {
       </View>
 
       <View style={styles.toggleRow}>
-        <Pressable style={styles.addButton} onPress={() => router.push(`${group}/spots/new`)}>
-          <Ionicons name="add" size={sc(14)} color={colors.teal} />
-          <Text style={styles.addButtonText}>{t('profile.mySpots.add')}</Text>
-        </Pressable>
         {spots.length > 0 && (
           <View style={styles.segmentedControl}>
             <Pressable
               style={[styles.segmentButton, viewMode === 'list' && styles.segmentActive]}
               onPress={() => setViewMode('list')}
+              accessibilityLabel={t('search.viewList')}
             >
-              <Ionicons name="list-outline" size={sc(14)} color={viewMode === 'list' ? colors.white : colors.textSecondary} />
-              <Text style={[styles.segmentText, viewMode === 'list' && styles.segmentTextActive]}>
-                {t('search.viewList')}
-              </Text>
+              <Ionicons name="list-outline" size={sc(iconOnlySwitch ? 16 : 14)} color={viewMode === 'list' ? colors.white : colors.textSecondary} />
+              {!iconOnlySwitch && (
+                <Text style={[styles.segmentText, viewMode === 'list' && styles.segmentTextActive]}>
+                  {t('search.viewList')}
+                </Text>
+              )}
             </Pressable>
             {/* react-native-maps no tiene build para web -- metro.config.js lo
                 resuelve a un stub vacío ahí, así que no se ofrece la opción
@@ -156,15 +159,22 @@ export default function OwnerSpots() {
               <Pressable
                 style={[styles.segmentButton, viewMode === 'map' && styles.segmentActive]}
                 onPress={() => setViewMode('map')}
+                accessibilityLabel={t('search.viewMap')}
               >
-                <Ionicons name="map-outline" size={sc(14)} color={viewMode === 'map' ? colors.white : colors.textSecondary} />
-                <Text style={[styles.segmentText, viewMode === 'map' && styles.segmentTextActive]}>
-                  {t('search.viewMap')}
-                </Text>
+                <Ionicons name="map-outline" size={sc(iconOnlySwitch ? 16 : 14)} color={viewMode === 'map' ? colors.white : colors.textSecondary} />
+                {!iconOnlySwitch && (
+                  <Text style={[styles.segmentText, viewMode === 'map' && styles.segmentTextActive]}>
+                    {t('search.viewMap')}
+                  </Text>
+                )}
               </Pressable>
             )}
           </View>
         )}
+        <Pressable style={styles.addButton} onPress={() => router.push(`${group}/spots/new`)}>
+          <Ionicons name="add" size={sc(14)} color={colors.teal} />
+          <Text style={styles.addButtonText} numberOfLines={1}>{t('profile.mySpots.add')}</Text>
+        </Pressable>
       </View>
 
       <View style={styles.body}>

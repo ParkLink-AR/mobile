@@ -14,13 +14,16 @@ import {
   hourlyAvailabilityFetcher,
   stayAvailabilityFetcher,
 } from '@/src/components/AvailabilityDatePickerField';
+import { DatePickerField } from '@/src/components/DatePickerField';
 import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
 import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
-import { getParkingSpotDetail, formatScheduleForDisplay, getSpotPricePerHour, getMinPricePerHour } from '@/src/services/parkingService';
+import {
+  getParkingSpotDetail, formatScheduleForDisplay, getSpotPricePerHour, getMinPricePerHour, HALF_DAY_HOURS,
+} from '@/src/services/parkingService';
 import { addDaysISO, addOneDayISO, nowArtHour, todayArtDateISO } from '@/src/services/dateUtils';
 import {
   defaultEnd,
@@ -51,7 +54,7 @@ import { MonthAvailabilitySheet } from '@/src/components/MonthAvailabilitySheet'
 import { findFirstFreeStart, useAvailability } from '@/src/hooks/useAvailability';
 import { findFirstFreeStayStart } from '@/src/services/stayAvailability';
 import { getPublicProfileApi } from '@/src/api/auth';
-import { getStayQuote, type StayQuote } from '@/src/api/parking';
+import { getHalfDayQuote, getHalfDayStarts, getStayQuote, type HalfDayQuote, type StayQuote } from '@/src/api/parking';
 import { ApiError } from '@/src/api/client';
 import { VehicleType, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { ParkingSpot } from '@/src/types';
@@ -59,15 +62,12 @@ import { ReportButton } from '@/src/components/ReportButton';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-// What each amenity means for the driver, beyond its one-word label.
-// Spots store "covered" as the Spanish word (see parkingService's mapping), the rest as keys.
+// What each amenity means for the driver, beyond its one-word label (see parkingService's
+// mapping: whether it's covered, and "access247" when it's open around the clock).
 const FEATURES: Record<string, { icon: IconName; labelKey: string; detailKey: string }> = {
   covered: { icon: 'home-outline', labelKey: 'spot.tag.covered', detailKey: 'spot.feature.covered' },
-  Cubierta: { icon: 'home-outline', labelKey: 'spot.tag.covered', detailKey: 'spot.feature.covered' },
   uncovered: { icon: 'sunny-outline', labelKey: 'spot.tag.uncovered', detailKey: 'spot.feature.uncovered' },
-  Descubierta: { icon: 'sunny-outline', labelKey: 'spot.tag.uncovered', detailKey: 'spot.feature.uncovered' },
   access247: { icon: 'time-outline', labelKey: 'spot.tag.access247', detailKey: 'spot.feature.access247' },
-  secure: { icon: 'shield-checkmark-outline', labelKey: 'spot.tag.secure', detailKey: 'spot.feature.secure' },
 };
 
 /** "$9.180" */
@@ -107,6 +107,17 @@ const MAX_BOOKING_SPAN_DAYS = 14;
 // válida.
 const STAY_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => hour);
 
+type BookingMode = 'hourly' | 'halfDay' | 'stay';
+
+/** The ways this spot can be booked, in the order the selector shows them. */
+function bookingModesOf(spot: ParkingSpot): BookingMode[] {
+  return [
+    ...(spot.hourlyEnabled ? (['hourly'] as const) : []),
+    ...(spot.halfDayEnabled ? (['halfDay'] as const) : []),
+    ...(spot.stayEnabled ? (['stay'] as const) : []),
+  ];
+}
+
 export default function SpotDetail() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
@@ -115,9 +126,9 @@ export default function SpotDetail() {
   const commissionRatePercent = useCommissionStore((s) => s.ratePercent);
   useLanguage();
   const group = `/${useSegments()[0]}`;
-  // "Volver a reservar" opens the spot set up like the booking it repeats: same kind (hourly
-  // or stay), same length (hours, or days for a stay) and same vehicle type. The day still
-  // falls on the first free one, like any other visit.
+  // "Volver a reservar" opens the spot set up like the booking it repeats: same kind (hourly,
+  // half-day or stay), same length (hours, or days for a stay) and same vehicle type. The day
+  // still falls on the first free one, like any other visit.
   const { id, mode: repeatMode, hours: repeatHoursParam, days: repeatDaysParam, vehicleType: repeatVehicleType } =
     useLocalSearchParams<{ id: string; mode?: string; hours?: string; days?: string; vehicleType?: string }>();
   const repeatHours = Number(repeatHoursParam) > 0 ? Number(repeatHoursParam) : null;
@@ -137,10 +148,13 @@ export default function SpotDetail() {
   const [selectedVehicleType, setSelectedVehicleType] = useState<VehicleType | null>(
     () => (repeatVehicleType as VehicleType | undefined) ?? null,
   );
-  // Sólo importa cuando la cochera ofrece los dos modos -- ahí el conductor
-  // elige uno a la vez en vez de ver los dos formularios juntos (que
-  // confundía sobre cuál total/botón corresponde a qué reserva).
-  const [bookingMode, setBookingMode] = useState<'hourly' | 'stay'>(() => (repeatMode === 'stay' ? 'stay' : 'hourly'));
+  // Sólo importa cuando la cochera ofrece más de un modo -- ahí el conductor elige uno a la vez
+  // en vez de ver los formularios juntos (que confundía sobre cuál total/botón corresponde a qué
+  // reserva). Lo que se elige; el modo que se muestra es éste si la cochera lo ofrece, si no el
+  // primero que ofrece (ver bookingMode más abajo).
+  const [bookingModeChoice, setBookingMode] = useState<BookingMode | null>(() =>
+    repeatMode === 'stay' || repeatMode === 'halfDay' || repeatMode === 'hourly' ? repeatMode : null,
+  );
   const user = useSessionStore((s) => s.user);
   const isFavorite = useFavoritesStore((s) => (id ? s.ids.has(id) : false));
   const toggleFavorite = useFavoritesStore((s) => s.toggle);
@@ -326,7 +340,7 @@ export default function SpotDetail() {
   // ── Estadía (rango de fechas + hora de check-in) ────────────────────────
   const [stayStartDateOverride, setStayStartDateOverride] = useState<string | null>(null);
   const [stayEndDateOverride, setStayEndDateOverride] = useState<string | null>(null);
-  const [stayStartHour, setStayStartHour] = useState(nowArtHour);
+  const [stayStartHourChoice, setStayStartHour] = useState(nowArtHour);
   const [stayQuote, setStayQuote] = useState<StayQuote | null>(null);
   const [stayQuoteLoading, setStayQuoteLoading] = useState(false);
   const [stayQuoteError, setStayQuoteError] = useState<string | null>(null);
@@ -344,6 +358,12 @@ export default function SpotDetail() {
     : todayArtDateISO();
   const stayStartDate =
     stayStartDateOverride && stayStartDateOverride >= minStayStartDate ? stayStartDateOverride : minStayStartDate;
+  // Starting today, the check-in can't be an hour already gone: it would charge a whole first
+  // day of which only the rest is left (parking-service refuses it too). The hour under way is
+  // fine. Derived like the dates, so the time passing never leaves a past hour picked.
+  const firstStayHour = stayStartDate === todayArtDateISO() ? nowArtHour() : 0;
+  const stayStartHour = Math.max(stayStartHourChoice, firstStayHour);
+  const freeStayHours = STAY_HOUR_OPTIONS.filter((hour) => hour >= firstStayHour);
 
   // Al menos 1 día de estadía -- mismo criterio de "derivar, no sincronizar"
   // que minStayStartDate: si stayStartDate avanza más allá del fin elegido
@@ -407,9 +427,82 @@ export default function SpotDetail() {
       });
   }, [defaultStayTaken, spot, stayStartDate]);
 
+  // ── Media estadía (12 h desde la hora elegida) ──────────────────────────
+  // Mismas fechas que la estadía (desde hoy o stayAvailableFrom); la hora se elige entre las
+  // que parking-service dice libres ese día (getHalfDayStarts), así nunca se ofrece una que
+  // choque con otra reserva o con el margen entre reservas.
+  const [halfDayDateOverride, setHalfDayDateOverride] = useState<string | null>(null);
+  const halfDayDate =
+    halfDayDateOverride && halfDayDateOverride >= minStayStartDate ? halfDayDateOverride : minStayStartDate;
+  const [halfDayHourChoice, setHalfDayHourChoice] = useState<number | null>(null);
+  const [halfDayStarts, setHalfDayStarts] = useState<{ date: string; starts: { hour: number; available: boolean }[] } | null>(null);
+  const [halfDayStartsError, setHalfDayStartsError] = useState(false);
+  const [halfDayQuote, setHalfDayQuote] = useState<HalfDayQuote | null>(null);
+  const [halfDayQuoteLoading, setHalfDayQuoteLoading] = useState(false);
+  const [halfDayQuoteError, setHalfDayQuoteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!spot?.halfDayEnabled) return;
+    let cancelled = false;
+    setHalfDayStartsError(false);
+    getHalfDayStarts(spot.id, halfDayDate)
+      .then((result) => {
+        if (!cancelled) setHalfDayStarts(result);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHalfDayStarts({ date: halfDayDate, starts: [] });
+          setHalfDayStartsError(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [spot?.id, spot?.halfDayEnabled, halfDayDate]);
+
+  // Only the hours of the day on screen count (a stale answer for another day doesn't); the
+  // driver's pick while it's free, otherwise the first free one.
+  const freeHalfDayHours =
+    halfDayStarts && halfDayStarts.date === halfDayDate
+      ? halfDayStarts.starts.filter((start) => start.available).map((start) => start.hour)
+      : null;
+  const halfDayHour =
+    freeHalfDayHours === null
+      ? null
+      : halfDayHourChoice !== null && freeHalfDayHours.includes(halfDayHourChoice)
+        ? halfDayHourChoice
+        : freeHalfDayHours[0] ?? null;
+
+  useEffect(() => {
+    if (!spot?.halfDayEnabled || halfDayHour === null) {
+      setHalfDayQuote(null);
+      return;
+    }
+    let cancelled = false;
+    setHalfDayQuoteLoading(true);
+    setHalfDayQuoteError(null);
+    getHalfDayQuote(spot.id, halfDayDate, halfDayHour, stayQuoteVehicleType)
+      .then((quote) => {
+        if (!cancelled) setHalfDayQuote(quote);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setHalfDayQuote(null);
+        setHalfDayQuoteError(err instanceof ApiError ? err.detail : t('spot.halfDay.quoteError'));
+      })
+      .finally(() => {
+        if (!cancelled) setHalfDayQuoteLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [spot?.id, spot?.halfDayEnabled, halfDayDate, halfDayHour, stayQuoteVehicleType]);
+
   if (!spot) return null;
 
   const isOwner = !!user && spot.ownerId === user.id;
+  // Bookings go up to a year ahead (booking-service refuses later ones): the calendars stop there.
+  const lastBookableDate = new Date(`${addDaysISO(todayArtDateISO(), 364)}T00:00:00`);
   // Si la cochera cobra distinto por vehículo, hace falta uno elegido para
   // saber qué tarifa mostrar/cobrar -- se deriva del override en vez de
   // sincronizarse con un useEffect, mismo criterio que effectiveStartMs.
@@ -421,8 +514,13 @@ export default function SpotDetail() {
   const total = (visiblePricePerHour ?? 0) * durationHours;
   const canBook = effectiveStartMs !== null && effectiveEndMs !== null;
 
-  const showHourly = spot.hourlyEnabled && (!spot.stayEnabled || bookingMode === 'hourly');
-  const showStay = spot.stayEnabled && (!spot.hourlyEnabled || bookingMode === 'stay');
+  const bookingModes = bookingModesOf(spot);
+  const bookingMode: BookingMode | null =
+    bookingModeChoice && bookingModes.includes(bookingModeChoice) ? bookingModeChoice : bookingModes[0] ?? null;
+  const showHourly = bookingMode === 'hourly';
+  const showStay = bookingMode === 'stay';
+  const showHalfDay = bookingMode === 'halfDay';
+  const halfDayTotal = halfDayQuote ? getDriverVisiblePrice(halfDayQuote.amount / 100, commissionRatePercent) : null;
   const stayTotal = stayQuote ? getDriverVisiblePrice(stayQuote.amount / 100, commissionRatePercent) : null;
   const vehiclesLabel = spot.vehicleTypes.map((vt) => t(VEHICLE_TYPE_LABEL_KEYS[vt]).toLowerCase()).join(', ');
   const neighborhood = spot.address.split(',').map((part) => part.trim())[1];
@@ -529,6 +627,8 @@ export default function SpotDetail() {
     chipSelected: { backgroundColor: colors.teal, borderColor: colors.teal },
     chipText: { fontSize: sc(14), fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
     chipTextSelected: { color: colors.white },
+    chipDisabled: { opacity: 0.4 },
+    chipTextDisabled: { textDecorationLine: 'line-through' },
 
     priceLine: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
     priceLineText: { fontSize: sc(14), color: colors.text },
@@ -587,19 +687,25 @@ export default function SpotDetail() {
     );
   }
 
-  function hourChips(hours: number[], selected: number | null, onSelect: (h: number) => void) {
+  // `available`, when given, leaves the other hours greyed out and not tappable.
+  function hourChips(hours: number[], selected: number | null, onSelect: (h: number) => void, available?: number[]) {
     return (
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
         {hours.map((h) => {
           const isSelected = h === selected;
+          const disabled = available !== undefined && !available.includes(h);
           return (
             <TouchableOpacity
               key={h}
-              style={[styles.chip, isSelected && styles.chipSelected]}
+              style={[styles.chip, isSelected && styles.chipSelected, disabled && styles.chipDisabled]}
               onPress={() => onSelect(h)}
+              disabled={disabled}
               activeOpacity={0.7}
+              accessibilityState={{ disabled, selected: isSelected }}
             >
-              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>{pad(h)}</Text>
+              <Text style={[styles.chipText, isSelected && styles.chipTextSelected, disabled && styles.chipTextDisabled]}>
+                {pad(h)}
+              </Text>
             </TouchableOpacity>
           );
         })}
@@ -622,6 +728,13 @@ export default function SpotDetail() {
         return price ? [`${t(VEHICLE_TYPE_LABEL_KEYS[vt])} ${visible(price)}`] : [];
       })
       .join(' · ');
+  const halfDayPrices = spot.halfDayEnabled
+    ? spot.stayPricesByVehicleType
+      ? spot.vehicleTypes.map((vt) => spot.stayPricesByVehicleType?.[vt]?.halfDay ?? null)
+      : [spot.pricePerHalfDay]
+    : [];
+  const pricedHalfDays = halfDayPrices.filter((price): price is number => typeof price === 'number' && price > 0);
+  const minHalfDay = pricedHalfDays.length > 0 ? Math.min(...pricedHalfDays) : null;
   const minStayDay = spot.stayPricesByVehicleType
     ? Math.min(...spot.vehicleTypes.map((vt) => spot.stayPricesByVehicleType?.[vt]?.day ?? Infinity))
     : spot.pricePerDay;
@@ -732,6 +845,27 @@ export default function SpotDetail() {
                 </View>
               </View>
             )}
+            {minHalfDay !== null && (
+              <View style={styles.rate}>
+                <View style={styles.rateIcon}>
+                  <Ionicons name="hourglass-outline" size={sc(18)} color={colors.teal} />
+                </View>
+                <View style={styles.rateText}>
+                  <View style={styles.rateHead}>
+                    <Text style={styles.rateLabel}>{t('spot.mode.halfDay')}</Text>
+                    <Text style={styles.rateValue}>
+                      {spot.stayPricesByVehicleType ? t('spot.pricePerHour.from', { price: visible(minHalfDay) }) : visible(minHalfDay)}
+                      <Text style={styles.rateUnit}>{` ${t('spot.unit.halfDay')}`}</Text>
+                    </Text>
+                  </View>
+                  <Text style={styles.rateDetail}>
+                    {spot.stayPricesByVehicleType
+                      ? perVehicle((vt) => spot.stayPricesByVehicleType?.[vt]?.halfDay)
+                      : t('spot.mode.halfDayDetail', { hours: String(HALF_DAY_HOURS) })}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
 
           {owner && (
@@ -821,16 +955,17 @@ export default function SpotDetail() {
               <View style={styles.divider} />
               <Text style={styles.sectionTitle}>{t('spot.section.book')}</Text>
 
-              {spot.hourlyEnabled && spot.stayEnabled && (
+              {bookingModes.length > 1 && (
                 <View style={styles.segment}>
-                  {(['hourly', 'stay'] as const).map((mode) => (
+                  {bookingModes.map((mode) => (
                     <Pressable
                       key={mode}
                       style={[styles.segmentItem, bookingMode === mode && styles.segmentItemActive]}
                       onPress={() => setBookingMode(mode)}
+                      accessibilityState={{ selected: bookingMode === mode }}
                     >
                       <Text style={[styles.segmentText, bookingMode === mode && styles.segmentTextActive]}>
-                        {t(mode === 'hourly' ? 'owner.spot.hourly.enable' : 'owner.spot.stay.enable')}
+                        {t(`spot.bookingMode.${mode}`)}
                       </Text>
                     </Pressable>
                   ))}
@@ -886,6 +1021,7 @@ export default function SpotDetail() {
                         onChange={handleStartDateChange}
                         placeholder={t('spot.datePlaceholder')}
                         minimumDate={new Date(`${todayArtDateISO()}T00:00:00`)}
+                        maximumDate={lastBookableDate}
                         style={[styles.dateInput, styles.rangeDate]}
                       />
                       <Pressable
@@ -909,6 +1045,7 @@ export default function SpotDetail() {
                           onChange={handleEndDateChange}
                           placeholder={t('spot.datePlaceholder')}
                           minimumDate={new Date(`${selectedDateISO}T00:00:00`)}
+                          maximumDate={lastBookableDate}
                           style={[styles.dateInput, styles.rangeDate]}
                         />
                         <Pressable style={[styles.dateInput, styles.rangeTime]} onPress={() => setTimeSheet('end')}>
@@ -968,6 +1105,51 @@ export default function SpotDetail() {
                 </>
               )}
 
+              {showHalfDay && (
+                <>
+                  {spot.stayPricesByVehicleType && vehicleTypeChips()}
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>{t('spot.halfDay.date')}</Text>
+                    <DatePickerField
+                      value={halfDayDate}
+                      onChange={(value) => setHalfDayDateOverride(value || null)}
+                      placeholder={t('spot.datePlaceholder')}
+                      minimumDate={new Date(`${minStayStartDate}T00:00:00`)}
+                      maximumDate={lastBookableDate}
+                      style={styles.dateInput}
+                    />
+                  </View>
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>{t('spot.halfDay.startHour')}</Text>
+                    {freeHalfDayHours === null ? (
+                      <ActivityIndicator size="small" color={colors.teal} style={{ alignSelf: 'flex-start' }} />
+                    ) : halfDayStartsError ? (
+                      <Text style={styles.warn}>{t('spot.halfDay.startsError')}</Text>
+                    ) : freeHalfDayHours.length === 0 ? (
+                      <Text style={styles.warn}>{t('spot.halfDay.noFreeHours')}</Text>
+                    ) : (
+                      hourChips(STAY_HOUR_OPTIONS, halfDayHour, setHalfDayHourChoice, freeHalfDayHours)
+                    )}
+                    <Text style={styles.hint}>{t('spot.halfDay.startHourHint', { hours: String(HALF_DAY_HOURS) })}</Text>
+                  </View>
+                  {halfDayQuoteLoading ? (
+                    <ActivityIndicator size="small" color={colors.teal} style={{ alignSelf: 'flex-start' }} />
+                  ) : halfDayQuoteError ? (
+                    <Text style={styles.warn}>{halfDayQuoteError}</Text>
+                  ) : halfDayQuote && halfDayTotal !== null ? (
+                    <View style={styles.priceLine}>
+                      <Text style={styles.priceLineText}>
+                        {t('spot.halfDay.range', {
+                          from: formatArtTime(new Date(halfDayQuote.startDateTime).getTime()),
+                          to: formatArtTime(new Date(halfDayQuote.endDateTime).getTime(), true),
+                        })}
+                      </Text>
+                      <Text style={styles.priceLineText}>{formatPesos(halfDayTotal)}</Text>
+                    </View>
+                  ) : null}
+                </>
+              )}
+
               {showStay && (
                 <>
                   {spot.stayPricesByVehicleType && vehicleTypeChips()}
@@ -979,6 +1161,7 @@ export default function SpotDetail() {
                       onChange={setStayStartDateOverride}
                       placeholder={t('spot.datePlaceholder')}
                       minimumDate={new Date(`${minStayStartDate}T00:00:00`)}
+                      maximumDate={lastBookableDate}
                       style={styles.dateInput}
                     />
                   </View>
@@ -990,12 +1173,13 @@ export default function SpotDetail() {
                       onChange={setStayEndDateOverride}
                       placeholder={t('spot.datePlaceholder')}
                       minimumDate={new Date(`${minStayEndDate}T00:00:00`)}
+                      maximumDate={lastBookableDate}
                       style={styles.dateInput}
                     />
                   </View>
                   <View style={styles.field}>
                     <Text style={styles.fieldLabel}>{t('spot.stay.startHour')}</Text>
-                    {hourChips(STAY_HOUR_OPTIONS, stayStartHour, setStayStartHour)}
+                    {hourChips(STAY_HOUR_OPTIONS, stayStartHour, setStayStartHour, freeStayHours)}
                     <Text style={styles.hint}>{t('spot.stay.startHour.hint')}</Text>
                   </View>
                   {stayQuoteLoading ? (
@@ -1041,12 +1225,12 @@ export default function SpotDetail() {
               <Text style={styles.footerTotal}>{canBook ? formatPesos(total) : '—'}</Text>
               {canBook && (
                 <>
-                  <Text style={styles.footerWhen} numberOfLines={1} adjustsFontSizeToFit>
+                  <Text style={styles.footerWhen} numberOfLines={2}>
                     {t('spot.footer.from', {
                       when: `${formatWeekdayDayMonth(selectedDateISO)} ${formatArtTime(effectiveStartMs!)}`,
                     })}
                   </Text>
-                  <Text style={styles.footerWhen} numberOfLines={1} adjustsFontSizeToFit>
+                  <Text style={styles.footerWhen} numberOfLines={2}>
                     {t('spot.footer.to', {
                       when: `${formatWeekdayDayMonth(endDateISO)} ${formatArtTime(effectiveEndMs!, true)}`,
                     })}
@@ -1070,6 +1254,45 @@ export default function SpotDetail() {
                 })
               }
               disabled={!canBook}
+            />
+          </>
+        ) : showHalfDay ? (
+          <>
+            <View style={styles.footerInfo}>
+              <Text style={styles.footerTotal}>
+                {halfDayTotal !== null && !halfDayQuoteLoading ? formatPesos(halfDayTotal) : '—'}
+              </Text>
+              {halfDayQuote && (
+                <>
+                  <Text style={styles.footerWhen} numberOfLines={2}>
+                    {t('spot.footer.from', {
+                      when: `${formatWeekdayDayMonth(halfDayQuote.startDateTime.slice(0, 10))} ${formatArtTime(new Date(halfDayQuote.startDateTime).getTime())}`,
+                    })}
+                  </Text>
+                  <Text style={styles.footerWhen} numberOfLines={2}>
+                    {t('spot.footer.to', {
+                      when: `${formatWeekdayDayMonth(halfDayQuote.endDateTime.slice(0, 10))} ${formatArtTime(new Date(halfDayQuote.endDateTime).getTime(), true)}`,
+                    })}
+                  </Text>
+                </>
+              )}
+            </View>
+            <Button
+              title={t('spot.book')}
+              style={styles.footerButton}
+              onPress={() =>
+                router.push({
+                  pathname: `${group}/booking/confirm-stay`,
+                  params: {
+                    mode: 'halfDay',
+                    spotId: spot.id,
+                    startDate: halfDayDate,
+                    startHour: String(halfDayHour),
+                    ...(stayQuoteVehicleType ? { vehicleType: stayQuoteVehicleType } : {}),
+                  },
+                })
+              }
+              disabled={!halfDayQuote || halfDayQuoteLoading || halfDayHour === null}
             />
           </>
         ) : showStay ? (

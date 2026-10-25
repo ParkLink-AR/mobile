@@ -278,7 +278,7 @@ export default function OwnerToday() {
               <Ionicons name="today-outline" size={sc(32)} color={colors.textSecondary} />
               <Text style={styles.emptyText}>{t('owner.today.empty')}</Text>
             </View>
-          ) : null
+          ) : undefined
         }
         renderItem={({ item }) => (
           <Pressable onPress={() => router.push(`${group}/bookings/${item.id}`)}>
