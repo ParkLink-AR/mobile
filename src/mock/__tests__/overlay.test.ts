@@ -157,6 +157,29 @@ describe('src/mock overlay', () => {
     expect(history.filter((b: any) => b.id !== realBooking.id).every((b: any) => /^[0-9a-z]{2}000000-/.test(b.id))).toBe(true);
   });
 
+  it('con sort=upcoming, las activas que no terminaron van primero, la más próxima arriba', async () => {
+    await get('/parking-spots/search', [spot('abc', { ownerId: 'otro' })]);
+    const hours = (n: number) => new Date(Date.now() + n * 3600 * 1000).toISOString();
+    const real = [
+      { id: 'pasada', start: hours(-30), end: hours(-28), status: 'COMPLETED' },
+      { id: 'manana', start: hours(24), end: hours(26), status: 'CONFIRMED' },
+      { id: 'cancelada', start: hours(3), end: hours(5), status: 'CANCELLED' },
+      { id: 'en-una-hora', start: hours(1), end: hours(3), status: 'CONFIRMED' },
+    ];
+    const history = await get('/users/driver-1/bookings/history?sort=upcoming', real);
+    const ids = history.map((b: any) => b.id).filter((id: string) => real.some((r) => r.id === id));
+    expect(ids).toEqual(['en-una-hora', 'manana', 'cancelada', 'pasada']);
+  });
+
+  it('con status=..., las reservas de ejemplo que se suman son solo de ese estado', async () => {
+    await get('/parking-spots/search', [spot('abc', { ownerId: 'otro' })]);
+    const all = await get('/users/driver-1/bookings/history', []);
+    const target = all[0].status;
+    const filtered = await get(`/users/driver-1/bookings/history?status=${target}`, []);
+    expect(filtered.length).toBeGreaterThan(0);
+    expect(filtered.every((b: any) => b.status === target)).toBe(true);
+  });
+
   it('una reserva de ejemplo que no existe da 404 y no devuelve otra en su lugar', async () => {
     const missing = await withMocks('/bookings/b2000000-0000-4000-8000-999999999999', {}, async () => json({}));
     expect(missing.status).toBe(404);

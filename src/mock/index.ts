@@ -317,6 +317,19 @@ async function serveMockEntity(path: string, pathname: string, options: RequestI
   return null;
 }
 
+const ACTIVE_STATUSES = new Set(['PENDING_PAYMENT', 'PENDING_OWNER_APPROVAL', 'CONFIRMED', 'IN_PROGRESS']);
+
+/** Mismo orden que ?sort=upcoming de booking-service, para que las de ejemplo se intercalen bien. */
+function sortUpcoming(rows: any[]): any[] {
+  const now = Date.now();
+  const ahead = (row: any) => ACTIVE_STATUSES.has(row.status) && Date.parse(row.end) > now;
+  return [...rows].sort((a, b) => {
+    if (ahead(a) !== ahead(b)) return ahead(a) ? -1 : 1;
+    const byStart = Date.parse(a.start) - Date.parse(b.start);
+    return ahead(a) ? byStart : -byStart;
+  });
+}
+
 function enrich(pathname: string, query: URLSearchParams, data: any): any {
   const list = (fn: (row: any) => any) => (Array.isArray(data) ? data.map(fn) : data);
   if (/^\/parking-spots\/search$/.test(pathname) || /^\/parking-spots$/.test(pathname)) return list(enrichSpot);
@@ -332,7 +345,11 @@ function enrich(pathname: string, query: URLSearchParams, data: any): any {
   if (m && Array.isArray(data)) return [...data, ...ownerBookingsFor(m[1])];
   m = pathname.match(/^\/users\/([^/]+)\/bookings\/history$/);
   if (m && Array.isArray(data)) {
-    return [...data, ...driverBookingsFor(m[1])].sort((a, b) => String(b.start).localeCompare(String(a.start)));
+    const status = query.get('status');
+    const merged = [...data, ...driverBookingsFor(m[1]).filter((row) => !status || row.status === status)];
+    return query.get('sort') === 'upcoming'
+      ? sortUpcoming(merged)
+      : merged.sort((a, b) => String(b.start).localeCompare(String(a.start)));
   }
   if (/^\/notifications$/.test(pathname) && !query.get('before') && data && Array.isArray(data.items)) {
     const userId = useSessionStore.getState().user?.id;

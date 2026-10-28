@@ -1,3 +1,4 @@
+import { BookingStatus } from '@/src/types';
 import { request } from './client';
 
 // ── Wire shapes returned by booking-service ──────────────────────────────────
@@ -208,12 +209,23 @@ export async function createPaymentPreference(
 }
 
 /**
- * Returns the booking history for a user.
- *
- * GET /users/{userId}/bookings/history
+ * How the booking history is sorted: the ones made most recently first, or the ones about
+ * to happen first (active and not over yet, soonest first; then the rest).
  */
-export async function getUserBookingsApi(userId: string): Promise<BookingApiResponse[]> {
-  return request(`/users/${userId}/bookings/history`);
+export type BookingsSort = 'recent' | 'upcoming';
+
+/**
+ * Returns the booking history for a user, only the ones in `status` when given.
+ *
+ * GET /users/{userId}/bookings/history?sort=recent|upcoming[&status=CONFIRMED|...]
+ */
+export async function getUserBookingsApi(
+  userId: string,
+  sort: BookingsSort = 'recent',
+  status?: BookingStatus,
+): Promise<BookingApiResponse[]> {
+  const statusParam = status ? `&status=${status}` : '';
+  return request(`/users/${userId}/bookings/history?sort=${sort}${statusParam}`);
 }
 
 /**

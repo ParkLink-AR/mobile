@@ -4,17 +4,28 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator }
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useSegments } from 'expo-router';
 import { Card } from '@/src/components/Card';
+import { DropdownSelect } from '@/src/components/DropdownSelect';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { RoleBadge } from '@/src/components/RoleBadge';
 import { Screen } from '@/src/components/Screen';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useTypography, useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
-import { getUserBookingsApi, BookingApiResponse } from '@/src/api/booking';
+import { getUserBookingsApi, BookingApiResponse, BookingsSort } from '@/src/api/booking';
 import { getParkingSpotsByIds } from '@/src/api/parking';
 import { mapBookingDateRange, formatBookingWhen, toVehicleSnapshot } from '@/src/services/bookingDates';
-import { Booking } from '@/src/types';
+import { Booking, BookingStatus } from '@/src/types';
 import { PaymentDueHint } from '@/src/components/PaymentDue';
+
+/** The statuses a driver can filter their bookings by (expired checkouts never show up). */
+const FILTER_STATUSES: BookingStatus[] = [
+  'PENDING_PAYMENT',
+  'PENDING_OWNER_APPROVAL',
+  'CONFIRMED',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'CANCELLED',
+];
 
 /** Maps the backend wire shape to the UI Booking type. */
 function mapApiBooking(b: BookingApiResponse, spotTitle: string): Booking {
@@ -49,12 +60,16 @@ export default function DriverBookings() {
   const user = useSessionStore((s) => s.user);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sort, setSort] = useState<BookingsSort>('recent');
+  const [status, setStatus] = useState<BookingStatus | undefined>(undefined);
 
   useFocusEffect(
     useCallback(() => {
       if (!user) return;
+      // Switching the order again before this answers discards it, so it can't overwrite the new one.
+      let active = true;
       setLoading(true);
-      getUserBookingsApi(user.id)
+      getUserBookingsApi(user.id, sort, status)
         .then(async (list) => {
           // Deduplicate spot ids and fetch all their titles in a single batch request
           const uniqueSpotIds = [...new Set(list.map((b) => b.parking_spot_id))];
@@ -64,11 +79,16 @@ export default function DriverBookings() {
             spots.map((spot) => [spot.id, spot.title]),
           );
           // Any id not found by the batch call (deleted spot, etc.) falls back to showing the id
-          setBookings(list.map((b) => mapApiBooking(b, spotTitleMap[b.parking_spot_id] ?? b.parking_spot_id)));
+          if (active) setBookings(list.map((b) => mapApiBooking(b, spotTitleMap[b.parking_spot_id] ?? b.parking_spot_id)));
         })
         .catch((err) => console.warn('[Bookings] fetch error:', err))
-        .finally(() => setLoading(false));
-    }, [user?.id])
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+      return () => {
+        active = false;
+      };
+    }, [user?.id, sort, status])
   );
 
   if (!user) return null;
@@ -76,6 +96,7 @@ export default function DriverBookings() {
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 16, paddingTop: 8, gap: 8 },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    optionsRow: { flexDirection: 'row', gap: 8 },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
     total: { color: colors.teal, fontWeight: '700', marginTop: 4, fontSize: sc(15) },
     codeChip: {
@@ -93,13 +114,40 @@ export default function DriverBookings() {
     emptyText: { fontSize: sc(15), color: colors.textSecondary, textAlign: 'center', lineHeight: sc(22) },
   });
 
+  const header = (
+    <>
+      <View style={styles.headerRow}>
+        <Text style={typography.h1}>{t('driver.bookings.title')}</Text>
+        <RoleBadge />
+      </View>
+      <View style={styles.optionsRow}>
+        <DropdownSelect
+          icon="swap-vertical"
+          value={sort}
+          onChange={setSort}
+          options={(['recent', 'upcoming'] as const).map((option) => ({
+            value: option,
+            label: t(`driver.bookings.sort.${option}`),
+          }))}
+        />
+        <DropdownSelect
+          icon="filter"
+          value={status ?? 'ALL'}
+          onChange={(value) => setStatus(value === 'ALL' ? undefined : value)}
+          active={!!status}
+          options={[
+            { value: 'ALL' as const, label: t('driver.bookings.filter.all') },
+            ...FILTER_STATUSES.map((option) => ({ value: option, label: t(`receipt.statusValue.${option}`) })),
+          ]}
+        />
+      </View>
+    </>
+  );
+
   if (loading) {
     return (
       <Screen style={styles.container}>
-        <View style={styles.headerRow}>
-          <Text style={typography.h1}>{t('driver.bookings.title')}</Text>
-          <RoleBadge />
-        </View>
+        {header}
         <View style={styles.emptyContainer}>
           <ActivityIndicator color={colors.teal} />
         </View>
@@ -109,10 +157,7 @@ export default function DriverBookings() {
 
   return (
     <Screen style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={typography.h1}>{t('driver.bookings.title')}</Text>
-        <RoleBadge />
-      </View>
+      {header}
       <FlatList
         data={bookings}
         keyExtractor={(item) => item.id}
@@ -120,7 +165,7 @@ export default function DriverBookings() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={sc(40)} color={colors.textSecondary} />
-            <Text style={styles.emptyText}>{t('driver.bookings.empty')}</Text>
+            <Text style={styles.emptyText}>{t(status ? 'driver.bookings.filter.empty' : 'driver.bookings.empty')}</Text>
           </View>
         }
         renderItem={({ item }) => (
