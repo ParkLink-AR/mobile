@@ -27,14 +27,14 @@ En jest / si `@react-native-firebase/messaging` no está,
 
 ## Firebase — ya viene configurado
 
-Este es un proyecto personal privado, así que las credenciales de Firebase
-(proyecto `parklink-app`) están **commiteadas en el repo**:
+Credenciales de Firebase (proyecto `parklink-app`). Las configs de la app van
+en el repo de mobile; la service account del backend, **no** (es secreta):
 
 | Archivo | Repo | Para qué |
 |---|---|---|
 | `mobile/google-services.json` | mobile | config de la app **Android** (`com.parklink.mobile`) |
 | `mobile/GoogleService-Info.plist` | mobile | config de la app **iOS** (`com.parklink.mobile`) |
-| `notifications-service/secrets/firebase-service-account.json` | notifications-service | que el backend mande push por FCM |
+| `notifications-service/secrets/firebase-service-account.json` | notifications-service (fuera de git) | que el backend mande push por FCM |
 
 `docker compose up` monta el JSON del backend en el contenedor y
 `notifications-service` lo toma solo (ver `root/compose.yaml`). No hay que setear

@@ -1,0 +1,49 @@
+# EAS uploads the project following this file instead of .gitignore: the same rules, but
+# without ignoring .env, so builds still get the EXPO_PUBLIC_* values from the local .env.
+
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Firebase config -- committed on purpose (private personal project).
+# google-services.json (Android) and GoogleService-Info.plist (iOS) are both in.
+# If this repo ever goes public, regenerate both and rotate the SA key.
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android
+
