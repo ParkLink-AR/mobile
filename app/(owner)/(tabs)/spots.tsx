@@ -75,7 +75,7 @@ export default function OwnerSpots() {
     container: { flex: 1, backgroundColor: colors.background },
     header: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      padding: 16, paddingBottom: 8,
+      paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8,
     },
     // List/map switch on the left, "Añadir cochera" on the right.
     // If they still don't fit on one line, the button wraps to the next one.
