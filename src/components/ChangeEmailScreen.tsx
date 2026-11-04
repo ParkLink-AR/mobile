@@ -114,7 +114,7 @@ export default function ChangeEmailScreen() {
         <TextInput
           style={form.input}
           placeholder={t('changeEmail.newEmail.placeholder')}
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={colors.placeholder}
           autoCapitalize="none"
           keyboardType="email-address"
           value={newEmail}

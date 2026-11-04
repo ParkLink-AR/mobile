@@ -170,7 +170,7 @@ export function HourlySettingsEditor({ value, onChange, vehicleTypes }: HourlySe
                         onChangeText={(text) => setVehiclePrice(vehicleType, text)}
                         keyboardType="numeric"
                         placeholder="$1.200"
-                        placeholderTextColor={colors.textSecondary}
+                        placeholderTextColor={colors.placeholder}
                       />
                       {breakdown && <Text style={styles.priceBreakdown}>{breakdown}</Text>}
                     </View>
@@ -187,7 +187,7 @@ export function HourlySettingsEditor({ value, onChange, vehicleTypes }: HourlySe
                 onChangeText={(text) => onChange({ pricePerHour: text.replace(/[^0-9.]/g, '') })}
                 keyboardType="numeric"
                 placeholder="$1.200"
-                placeholderTextColor={colors.textSecondary}
+                placeholderTextColor={colors.placeholder}
               />
               {priceBreakdown(value.pricePerHour) && (
                 <Text style={styles.priceBreakdown}>{priceBreakdown(value.pricePerHour)}</Text>

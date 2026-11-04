@@ -160,7 +160,7 @@ export default function Login() {
         <TextInput
           style={form.input}
           placeholder={t('auth.login.emailExample')}
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={colors.placeholder}
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
@@ -173,7 +173,7 @@ export default function Login() {
         <TextInput
           style={form.input}
           placeholder="••••••••"
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={colors.placeholder}
           secureTextEntry
           autoComplete="password"
           value={password}

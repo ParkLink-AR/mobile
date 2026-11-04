@@ -229,7 +229,7 @@ export default function TicketThread() {
             <TextInput
               style={styles.input}
               placeholder={t('driver.booking.tickets.messagePlaceholder')}
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
               value={draft}
               onChangeText={setDraft}
               multiline

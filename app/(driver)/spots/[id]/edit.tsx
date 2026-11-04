@@ -539,7 +539,7 @@ export default function EditSpot() {
               autoCapitalize="words"
               maxLength={SPOT_TITLE_MAX_LENGTH}
               placeholder={t('owner.spot.new.spotTitlePlaceholder')}
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
             />
           </View>
 
@@ -628,7 +628,7 @@ export default function EditSpot() {
               onChangeText={(text) => setCapacity(text.replace(/[^0-9]/g, ''))}
               keyboardType="number-pad"
               placeholder="1"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
             />
             <Text style={{ fontSize: sc(12), color: colors.textSecondary }}>
               {t('owner.spot.new.capacityHint')}
@@ -699,7 +699,7 @@ export default function EditSpot() {
               onChangeText={setDescription}
               multiline
               placeholder={t('owner.spot.new.descriptionPlaceholder')}
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
             />
           </View>
 
@@ -716,7 +716,7 @@ export default function EditSpot() {
               onChangeText={(value) => setAccessInstructions(value.slice(0, 1000))}
               multiline
               placeholder={t('owner.spot.access.placeholder')}
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
             />
           </View>
 

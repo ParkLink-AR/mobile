@@ -9,6 +9,7 @@ export const darkPalette: ColorPalette = {
   background: '#0B1220',
   border: '#233047',
   textSecondary: '#8FA3BF',
+  placeholder: '#8FA3BF',
   surface: '#131C2E',
   text: '#E7EDF5',
 };

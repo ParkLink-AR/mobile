@@ -88,7 +88,7 @@ export function OwnerCancelBooking({ bookingId, onCancelled }: { bookingId: stri
                   onChangeText={(value) => setReason(value.slice(0, REASON_MAX))}
                   multiline
                   placeholder={t('owner.booking.cancel.placeholder')}
-                  placeholderTextColor={colors.textSecondary}
+                  placeholderTextColor={colors.placeholder}
                 />
                 {error ? <Text style={styles.error}>{error}</Text> : null}
                 <View style={styles.actions}>

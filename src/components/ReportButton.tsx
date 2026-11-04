@@ -184,7 +184,7 @@ export function ReportButton({ targetType, targetId, variant = 'link', bookingSi
                       onChangeText={(v) => setDetails(v.slice(0, DETAILS_MAX))}
                       multiline
                       placeholder={t('report.detailsPlaceholder')}
-                      placeholderTextColor={colors.textSecondary}
+                      placeholderTextColor={colors.placeholder}
                     />
                     {error ? <Text style={styles.error}>{error}</Text> : null}
                     <View style={styles.actions}>

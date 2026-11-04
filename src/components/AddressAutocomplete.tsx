@@ -165,7 +165,7 @@ export function AddressAutocomplete({
         <TextInput
           style={styles.input}
           placeholder={placeholder}
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={colors.placeholder}
           value={value}
           onChangeText={handleChangeText}
           onFocus={() => candidates.length > 0 && setShowSuggestions(true)}

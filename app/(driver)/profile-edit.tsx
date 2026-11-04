@@ -176,7 +176,7 @@ export default function DriverProfileEdit() {
                 value={name}
                 onChangeText={setName}
                 placeholder={t('profile.edit.firstName')}
-                placeholderTextColor={colors.textSecondary}
+                placeholderTextColor={colors.placeholder}
               />
             </View>
             <View style={[styles.fieldGroup, styles.rowItem]}>
@@ -186,7 +186,7 @@ export default function DriverProfileEdit() {
                 value={lastName}
                 onChangeText={setLastName}
                 placeholder={t('profile.edit.lastName')}
-                placeholderTextColor={colors.textSecondary}
+                placeholderTextColor={colors.placeholder}
               />
             </View>
           </View>

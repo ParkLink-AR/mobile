@@ -102,7 +102,7 @@ export default function ForgotPassword() {
             <TextInput
               style={form.input}
               placeholder={t('auth.login.emailExample')}
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
               autoCapitalize="none"
               keyboardType="email-address"
               value={email}
@@ -129,7 +129,7 @@ export default function ForgotPassword() {
             <TextInput
               style={form.input}
               placeholder="••••••••"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
               secureTextEntry
               value={newPassword}
               onChangeText={setNewPassword}
@@ -140,7 +140,7 @@ export default function ForgotPassword() {
             <TextInput
               style={form.input}
               placeholder="••••••••"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
               secureTextEntry
               value={confirmNewPassword}
               onChangeText={setConfirmNewPassword}

@@ -9,6 +9,8 @@ export interface ColorPalette {
   background: string;
   border: string;
   textSecondary: string;
+  /** Example text inside empty inputs: kept grey so an empty field never looks filled in. */
+  placeholder: string;
   surface: string;
   text: string;
 }

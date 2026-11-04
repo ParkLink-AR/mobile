@@ -194,7 +194,7 @@ export function VehicleFormModal({
                           <TextInput
                             style={styles.input}
                             placeholder="AB123CD"
-                            placeholderTextColor={colors.textSecondary}
+                            placeholderTextColor={colors.placeholder}
                             autoCapitalize="characters"
                             maxLength={10}
                             value={plate}
@@ -208,7 +208,7 @@ export function VehicleFormModal({
                         <TextInput
                           style={styles.input}
                           placeholder={bicycle ? 'Venzo' : 'Toyota'}
-                          placeholderTextColor={colors.textSecondary}
+                          placeholderTextColor={colors.placeholder}
                           value={brand}
                           onChangeText={setBrand}
                         />
@@ -219,7 +219,7 @@ export function VehicleFormModal({
                         <TextInput
                           style={styles.input}
                           placeholder={bicycle ? t('vehicles.bicycle.modelPlaceholder') : 'Corolla'}
-                          placeholderTextColor={colors.textSecondary}
+                          placeholderTextColor={colors.placeholder}
                           value={model}
                           onChangeText={setModel}
                         />

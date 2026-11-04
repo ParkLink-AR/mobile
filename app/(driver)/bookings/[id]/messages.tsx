@@ -200,7 +200,7 @@ export default function BookingMessages() {
             <TextInput
               style={styles.input}
               placeholder={t('driver.booking.messages.placeholder')}
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
               value={draft}
               onChangeText={setDraft}
               multiline

@@ -157,7 +157,7 @@ export default function PayoutInfoScreen() {
         <TextInput
           style={styles.input}
           placeholder="0000000000000000000000"
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={colors.placeholder}
           keyboardType="number-pad"
           maxLength={22}
           value={cbu}
@@ -170,7 +170,7 @@ export default function PayoutInfoScreen() {
         <TextInput
           style={styles.input}
           placeholder={t('owner.payoutInfo.titularPlaceholder')}
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={colors.placeholder}
           value={titular}
           onChangeText={setTitular}
         />
@@ -181,7 +181,7 @@ export default function PayoutInfoScreen() {
         <TextInput
           style={styles.input}
           placeholder="20123456789"
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={colors.placeholder}
           keyboardType="number-pad"
           maxLength={11}
           value={cuil}

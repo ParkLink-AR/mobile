@@ -66,7 +66,7 @@ export default function NewTicket() {
             <TextInput
               style={styles.input}
               placeholder={t('driver.booking.tickets.subjectPlaceholder')}
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
               value={subject}
               onChangeText={setSubject}
               maxLength={200}
@@ -77,7 +77,7 @@ export default function NewTicket() {
             <TextInput
               style={[styles.input, styles.bodyInput]}
               placeholder={t('driver.booking.tickets.bodyPlaceholder')}
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
               value={body}
               onChangeText={setBody}
               multiline

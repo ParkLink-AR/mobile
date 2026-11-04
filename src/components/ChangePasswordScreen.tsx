@@ -104,7 +104,7 @@ export default function ChangePasswordScreen() {
           <TextInput
             style={form.input}
             placeholder="••••••••"
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={colors.placeholder}
             secureTextEntry
             value={newPassword}
             onChangeText={setNewPassword}
@@ -115,7 +115,7 @@ export default function ChangePasswordScreen() {
           <TextInput
             style={form.input}
             placeholder="••••••••"
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={colors.placeholder}
             secureTextEntry
             value={confirmNewPassword}
             onChangeText={setConfirmNewPassword}
@@ -139,7 +139,7 @@ export default function ChangePasswordScreen() {
         <TextInput
           style={form.input}
           placeholder="••••••••"
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={colors.placeholder}
           secureTextEntry
           value={currentPassword}
           onChangeText={setCurrentPassword}

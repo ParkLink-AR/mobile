@@ -885,7 +885,7 @@ export function SearchScreen() {
             <TextInput
               style={styles.searchInput}
               placeholder={t('search.placeholder')}
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
               value={addressQuery}
               onChangeText={setAddressQuery}
               onFocus={() => candidates.length > 0 && setShowSuggestions(true)}
@@ -1391,7 +1391,7 @@ export function SearchScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder={t('search.filters.minPrice')}
-                  placeholderTextColor={colors.textSecondary}
+                  placeholderTextColor={colors.placeholder}
                   keyboardType="numeric"
                   value={minPriceInput}
                   onChangeText={setMinPriceInput}
@@ -1399,7 +1399,7 @@ export function SearchScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder={t('search.filters.maxPrice')}
-                  placeholderTextColor={colors.textSecondary}
+                  placeholderTextColor={colors.placeholder}
                   keyboardType="numeric"
                   value={maxPriceInput}
                   onChangeText={setMaxPriceInput}
@@ -1432,7 +1432,7 @@ export function SearchScreen() {
               <TextInput
                 style={styles.input}
                 placeholder={t('search.filters.distancePlaceholder')}
-                placeholderTextColor={colors.textSecondary}
+                placeholderTextColor={colors.placeholder}
                 keyboardType="numeric"
                 value={distanceKmInput}
                 onChangeText={setDistanceKmInput}

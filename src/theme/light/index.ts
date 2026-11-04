@@ -8,7 +8,9 @@ export const lightPalette: ColorPalette = {
   warning: '#D97706',
   background: '#F5F7FA',
   border: '#E2E8F0',
-  textSecondary: '#64748B',
+  // Black instead of grey so secondary text reads on a projector.
+  textSecondary: '#000000',
+  placeholder: '#475569',
   surface: '#FFFFFF',
   text: '#042347',
 };

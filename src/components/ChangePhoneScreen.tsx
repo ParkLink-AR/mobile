@@ -158,7 +158,7 @@ export default function ChangePhoneScreen() {
           <TextInput
             style={[form.input, styles.phoneInput]}
             placeholder="11 2345 6789"
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={colors.placeholder}
             keyboardType="phone-pad"
             value={phoneNumber}
             onChangeText={setPhoneNumber}

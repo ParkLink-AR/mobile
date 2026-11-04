@@ -301,7 +301,7 @@ function ReviewForm({
             <TextInput
               style={styles.input}
               placeholder={t('driver.review.placeholder')}
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
               multiline
               value={comment}
               onChangeText={(text) => setComment(target.targetType, text)}

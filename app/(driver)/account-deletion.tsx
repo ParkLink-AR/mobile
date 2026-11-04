@@ -150,7 +150,7 @@ export default function AccountDeletion() {
         value={password}
         onChangeText={setPassword}
         placeholder={t('account.deletion.passwordPlaceholder')}
-        placeholderTextColor={colors.textSecondary}
+        placeholderTextColor={colors.placeholder}
         secureTextEntry
         editable={!deleting}
       />

@@ -333,7 +333,7 @@ export default function Register() {
             <TextInput
               style={form.input}
               placeholder={t('auth.login.emailExample')}
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
@@ -402,7 +402,7 @@ export default function Register() {
               <TextInput
                 style={[form.input, styles.phoneInput]}
                 placeholder={t('auth.register.phone.placeholder')}
-                placeholderTextColor={colors.textSecondary}
+                placeholderTextColor={colors.placeholder}
                 keyboardType="phone-pad"
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
@@ -488,7 +488,7 @@ export default function Register() {
               <Text style={form.label}>{t('auth.register.personal.firstName')}</Text>
               <TextInput
                 style={form.input}
-                placeholderTextColor={colors.textSecondary}
+                placeholderTextColor={colors.placeholder}
                 autoComplete="given-name"
                 value={firstName}
                 onChangeText={setFirstName}
@@ -498,7 +498,7 @@ export default function Register() {
               <Text style={form.label}>{t('auth.register.personal.lastName')}</Text>
               <TextInput
                 style={form.input}
-                placeholderTextColor={colors.textSecondary}
+                placeholderTextColor={colors.placeholder}
                 autoComplete="family-name"
                 value={lastName}
                 onChangeText={setLastName}
@@ -510,7 +510,7 @@ export default function Register() {
             <TextInput
               style={form.input}
               placeholder="30123456"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
               keyboardType="number-pad"
               value={dni}
               onChangeText={(v) => setDni(v.replace(/[^0-9]/g, ''))}
@@ -574,7 +574,7 @@ export default function Register() {
             <TextInput
               style={form.input}
               placeholder="••••••••"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
               secureTextEntry
               autoComplete="new-password"
               value={password}

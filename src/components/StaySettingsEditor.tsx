@@ -270,7 +270,7 @@ export function StaySettingsEditor({ value, onChange, vehicleTypes }: StaySettin
                             onChangeText={(text) => setVehicleRate(vehicleType, unit, text)}
                             keyboardType="numeric"
                             placeholder="$"
-                            placeholderTextColor={colors.textSecondary}
+                            placeholderTextColor={colors.placeholder}
                           />
                         </View>
                       ))}
@@ -285,7 +285,7 @@ export function StaySettingsEditor({ value, onChange, vehicleTypes }: StaySettin
                             onChangeText={(text) => setVehicleRate(vehicleType, 'halfDay', text)}
                             keyboardType="numeric"
                             placeholder="$"
-                            placeholderTextColor={colors.textSecondary}
+                            placeholderTextColor={colors.placeholder}
                           />
                         </View>
                       </View>
@@ -304,7 +304,7 @@ export function StaySettingsEditor({ value, onChange, vehicleTypes }: StaySettin
                   onChangeText={(text) => numericField(text, (v) => onChange({ pricePerDay: v }))}
                   keyboardType="numeric"
                   placeholder="$8.000"
-                  placeholderTextColor={colors.textSecondary}
+                  placeholderTextColor={colors.placeholder}
                 />
                 {priceBreakdown(value.pricePerDay, 'owner.spot.stay.priceBreakdownDay') && (
                   <Text style={styles.priceBreakdown}>
@@ -320,7 +320,7 @@ export function StaySettingsEditor({ value, onChange, vehicleTypes }: StaySettin
                   onChangeText={(text) => numericField(text, (v) => onChange({ pricePerWeek: v }))}
                   keyboardType="numeric"
                   placeholder="$45.000"
-                  placeholderTextColor={colors.textSecondary}
+                  placeholderTextColor={colors.placeholder}
                 />
                 {priceBreakdown(value.pricePerWeek, 'owner.spot.stay.priceBreakdownWeek') && (
                   <Text style={styles.priceBreakdown}>
@@ -336,7 +336,7 @@ export function StaySettingsEditor({ value, onChange, vehicleTypes }: StaySettin
                   onChangeText={(text) => numericField(text, (v) => onChange({ pricePerMonth: v }))}
                   keyboardType="numeric"
                   placeholder="$150.000"
-                  placeholderTextColor={colors.textSecondary}
+                  placeholderTextColor={colors.placeholder}
                 />
                 {priceBreakdown(value.pricePerMonth, 'owner.spot.stay.priceBreakdownMonth') && (
                   <Text style={styles.priceBreakdown}>
@@ -353,7 +353,7 @@ export function StaySettingsEditor({ value, onChange, vehicleTypes }: StaySettin
                     onChangeText={(text) => numericField(text, (v) => onChange({ pricePerHalfDay: v }))}
                     keyboardType="numeric"
                     placeholder="$5.000"
-                    placeholderTextColor={colors.textSecondary}
+                    placeholderTextColor={colors.placeholder}
                   />
                   {priceBreakdown(value.pricePerHalfDay, 'owner.spot.halfDay.priceBreakdown') && (
                     <Text style={styles.priceBreakdown}>
@@ -375,7 +375,7 @@ export function StaySettingsEditor({ value, onChange, vehicleTypes }: StaySettin
               onChangeText={(text) => onChange({ maxStayDays: text.replace(/[^0-9]/g, '') })}
               keyboardType="number-pad"
               placeholder="90"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={colors.placeholder}
             />
           </View>
           <View>
