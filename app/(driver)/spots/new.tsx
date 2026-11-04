@@ -123,14 +123,15 @@ export default function NewSpot() {
       const position = await Location.getCurrentPositionAsync({});
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
-      setCoordinates({ lat, lng });
       try {
         const reversed = await reverseGeocode(lat, lng);
         setAddress(reversed.displayName);
+        setCoordinates({ lat, lng });
       } catch {
         // Coordinates are still good even if we couldn't turn them into a
         // readable label -- fall back to a generic one instead of blocking.
         setAddress(t('owner.spot.new.locationFallback'));
+        setCoordinates({ lat, lng });
       }
     } catch {
       setLocationError(t('search.location.error'));
@@ -345,7 +346,7 @@ export default function NewSpot() {
                 )}
               </TouchableOpacity>
             </View>
-            {coordinates && !addressSuggestionsOpen && (
+            {coordinates && !locating && !addressSuggestionsOpen && (
               <View style={styles.locationConfirmedRow}>
                 <Ionicons name="checkmark-circle" size={sc(14)} color={colors.teal} />
                 <Text style={styles.locationConfirmed}>{t('owner.spot.new.locationConfirmed')}</Text>
