@@ -8,7 +8,7 @@ import { DropdownSelect } from '@/src/components/DropdownSelect';
 import { vehicleName } from '@/src/components/VehicleIdentity';
 import { getVehicles } from '@/src/api/auth';
 import { VEHICLE_TYPES, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
-import { todayArtDateISO } from '@/src/services/dateUtils';
+import { earliestBookableHourToday, todayArtDateISO } from '@/src/services/dateUtils';
 import { PROVINCES, SearchRequest, isSearchRequestComplete } from '@/src/services/searchRequest';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useThemeColors } from '@/src/theme/useThemeColors';
@@ -34,15 +34,30 @@ export function SearchRequestForm({ initial, onSubmit }: Props) {
   const sc = (n: number) => Math.round(n * scale);
   const user = useSessionStore((s) => s.user);
   const today = todayArtDateISO();
+  // Today, hours already gone can't be booked: the earliest start is the current hour.
+  const earliestToday = Math.min(earliestBookableHourToday(), 23);
 
   const [provinceId, setProvinceId] = useState(initial?.provinceId ?? PROVINCES[0].id);
   const [mode, setMode] = useState<'hourly' | 'stay'>(initial?.mode ?? 'hourly');
   const [date, setDate] = useState(initial?.date ?? today);
-  const [fromHour, setFromHour] = useState(initial?.fromHour ?? 8);
-  const [toHour, setToHour] = useState(initial?.toHour ?? 9);
+  const [fromHour, setFromHour] = useState(initial?.fromHour ?? Math.max(8, earliestToday));
+  const [toHour, setToHour] = useState(initial?.toHour ?? Math.max(9, earliestToday + 1));
   const [stayFrom, setStayFrom] = useState(initial?.stayFrom ?? '');
   const [stayTo, setStayTo] = useState(initial?.stayTo ?? '');
-  const [stayHour, setStayHour] = useState(initial?.stayHour ?? 8);
+  const [stayHour, setStayHour] = useState(initial?.stayHour ?? Math.max(8, earliestToday));
+  const minFromHour = date === today ? earliestToday : 0;
+  const minStayHour = stayFrom === today ? earliestToday : 0;
+
+  // A date or an earlier search can leave hours in the past: move them up to the current one.
+  useEffect(() => {
+    if (fromHour < minFromHour) {
+      setFromHour(minFromHour);
+      setToHour((h) => Math.max(h, minFromHour + 1));
+    }
+  }, [fromHour, minFromHour]);
+  useEffect(() => {
+    if (stayHour < minStayHour) setStayHour(minStayHour);
+  }, [stayHour, minStayHour]);
   const [vehicleType, setVehicleType] = useState(initial?.vehicleType ?? null);
   const [vehicleId, setVehicleId] = useState(initial?.vehicleId ?? null);
   const [myVehicles, setMyVehicles] = useState<Vehicle[]>([]);
@@ -169,7 +184,7 @@ export function SearchRequestForm({ initial, onSubmit }: Props) {
           {renderHourStepper(
             t('search.request.checkInHour'),
             stayHour,
-            () => setStayHour((h) => Math.max(0, h - 1)),
+            () => setStayHour((h) => Math.max(minStayHour, h - 1)),
             () => setStayHour((h) => Math.min(23, h + 1)),
           )}
           <View style={styles.field} />
@@ -190,7 +205,7 @@ export function SearchRequestForm({ initial, onSubmit }: Props) {
             {renderHourStepper(
               t('search.filters.from'),
               fromHour,
-              () => setFromHour((h) => Math.max(0, h - 1)),
+              () => setFromHour((h) => Math.max(minFromHour, h - 1)),
               () => {
                 const next = Math.min(fromHour + 1, 23);
                 setFromHour(next);
