@@ -23,6 +23,10 @@ import { Button } from '@/src/components/Button';
 import { ParkingSpotCard } from '@/src/components/ParkingSpotCard';
 import { Screen } from '@/src/components/Screen';
 import { DatePickerField } from '@/src/components/DatePickerField';
+import { SearchRequestForm } from '@/src/components/SearchRequestForm';
+import {
+  SearchRequest, addressInProvince, findProvince, requestToFilters, searchParams,
+} from '@/src/services/searchRequest';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { useThemeColors } from '@/src/theme/useThemeColors';
@@ -93,6 +97,12 @@ export function SearchScreen() {
   const [loadingSpots, setLoadingSpots] = useState(false);
   const [spotsError, setSpotsError] = useState<string | null>(null);
   const [filters, setFilters] = useState<SearchParkingSpotsFilters>({});
+  // The map and the spots stay hidden until the driver has said where, when and with which
+  // vehicle (SearchRequestForm). `request` is null while that form is showing;
+  // `lastRequest` keeps what was filled in so changing the search doesn't start from scratch.
+  const [request, setRequest] = useState<SearchRequest | null>(null);
+  const [lastRequest, setLastRequest] = useState<SearchRequest | null>(null);
+  const requestRef = useRef<SearchRequest | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   // The map first: it's what a driver opens the app to see. Web has no map (see the
   // toggle below), so it starts on the list there.
@@ -210,7 +220,8 @@ export function SearchScreen() {
       const position = await Location.getCurrentPositionAsync({});
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
-      setLocation({ lat, lng });
+      // The automatic fix on mount must not move the search away from the chosen province.
+      if (fillAddress || !requestRef.current) setLocation({ lat, lng });
 
       if (fillAddress) {
         // Same as the publish/edit-spot screens' "use my current location" --
@@ -328,8 +339,11 @@ export function SearchScreen() {
         if (seq !== searchSeq.current) return;
         // The user's own spots stay in the results -- opening one shows "Esta es tu
         // cochera" instead of the booking options (see spot/[id].tsx).
-        setSpots(results);
-        setSelectedSpotId(results[0]?.id ?? null);
+        const inProvince = requestRef.current
+          ? results.filter((spot) => addressInProvince(spot.address, requestRef.current!.provinceId))
+          : results;
+        setSpots(inProvince);
+        setSelectedSpotId(inProvince[0]?.id ?? null);
       })
       .catch((err) => {
         if (seq !== searchSeq.current) return;
@@ -344,9 +358,27 @@ export function SearchScreen() {
     // Don't search while the permission check is still in flight or while
     // GPS is being acquired — otherwise we fire with the BA default coords
     // before the real position arrives and show an empty "no results" state.
-    if (permissionLoading || locating) return;
+    if (permissionLoading || locating || !request) return;
     runSearch();
-  }, [filters, location, permissionLoading, locating, user?.id]);
+  }, [filters, location, permissionLoading, locating, user?.id, request]);
+
+  function submitRequest(next: SearchRequest) {
+    const province = findProvince(next.provinceId);
+    requestRef.current = next;
+    setLastRequest(next);
+    // The search starts at the province's capital; the locate button / address box can move it.
+    setSearchAddress(null);
+    setAddressQuery('');
+    if (province) setLocation({ lat: province.lat, lng: province.lng });
+    setFilters((f) => ({ ...f, ...requestToFilters(next) }));
+    setRequest(next);
+  }
+
+  function changeRequest() {
+    requestRef.current = null;
+    setSpots([]);
+    setRequest(null);
+  }
 
   function openFilters() {
     setMinPriceInput(filters.minPrice ? String(filters.minPrice) : '');
@@ -402,7 +434,8 @@ export function SearchScreen() {
   }
 
   function clearFilters() {
-    setFilters({ sort: filters.sort });
+    // What the driver filled in up front (dates, vehicle) stays: only the extras are cleared.
+    setFilters({ ...(request ? requestToFilters(request) : {}), sort: filters.sort });
     setModalVisible(false);
   }
 
@@ -866,6 +899,22 @@ export function SearchScreen() {
     candidateMain: { flex: 1, minWidth: 0, fontSize: sc(14), color: colors.text, lineHeight: sc(19) },
   });
 
+  if (!request) {
+    return (
+      <Screen style={styles.container} edges={['left', 'right']}>
+        <View style={{ height: insets.top, backgroundColor: colors.surface }} />
+        <SearchRequestForm initial={lastRequest} onSubmit={submitRequest} />
+      </Screen>
+    );
+  }
+
+  const requestWhen = request.mode === 'stay'
+    ? `${formatShortDate(request.stayFrom)} – ${formatShortDate(request.stayTo)}`
+    : `${formatShortDate(request.date)} ${t('search.request.hours', {
+        from: `${String(request.fromHour).padStart(2, '0')}:00`,
+        to: `${String(request.toHour % 24).padStart(2, '0')}:00`,
+      })}`;
+
   return (
     <Screen style={styles.container} edges={['left', 'right']}>
       {/* El inset de la barra de estado usa el fondo gris de la pantalla
@@ -956,6 +1005,16 @@ export function SearchScreen() {
       )}
       {/* ── Toolbar ────────────────────────────────────────────────── */}
       <View style={styles.toolbar}>
+        <TouchableOpacity
+          style={[styles.filterButton, { flexShrink: 1, borderColor: colors.teal }]}
+          onPress={changeRequest}
+          accessibilityLabel={t('search.request.change')}
+        >
+          <Ionicons name="create-outline" size={sc(15)} color={colors.teal} />
+          <Text style={[styles.filterButtonText, { color: colors.teal, flexShrink: 1 }]} numberOfLines={1}>
+            {`${findProvince(request.provinceId)?.name ?? ''} · ${requestWhen}`}
+          </Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
           <Ionicons
             name="options-outline"
@@ -1077,7 +1136,7 @@ export function SearchScreen() {
                 onPress={() =>
                   router.push({
                     pathname: `${group}/spot/${item.id}`,
-                    params: { startHour: '8', endHour: '9' },
+                    params: searchParams(request),
                   })
                 }
               >
@@ -1201,7 +1260,7 @@ export function SearchScreen() {
                 onPress={() =>
                   router.push({
                     pathname: `${group}/spot/${selectedSpot.id}`,
-                    params: { startHour: '8', endHour: '9' },
+                    params: searchParams(request),
                   })
                 }
               >
