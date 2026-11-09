@@ -22,7 +22,7 @@ import { useScale } from '@/src/theme/typography';
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { useFavoritesStore } from '@/src/store/useFavoritesStore';
 import {
-  getParkingSpotDetail, formatScheduleForDisplay, getSpotPricePerHour, getMinPricePerHour, HALF_DAY_HOURS,
+  getParkingSpotDetail, formatScheduleForDisplay, getSpotPricePerHour, getMinPricePerHour, HALF_DAY_HOURS, toISODateTime,
 } from '@/src/services/parkingService';
 import { addDaysISO, addOneDayISO, nowArtHour, todayArtDateISO } from '@/src/services/dateUtils';
 import {
@@ -129,16 +129,31 @@ export default function SpotDetail() {
   // "Volver a reservar" opens the spot set up like the booking it repeats: same kind (hourly,
   // half-day or stay), same length (hours, or days for a stay) and same vehicle type. The day
   // still falls on the first free one, like any other visit.
-  const { id, mode: repeatMode, hours: repeatHoursParam, days: repeatDaysParam, vehicleType: repeatVehicleType } =
-    useLocalSearchParams<{ id: string; mode?: string; hours?: string; days?: string; vehicleType?: string }>();
+  // Opened from the search results, the day and hours (or the stay's dates) were already picked
+  // in the search form: they arrive as params and the pickers aren't shown (`searched`).
+  const {
+    id, mode: repeatMode, hours: repeatHoursParam, days: repeatDaysParam, vehicleType: repeatVehicleType,
+    searchMode, searchDate, searchFrom, searchTo, searchStayFrom, searchStayTo, searchStayHour,
+  } = useLocalSearchParams<{
+    id: string; mode?: string; hours?: string; days?: string; vehicleType?: string;
+    searchMode?: string; searchDate?: string; searchFrom?: string; searchTo?: string;
+    searchStayFrom?: string; searchStayTo?: string; searchStayHour?: string;
+  }>();
+  const searchedHourly = searchMode === 'hourly' && !!searchDate && searchFrom !== undefined && searchTo !== undefined;
+  const searchedStay = searchMode === 'stay' && !!searchStayFrom && !!searchStayTo;
+  const searched = searchedHourly || searchedStay;
   const repeatHours = Number(repeatHoursParam) > 0 ? Number(repeatHoursParam) : null;
   const repeatDays = Number(repeatDaysParam) > 0 ? Math.round(Number(repeatDaysParam)) : null;
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [owner, setOwner] = useState<{ name: string; avatarUrl: string | null } | null>(null);
   // Inicio y fin de la reserva por hora, en epoch-ms. Sólo guardan lo que el conductor tocó: lo que
   // se muestra sale de effectiveStartMs/effectiveEndMs más abajo, que caen en un valor válido solos.
-  const [startMsOverride, setStartMsOverride] = useState<number | null>(null);
-  const [endMsOverride, setEndMsOverride] = useState<number | null>(null);
+  const [startMsOverride, setStartMsOverride] = useState<number | null>(() =>
+    searchedHourly ? new Date(toISODateTime(searchDate!, Number(searchFrom))).getTime() : null,
+  );
+  const [endMsOverride, setEndMsOverride] = useState<number | null>(() =>
+    searchedHourly ? new Date(toISODateTime(searchDate!, Number(searchTo))).getTime() : null,
+  );
   const [endDateNotice, setEndDateNotice] = useState(false);
   const [timeSheet, setTimeSheet] = useState<'start' | 'end' | null>(null);
   const [monthSheetOpen, setMonthSheetOpen] = useState(false);
@@ -153,7 +168,7 @@ export default function SpotDetail() {
   // reserva). Lo que se elige; el modo que se muestra es éste si la cochera lo ofrece, si no el
   // primero que ofrece (ver bookingMode más abajo).
   const [bookingModeChoice, setBookingMode] = useState<BookingMode | null>(() =>
-    repeatMode === 'stay' || repeatMode === 'halfDay' || repeatMode === 'hourly' ? repeatMode : null,
+    searched ? (searchMode as BookingMode) : repeatMode === 'stay' || repeatMode === 'halfDay' || repeatMode === 'hourly' ? repeatMode : null,
   );
   const user = useSessionStore((s) => s.user);
   const isFavorite = useFavoritesStore((s) => (id ? s.ids.has(id) : false));
@@ -163,7 +178,7 @@ export default function SpotDetail() {
   // sincronizarse con un useEffect, así nunca queda una fecha pasada
   // seleccionada (por el simple paso del tiempo) ni hace falta resetear
   // nada a mano al limpiar el calendario.
-  const [selectedDateOverride, setSelectedDateOverride] = useState('');
+  const [selectedDateOverride, setSelectedDateOverride] = useState(searchedHourly ? searchDate! : '');
   const selectedDateISO =
     selectedDateOverride && selectedDateOverride >= todayArtDateISO() ? selectedDateOverride : todayArtDateISO();
 
@@ -239,7 +254,10 @@ export default function SpotDetail() {
   const effectiveStartMs: number | null =
     startMsOverride !== null && isInRanges(startRanges, startMsOverride)
       ? startMsOverride
-      : defaultStart(startRanges, nowMs);
+      : // Searched for a given time: if it's no longer free, nothing else is quietly offered instead.
+        searchedHourly
+        ? null
+        : defaultStart(startRanges, nowMs);
 
   // Entre cuándo puede terminar: hasta donde acaba la ventana libre que contiene el inicio, sea el mismo
   // día o varios después.
@@ -251,7 +269,7 @@ export default function SpotDetail() {
   const effectiveEndMs: number | null =
     endMsOverride !== null && endLimits !== null && isInRanges([endLimits], endMsOverride)
       ? endMsOverride
-      : effectiveStartMs !== null
+      : effectiveStartMs !== null && !searchedHourly
         ? repeatHours !== null && endLimits !== null
           ? // Repeating a booking: as long as last time, or as far as it's free.
             Math.max(endLimits.startMs, Math.min(effectiveStartMs + repeatHours * 60 * 60 * 1000, endLimits.endMs))
@@ -338,9 +356,9 @@ export default function SpotDetail() {
   }
 
   // ── Estadía (rango de fechas + hora de check-in) ────────────────────────
-  const [stayStartDateOverride, setStayStartDateOverride] = useState<string | null>(null);
-  const [stayEndDateOverride, setStayEndDateOverride] = useState<string | null>(null);
-  const [stayStartHourChoice, setStayStartHour] = useState(nowArtHour);
+  const [stayStartDateOverride, setStayStartDateOverride] = useState<string | null>(searchedStay ? searchStayFrom! : null);
+  const [stayEndDateOverride, setStayEndDateOverride] = useState<string | null>(searchedStay ? searchStayTo! : null);
+  const [stayStartHourChoice, setStayStartHour] = useState(() => (searchedStay && searchStayHour !== undefined ? Number(searchStayHour) : nowArtHour()));
   const [stayQuote, setStayQuote] = useState<StayQuote | null>(null);
   const [stayQuoteLoading, setStayQuoteLoading] = useState(false);
   const [stayQuoteError, setStayQuoteError] = useState<string | null>(null);
@@ -928,7 +946,7 @@ export default function SpotDetail() {
             </>
           ) : null}
 
-          {scheduleLines.length > 0 && (
+          {!searched && scheduleLines.length > 0 && (
             <>
               <View style={styles.divider} />
               <Text style={styles.sectionTitle}>{t('spot.section.schedule')}</Text>
@@ -955,7 +973,7 @@ export default function SpotDetail() {
               <View style={styles.divider} />
               <Text style={styles.sectionTitle}>{t('spot.section.book')}</Text>
 
-              {bookingModes.length > 1 && (
+              {!searched && bookingModes.length > 1 && (
                 <View style={styles.segment}>
                   {bookingModes.map((mode) => (
                     <Pressable
@@ -977,6 +995,23 @@ export default function SpotDetail() {
                   {/* Vehicle type picker -- sólo si el precio depende de cuál elijas */}
                   {spot.pricePerHourByVehicleType && vehicleTypeChips()}
 
+                  {searchedHourly ? (
+                    availabilityLoading && windows === null ? (
+                      <ActivityIndicator size="small" color={colors.teal} style={{ alignSelf: 'flex-start', marginBottom: 18 }} />
+                    ) : availabilityError && windows === null ? (
+                      <View style={[styles.field, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                        <Text style={styles.warn}>{t('spot.availabilityError')}</Text>
+                        <TouchableOpacity onPress={refreshAvailability}>
+                          <Text style={styles.retry}>{t('spot.availabilityRetry')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : !canBook ? (
+                      <View style={styles.field}>
+                        <Text style={styles.warn}>{t('spot.searched.unavailable')}</Text>
+                      </View>
+                    ) : null
+                  ) : (
+                    <>
                   {/* Cuándo hay lugar ese día: arriba de los campos, es lo primero que conviene mirar */}
                   <View style={styles.field}>
                     {availabilityLoading && windows === null ? (
@@ -1057,6 +1092,9 @@ export default function SpotDetail() {
                     </View>
                   )}
 
+                    </>
+                  )}
+
                   {canBook && visiblePricePerHour !== null && (
                     <View style={styles.priceLine}>
                       <Text style={styles.priceLineText}>
@@ -1070,6 +1108,8 @@ export default function SpotDetail() {
                     <Text style={styles.hint}>{t('spot.longRangeHint')}</Text>
                   )}
 
+                  {!searchedHourly && (
+                    <>
                   <MonthAvailabilitySheet
                     visible={monthSheetOpen}
                     spotId={spot.id}
@@ -1102,6 +1142,8 @@ export default function SpotDetail() {
                     onConfirm={handleEndTimeConfirm}
                     onClose={() => setTimeSheet(null)}
                   />
+                    </>
+                  )}
                 </>
               )}
 
@@ -1153,6 +1195,8 @@ export default function SpotDetail() {
               {showStay && (
                 <>
                   {spot.stayPricesByVehicleType && vehicleTypeChips()}
+                  {!searchedStay && (
+                    <>
                   <View style={styles.field}>
                     <Text style={styles.fieldLabel}>{t('spot.stay.startDate')}</Text>
                     <AvailabilityDatePickerField
@@ -1177,11 +1221,15 @@ export default function SpotDetail() {
                       style={styles.dateInput}
                     />
                   </View>
-                  <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>{t('spot.stay.startHour')}</Text>
-                    {hourChips(STAY_HOUR_OPTIONS, stayStartHour, setStayStartHour, freeStayHours)}
-                    <Text style={styles.hint}>{t('spot.stay.startHour.hint')}</Text>
-                  </View>
+                    </>
+                  )}
+                  {!searchedStay && (
+                    <View style={styles.field}>
+                      <Text style={styles.fieldLabel}>{t('spot.stay.startHour')}</Text>
+                      {hourChips(STAY_HOUR_OPTIONS, stayStartHour, setStayStartHour, freeStayHours)}
+                      <Text style={styles.hint}>{t('spot.stay.startHour.hint')}</Text>
+                    </View>
+                  )}
                   {stayQuoteLoading ? (
                     <ActivityIndicator size="small" color={colors.teal} style={{ alignSelf: 'flex-start' }} />
                   ) : stayQuoteError ? (

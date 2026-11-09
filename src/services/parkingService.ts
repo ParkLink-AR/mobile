@@ -234,6 +234,8 @@ export interface SearchParkingSpotsFilters {
   // Con stayOnly: check-in y check-out (YYYY-MM-DD). Van juntos.
   stayFrom?: string;
   stayTo?: string;
+  // Hora de entrada de la estadía (0-23).
+  stayHour?: number;
   // Contraparte de stayOnly -- sólo cocheras con alquiler por hora habilitado.
   // Mobile los trata como mutuamente excluyentes en la UI del buscador.
   hourlyOnly?: boolean;
@@ -353,6 +355,7 @@ export async function searchParkingSpots(
     stayOnly: stays ? filters.stayOnly : undefined,
     stayFrom: stays ? filters.stayFrom : undefined,
     stayTo: stays ? filters.stayTo : undefined,
+    stayHour: stays ? filters.stayHour : undefined,
     hourlyOnly: halfDay ? undefined : filters.hourlyOnly,
     halfDayOnly: halfDay || undefined,
     sort: filters.sort,
