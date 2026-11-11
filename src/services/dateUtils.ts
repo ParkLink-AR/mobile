@@ -30,16 +30,6 @@ export function nowArtHour(): number {
   return new Date(new Date().getTime() - 3 * 3600_000).getUTCHours();
 }
 
-/**
- * Primera hora en punto de hoy (ART) que todavía se puede reservar: la actual hasta 10 min
- * después de empezar (misma tolerancia que bookingRange), la siguiente después. 24 = ya no queda ninguna hoy.
- */
-export function earliestBookableHourToday(): number {
-  const art = new Date(Date.now() - 3 * 3600_000);
-  const minutes = art.getUTCHours() * 60 + art.getUTCMinutes() - 10;
-  return minutes <= 0 ? 0 : Math.ceil(minutes / 60);
-}
-
 /** Avanza un YYYY-MM-DD un día. */
 export function addOneDayISO(dateISO: string): string {
   const [year, month, day] = dateISO.split('-').map(Number);

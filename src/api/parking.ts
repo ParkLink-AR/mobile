@@ -84,8 +84,6 @@ export interface SearchParkingSpotsParams {
   // A stay's check-in and check-out days (YYYY-MM-DD). Go together.
   stayFrom?: string;
   stayTo?: string;
-  // The stay's check-in hour (0-23): the room is then checked for exactly that time.
-  stayHour?: number;
   // Desired reservation window, ISO 8601 with offset. Go together: send
   // both or neither (see SearchParkingSpotDto). parking-service uses these
   // to filter out spots that are already booked for that window (see
@@ -240,7 +238,6 @@ export async function searchParkingSpots(
     ...(params.vehicleType !== undefined ? { vehicleType: params.vehicleType } : {}),
     ...(params.minRating !== undefined ? { minRating: String(params.minRating) } : {}),
     ...(params.stayFrom !== undefined && params.stayTo !== undefined ? { stayFrom: params.stayFrom, stayTo: params.stayTo } : {}),
-    ...(params.stayHour !== undefined ? { stayHour: String(params.stayHour) } : {}),
     ...(params.covered !== undefined ? { covered: String(params.covered) } : {}),
     ...(params.from !== undefined ? { from: params.from } : {}),
     ...(params.to !== undefined ? { to: params.to } : {}),

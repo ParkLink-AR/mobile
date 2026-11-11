@@ -38,10 +38,6 @@ interface VerifyStatusResponse {
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLLS = 60; // 2 minutes max
 
-// Demo only: shows the "Consultar pago" button that takes the booking as paid when Mercado Pago
-// fails. Needs ALLOW_FORCE_PAYMENT_APPROVAL=true on payment-service too.
-const FORCE_PAYMENT_BUTTON = process.env.EXPO_PUBLIC_FORCE_PAYMENT_BUTTON === 'true';
-
 const SUCCESS = '#16A34A';
 const WARNING = '#D97706';
 const DANGER = '#DC2626';
@@ -86,11 +82,6 @@ export default function PaymentPendingScreen() {
   // Bumped each time the driver goes back to Mercado Pago, to watch the new attempt.
   const [attempt, setAttempt] = useState(0);
   const [resuming, setResuming] = useState(false);
-  const [forcing, setForcing] = useState(false);
-  // Demo: after "Consultar pago" the "PAGO APROBADO" banner shows, even if the backend call
-  // failed (then the approved state is faked locally, just so the flow can be seen).
-  const [approvedBanner, setApprovedBanner] = useState(false);
-  const [fakeApproved, setFakeApproved] = useState(false);
   // Mercado Pago already has a payment in process for it: don't offer paying again.
   const [paymentInFlight, setPaymentInFlight] = useState(false);
   // An attempt that already failed: after going back to the checkout, verify-status keeps
@@ -147,7 +138,7 @@ export default function PaymentPendingScreen() {
   }, [bookingId]);
 
   useEffect(() => {
-    if (!bookingId || fakeApproved) return;
+    if (!bookingId) return;
 
     // One check at a time, and none once it's settled: a check (verify-status, then the
     // booking) can take longer than the interval, and two overlapping ones that both saw
@@ -239,34 +230,7 @@ export default function PaymentPendingScreen() {
       settled = true;
       clearInterval(timer);
     };
-  }, [bookingId, attempt, fakeApproved]);
-
-  // Demo escape hatch (EXPO_PUBLIC_FORCE_PAYMENT_BUTTON): when Mercado Pago fails, take the
-  // booking as paid. The backend only goes along with it when it's enabled there too.
-  async function forcePayment() {
-    if (!booking || forcing) return;
-    setForcing(true);
-    setApprovedBanner(true);
-    try {
-      await request('/payments/force-approve', {
-        method: 'POST',
-        body: JSON.stringify({ externalReference: booking.id, payerEmail: userEmail }),
-      });
-      failedPaymentId.current = null;
-      setPaymentInFlight(false);
-      setStatus('pending');
-      // The next check finds the approved payment and shows the result.
-      setAttempt((n) => n + 1);
-    } catch {
-      // Backend refused or failed: fake the approved result locally so it can be seen.
-      setFakeApproved(true);
-      setPaymentInFlight(false);
-      setApprovedAt(new Date().toISOString());
-      setStatus('approved');
-    } finally {
-      setForcing(false);
-    }
-  }
+  }, [bookingId, attempt]);
 
   // Back to Mercado Pago for this same booking -- the driver closed the checkout by
   // mistake, or wants to try again after a declined card -- then watch for the payment.
@@ -359,17 +323,6 @@ export default function PaymentPendingScreen() {
   const canResume =
     booking?.status === 'PENDING_PAYMENT' && remaining > 0 && !paymentInFlight &&
     (status === 'pending' || status === 'rejected' || status === 'unknown');
-  // The demo button: while the booking still awaits payment, whatever Mercado Pago says.
-  const canForce =
-    FORCE_PAYMENT_BUTTON && booking?.status === 'PENDING_PAYMENT' && remaining > 0 &&
-    (status === 'pending' || status === 'rejected' || status === 'unknown');
-  const forceButton = canForce ? (
-    forcing ? (
-      <ActivityIndicator color={colors.teal} style={{ paddingVertical: sc(10) }} />
-    ) : (
-      <SecondaryAction label={t('driver.payment.force.button')} onPress={forcePayment} />
-    )
-  ) : null;
   const resumeButton = resuming ? (
     <ActivityIndicator color={colors.teal} style={{ paddingVertical: sc(14) }} />
   ) : (
@@ -389,20 +342,6 @@ export default function PaymentPendingScreen() {
   return (
     <Screen style={styles.screen} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {approvedBanner ? (
-          <View
-            style={{
-              backgroundColor: SUCCESS, borderRadius: 14, paddingVertical: sc(14),
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-          >
-            <Ionicons name="checkmark-circle" size={sc(22)} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontSize: sc(18), fontWeight: '800', letterSpacing: 0.6 }}>
-              {t('driver.payment.result.approvedBanner')}
-            </Text>
-          </View>
-        ) : null}
-
         <StatusHero tone={hero.tone} icon={hero.icon} busy={status === 'pending'} key={status} />
 
         <View style={styles.heading}>
@@ -463,7 +402,6 @@ export default function PaymentPendingScreen() {
         ) : canResume ? (
           <>
             {resumeButton}
-            {forceButton}
             <SecondaryAction label={t('driver.booking.success.viewBookings')} onPress={goToBookings} />
           </>
         ) : status === 'rejected' || status === 'refunded' || status === 'expired' ? (
@@ -472,17 +410,11 @@ export default function PaymentPendingScreen() {
             <SecondaryAction label={t('driver.payment.result.goHome')} onPress={goHome} />
           </>
         ) : status === 'unknown' ? (
-          <>
-            <Button title={t('driver.booking.success.viewBookings')} onPress={goToBookings} style={styles.primary} />
-            {forceButton}
-          </>
+          <Button title={t('driver.booking.success.viewBookings')} onPress={goToBookings} style={styles.primary} />
         ) : (
           // Pending: nothing to cancel -- an unpaid hold just expires on its own
           // (POST /bookings/{id}/cancel doesn't take PENDING_PAYMENT).
-          <>
-            {forceButton}
-            <SecondaryAction label={t('driver.booking.success.viewBookings')} onPress={goToBookings} />
-          </>
+          <SecondaryAction label={t('driver.booking.success.viewBookings')} onPress={goToBookings} />
         )}
       </View>
     </Screen>
