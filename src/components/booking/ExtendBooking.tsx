@@ -89,12 +89,13 @@ export function ExtendBooking({ bookingId, onExtended }: { bookingId: string; on
     totalValue: { fontSize: sc(18), color: colors.teal, fontWeight: '700' },
     actions: { flexDirection: 'row', gap: 10 },
     cancelBtn: {
+      justifyContent: 'center', paddingHorizontal: 10,
       flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1.5, borderColor: colors.border,
     },
-    cancelText: { fontSize: sc(15), fontWeight: '600', color: colors.text },
-    confirmBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center', backgroundColor: colors.teal },
+    cancelText: { textAlign: 'center', fontSize: sc(15), fontWeight: '600', color: colors.text },
+    confirmBtn: { justifyContent: 'center', paddingHorizontal: 10, flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center', backgroundColor: colors.teal },
     confirmBtnDisabled: { backgroundColor: colors.border },
-    confirmText: { fontSize: sc(15), fontWeight: '700', color: colors.white },
+    confirmText: { textAlign: 'center', fontSize: sc(15), fontWeight: '700', color: colors.white },
   });
 
   return (

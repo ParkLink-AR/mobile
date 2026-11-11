@@ -22,7 +22,6 @@ export function iso(date: Date): string {
   return new Date(date.getTime() - 3 * 3600 * 1000).toISOString().slice(0, 19) + '-03:00';
 }
 
-const dateOnly = (date: Date) => iso(date).slice(0, 10);
 export const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
 
 // ── Personas ─────────────────────────────────────────────────────────────────
@@ -67,6 +66,9 @@ const mockUser = {
   status: 'ACTIVE',
   deletion_scheduled_at: null,
 };
+
+/** Whether `id` is one of the example people above (and not just an id with the same shape). */
+export const isMockPerson = (id: string) => id in PEOPLE;
 
 export const profile = (id: string) => {
   const p = PEOPLE[id] ?? { first: 'Usuario', last: 'ParkLink' };

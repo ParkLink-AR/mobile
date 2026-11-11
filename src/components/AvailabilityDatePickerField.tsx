@@ -242,10 +242,12 @@ export function AvailabilityDatePickerField({
       width: '100%', maxWidth: 380, backgroundColor: colors.surface, borderRadius: 20, padding: 20, gap: 14,
     },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    monthNav: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    // Takes the room left by the close button and shrinks into it, so a big month name (large
+    // text settings) never pushes the close button out of the card.
+    monthNav: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4 },
     navBtn: { padding: 6 },
-    monthLabel: { fontSize: sc(16), fontWeight: '700', color: colors.text },
-    closeBtn: { padding: 4 },
+    monthLabel: { flexShrink: 1, fontSize: sc(16), fontWeight: '700', color: colors.text },
+    closeBtn: { padding: 4, marginLeft: 8, flexShrink: 0 },
     weekRow: { flexDirection: 'row' },
     weekDayCell: { flex: 1, alignItems: 'center', paddingBottom: 4 },
     weekDayText: { fontSize: sc(11), fontWeight: '700', color: colors.textSecondary },
@@ -288,7 +290,9 @@ export function AvailabilityDatePickerField({
                 <Pressable style={styles.navBtn} onPress={() => goToMonth(-1)} hitSlop={8}>
                   <Ionicons name="chevron-back" size={sc(20)} color={colors.text} />
                 </Pressable>
-                <Text style={styles.monthLabel}>{monthLabel}</Text>
+                <Text style={styles.monthLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                  {monthLabel}
+                </Text>
                 <Pressable style={styles.navBtn} onPress={() => goToMonth(1)} hitSlop={8}>
                   <Ionicons name="chevron-forward" size={sc(20)} color={colors.text} />
                 </Pressable>

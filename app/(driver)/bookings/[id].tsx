@@ -289,6 +289,8 @@ export default function DriverBookingDetail() {
     totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     totalLabel: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
     totalValue: { fontSize: sc(18), color: colors.teal, fontWeight: '700' },
+    // "El conductor pagó (con la comisión de ParkLink)" has no icon to line its value up with.
+    paidValueNoIcon: largeText ? { paddingLeft: 0 } : {},
 
     refundReason: { fontSize: sc(14), color: colors.text, fontWeight: '600' },
     refundBody: { flex: 1, fontSize: sc(14), color: colors.text, lineHeight: sc(20) },
@@ -298,12 +300,12 @@ export default function DriverBookingDetail() {
     answerRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingBottom: 16 },
     answerBtn: {
       flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-      paddingVertical: 14, borderRadius: 12,
+      paddingVertical: 14, paddingHorizontal: 8, borderRadius: 12,
     },
     approveBtn: { backgroundColor: colors.teal },
     rejectBtn: { borderWidth: 1.5, borderColor: '#C62828' },
-    approveBtnText: { color: colors.white, fontWeight: '700', fontSize: sc(15) },
-    rejectBtnText: { color: '#C62828', fontWeight: '700', fontSize: sc(15) },
+    approveBtnText: { flexShrink: 1, color: colors.white, fontWeight: '700', fontSize: sc(15) },
+    rejectBtnText: { flexShrink: 1, color: '#C62828', fontWeight: '700', fontSize: sc(15) },
     // Outlined, secondary action ("Volver a reservar").
     receiptButton: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -683,7 +685,7 @@ export default function DriverBookingDetail() {
             {isOwnerView && booking.ownerEarnings !== undefined && booking.ownerEarnings !== booking.total && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>{t('owner.booking.driverPaid')}</Text>
-                <Text style={styles.detailValue}>{formatPesos(booking.total)}</Text>
+                <Text style={[styles.detailValue, styles.paidValueNoIcon]}>{formatPesos(booking.total)}</Text>
               </View>
             )}
           </View>
@@ -916,7 +918,7 @@ export default function DriverBookingDetail() {
               ) : (
                 <>
                   <Ionicons name="close" size={sc(18)} color="#C62828" />
-                  <Text style={styles.rejectBtnText}>{t('owner.spot.requests.reject')}</Text>
+                  <Text style={styles.rejectBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('owner.spot.requests.reject')}</Text>
                 </>
               )}
             </Pressable>
@@ -930,7 +932,7 @@ export default function DriverBookingDetail() {
               ) : (
                 <>
                   <Ionicons name="checkmark" size={sc(18)} color={colors.white} />
-                  <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
+                  <Text style={styles.approveBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('owner.spot.requests.approve')}</Text>
                 </>
               )}
             </Pressable>

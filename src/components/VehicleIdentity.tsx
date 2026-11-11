@@ -72,8 +72,10 @@ export function VehicleSummaryRow({ vehicle }: { vehicle: VehicleSnapshot }) {
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
   const styles = StyleSheet.create({
-    row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    info: { flex: 1 },
+    // When the name and the plate don't fit side by side (large text), the plate drops under the name
+    // instead of the name breaking mid-word ("Volkswag-en").
+    row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
+    info: { flexGrow: 1, flexShrink: 1, flexBasis: sc(140) },
     name: { fontSize: sc(15), fontWeight: '600', color: colors.text },
     type: { fontSize: sc(13), color: colors.textSecondary, marginTop: 1 },
   });

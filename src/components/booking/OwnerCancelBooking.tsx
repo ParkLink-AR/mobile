@@ -62,11 +62,11 @@ export function OwnerCancelBooking({ bookingId, onCancelled }: { bookingId: stri
     },
     error: { fontSize: sc(13), color: DANGER },
     actions: { flexDirection: 'row', gap: 10 },
-    backBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1.5, borderColor: colors.border },
-    backText: { fontSize: sc(15), fontWeight: '600', color: colors.text },
-    confirmBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center', backgroundColor: DANGER },
+    backBtn: { justifyContent: 'center', paddingHorizontal: 10, flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1.5, borderColor: colors.border },
+    backText: { textAlign: 'center', fontSize: sc(15), fontWeight: '600', color: colors.text },
+    confirmBtn: { justifyContent: 'center', paddingHorizontal: 10, flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center', backgroundColor: DANGER },
     confirmBtnDisabled: { backgroundColor: colors.border },
-    confirmText: { fontSize: sc(15), fontWeight: '700', color: colors.white },
+    confirmText: { textAlign: 'center', fontSize: sc(15), fontWeight: '700', color: colors.white },
   });
 
   return (

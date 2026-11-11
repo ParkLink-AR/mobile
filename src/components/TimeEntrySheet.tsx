@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Modal, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { t } from '@/src/i18n';
+import { palettes } from '@/src/theme/colors';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useScale } from '@/src/theme/typography';
 import { parseTimeDigits } from '@/src/services/bookingRange';
@@ -23,12 +25,14 @@ interface TimeEntrySheetProps {
 }
 
 /**
- * Hoja desde abajo para escribir una hora exacta (19:17) con un teclado numérico propio -- no el del
- * sistema, que depende del celular (y del teclado físico en el emulador): así siempre hay con qué
- * tipear. Valida mientras se escribe: si la hora no existe o cae en algo ocupado lo dice y deja las
- * franjas libres a la vista; "Listo" sólo confirma una hora válida.
+ * Hoja desde abajo para elegir una hora exacta (19:17). En iPhone, con la ruedita nativa de horas y
+ * minutos (la del despertador); en Android y web, con un teclado numérico propio -- en Android la
+ * ruedita sólo existe como diálogo aparte y en web no existe. Valida mientras se elige: si la hora no
+ * existe o cae en algo ocupado lo dice y deja las franjas libres a la vista; "Listo" sólo confirma una
+ * hora válida.
  */
 export function TimeEntrySheet(props: TimeEntrySheetProps) {
+  const Entry = Platform.OS === 'ios' ? WheelEntry : KeypadEntry;
   return (
     <Modal visible={props.visible} transparent animationType="fade" onRequestClose={props.onClose}>
       {props.visible && <Entry {...props} />}
@@ -36,9 +40,88 @@ export function TimeEntrySheet(props: TimeEntrySheetProps) {
   );
 }
 
+// La ruedita va de 00:00 a 23:59: un fin "24:00" (hasta el final del día) se elige como 00:00, que como
+// fin no tendría sentido -- si así no sirve, vale como 24:00.
+function resolveWheel(resolve: TimeEntrySheetProps['resolve'], hours: number, minutes: number) {
+  const result = resolve(hours, minutes);
+  if ('error' in result && hours === 0 && minutes === 0) {
+    const endOfDay = resolve(24, 0);
+    if ('ms' in endOfDay) return endOfDay;
+  }
+  return result;
+}
+
+// Se monta recién al abrir la hoja, así arranca siempre con la hora que venía en vez de sincronizarse
+// con un efecto.
+function WheelEntry({ title, hint, initialDigits, resolve, onConfirm, onClose }: TimeEntrySheetProps) {
+  const colors = useThemeColors();
+  const scale = useScale();
+  const sc = (n: number) => Math.round(n * scale);
+  const [time, setTime] = useState(() => {
+    const parsed = parseTimeDigits(initialDigits);
+    const date = new Date();
+    if (parsed) date.setHours(parsed.hours % 24, parsed.minutes, 0, 0);
+    else date.setSeconds(0, 0);
+    return date;
+  });
+
+  const result = resolveWheel(resolve, time.getHours(), time.getMinutes());
+  const confirmed = 'ms' in result ? result.ms : null;
+  const message =
+    'error' in result ? { text: result.error, color: ERROR_RED } : { text: t('spot.time.ok'), color: colors.teal };
+
+  const styles = StyleSheet.create({
+    overlay: { flex: 1, backgroundColor: 'rgba(4, 35, 71, 0.45)', justifyContent: 'flex-end' },
+    sheet: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingHorizontal: 20,
+      paddingTop: 18,
+      paddingBottom: 24,
+    },
+    title: { fontSize: sc(17), fontWeight: '600', color: colors.text },
+    wheel: { alignSelf: 'center' },
+    message: { fontSize: sc(13), lineHeight: sc(18), textAlign: 'center' },
+    hint: { fontSize: sc(13), lineHeight: sc(18), color: colors.textSecondary, marginTop: 4, textAlign: 'center' },
+    button: {
+      marginTop: 14,
+      backgroundColor: colors.teal,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+      opacity: confirmed === null ? 0.45 : 1,
+    },
+    buttonText: { fontSize: sc(15), fontWeight: '600', color: colors.white },
+  });
+
+  return (
+    <Pressable style={styles.overlay} onPress={onClose}>
+      <Pressable style={styles.sheet} onPress={(event) => event.stopPropagation()}>
+        <Text style={styles.title}>{title}</Text>
+        <DateTimePicker
+          value={time}
+          mode="time"
+          display="spinner"
+          locale="es-AR"
+          textColor={colors.text}
+          themeVariant={colors === palettes.dark ? 'dark' : 'light'}
+          onValueChange={(_, date) => setTime(date)}
+          style={styles.wheel}
+        />
+        <Text style={[styles.message, { color: message.color }]}>{message.text}</Text>
+        <Text style={styles.hint}>{hint}</Text>
+        <Pressable style={styles.button} onPress={() => confirmed !== null && onConfirm(confirmed)}>
+          <Text style={styles.buttonText}>{t('spot.time.done')}</Text>
+        </Pressable>
+      </Pressable>
+    </Pressable>
+  );
+}
+
 // Se monta recién al abrir la hoja, así el campo arranca siempre de cero con la hora actual en vez de
 // sincronizarse con un efecto.
-function Entry({ title, hint, initialDigits, resolve, onConfirm, onClose }: TimeEntrySheetProps) {
+function KeypadEntry({ title, hint, initialDigits, resolve, onConfirm, onClose }: TimeEntrySheetProps) {
   const colors = useThemeColors();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);

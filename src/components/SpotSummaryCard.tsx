@@ -21,7 +21,8 @@ export function SpotSummaryRow({ title, address, photoUrl, onPress }: SpotSummar
   const colors = useThemeColors();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
-  const size = sc(68);
+  // The photo grows a little with the text, but not so much it leaves the title no room.
+  const size = Math.min(sc(68), 80);
 
   const styles = StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center', gap: 14 },

@@ -148,15 +148,17 @@ export default function Profile() {
     },
     deleteActions: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 8 },
     deleteCancelBtn: {
+      justifyContent: 'center', paddingHorizontal: 10,
       flex: 1, borderRadius: 10, paddingVertical: sc(12), alignItems: 'center',
       borderWidth: 1.5, borderColor: colors.border,
     },
-    deleteCancelBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.text },
+    deleteCancelBtnText: { textAlign: 'center', fontSize: sc(15), fontWeight: '600', color: colors.text },
     deleteConfirmBtn: {
+      justifyContent: 'center', paddingHorizontal: 10,
       flex: 1, borderRadius: 10, paddingVertical: sc(12), alignItems: 'center',
       backgroundColor: '#EF4444',
     },
-    deleteConfirmBtnText: { fontSize: sc(15), fontWeight: '600', color: colors.white },
+    deleteConfirmBtnText: { textAlign: 'center', fontSize: sc(15), fontWeight: '600', color: colors.white },
   });
 
   return (

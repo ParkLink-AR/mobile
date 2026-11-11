@@ -50,6 +50,7 @@ export default function SpotBookingRequests() {
   const colors = useThemeColors();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
+  const largeText = scale > 1;
   const { id } = useLocalSearchParams<{ id: string }>();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [driverNames, setDriverNames] = useState<Record<string, string>>({});
@@ -129,19 +130,23 @@ export default function SpotBookingRequests() {
     headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
     driverRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5 },
     driverRowText: { flexShrink: 1, fontSize: sc(14), fontWeight: '700', color: colors.text },
-    infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-    infoLabel: { flex: 1, fontSize: sc(13), color: colors.textSecondary },
-    infoValue: { fontSize: sc(13), fontWeight: '600', color: colors.text },
+    // With the large text size the value drops to its own line under the label (as in the booking's detail):
+    // side by side, on the phone the value took the whole width and the label ended up squashed under it.
+    infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: largeText ? 'wrap' : 'nowrap', rowGap: 2 },
+    infoLabel: { flexGrow: 1, flexShrink: 1, fontSize: sc(13), color: colors.textSecondary },
+    infoValue: largeText
+      ? { flexBasis: '100%', paddingLeft: sc(15) + 8, fontSize: sc(13), fontWeight: '600', color: colors.text }
+      : { flexShrink: 1, textAlign: 'right', fontSize: sc(13), fontWeight: '600', color: colors.text },
     total: { color: colors.teal, fontWeight: '700', marginTop: 8, fontSize: sc(14) },
     actionsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
     actionBtn: {
       flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-      paddingVertical: 9, borderRadius: 10,
+      paddingVertical: 9, paddingHorizontal: 8, borderRadius: 10,
     },
     approveBtn: { backgroundColor: colors.teal },
     rejectBtn: { borderWidth: 1.5, borderColor: '#C62828' },
-    approveBtnText: { color: colors.white, fontWeight: '700' },
-    rejectBtnText: { color: '#C62828', fontWeight: '700' },
+    approveBtnText: { flexShrink: 1, color: colors.white, fontWeight: '700', fontSize: sc(14) },
+    rejectBtnText: { flexShrink: 1, color: '#C62828', fontWeight: '700', fontSize: sc(14) },
     tabBar: {
       flexDirection: 'row', padding: 4, gap: 4, borderRadius: 12,
       backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
@@ -171,7 +176,7 @@ export default function SpotBookingRequests() {
                 numberOfLines={1}
                 // Three tabs in a row: with the large text size "Confirmadas" didn't fit.
                 adjustsFontSizeToFit
-                minimumFontScale={0.7}
+                minimumFontScale={0.5}
               >
                 {tab.label}
               </Text>
@@ -245,7 +250,7 @@ export default function SpotBookingRequests() {
                       ) : (
                         <>
                           <Ionicons name="close" size={sc(16)} color="#C62828" />
-                          <Text style={styles.rejectBtnText}>{t('owner.spot.requests.reject')}</Text>
+                          <Text style={styles.rejectBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('owner.spot.requests.reject')}</Text>
                         </>
                       )}
                     </TouchableOpacity>
@@ -259,7 +264,7 @@ export default function SpotBookingRequests() {
                       ) : (
                         <>
                           <Ionicons name="checkmark" size={sc(16)} color={colors.white} />
-                          <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
+                          <Text style={styles.approveBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('owner.spot.requests.approve')}</Text>
                         </>
                       )}
                     </TouchableOpacity>

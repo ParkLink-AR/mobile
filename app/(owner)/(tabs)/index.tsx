@@ -103,6 +103,8 @@ export default function OwnerToday() {
       borderWidth: 1, borderColor: colors.border, padding: 16, gap: 4,
     },
     statValue: { fontSize: sc(22), fontWeight: '700', color: colors.text },
+    // With the large text size a long sum ("$103.785") shrinks to fit instead of splitting in two.
+    statValueFit: { width: '100%' },
     statLabel: { fontSize: sc(12), color: colors.textSecondary },
     financesShortcut: {
       flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -126,29 +128,32 @@ export default function OwnerToday() {
     bookingCard: { gap: 8 },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
     driverRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    driverRowText: { fontSize: sc(13), fontWeight: '600', color: colors.textSecondary },
+    // flexShrink everywhere a text sits in a row next to an icon: on the phone a text doesn't shrink on its own,
+    // so with the large text size it ran past the card's edge and over the next one.
+    driverRowText: { flexShrink: 1, fontSize: sc(13), fontWeight: '600', color: colors.textSecondary },
     spotTitle: { fontSize: sc(15), fontWeight: '700', color: colors.text, flex: 1 },
     stayRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    stayLabel: { flex: 1, fontSize: sc(13), color: colors.textSecondary },
-    stayValue: { fontSize: sc(13), fontWeight: '600', color: colors.text },
+    stayWhen: { flexShrink: 1 },
+    stayLabel: { flex: 1, minWidth: sc(64), fontSize: sc(13), color: colors.textSecondary },
+    stayValue: { flexShrink: 1, textAlign: 'right', fontSize: sc(13), fontWeight: '600', color: colors.text },
     timeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     requestsList: { gap: 10 },
     requestCard: { gap: 6, borderWidth: 1, borderColor: colors.warning },
     requestSpotTitle: { fontSize: sc(15), fontWeight: '700', color: colors.text },
     vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    vehicleText: { fontSize: sc(13), color: colors.textSecondary },
+    vehicleText: { flexShrink: 1, fontSize: sc(13), color: colors.textSecondary },
     earnText: { fontSize: sc(14), fontWeight: '700', color: colors.teal },
     deadlineRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    deadlineText: { fontSize: sc(13), fontWeight: '600', color: colors.warning },
+    deadlineText: { flexShrink: 1, fontSize: sc(13), fontWeight: '600', color: colors.warning },
     actionsRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
     actionBtn: {
       flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-      paddingVertical: 9, borderRadius: 10,
+      paddingVertical: 9, paddingHorizontal: 8, borderRadius: 10,
     },
     approveBtn: { backgroundColor: colors.teal },
     rejectBtn: { borderWidth: 1.5, borderColor: '#C62828' },
-    approveBtnText: { color: colors.white, fontWeight: '700', fontSize: sc(14) },
-    rejectBtnText: { color: '#C62828', fontWeight: '700', fontSize: sc(14) },
+    approveBtnText: { flexShrink: 1, color: colors.white, fontWeight: '700', fontSize: sc(14) },
+    rejectBtnText: { flexShrink: 1, color: '#C62828', fontWeight: '700', fontSize: sc(14) },
   });
 
   return (
@@ -214,7 +219,7 @@ export default function OwnerToday() {
                             ) : (
                               <>
                                 <Ionicons name="close" size={sc(16)} color="#C62828" />
-                                <Text style={styles.rejectBtnText}>{t('owner.spot.requests.reject')}</Text>
+                                <Text style={styles.rejectBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('owner.spot.requests.reject')}</Text>
                               </>
                             )}
                           </Pressable>
@@ -228,7 +233,7 @@ export default function OwnerToday() {
                             ) : (
                               <>
                                 <Ionicons name="checkmark" size={sc(16)} color={colors.white} />
-                                <Text style={styles.approveBtnText}>{t('owner.spot.requests.approve')}</Text>
+                                <Text style={styles.approveBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('owner.spot.requests.approve')}</Text>
                               </>
                             )}
                           </Pressable>
@@ -242,11 +247,11 @@ export default function OwnerToday() {
 
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
-                <Text style={styles.statValue}>{bookings.length}</Text>
+                <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>{bookings.length}</Text>
                 <Text style={styles.statLabel}>{t('owner.today.bookingsCount')}</Text>
               </View>
               <View style={styles.statCard}>
-                <Text style={styles.statValue}>
+                <Text style={[styles.statValue, styles.statValueFit]} numberOfLines={1} adjustsFontSizeToFit>
                   ${totalToday.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </Text>
                 <Text style={styles.statLabel}>{t('owner.today.earnings')}</Text>
@@ -294,7 +299,7 @@ export default function OwnerToday() {
               {item.date === item.endDate ? (
                 <View style={styles.stayRow}>
                   <Ionicons name="time-outline" size={sc(15)} color={colors.textSecondary} />
-                  <Text style={typography.body}>
+                  <Text style={[typography.body, styles.stayWhen]}>
                     {formatBookingWhen(item, t('driver.booking.timeTo'))}
                   </Text>
                 </View>

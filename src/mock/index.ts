@@ -1,6 +1,6 @@
 import { useSessionStore } from '@/src/store/useSessionStore';
 import { markMockNotificationsRead, withReadState } from './seen';
-import { CAR, DAY_MS, DRIVERS, ago, at, fallbackFetch, iso, profile, reviewsOf, settlements, uid } from './fixtures';
+import { CAR, DAY_MS, DRIVERS, ago, at, fallbackFetch, iso, isMockPerson, profile, reviewsOf, settlements, uid } from './fixtures';
 
 export { mocksEnabled } from './flag';
 
@@ -311,7 +311,8 @@ async function serveMockEntity(path: string, pathname: string, options: RequestI
     return fallbackFetch(path, options);
   }
   const person = pathname.match(/^\/users\/([^/]+)\/public-profile$/);
-  if (person && isMockId(person[1])) return jsonResponse(profile(person[1]));
+  // Only the example people: the backend's own demo users share the id shape (de000000-...) and have real names.
+  if (person && isMockPerson(person[1])) return jsonResponse(profile(person[1]));
   const other = pathname.match(/^\/(?:settlements|payments\/refund-status)\/([^/]+)$/);
   if (other && isMockId(other[1])) return fallbackFetch(path, options);
   return null;

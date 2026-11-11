@@ -4,7 +4,12 @@
     "slug": "thiago",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon-logo.png",
+    "splash": {
+      "image": "./assets/logo-parklink.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
     "userInterfaceStyle": "light",
     "scheme": "parklink",
     "android": {

@@ -139,8 +139,8 @@ export function VehicleFormModal({
     chosenText: { fontSize: sc(14), fontWeight: '700', color: colors.teal },
     changeType: { fontSize: sc(13), fontWeight: '600', color: colors.teal },
     actions: { flexDirection: 'row', gap: 10, marginTop: 8 },
-    cancelBtn: { flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border },
-    cancelBtnText: { color: colors.textSecondary, fontWeight: '600' },
+    cancelBtn: { justifyContent: 'center', paddingHorizontal: 10, flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border },
+    cancelBtnText: { textAlign: 'center', color: colors.textSecondary, fontWeight: '600' },
   });
 
   const optional = bicycle ? ` (${t('vehicles.optional')})` : '';

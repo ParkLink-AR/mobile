@@ -356,7 +356,7 @@ export default function ConfirmStayBooking() {
                 : t('driver.booking.confirmPay').replace('$%{total}', visibleTotal !== null ? formatDebtPesos(Math.round(visibleTotal) + pendingBalance) : '—')
             }
             onPress={reserve}
-            disabled={processing || !quote || debtsLoading}
+            disabled={processing || !quote || debtsLoading || (needsVehicle && !selectedVehicle)}
             style={styles.button}
           />
         </View>

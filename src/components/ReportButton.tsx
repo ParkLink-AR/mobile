@@ -123,13 +123,14 @@ export function ReportButton({ targetType, targetId, variant = 'link', bookingSi
     error: { fontSize: sc(13), color: DANGER, textAlign: 'center' },
     actions: { flexDirection: 'row', gap: 8 },
     cancelBtn: {
+      paddingHorizontal: 10,
       flex: 1, alignItems: 'center', justifyContent: 'center',
       paddingVertical: 10, borderRadius: 10, borderWidth: 1.5, borderColor: colors.border,
     },
-    cancelText: { fontSize: sc(14), color: colors.textSecondary, fontWeight: '700' },
-    confirmBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10, backgroundColor: DANGER },
+    cancelText: { textAlign: 'center', fontSize: sc(14), color: colors.textSecondary, fontWeight: '700' },
+    confirmBtn: { paddingHorizontal: 10, flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10, backgroundColor: DANGER },
     confirmBtnDisabled: { backgroundColor: colors.border },
-    confirmText: { fontSize: sc(14), color: colors.white, fontWeight: '700' },
+    confirmText: { textAlign: 'center', fontSize: sc(14), color: colors.white, fontWeight: '700' },
     sentBox: { alignItems: 'center', gap: 10, paddingVertical: 8 },
   });
 

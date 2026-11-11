@@ -12,6 +12,11 @@ export function getDriverVisiblePrice(ownerPrice: number, ratePercent: number): 
   return Math.round(ownerPrice * (1 + ratePercent / 100));
 }
 
+/** "$9.180" -- whole pesos, Argentine thousands separator. */
+export function formatPesos(amount: number): string {
+  return `$${Math.round(amount).toLocaleString('es-AR')}`;
+}
+
 function pluralKey(base: string, count: number): string {
   return `${base}.${count === 1 ? 'one' : 'other'}`;
 }

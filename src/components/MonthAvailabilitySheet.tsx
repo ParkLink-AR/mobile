@@ -78,7 +78,8 @@ function Sheet({ spotId, nowMs, selectedMs, onPick, onClose }: MonthAvailability
     overlay: { flex: 1, backgroundColor: 'rgba(4, 35, 71, 0.45)', justifyContent: 'flex-end' },
     sheet: { backgroundColor: colors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, height: '88%' },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 6 },
-    title: { fontSize: sc(17), fontWeight: '600', color: colors.text },
+    // Shrinks (wrapping if it has to) so large text never pushes the close button out of the sheet.
+    title: { flexShrink: 1, marginRight: 12, fontSize: sc(17), fontWeight: '600', color: colors.text },
     monthRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingBottom: 8 },
     monthText: { fontSize: sc(14), color: colors.textSecondary, minWidth: 110, textAlign: 'center' },
     hint: { fontSize: sc(13), color: colors.textSecondary, paddingHorizontal: 20, paddingBottom: 8 },

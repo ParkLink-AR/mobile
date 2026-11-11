@@ -17,6 +17,7 @@ import {
 } from '@/src/services/pushNotifications';
 import { useNotificationsSync } from '@/src/services/notificationsLive';
 import { preloadPlateAssets } from '@/src/components/VehiclePlate';
+import { TouchIndicator } from '@/src/components/TouchIndicator';
 import { onAccountBlocked, request } from '@/src/api/client';
 import { openInMode } from '@/src/services/openInMode';
 import { initMonitoring, setMonitoringUser, wrapRoot } from '@/src/services/monitoring';
@@ -127,12 +128,14 @@ function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(driver)" />
-        <Stack.Screen name="(owner)" />
-      </Stack>
+      <TouchIndicator>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(driver)" />
+          <Stack.Screen name="(owner)" />
+        </Stack>
+      </TouchIndicator>
     </SafeAreaProvider>
   );
 }

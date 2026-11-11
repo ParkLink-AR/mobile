@@ -25,6 +25,7 @@ export default function DriverLayout() {
       {/* Spot (driver view) */}
       <Stack.Screen name="spot/[id]" options={{ title: t('layout.driver.spotDetail') }} />
       <Stack.Screen name="spot/[id]/reviews" options={{ title: t('layout.driver.reviews') }} />
+      <Stack.Screen name="spot/[id]/prices" options={{ title: t('layout.driver.prices') }} />
       {/* Booking flow */}
       <Stack.Screen name="booking/confirm" options={{ title: t('driver.booking.confirm.title') }} />
       <Stack.Screen name="booking/confirm-stay" options={{ title: t('driver.booking.confirm.title') }} />

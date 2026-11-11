@@ -5,7 +5,7 @@ import { useLocalSearchParams, router, useFocusEffect, useSegments } from 'expo-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { FAVORITE_RED } from '@/src/components/ParkingSpotCard';
-import { formatShortDate, formatWeekdayDayMonth } from '@/src/services/bookingDates';
+import { formatShortDate, formatWeekdayShortDay } from '@/src/services/bookingDates';
 import { PhotoGallery } from '@/src/components/PhotoGallery';
 import { Button } from '@/src/components/Button';
 import { Screen } from '@/src/components/Screen';
@@ -15,7 +15,7 @@ import {
   stayAvailabilityFetcher,
 } from '@/src/components/AvailabilityDatePickerField';
 import { DatePickerField } from '@/src/components/DatePickerField';
-import { formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
+import { formatPesos, formatStayBreakdown, getDriverVisiblePrice } from '@/src/services/utils';
 import { useCommissionStore } from '@/src/store/useCommissionStore';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useScale } from '@/src/theme/typography';
@@ -32,8 +32,6 @@ import {
   endBounds,
   endDateOf,
   endOnDate,
-  barDomain,
-  freeRangesIn,
   startDateOf,
   endRangeOnDate,
   formatArtTime,
@@ -41,7 +39,6 @@ import {
   freeRangesOnDay,
   isInRanges,
   MIN_BOOKING_MINUTES,
-  pickStartFromTap,
   resolveEndInput,
   resolveStartInput,
   timeToDigits,
@@ -49,7 +46,6 @@ import {
   validStartRanges,
 } from '@/src/services/bookingRange';
 import { TimeEntrySheet } from '@/src/components/TimeEntrySheet';
-import { DayAvailabilityBar } from '@/src/components/DayAvailabilityBar';
 import { MonthAvailabilitySheet } from '@/src/components/MonthAvailabilitySheet';
 import { findFirstFreeStart, useAvailability } from '@/src/hooks/useAvailability';
 import { findFirstFreeStayStart } from '@/src/services/stayAvailability';
@@ -69,11 +65,6 @@ const FEATURES: Record<string, { icon: IconName; labelKey: string; detailKey: st
   uncovered: { icon: 'sunny-outline', labelKey: 'spot.tag.uncovered', detailKey: 'spot.feature.uncovered' },
   access247: { icon: 'time-outline', labelKey: 'spot.tag.access247', detailKey: 'spot.feature.access247' },
 };
-
-/** "$9.180" */
-function formatPesos(amount: number): string {
-  return `$${Math.round(amount).toLocaleString('es-AR')}`;
-}
 
 /** "1,5" / "2" -- horas con coma decimal, sin ceros de más. */
 function formatHours(hours: number): string {
@@ -116,6 +107,26 @@ function bookingModesOf(spot: ParkingSpot): BookingMode[] {
     ...(spot.halfDayEnabled ? (['halfDay'] as const) : []),
     ...(spot.stayEnabled ? (['stay'] as const) : []),
   ];
+}
+
+/**
+ * The booking's span in the footer, in one short line: "mié 4 · 12:19 a 13:19", or with each end's day when it
+ * crosses into another one ("mié 4 22:00 → jue 5 02:00").
+ */
+function footerWhen(startMs: number, endMs: number): string {
+  const startISO = startDateOf(startMs);
+  const endISO = endDateOf(endMs);
+  if (startISO === endISO) {
+    return t('spot.footer.when', {
+      date: formatWeekdayShortDay(startISO),
+      from: formatArtTime(startMs),
+      to: formatArtTime(endMs, true),
+    });
+  }
+  return t('spot.footer.span', {
+    from: `${formatWeekdayShortDay(startISO)} ${formatArtTime(startMs)}`,
+    to: `${formatWeekdayShortDay(endISO)} ${formatArtTime(endMs, true)}`,
+  });
 }
 
 export default function SpotDetail() {
@@ -217,7 +228,9 @@ export default function SpotDetail() {
   // mostrar "no hay horarios" -- una sola vez, y sólo si el conductor todavía no eligió un día. Se busca hacia
   // adelante de a 14 días (lo que ya está cargado no alcanza si la cochera está llena varias semanas).
   const firstFreeLookup = useRef<'idle' | 'done'>('idle');
-  const todayHasNoStart = !!spot?.hourlyEnabled && windows !== null && selectedDateOverride === '' && startRanges.length === 0;
+  // Sólo al repetir una reserva: si no, la cochera se abre sin nada elegido (ver effectiveStartMs).
+  const todayHasNoStart =
+    repeatHours !== null && !!spot?.hourlyEnabled && windows !== null && selectedDateOverride === '' && startRanges.length === 0;
   useEffect(() => {
     if (!todayHasNoStart || firstFreeLookup.current === 'done') return;
     // Sin cancelar en el cleanup: en modo estricto el efecto corre dos veces y la segunda ya no busca.
@@ -234,12 +247,15 @@ export default function SpotDetail() {
       });
   }, [todayHasNoStart, id]);
 
-  // Si el inicio elegido ya no está libre (cambió el día, se lo ganaron), cae en el sugerido. Derivado
-  // en vez de sincronizado con un useEffect, para no encadenar renders.
+  // La cochera se abre sin nada elegido: el inicio es el que tocó el conductor (al repetir una reserva, el sugerido).
+  // Si el elegido ya no está libre (se lo ganaron, cambió el día), vuelve a quedar sin elegir. Derivado en vez de
+  // sincronizado con un useEffect, para no encadenar renders.
   const effectiveStartMs: number | null =
     startMsOverride !== null && isInRanges(startRanges, startMsOverride)
       ? startMsOverride
-      : defaultStart(startRanges, nowMs);
+      : repeatHours !== null
+        ? defaultStart(startRanges, nowMs)
+        : null;
 
   // Entre cuándo puede terminar: hasta donde acaba la ventana libre que contiene el inicio, sea el mismo
   // día o varios después.
@@ -259,15 +275,6 @@ export default function SpotDetail() {
         : null;
 
   const endDateISO = effectiveEndMs !== null ? endDateOf(effectiveEndMs) : selectedDateISO;
-
-  // Lo que dibuja la barra: las próximas 24 h desde ahora (o el día de inicio entero si cae más lejos).
-  const barWindow = barDomain(selectedDateISO, effectiveStartMs, nowMs);
-  const freeInBar = useMemo(
-    () => (windows === null ? [] : freeRangesIn(windows, barWindow)),
-    // barWindow es un objeto nuevo en cada render: se compara por sus extremos.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [windows, barWindow.startMs, barWindow.endMs],
-  );
 
   const durationHours =
     effectiveStartMs !== null && effectiveEndMs !== null ? rangeDurationHours(effectiveStartMs, effectiveEndMs) : 0;
@@ -305,12 +312,6 @@ export default function SpotDetail() {
   function pickStartAt(ms: number) {
     setSelectedDateOverride(startDateOf(ms));
     handleStartTimeConfirm(ms);
-  }
-
-  function handleBarPick(tapMs: number) {
-    if (windows === null) return;
-    const ms = pickStartFromTap(validStartRanges(windows, startDateOf(tapMs), nowMs), tapMs);
-    if (ms !== null) pickStartAt(ms);
   }
 
   function handleEndTimeConfirm(ms: number) {
@@ -561,7 +562,8 @@ export default function SpotDetail() {
     rateLabel: { flexShrink: 0, fontSize: sc(14), fontWeight: '600', color: colors.text },
     rateValue: { fontSize: sc(18), fontWeight: '700', color: colors.teal },
     rateUnit: { fontSize: sc(13), fontWeight: '400', color: colors.textSecondary },
-    rateDetail: { fontSize: sc(13), color: colors.textSecondary, marginTop: 2, lineHeight: sc(18) },
+    allPrices: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: 4 },
+    allPricesText: { fontSize: sc(14), fontWeight: '600', color: colors.teal },
 
     // colors.border barely shows on the gray background -- a translucent textSecondary
     // reads as a clear line in both themes.
@@ -720,14 +722,6 @@ export default function SpotDetail() {
     : null;
 
   const visible = (price: number) => formatPesos(getDriverVisiblePrice(price, commissionRatePercent));
-  // "Auto $9.180 · Moto $4.000" -- each accepted type's own rate, for a spot priced per vehicle.
-  const perVehicle = (priceOf: (vt: VehicleType) => number | undefined) =>
-    spot.vehicleTypes
-      .flatMap((vt) => {
-        const price = priceOf(vt);
-        return price ? [`${t(VEHICLE_TYPE_LABEL_KEYS[vt])} ${visible(price)}`] : [];
-      })
-      .join(' · ');
   const halfDayPrices = spot.halfDayEnabled
     ? spot.stayPricesByVehicleType
       ? spot.vehicleTypes.map((vt) => spot.stayPricesByVehicleType?.[vt]?.halfDay ?? null)
@@ -738,24 +732,6 @@ export default function SpotDetail() {
   const minStayDay = spot.stayPricesByVehicleType
     ? Math.min(...spot.vehicleTypes.map((vt) => spot.stayPricesByVehicleType?.[vt]?.day ?? Infinity))
     : spot.pricePerDay;
-
-  // "$60.000 por semana · $200.000 por mes · Del 10/10/2026 al 20/10/2026 · Hasta 7 días" --
-  // or, priced per vehicle, each type's daily rate first.
-  const stayDetail = [
-    spot.stayPricesByVehicleType ? perVehicle((vt) => spot.stayPricesByVehicleType?.[vt]?.day) : null,
-    !spot.stayPricesByVehicleType && spot.pricePerWeek !== null
-      ? t('spot.mode.perWeek', { price: formatPesos(getDriverVisiblePrice(spot.pricePerWeek, commissionRatePercent)) })
-      : null,
-    !spot.stayPricesByVehicleType && spot.pricePerMonth !== null
-      ? t('spot.mode.perMonth', { price: formatPesos(getDriverVisiblePrice(spot.pricePerMonth, commissionRatePercent)) })
-      : null,
-    spot.stayAvailableUntil
-      ? t('spot.mode.window', { from: formatShortDate(minStayStartDate), to: formatShortDate(spot.stayAvailableUntil) })
-      : spot.stayAvailableFrom && spot.stayAvailableFrom > todayArtDateISO()
-        ? t('spot.mode.from', { from: formatShortDate(spot.stayAvailableFrom) })
-        : null,
-    spot.maxStayDays ? t('spot.mode.maxDays', { days: String(spot.maxStayDays) }) : null,
-  ].filter(Boolean).join(' · ');
 
   return (
     <Screen style={styles.screen} edges={['left', 'right']}>
@@ -818,11 +794,6 @@ export default function SpotDetail() {
                       {leadPrice}<Text style={styles.rateUnit}>{` ${t('spot.unit.hour')}`}</Text>
                     </Text>
                   </View>
-                  <Text style={styles.rateDetail}>
-                    {spot.pricePerHourByVehicleType
-                      ? perVehicle((vt) => spot.pricePerHourByVehicleType?.[vt])
-                      : t('spot.mode.hourlyDetail')}
-                  </Text>
                 </View>
               </View>
             )}
@@ -841,7 +812,6 @@ export default function SpotDetail() {
                       <Text style={styles.rateUnit}>{` ${t('spot.unit.day')}`}</Text>
                     </Text>
                   </View>
-                  <Text style={styles.rateDetail}>{stayDetail}</Text>
                 </View>
               </View>
             )}
@@ -858,13 +828,16 @@ export default function SpotDetail() {
                       <Text style={styles.rateUnit}>{` ${t('spot.unit.halfDay')}`}</Text>
                     </Text>
                   </View>
-                  <Text style={styles.rateDetail}>
-                    {spot.stayPricesByVehicleType
-                      ? perVehicle((vt) => spot.stayPricesByVehicleType?.[vt]?.halfDay)
-                      : t('spot.mode.halfDayDetail', { hours: String(HALF_DAY_HOURS) })}
-                  </Text>
                 </View>
               </View>
+            )}
+            {/* The headline price of each mode above; everything else (each vehicle's rate, week and month, the
+                stay's dates) on its own screen. */}
+            {(spot.hourlyEnabled || spot.stayEnabled || spot.halfDayEnabled) && (
+              <Pressable style={styles.allPrices} onPress={() => router.push(`${group}/spot/${spot.id}/prices`)}>
+                <Text style={styles.allPricesText}>{t('spot.prices.seeAll')}</Text>
+                <Ionicons name="chevron-forward" size={sc(16)} color={colors.teal} />
+              </Pressable>
             )}
           </View>
 
@@ -988,20 +961,9 @@ export default function SpotDetail() {
                           <Text style={styles.retry}>{t('spot.availabilityRetry')}</Text>
                         </TouchableOpacity>
                       </View>
-                    ) : startRanges.length === 0 ? (
+                    ) : selectedDateOverride !== '' && startRanges.length === 0 ? (
                       <Text style={styles.warn}>{t('spot.noSlotsDay')}</Text>
-                    ) : (
-                      <DayAvailabilityBar
-                        domain={barWindow}
-                        free={freeInBar}
-                        selection={
-                          effectiveStartMs !== null && effectiveEndMs !== null
-                            ? { startMs: effectiveStartMs, endMs: effectiveEndMs }
-                            : null
-                        }
-                        onPick={handleBarPick}
-                      />
-                    )}
+                    ) : null}
                     {windows !== null && (
                       <Pressable style={styles.monthButton} onPress={() => setMonthSheetOpen(true)}>
                         <Ionicons name="calendar-outline" size={sc(18)} color={colors.teal} />
@@ -1017,7 +979,7 @@ export default function SpotDetail() {
                     <View style={styles.rangeRow}>
                       <AvailabilityDatePickerField
                         fetchAvailability={hourlyAvailabilityFetcher(spot.id)}
-                        value={selectedDateISO}
+                        value={selectedDateOverride !== '' || effectiveStartMs !== null ? selectedDateISO : ''}
                         onChange={handleStartDateChange}
                         placeholder={t('spot.datePlaceholder')}
                         minimumDate={new Date(`${todayArtDateISO()}T00:00:00`)}
@@ -1026,7 +988,8 @@ export default function SpotDetail() {
                       />
                       <Pressable
                         style={[styles.dateInput, styles.rangeTime]}
-                        onPress={() => startRanges.length > 0 && setTimeSheet('start')}
+                        // Nothing free that day: straight to the per-day calendar to pick another one.
+                        onPress={() => (startRanges.length > 0 ? setTimeSheet('start') : setMonthSheetOpen(true))}
                       >
                         <Text style={styles.rangeTimeText}>{effectiveStartMs !== null ? formatArtTime(effectiveStartMs) : '--:--'}</Text>
                         <Ionicons name="time-outline" size={sc(18)} color={colors.textSecondary} />
@@ -1205,7 +1168,9 @@ export default function SpotDetail() {
         </View>
       </ScrollView>
 
-      {/* Sticky footer: what it costs and the one action, always in reach. */}
+      {/* Sticky footer: what it costs and the one action, always in reach -- for an hourly booking, only once its
+          start is chosen (the spot opens with nothing picked). */}
+      {!(showHourly && !canBook && !isOwner && spot.status === 'active') && (
       <View style={styles.footer}>
         {isOwner ? (
           <TouchableOpacity style={styles.editBtn} onPress={() => router.push(`${group}/spots/${spot.id}/edit`)}>
@@ -1224,18 +1189,9 @@ export default function SpotDetail() {
             <View style={styles.footerInfo}>
               <Text style={styles.footerTotal}>{canBook ? formatPesos(total) : '—'}</Text>
               {canBook && (
-                <>
-                  <Text style={styles.footerWhen} numberOfLines={2}>
-                    {t('spot.footer.from', {
-                      when: `${formatWeekdayDayMonth(selectedDateISO)} ${formatArtTime(effectiveStartMs!)}`,
-                    })}
-                  </Text>
-                  <Text style={styles.footerWhen} numberOfLines={2}>
-                    {t('spot.footer.to', {
-                      when: `${formatWeekdayDayMonth(endDateISO)} ${formatArtTime(effectiveEndMs!, true)}`,
-                    })}
-                  </Text>
-                </>
+                <Text style={styles.footerWhen} numberOfLines={2}>
+                  {footerWhen(effectiveStartMs!, effectiveEndMs!)}
+                </Text>
               )}
             </View>
             <Button
@@ -1263,18 +1219,9 @@ export default function SpotDetail() {
                 {halfDayTotal !== null && !halfDayQuoteLoading ? formatPesos(halfDayTotal) : '—'}
               </Text>
               {halfDayQuote && (
-                <>
-                  <Text style={styles.footerWhen} numberOfLines={2}>
-                    {t('spot.footer.from', {
-                      when: `${formatWeekdayDayMonth(halfDayQuote.startDateTime.slice(0, 10))} ${formatArtTime(new Date(halfDayQuote.startDateTime).getTime())}`,
-                    })}
-                  </Text>
-                  <Text style={styles.footerWhen} numberOfLines={2}>
-                    {t('spot.footer.to', {
-                      when: `${formatWeekdayDayMonth(halfDayQuote.endDateTime.slice(0, 10))} ${formatArtTime(new Date(halfDayQuote.endDateTime).getTime(), true)}`,
-                    })}
-                  </Text>
-                </>
+                <Text style={styles.footerWhen} numberOfLines={2}>
+                  {footerWhen(new Date(halfDayQuote.startDateTime).getTime(), new Date(halfDayQuote.endDateTime).getTime())}
+                </Text>
               )}
             </View>
             <Button
@@ -1323,6 +1270,7 @@ export default function SpotDetail() {
           </>
         ) : null}
       </View>
+      )}
     </Screen>
   );
 }
