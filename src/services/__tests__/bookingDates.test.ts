@@ -1,6 +1,8 @@
 import { setLanguage } from '@/src/i18n';
 import {
   formatBookingWhen,
+  formatCompactDate,
+  formatCompactDateTime,
   formatLongDate,
   formatLongDateTime,
   formatShortDate,
@@ -10,6 +12,16 @@ import {
 
 describe('date formats', () => {
   afterEach(() => setLanguage('es'));
+
+  it('compact: "16 nov 2026", abbreviated month', () => {
+    expect(formatCompactDate('2026-11-16')).toBe('16 nov 2026');
+    expect(formatCompactDate('2027-01-05')).toBe('5 ene 2027');
+    expect(formatCompactDateTime('2026-11-16T18:00:00Z')).toBe('16 nov 2026, 15:00');
+    setLanguage('en');
+    expect(formatCompactDate('2026-11-16')).toBe('Nov 16, 2026');
+    setLanguage('ja');
+    expect(formatCompactDate('2026-11-16')).toBe('2026年11月16日');
+  });
 
   it('long: "14 de septiembre de 2026"', () => {
     expect(formatLongDate('2026-09-14')).toBe('14 de septiembre de 2026');
@@ -36,7 +48,7 @@ describe('date formats', () => {
   it('booking line, short and long', () => {
     const range = mapBookingDateRange('2026-09-14T13:00:00Z', '2026-09-14T16:00:00Z');
     expect(formatBookingWhen(range, 'a')).toBe('14/09/2026 10:00 a 13:00');
-    expect(formatBookingWhen(range, 'a', 'long')).toBe('14 de septiembre de 2026, 10:00 a 13:00');
+    expect(formatBookingWhen(range, 'a', 'long')).toBe('14 sep 2026, 10:00 a 13:00');
   });
 
   it('multi-day stay: both dates with their times, compact, no check-in/check-out labels', () => {

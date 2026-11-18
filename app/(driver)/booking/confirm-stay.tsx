@@ -21,7 +21,7 @@ import { bookingVehicleBody, useBookingVehicle, vehicleErrorMessage } from '@/sr
 import { PaymentMethodDisplay } from '@/src/components/PaymentMethodDisplay';
 import { SpotSummaryCard } from '@/src/components/SpotSummaryCard';
 import { VehiclePicker } from '@/src/components/VehiclePicker';
-import { formatLongDateTime, formatShortDate } from '@/src/services/bookingDates';
+import { formatCompactDateTime, formatLongDateTime, formatShortDate } from '@/src/services/bookingDates';
 import { CancellationPolicyNote } from '@/src/components/booking/CancellationPolicyNote';
 import { DebtBreakdown } from '@/src/components/booking/DebtBreakdown';
 import { confirmChangedTotal, debtChanged, formatDebtPesos, useMyDebts } from '@/src/services/debts';
@@ -240,7 +240,9 @@ export default function ConfirmStayBooking() {
     detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: largeText ? 'wrap' : 'nowrap', rowGap: 2 },
     detailLabel: { flexGrow: 1, flexShrink: 0, fontSize: sc(14), color: colors.textSecondary },
     detailValue: largeText
-      ? { width: '100%', paddingLeft: sc(16) + 8, fontSize: sc(14), color: colors.text, fontWeight: '600' }
+      // Next to its label when it fits (dates are short: "17 nov, 15:00"); only a value that
+      // doesn't fit drops to the line below.
+      ? { marginLeft: 'auto', flexShrink: 1, maxWidth: '100%', textAlign: 'right', fontSize: sc(14), color: colors.text, fontWeight: '600' }
       : { flexShrink: 1, textAlign: 'right', fontSize: sc(14), color: colors.text, fontWeight: '600' },
     divider: { height: 1, backgroundColor: colors.border },
     totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -292,12 +294,12 @@ export default function ConfirmStayBooking() {
                   <View style={styles.detailRow}>
                     <Ionicons name="log-in-outline" size={sc(16)} color={colors.textSecondary} />
                     <Text style={styles.detailLabel}>{t('spot.stay.checkIn')}</Text>
-                    <Text style={styles.detailValue}>{formatLongDateTime(quote.startDateTime)}</Text>
+                    <Text style={styles.detailValue}>{formatCompactDateTime(quote.startDateTime)}</Text>
                   </View>
                   <View style={styles.detailRow}>
                     <Ionicons name="log-out-outline" size={sc(16)} color={colors.textSecondary} />
                     <Text style={styles.detailLabel}>{t('spot.stay.checkOut')}</Text>
-                    <Text style={styles.detailValue}>{formatLongDateTime(quote.endDateTime)}</Text>
+                    <Text style={styles.detailValue}>{formatCompactDateTime(quote.endDateTime)}</Text>
                   </View>
                   <View style={styles.detailRow}>
                     <Ionicons name="hourglass-outline" size={sc(16)} color={colors.textSecondary} />

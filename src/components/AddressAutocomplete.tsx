@@ -111,8 +111,8 @@ export function AddressAutocomplete({
 
   const styles = StyleSheet.create({
     wrapper: { flex: 1, minWidth: 0, position: 'relative', zIndex: 20, elevation: 20 },
+    // No flex here: in the wrapper's column it would zero the fixed height below.
     inputWrapper: {
-      flex: 1,
       minWidth: 0,
       flexDirection: 'row',
       alignItems: 'center',

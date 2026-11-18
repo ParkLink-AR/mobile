@@ -87,9 +87,8 @@ export default function PaymentPendingScreen() {
   const [attempt, setAttempt] = useState(0);
   const [resuming, setResuming] = useState(false);
   const [forcing, setForcing] = useState(false);
-  // Demo: after "Consultar pago" the "PAGO APROBADO" banner shows, even if the backend call
-  // failed (then the approved state is faked locally, just so the flow can be seen).
-  const [approvedBanner, setApprovedBanner] = useState(false);
+  // Demo: if the backend refuses "Consultar pago", the approved state is faked locally so the
+  // flow can still be seen.
   const [fakeApproved, setFakeApproved] = useState(false);
   // Mercado Pago already has a payment in process for it: don't offer paying again.
   const [paymentInFlight, setPaymentInFlight] = useState(false);
@@ -246,7 +245,6 @@ export default function PaymentPendingScreen() {
   async function forcePayment() {
     if (!booking || forcing) return;
     setForcing(true);
-    setApprovedBanner(true);
     try {
       await request('/payments/force-approve', {
         method: 'POST',
@@ -307,14 +305,18 @@ export default function PaymentPendingScreen() {
     noteText: { flex: 1, fontSize: sc(14), lineHeight: sc(20) },
     // Part of the screen, not a panel stuck on it: same background, no divider, and it
     // runs to the bottom edge (the home indicator sits over its padding, not under a gap).
+    // Kept compact even with large text, so the screen above gets the room.
     footer: {
-      paddingHorizontal: 24, paddingTop: sc(10), paddingBottom: insets.bottom + sc(6),
+      paddingHorizontal: 24, paddingTop: 8, paddingBottom: insets.bottom + 4,
       backgroundColor: colors.background,
     },
     primary: {
-      borderRadius: 14, paddingVertical: sc(14),
+      borderRadius: 14, paddingVertical: 11,
       shadowColor: colors.teal, shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3,
     },
+    primaryText: { fontSize: Math.min(sc(16), 19) },
+    // The text actions side by side when they fit, one under the other when they don't.
+    secondaryRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 4 },
   });
 
   // ---- What each state shows ----
@@ -365,18 +367,19 @@ export default function PaymentPendingScreen() {
     (status === 'pending' || status === 'rejected' || status === 'unknown');
   const forceButton = canForce ? (
     forcing ? (
-      <ActivityIndicator color={colors.teal} style={{ paddingVertical: sc(10) }} />
+      <ActivityIndicator color={colors.teal} style={{ paddingVertical: 8, paddingHorizontal: 12 }} />
     ) : (
       <SecondaryAction label={t('driver.payment.force.button')} onPress={forcePayment} />
     )
   ) : null;
   const resumeButton = resuming ? (
-    <ActivityIndicator color={colors.teal} style={{ paddingVertical: sc(14) }} />
+    <ActivityIndicator color={colors.teal} style={{ paddingVertical: 11 }} />
   ) : (
     <Button
       title={t(status === 'rejected' ? 'driver.payment.resume.retry' : 'driver.payment.resume.button')}
       onPress={resume}
       style={styles.primary}
+      textStyle={styles.primaryText}
     />
   );
 
@@ -389,20 +392,6 @@ export default function PaymentPendingScreen() {
   return (
     <Screen style={styles.screen} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {approvedBanner ? (
-          <View
-            style={{
-              backgroundColor: SUCCESS, borderRadius: 14, paddingVertical: sc(14),
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-          >
-            <Ionicons name="checkmark-circle" size={sc(22)} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontSize: sc(18), fontWeight: '800', letterSpacing: 0.6 }}>
-              {t('driver.payment.result.approvedBanner')}
-            </Text>
-          </View>
-        ) : null}
-
         <StatusHero tone={hero.tone} icon={hero.icon} busy={status === 'pending'} key={status} />
 
         <View style={styles.heading}>
@@ -457,32 +446,34 @@ export default function PaymentPendingScreen() {
       <View style={styles.footer}>
         {status === 'approved' ? (
           <>
-            <Button title={t('driver.payment.result.viewBooking')} onPress={goToBooking} style={styles.primary} />
+            <Button title={t('driver.payment.result.viewBooking')} onPress={goToBooking} style={styles.primary} textStyle={styles.primaryText} />
             <SecondaryAction label={t('driver.payment.result.goHome')} onPress={goHome} />
           </>
         ) : canResume ? (
           <>
             {resumeButton}
-            {forceButton}
-            <SecondaryAction label={t('driver.booking.success.viewBookings')} onPress={goToBookings} />
+            <View style={styles.secondaryRow}>
+              {forceButton}
+              <SecondaryAction label={t('driver.booking.success.viewBookings')} onPress={goToBookings} />
+            </View>
           </>
         ) : status === 'rejected' || status === 'refunded' || status === 'expired' ? (
           <>
-            <Button title={t('driver.payment.result.backToSpot')} onPress={goToSpot} style={styles.primary} />
+            <Button title={t('driver.payment.result.backToSpot')} onPress={goToSpot} style={styles.primary} textStyle={styles.primaryText} />
             <SecondaryAction label={t('driver.payment.result.goHome')} onPress={goHome} />
           </>
         ) : status === 'unknown' ? (
           <>
-            <Button title={t('driver.booking.success.viewBookings')} onPress={goToBookings} style={styles.primary} />
+            <Button title={t('driver.booking.success.viewBookings')} onPress={goToBookings} style={styles.primary} textStyle={styles.primaryText} />
             {forceButton}
           </>
         ) : (
           // Pending: nothing to cancel -- an unpaid hold just expires on its own
           // (POST /bookings/{id}/cancel doesn't take PENDING_PAYMENT).
-          <>
+          <View style={styles.secondaryRow}>
             {forceButton}
             <SecondaryAction label={t('driver.booking.success.viewBookings')} onPress={goToBookings} />
-          </>
+          </View>
         )}
       </View>
     </Screen>
@@ -616,7 +607,11 @@ function Receipt({
       fontSize: sc(20), fontWeight: '800', color: faded ? colors.textSecondary : colors.teal,
       textDecorationLine: faded ? 'line-through' : 'none',
     },
-    method: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6, flex: 1 },
+    // Logo + name never squeezed next to the label: with large text they don't fit beside it,
+    // so the whole row wraps and they go to the line below, on the right.
+    methodRow: { flexWrap: 'wrap', alignItems: 'center', rowGap: 4 },
+    methodLabel: { width: undefined, flexShrink: 0 },
+    method: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6, flexGrow: 1, flexShrink: 0 },
     methodText: { fontSize: sc(14), fontWeight: '600', color: colors.text },
   });
   return (
@@ -638,11 +633,11 @@ function Receipt({
         </View>
       ) : null}
       {showPaid ? (
-        <View style={styles.row}>
-          <Text style={styles.label}>{t('driver.payment.result.method')}</Text>
+        <View style={[styles.row, styles.methodRow]}>
+          <Text style={[styles.label, styles.methodLabel]}>{t('driver.payment.result.method')}</Text>
           <View style={styles.method}>
-            <MercadoPagoLogo size={sc(20)} />
-            <Text style={styles.methodText} numberOfLines={1}>Mercado Pago</Text>
+            <MercadoPagoLogo size={Math.min(sc(20), 24)} />
+            <Text style={styles.methodText}>Mercado Pago</Text>
           </View>
         </View>
       ) : null}
@@ -678,9 +673,9 @@ function SecondaryAction({ label, onPress }: { label: string; onPress: () => voi
     <Pressable
       onPress={onPress}
       hitSlop={6}
-      style={({ pressed }) => ({ alignSelf: 'center', paddingVertical: sc(10), paddingHorizontal: sc(16), opacity: pressed ? 0.6 : 1 })}
+      style={({ pressed }) => ({ alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 12, opacity: pressed ? 0.6 : 1 })}
     >
-      <Text style={{ fontSize: sc(14), fontWeight: '600', color: colors.teal }}>{label}</Text>
+      <Text style={{ fontSize: Math.min(sc(14), 17), fontWeight: '600', color: colors.teal }}>{label}</Text>
     </Pressable>
   );
 }

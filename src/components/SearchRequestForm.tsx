@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/src/components/Button';
 import { Chip } from '@/src/components/Chip';
 import { DatePickerField } from '@/src/components/DatePickerField';
-import { DropdownSelect } from '@/src/components/DropdownSelect';
 import { HourPickerField } from '@/src/components/HourPickerField';
+import { AddressAutocomplete } from '@/src/components/AddressAutocomplete';
+import { reverseGeocode } from '@/src/api/parking';
 import { VEHICLE_TYPES, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { earliestBookableHourToday, todayArtDateISO } from '@/src/services/dateUtils';
-import { PROVINCES, SearchRequest, isSearchRequestComplete } from '@/src/services/searchRequest';
+import { SearchPlace, SearchRequest, isSearchRequestComplete } from '@/src/services/searchRequest';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useScale } from '@/src/theme/typography';
 import { t } from '@/src/i18n';
@@ -18,11 +21,10 @@ interface Props {
   onSubmit: (request: SearchRequest) => void;
 }
 
-const PROVINCE_OPTIONS = PROVINCES.map((province) => ({ value: province.id, label: province.name }));
-
 /**
- * First thing a driver sees in the search tab: province (or CABA), when and which vehicle.
- * The map and the spots only show up once this is filled in.
+ * First thing a driver sees in the search tab: where (an address, or where they are), when
+ * and which vehicle. The map and the spots only show up once this is filled in, centred on
+ * that place and with its address already in the map's search bar.
  */
 export function SearchRequestForm({ initial, onSubmit }: Props) {
   const colors = useThemeColors();
@@ -32,7 +34,12 @@ export function SearchRequestForm({ initial, onSubmit }: Props) {
   // Today, hours already gone can't be booked: the earliest start is the current hour.
   const earliestToday = Math.min(earliestBookableHourToday(), 23);
 
-  const [provinceId, setProvinceId] = useState(initial?.provinceId ?? PROVINCES[0].id);
+  // Where: what's typed in the box, and the place picked from it (or from the GPS button).
+  // Typing again drops the picked place until a suggestion is chosen.
+  const [placeQuery, setPlaceQuery] = useState(initial?.place?.label ?? '');
+  const [place, setPlace] = useState<SearchPlace | null>(initial?.place ?? null);
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [mode, setMode] = useState<'hourly' | 'stay'>(initial?.mode ?? 'hourly');
   const [date, setDate] = useState(initial?.date ?? today);
   const [fromHour, setFromHour] = useState(initial?.fromHour ?? Math.max(8, earliestToday));
@@ -53,9 +60,38 @@ export function SearchRequestForm({ initial, onSubmit }: Props) {
   useEffect(() => {
     if (stayHour < minStayHour) setStayHour(minStayHour);
   }, [stayHour, minStayHour]);
+  // Only the type: which of the driver's vehicles (and its plate) is chosen when booking.
   const [vehicleType, setVehicleType] = useState(initial?.vehicleType ?? null);
+  const vehicleId = null;
 
-  const request: SearchRequest = { provinceId, mode, date, fromHour, toHour, stayFrom, stayTo, stayHour, vehicleType, vehicleId: null };
+  // The location button: the driver's position as the place, written out as an address.
+  // Never on its own -- the box starts empty until they type an address or tap the button.
+  async function locateMe() {
+    setLocationError(null);
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationError(t('search.location.permissionError'));
+        return;
+      }
+      const { coords } = await Location.getCurrentPositionAsync({});
+      let label = t('owner.spot.new.locationFallback');
+      try {
+        label = (await reverseGeocode(coords.latitude, coords.longitude)).displayName;
+      } catch {
+        // The coordinates are enough to search; the address is only what's shown.
+      }
+      setPlace({ label, lat: coords.latitude, lng: coords.longitude });
+      setPlaceQuery(label);
+    } catch {
+      setLocationError(t('search.location.error'));
+    } finally {
+      setLocating(false);
+    }
+  }
+
+  const request: SearchRequest = { place, mode, date, fromHour, toHour, stayFrom, stayTo, stayHour, vehicleType, vehicleId };
 
   const styles = StyleSheet.create({
     content: { padding: 20, paddingBottom: 40 },
@@ -71,6 +107,16 @@ export function SearchRequestForm({ initial, onSubmit }: Props) {
       marginBottom: 8,
     },
     row: { flexDirection: 'row', gap: 10 },
+    whereRow: { flexDirection: 'row', alignItems: 'center', gap: 10, zIndex: 20, elevation: 20 },
+    locateButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: colors.teal,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    locationError: { fontSize: sc(12), color: colors.textSecondary, marginTop: 6 },
     chipsWrap: { flexDirection: 'row', flexWrap: 'wrap' },
     field: { flex: 1, minWidth: 0, gap: 4 },
     smallLabel: { fontSize: sc(11), color: colors.textSecondary, fontWeight: '500' },
@@ -92,9 +138,33 @@ export function SearchRequestForm({ initial, onSubmit }: Props) {
       <Text style={styles.subtitle}>{t('search.request.subtitle')}</Text>
 
       <Text style={styles.sectionLabel}>{t('search.request.where')}</Text>
-      <View style={styles.row}>
-        <DropdownSelect icon="location-outline" options={PROVINCE_OPTIONS} value={provinceId} onChange={setProvinceId} active />
+      <View style={styles.whereRow}>
+        <AddressAutocomplete
+          value={placeQuery}
+          onChangeText={(text) => {
+            setPlaceQuery(text);
+            setPlace(null);
+          }}
+          onSelect={(candidate) => {
+            setPlace({ label: candidate.displayName, lat: candidate.lat, lng: candidate.lng });
+            setPlaceQuery(candidate.displayName);
+          }}
+          placeholder={t('search.placeholder')}
+        />
+        <TouchableOpacity
+          style={styles.locateButton}
+          onPress={locateMe}
+          disabled={locating}
+          accessibilityLabel={t('owner.spot.new.useCurrentLocation')}
+        >
+          {locating ? (
+            <ActivityIndicator color={colors.white} size="small" />
+          ) : (
+            <Ionicons name="locate" size={sc(20)} color={colors.white} />
+          )}
+        </TouchableOpacity>
       </View>
+      {locationError && <Text style={styles.locationError}>{locationError}</Text>}
 
       <Text style={styles.sectionLabel}>{t('search.request.when')}</Text>
       <View style={styles.chipsWrap}>

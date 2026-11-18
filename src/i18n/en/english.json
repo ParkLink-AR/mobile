@@ -806,7 +806,7 @@
 
   "search.request.title": "Where and when do you want to park?",
   "search.request.subtitle": "Fill in these details to see the available parking spots on the map.",
-  "search.request.where": "PROVINCE",
+  "search.request.where": "WHERE",
   "search.request.when": "WHEN",
   "search.request.hourly": "By the hour",
   "search.request.stay": "Stay (days)",
@@ -987,7 +987,6 @@
   "driver.payment.result.stepReserved": "Spot reserved",
   "driver.payment.result.approvedTitle": "Booking confirmed!",
   "driver.payment.result.approvedBody": "Your parking spot is reserved.",
-  "driver.payment.result.approvedBanner": "PAYMENT APPROVED",
   "driver.payment.result.awaitingTitle": "Payment received!",
   "driver.payment.result.awaitingNote": "Now the owner has to accept your booking. We'll let you know as soon as they answer; if they don't in time, you get your money back automatically.",
   "driver.payment.result.paidOn": "You paid on %{date} at %{time}.",

@@ -1,12 +1,19 @@
 import type { VehicleType } from '@/src/constants/vehicleTypes';
 import type { SearchParkingSpotsFilters } from '@/src/services/parkingService';
 
+/** Where the driver wants to park: an address they picked, or where they are. */
+export interface SearchPlace {
+  label: string;
+  lat: number;
+  lng: number;
+}
+
 /**
- * Lo que el conductor tiene que completar antes de ver el mapa: dónde (provincia o CABA),
- * cuándo (un día con horas, o las fechas de una estadía) y con qué tipo de vehículo.
+ * Lo que el conductor tiene que completar antes de ver el mapa: dónde (una dirección o su
+ * ubicación), cuándo (un día con horas, o las fechas de una estadía) y con qué vehículo.
  */
 export interface SearchRequest {
-  provinceId: string;
+  place: SearchPlace | null;
   mode: 'hourly' | 'stay';
   // mode 'hourly': YYYY-MM-DD + franja horaria (toHour 24 = medianoche).
   date: string;
@@ -22,55 +29,8 @@ export interface SearchRequest {
   vehicleId: string | null;
 }
 
-export const CABA_ID = 'caba';
-
-interface Province {
-  id: string;
-  name: string;
-  // Cómo puede aparecer en el texto de una dirección (sin tildes, en minúsculas).
-  aliases: string[];
-  // Centro de la búsqueda: la capital de la provincia.
-  lat: number;
-  lng: number;
-}
-
-export const PROVINCES: Province[] = [
-  { id: CABA_ID, name: 'CABA', aliases: ['caba', 'ciudad autonoma de buenos aires', 'capital federal'], lat: -34.6037, lng: -58.3816 },
-  { id: 'buenos-aires', name: 'PBA', aliases: ['buenos aires'], lat: -34.9205, lng: -57.9536 },
-  { id: 'cordoba', name: 'Córdoba', aliases: ['cordoba'], lat: -31.4201, lng: -64.1888 },
-];
-
-export function findProvince(id: string): Province | undefined {
-  return PROVINCES.find((province) => province.id === id);
-}
-
-function normalize(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/^provincia de /, '')
-    .trim();
-}
-
-/**
- * Whether a spot's address ("calle número, barrio, ciudad, provincia, cp, país") is in the
- * province. The first part is the street, left out so "Av. Santa Fe 3245" or "Córdoba 1500"
- * don't count as being in Santa Fe or Córdoba. CABA addresses also say "Buenos Aires" (the
- * city), so they're never matched to the province of that name.
- */
-export function addressInProvince(address: string, provinceId: string): boolean {
-  const province = findProvince(provinceId);
-  if (!province) return false;
-  const parts = address.split(',').slice(1).map(normalize);
-  const inCaba = parts.some((part) => PROVINCES[0].aliases.includes(part));
-  if (provinceId === CABA_ID) return inCaba;
-  if (inCaba) return false;
-  return parts.some((part) => province.aliases.includes(part));
-}
-
 export function isSearchRequestComplete(request: SearchRequest): boolean {
-  if (!request.provinceId || !request.vehicleType) return false;
+  if (!request.place || !request.vehicleType) return false;
   if (request.mode === 'stay') return !!request.stayFrom && !!request.stayTo && request.stayTo > request.stayFrom;
   return !!request.date && request.toHour > request.fromHour;
 }

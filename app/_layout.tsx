@@ -18,6 +18,7 @@ import {
 import { useNotificationsSync } from '@/src/services/notificationsLive';
 import { preloadPlateAssets } from '@/src/components/VehiclePlate';
 import { TouchIndicator } from '@/src/components/TouchIndicator';
+import { DemoCurtain } from '@/src/components/DemoCurtain';
 import { onAccountBlocked, request } from '@/src/api/client';
 import { openInMode } from '@/src/services/openInMode';
 import { initMonitoring, setMonitoringUser, wrapRoot } from '@/src/services/monitoring';
@@ -49,11 +50,18 @@ function RootLayout() {
   // The notifications inbox and its badge, kept live while the app is open.
   useNotificationsSync(userId);
 
-  // The platform commission rate for price-breakdown displays (create-spot preview,
-  // spot details) -- fetched once per session, since it rarely changes and every screen
-  // that needs it reads the same cached value from useCommissionStore.
+  // The platform commission rate for every price the driver sees -- every screen reads the
+  // same cached value from useCommissionStore. Fetched on login and again whenever the app
+  // comes back to the foreground: if the first fetch failed (no signal, server down) the app
+  // would otherwise keep showing prices with the fallback rate until it was restarted, and a
+  // rate an admin changed reaches open apps too.
   useEffect(() => {
-    if (userId) fetchCommissionRate();
+    if (!userId) return;
+    fetchCommissionRate();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') fetchCommissionRate();
+    });
+    return () => subscription.remove();
   }, [userId, fetchCommissionRate]);
 
   // Register the device's FCM token when a user is signed in; drop it on
@@ -135,6 +143,7 @@ function RootLayout() {
           <Stack.Screen name="(driver)" />
           <Stack.Screen name="(owner)" />
         </Stack>
+        <DemoCurtain />
       </TouchIndicator>
     </SafeAreaProvider>
   );

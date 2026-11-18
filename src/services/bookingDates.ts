@@ -102,6 +102,29 @@ export function formatLongDate(dateISO: string): string {
   return `${day} de ${MONTHS.es[month - 1]} de ${year}`;
 }
 
+const MONTHS_SHORT: Record<string, string[]> = {
+  es: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+};
+
+/**
+ * "16 nov 2026" from a YYYY-MM-DD: the abbreviated month, for booking summaries, which have to
+ * fit on one line even with large text.
+ */
+export function formatCompactDate(dateISO: string): string {
+  const [year, month, day] = ymd(dateISO);
+  const lang = getLanguage();
+  if (lang === 'ja') return `${year}年${month}月${day}日`;
+  if (lang === 'en') return `${MONTHS_SHORT.en[month - 1]} ${day}, ${year}`;
+  return `${day} ${MONTHS_SHORT.es[month - 1]} ${year}`;
+}
+
+/** "16 nov 2026, 15:00" */
+export function formatCompactDateTime(dateTimeISO: string): string {
+  const separator = getLanguage() === 'ja' ? ' ' : ', ';
+  return `${formatCompactDate(artDateFromISO(dateTimeISO))}${separator}${formatTime(dateTimeISO)}`;
+}
+
 /** "14/09/2026" from a full timestamp (e.g. a Settlement's paidAt). */
 export function formatShortDateFromISO(dateTimeISO: string): string {
   return formatShortDate(artDateFromISO(dateTimeISO));
@@ -126,7 +149,7 @@ export function formatLongDateTime(dateTimeISO: string): string {
 /**
  * Línea "cuándo" de una reserva. Cuando `date` y `endDate` coinciden (HOURLY, o una
  * estadía de un solo día) muestra la fecha una sola vez -- "14/09/2026 14:00 a 16:00"
- * (short, para listas) o "14 de septiembre de 2026, 14:00 a 16:00" (long). Si difieren
+ * (short, para listas) o "14 sep 2026, 14:00 a 16:00" (long). Si difieren
  * (estadía multi-día) van las dos fechas con su hora, siempre en formato corto para que
  * entre en una línea: "14/09/2026 14:00 – 16/09/2026 14:00" -- sin "Check-in"/"Check-out",
  * que la alargaban sin aportar.
@@ -140,7 +163,9 @@ export function formatBookingWhen(
   if (item.date !== item.endDate) {
     return `${formatShortDate(item.date)} ${item.startTime} – ${formatShortDate(item.endDate)} ${item.endTime}`;
   }
-  const format = style === 'long' ? formatLongDate : formatShortDate;
+  // 'long' is the one a booking's own screens show: day and abbreviated month, so it stays on
+  // one line even with large text ("16 nov 2026, 14:00 a 16:00").
+  const format = style === 'long' ? formatCompactDate : formatShortDate;
   const separator = style === 'long' && getLanguage() !== 'ja' ? ', ' : ' ';
   return `${format(item.date)}${separator}${item.startTime} ${timeToLabel} ${item.endTime}`;
 }

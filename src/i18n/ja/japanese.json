@@ -806,7 +806,7 @@
 
   "search.request.title": "いつ、どこに駐車しますか？",
   "search.request.subtitle": "必要事項を入力すると、地図に利用可能な駐車スペースが表示されます。",
-  "search.request.where": "州・地域",
+  "search.request.where": "場所",
   "search.request.when": "日時",
   "search.request.hourly": "時間貸し",
   "search.request.stay": "長期滞在（日単位）",
@@ -987,7 +987,6 @@
   "driver.payment.result.stepReserved": "駐車スペースを予約",
   "driver.payment.result.approvedTitle": "予約が確定しました！",
   "driver.payment.result.approvedBody": "駐車スペースが予約されました。",
-  "driver.payment.result.approvedBanner": "支払い承認済み",
   "driver.payment.result.awaitingTitle": "お支払いを受け付けました！",
   "driver.payment.result.awaitingNote": "次にオーナーが予約を承認します。返答があり次第お知らせします。期限内に返答がない場合は自動的に返金されます。",
   "driver.payment.result.paidOn": "%{date} %{time} にお支払いいただきました。",

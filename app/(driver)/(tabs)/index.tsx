@@ -25,7 +25,7 @@ import { Screen } from '@/src/components/Screen';
 import { DatePickerField } from '@/src/components/DatePickerField';
 import { SearchRequestForm } from '@/src/components/SearchRequestForm';
 import {
-  SearchRequest, addressInProvince, findProvince, requestToFilters, searchParams,
+  SearchPlace, SearchRequest, requestToFilters, searchParams,
 } from '@/src/services/searchRequest';
 import { getDriverVisiblePrice } from '@/src/services/utils';
 import { useCommissionStore } from '@/src/store/useCommissionStore';
@@ -72,6 +72,10 @@ function mapPinPrice(
 const MIN_RATINGS = [3, 4, 4.5];
 
 // Default center: Buenos Aires
+// How much of the city the map shows around the searched place: the neighbourhood and its
+// surroundings (~2.5 km across), not the single block nor the whole city.
+const AREA_DELTA = 0.022;
+
 const DEFAULT_REGION: Region = {
   latitude: -34.6037,
   longitude: -58.3816,
@@ -191,10 +195,24 @@ export function SearchScreen() {
   }
 
 
+  // Moving the search on the map (another address, or the locate button) moves the request's
+  // place too, so "change search" opens with where the driver is actually looking.
+  function updateRequestPlace(place: SearchPlace) {
+    const current = requestRef.current;
+    if (!current) return;
+    const next = { ...current, place };
+    requestRef.current = next;
+    setRequest(next);
+    setLastRequest(next);
+  }
+
   // fillAddress is true only when the user actually taps the locate button --
   // the automatic GPS fix on first mount (see the permission effect below)
   // should not fill the search box on its own.
   async function locateMe(fillAddress = false) {
+    // The automatic fix on opening is only a starting point: once a search is under way it
+    // must not clear the address bar the search filled in.
+    if (!fillAddress && requestRef.current) return;
     // Switching to GPS overrides any active address search.
     setSearchAddress(null);
     setAddressError(null);
@@ -228,12 +246,14 @@ export function SearchScreen() {
         // show the resolved address where the user types, instead of leaving
         // the search box empty after a GPS fix.
         skipNextAddressSuggestions.current = true;
+        let label = t('owner.spot.new.locationFallback');
         try {
-          const reversed = await reverseGeocode(lat, lng);
-          setAddressQuery(reversed.displayName);
+          label = (await reverseGeocode(lat, lng)).displayName;
         } catch {
-          setAddressQuery(t('owner.spot.new.locationFallback'));
+          // Keeps the fallback: the coordinates are what the search uses.
         }
+        setAddressQuery(label);
+        updateRequestPlace({ label, lat, lng });
       }
     } catch {
       setLocationError(t('search.location.error'));
@@ -285,6 +305,7 @@ export function SearchScreen() {
     setCandidates([]);
     setSearchAddress(candidate.displayName);
     setLocation({ lat: candidate.lat, lng: candidate.lng });
+    updateRequestPlace({ label: candidate.displayName, lat: candidate.lat, lng: candidate.lng });
   }
 
   // Once the permission check resolves, decide what to do:
@@ -319,8 +340,8 @@ export function SearchScreen() {
       {
         latitude: location.lat,
         longitude: location.lng,
-        latitudeDelta: 0.04,
-        longitudeDelta: 0.04,
+        latitudeDelta: AREA_DELTA,
+        longitudeDelta: AREA_DELTA,
       },
       600,
     );
@@ -339,11 +360,8 @@ export function SearchScreen() {
         if (seq !== searchSeq.current) return;
         // The user's own spots stay in the results -- opening one shows "Esta es tu
         // cochera" instead of the booking options (see spot/[id].tsx).
-        const inProvince = requestRef.current
-          ? results.filter((spot) => addressInProvince(spot.address, requestRef.current!.provinceId))
-          : results;
-        setSpots(inProvince);
-        setSelectedSpotId(inProvince[0]?.id ?? null);
+        setSpots(results);
+        setSelectedSpotId(results[0]?.id ?? null);
       })
       .catch((err) => {
         if (seq !== searchSeq.current) return;
@@ -363,13 +381,18 @@ export function SearchScreen() {
   }, [filters, location, permissionLoading, locating, user?.id, request]);
 
   function submitRequest(next: SearchRequest) {
-    const province = findProvince(next.provinceId);
     requestRef.current = next;
     setLastRequest(next);
-    // The search starts at the province's capital; the locate button / address box can move it.
+    // The map opens on the place asked for, with its address already in the search bar
+    // (written there, not typed: it mustn't reopen the suggestions).
     setSearchAddress(null);
-    setAddressQuery('');
-    if (province) setLocation({ lat: province.lat, lng: province.lng });
+    // A place was given, so "we need your location" no longer applies.
+    setLocationError(null);
+    if (next.place) {
+      skipNextAddressSuggestions.current = true;
+      setAddressQuery(next.place.label);
+      setLocation({ lat: next.place.lat, lng: next.place.lng });
+    }
     setFilters((f) => ({ ...f, ...requestToFilters(next) }));
     setRequest(next);
   }
@@ -439,8 +462,12 @@ export function SearchScreen() {
     setModalVisible(false);
   }
 
+  // What the driver filled in up front is already summed up on the "province · dates" button
+  // (tap it to change it), so only the filters added on top of it get a chip.
+  const base = request ? requestToFilters(request) : {};
   const activeChips: { label: string; onRemove: () => void }[] = [];
-  if (searchAddress) {
+  // The request's own place is already in the search bar: only another address gets a chip.
+  if (searchAddress && searchAddress !== request?.place?.label) {
     // locateMe only runs when the chip is tapped (an event handler), never during render --
     // the refs rule can't tell a stored callback apart from a call.
     // eslint-disable-next-line react-hooks/refs
@@ -461,19 +488,19 @@ export function SearchScreen() {
       onRemove: () => setFilters((f) => ({ ...f, covered: undefined })),
     });
   }
-  if (filters.stayOnly) {
+  if (filters.stayOnly && !base.stayOnly) {
     activeChips.push({
       label: t('search.filters.stayOnly'),
       onRemove: () => setFilters((f) => ({ ...f, stayOnly: undefined, stayFrom: undefined, stayTo: undefined })),
     });
   }
-  if (filters.stayFrom && filters.stayTo) {
+  if (filters.stayFrom && filters.stayTo && (filters.stayFrom !== base.stayFrom || filters.stayTo !== base.stayTo)) {
     activeChips.push({
       label: `${formatShortDate(filters.stayFrom)} – ${formatShortDate(filters.stayTo)}`,
       onRemove: () => setFilters((f) => ({ ...f, stayFrom: undefined, stayTo: undefined })),
     });
   }
-  if (filters.vehicleType) {
+  if (filters.vehicleType && (filters.vehicleType !== base.vehicleType || filters.vehicleId !== base.vehicleId)) {
     const saved = myVehicles.find((v) => v.id === filters.vehicleId);
     activeChips.push({
       label: saved ? vehicleName(saved) : t(VEHICLE_TYPE_LABEL_KEYS[filters.vehicleType]),
@@ -492,7 +519,7 @@ export function SearchScreen() {
       onRemove: () => setFilters((f) => ({ ...f, availableNow: undefined })),
     });
   }
-  if (filters.hourlyOnly) {
+  if (filters.hourlyOnly && !base.hourlyOnly) {
     activeChips.push({
       label: t('search.filters.hourlyOnly'),
       onRemove: () => setFilters((f) => ({ ...f, hourlyOnly: undefined })),
@@ -511,7 +538,10 @@ export function SearchScreen() {
       onRemove: () => setFilters((f) => ({ ...f, maxDistanceMeters: undefined })),
     });
   }
-  if (filters.fromHour !== undefined && filters.toHour !== undefined) {
+  if (
+    filters.fromHour !== undefined && filters.toHour !== undefined
+    && (filters.date !== base.date || filters.fromHour !== base.fromHour || filters.toHour !== base.toHour)
+  ) {
     const dateLabel = filters.date ? `${formatShortDate(filters.date)} ` : '';
     activeChips.push({
       label: filters.halfDayOnly
@@ -703,15 +733,20 @@ export function SearchScreen() {
     sortScroll: { flexGrow: 0, flexShrink: 0 },
     sortRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 4 },
     sortLabel: { fontSize: sc(13), color: colors.textSecondary, fontWeight: '600', marginRight: 8, marginBottom: 6 },
-    activeFiltersRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      paddingHorizontal: 20,
-      paddingTop: 10,
-      paddingBottom: 4,
+    // One sideways-scrolling line, so the chips never take more than a row off the map.
+    activeFiltersScroll: {
+      flexGrow: 0,
+      flexShrink: 0,
       backgroundColor: colors.surface,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
+    },
+    activeFiltersRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 10,
+      paddingBottom: 4,
     },
     // ── Loading / empty / error states ──────────────────────────────────────
     centeredFeedback: {
@@ -901,7 +936,7 @@ export function SearchScreen() {
 
   if (!request) {
     return (
-      <Screen style={styles.container} edges={['left', 'right']}>
+      <Screen style={{ ...styles.container, backgroundColor: colors.surface }} edges={['left', 'right']}>
         <View style={{ height: insets.top, backgroundColor: colors.surface }} />
         <SearchRequestForm initial={lastRequest} onSubmit={submitRequest} />
       </Screen>
@@ -1012,7 +1047,7 @@ export function SearchScreen() {
         >
           <Ionicons name="create-outline" size={sc(15)} color={colors.teal} />
           <Text style={[styles.filterButtonText, { color: colors.teal, flexShrink: 1 }]} numberOfLines={1}>
-            {`${findProvince(request.provinceId)?.name ?? ''} · ${requestWhen}`}
+            {request.vehicleType ? `${requestWhen} · ${t(VEHICLE_TYPE_LABEL_KEYS[request.vehicleType])}` : requestWhen}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
@@ -1077,11 +1112,16 @@ export function SearchScreen() {
 
       {/* ── Active filter chips ────────────────────────────────────── */}
       {activeChips.length > 0 && (
-        <View style={styles.activeFiltersRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.activeFiltersScroll}
+          contentContainerStyle={styles.activeFiltersRow}
+        >
           {activeChips.map((chip) => (
             <Chip key={chip.label} label={chip.label} onRemove={chip.onRemove} />
           ))}
-        </View>
+        </ScrollView>
       )}
 
       {/* ── Sort (list only: on the map, order doesn't matter) ─────────── */}
@@ -1158,7 +1198,13 @@ export function SearchScreen() {
             ref={mapRef}
             style={styles.map}
             provider={PROVIDER_DEFAULT}
-            initialRegion={DEFAULT_REGION}
+            // The map only appears once the search is set, so it starts right on its place
+            // (an animation fired before the map is ready would be lost).
+            initialRegion={
+              location
+                ? { latitude: location.lat, longitude: location.lng, latitudeDelta: AREA_DELTA, longitudeDelta: AREA_DELTA }
+                : DEFAULT_REGION
+            }
             customMapStyle={MAP_STYLE}
             showsUserLocation
             showsMyLocationButton={false}

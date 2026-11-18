@@ -806,7 +806,7 @@
 
   "search.request.title": "¿Dónde y cuándo querés estacionar?",
   "search.request.subtitle": "Completá estos datos para ver las cocheras disponibles en el mapa.",
-  "search.request.where": "PROVINCIA",
+  "search.request.where": "DÓNDE",
   "search.request.when": "CUÁNDO",
   "search.request.hourly": "Por hora",
   "search.request.stay": "Estadía (días)",
@@ -987,7 +987,6 @@
   "driver.payment.result.stepReserved": "Cochera reservada",
   "driver.payment.result.approvedTitle": "¡Reserva confirmada!",
   "driver.payment.result.approvedBody": "Tu cochera ya está reservada.",
-  "driver.payment.result.approvedBanner": "PAGO APROBADO",
   "driver.payment.result.awaitingTitle": "¡Pago recibido!",
   "driver.payment.result.awaitingNote": "Ahora el propietario tiene que aceptar tu reserva. Te avisamos apenas responda; si no responde a tiempo, te devolvemos el dinero automáticamente.",
   "driver.payment.result.paidOn": "Pagaste el %{date} a las %{time}.",
