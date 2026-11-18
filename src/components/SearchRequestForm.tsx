@@ -1,20 +1,16 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Button } from '@/src/components/Button';
 import { Chip } from '@/src/components/Chip';
 import { DatePickerField } from '@/src/components/DatePickerField';
 import { DropdownSelect } from '@/src/components/DropdownSelect';
-import { vehicleName } from '@/src/components/VehicleIdentity';
-import { getVehicles } from '@/src/api/auth';
+import { HourPickerField } from '@/src/components/HourPickerField';
 import { VEHICLE_TYPES, VEHICLE_TYPE_LABEL_KEYS } from '@/src/constants/vehicleTypes';
 import { earliestBookableHourToday, todayArtDateISO } from '@/src/services/dateUtils';
 import { PROVINCES, SearchRequest, isSearchRequestComplete } from '@/src/services/searchRequest';
-import { useSessionStore } from '@/src/store/useSessionStore';
 import { useThemeColors } from '@/src/theme/useThemeColors';
 import { useScale } from '@/src/theme/typography';
 import { t } from '@/src/i18n';
-import type { Vehicle } from '@/src/types';
 
 interface Props {
   /** Lo último que se buscó, para no empezar de cero al volver a cambiar la búsqueda. */
@@ -32,7 +28,6 @@ export function SearchRequestForm({ initial, onSubmit }: Props) {
   const colors = useThemeColors();
   const scale = useScale();
   const sc = (n: number) => Math.round(n * scale);
-  const user = useSessionStore((s) => s.user);
   const today = todayArtDateISO();
   // Today, hours already gone can't be booked: the earliest start is the current hour.
   const earliestToday = Math.min(earliestBookableHourToday(), 23);
@@ -59,17 +54,8 @@ export function SearchRequestForm({ initial, onSubmit }: Props) {
     if (stayHour < minStayHour) setStayHour(minStayHour);
   }, [stayHour, minStayHour]);
   const [vehicleType, setVehicleType] = useState(initial?.vehicleType ?? null);
-  const [vehicleId, setVehicleId] = useState(initial?.vehicleId ?? null);
-  const [myVehicles, setMyVehicles] = useState<Vehicle[]>([]);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    getVehicles(user.id)
-      .then((list) => setMyVehicles(list.filter((v) => v.type !== null)))
-      .catch(() => setMyVehicles([]));
-  }, [user?.id]);
-
-  const request: SearchRequest = { provinceId, mode, date, fromHour, toHour, stayFrom, stayTo, stayHour, vehicleType, vehicleId };
+  const request: SearchRequest = { provinceId, mode, date, fromHour, toHour, stayFrom, stayTo, stayHour, vehicleType, vehicleId: null };
 
   const styles = StyleSheet.create({
     content: { padding: 20, paddingBottom: 40 },
@@ -97,45 +83,8 @@ export function SearchRequestForm({ initial, onSubmit }: Props) {
       color: colors.text,
       backgroundColor: colors.background,
     },
-    hourControl: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      paddingHorizontal: 8,
-      paddingVertical: 6,
-      backgroundColor: colors.background,
-    },
-    hourBtn: {
-      width: 26,
-      height: 26,
-      borderRadius: 13,
-      backgroundColor: colors.surface,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    hourValue: { fontSize: sc(14), fontWeight: '700', color: colors.text, minWidth: 44, textAlign: 'center' },
     submit: { marginTop: 28 },
   });
-
-  function renderHourStepper(label: string, value: number, onMinus: () => void, onPlus: () => void) {
-    return (
-      <View key={label} style={styles.field}>
-        <Text style={styles.smallLabel}>{label}</Text>
-        <View style={styles.hourControl}>
-          <TouchableOpacity style={styles.hourBtn} onPress={onMinus}>
-            <Ionicons name="remove" size={sc(14)} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.hourValue}>{String(value % 24).padStart(2, '0')}:00</Text>
-          <TouchableOpacity style={styles.hourBtn} onPress={onPlus}>
-            <Ionicons name="add" size={sc(14)} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -181,12 +130,17 @@ export function SearchRequestForm({ initial, onSubmit }: Props) {
           </View>
         </View>
         <View style={[styles.row, { marginTop: 10 }]}>
-          {renderHourStepper(
-            t('search.request.checkInHour'),
-            stayHour,
-            () => setStayHour((h) => Math.max(minStayHour, h - 1)),
-            () => setStayHour((h) => Math.min(23, h + 1)),
-          )}
+          <View style={styles.field}>
+            <Text style={styles.smallLabel}>{t('search.request.checkInHour')}</Text>
+            <HourPickerField
+              value={stayHour}
+              minHour={minStayHour}
+              maxHour={23}
+              label={t('search.request.checkInHour')}
+              onChange={setStayHour}
+              style={styles.input}
+            />
+          </View>
           <View style={styles.field} />
         </View>
         </>
@@ -202,48 +156,45 @@ export function SearchRequestForm({ initial, onSubmit }: Props) {
             />
           </View>
           <View style={[styles.row, { marginTop: 10 }]}>
-            {renderHourStepper(
-              t('search.filters.from'),
-              fromHour,
-              () => setFromHour((h) => Math.max(minFromHour, h - 1)),
-              () => {
-                const next = Math.min(fromHour + 1, 23);
-                setFromHour(next);
-                if (toHour <= next) setToHour(next + 1);
-              },
-            )}
-            {renderHourStepper(
-              t('search.filters.until'),
-              toHour,
-              () => setToHour((h) => Math.max(fromHour + 1, h - 1)),
-              () => setToHour((h) => Math.min(24, h + 1)),
-            )}
+            <View style={styles.field}>
+              <Text style={styles.smallLabel}>{t('search.filters.from')}</Text>
+              <HourPickerField
+                value={fromHour}
+                minHour={minFromHour}
+                maxHour={23}
+                label={t('search.filters.from')}
+                onChange={(next) => {
+                  setFromHour(next);
+                  if (toHour <= next) {
+                    setToHour(Math.min(24, next + 1));
+                  }
+                }}
+                style={styles.input}
+              />
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.smallLabel}>{t('search.filters.until')}</Text>
+              <HourPickerField
+                value={toHour}
+                minHour={fromHour + 1}
+                maxHour={24}
+                label={t('search.filters.until')}
+                onChange={setToHour}
+                style={styles.input}
+              />
+            </View>
           </View>
         </>
       )}
 
       <Text style={styles.sectionLabel}>{t('search.request.vehicle')}</Text>
       <View style={styles.chipsWrap}>
-        {myVehicles.map((vehicle) => (
-          <Chip
-            key={vehicle.id}
-            label={vehicleName(vehicle)}
-            selected={vehicleId === vehicle.id}
-            onPress={() => {
-              setVehicleType(vehicle.type);
-              setVehicleId(vehicle.id);
-            }}
-          />
-        ))}
         {VEHICLE_TYPES.map((type) => (
           <Chip
             key={type}
             label={t(VEHICLE_TYPE_LABEL_KEYS[type])}
-            selected={vehicleId === null && vehicleType === type}
-            onPress={() => {
-              setVehicleType(type);
-              setVehicleId(null);
-            }}
+            selected={vehicleType === type}
+            onPress={() => setVehicleType(type)}
           />
         ))}
       </View>
